@@ -1,7 +1,6 @@
 /**
  * LabelPickQuad — one label's clickable screen rectangle plus the identity it
- * stamps. `packedId` is `packSelection(sourceCode, localIdx +
- * PICK_SENTINEL_OFFSET)`, byte-identical to what the subject's own geometry
+ * stamps. `packedId` is `packPickWord(sourceCode, localIdx)`, byte-identical to what the subject's own geometry
  * pick writes, so a label click resolves through the existing `resolvePick`
  * arms unchanged.
  */

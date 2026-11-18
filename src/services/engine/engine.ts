@@ -122,8 +122,6 @@ export function createEngine(
   ) as CubemapCaptureRuntimes;
 
   const store = cb.store;
-  // The only URL read for the rig — see the `canvas.dataset.viewRig` stamp below.
-  const viewRig = hasUrlGate('dome') ? 'dome' : 'mono';
 
   const state: EngineState = {
     // These getters delegate straight to the store: sagas and sub-handle
@@ -242,8 +240,9 @@ export function createEngine(
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
-    // `renderFrame`/`runFrame` look this up via VIEW_RIGS.
-    viewRig,
+    // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
+    // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
+    viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
     // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
     // that getter, above, is the unrelated saga display cache.
     layers: [],

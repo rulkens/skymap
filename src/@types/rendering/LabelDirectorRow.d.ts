@@ -4,6 +4,6 @@ import type { LabelEnvelopePolicy } from './LabelEnvelopePolicy';
 export type LabelDirectorRow = {
   readonly slab: number;
   readonly envelope: LabelEnvelopePolicy;
-  /** A label nearer than this view depth, Mpc, has zero alpha (COSMO's old near plane). */
+  /** A label nearer than this view depth, Mpc, has zero alpha (COSMO's near plane, which the label no longer shares with the draw). */
   readonly nearHideMpc?: number;
 };

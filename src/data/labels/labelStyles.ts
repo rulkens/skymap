@@ -1,7 +1,7 @@
 /**
  * LABEL_STYLES — every label style, one row each; a record carries its row's index in
- * `LABEL_STYLE_IDS` and the shader reads the same table. Structure `appear` thresholds are the
- * marker ring radii doubled (rows read diameters). Every px is a CSS px (times `pxScale`).
+ * `LABEL_STYLE_IDS` and the shader reads the same table. Structure `appear` bands are the ring's
+ * `markerMin*` thresholds doubled (rows read diameters, rings radii); a test ties the two. Every px is a CSS px (times `pxScale`).
  * Priorities are bands: rank = priority × CAPTION_PRIORITY_SCALE + apparent diameter.
  */
 
@@ -87,7 +87,7 @@ export const LABEL_STYLES = {
   famousGalaxy: {
     ...TEXT,
     color: hexToGl('#FFF2CC'),
-    // M31's em (0.0125 Mpc) over its 20 kpc radius; the producer's log-diameter rule goes.
+    // M31's em (0.0125 Mpc) over its 20 kpc radius.
     textHeight: { timesRadius: 0.625 },
     appear: { fromPx: 3, bandPx: 2 },
     placement: 'above',
@@ -107,10 +107,10 @@ export const LABEL_STYLES = {
   },
   stellarStream: {
     ...TEXT,
-    // Each stream passes its own tint at alpha 0.85.
+    // Each stream passes its own tint; this row's alpha is the one they all use.
     color: [1, 1, 1, 0.85],
     textHeight: { mpc: 5e-4 },
-    // Diameter here is the stream's length; the old hard cut gains a band.
+    // Diameter here is the stream's length.
     appear: { fromPx: 75, bandPx: 25 },
     placement: 'centre',
     priority: 0,
@@ -137,8 +137,8 @@ export const LABEL_STYLES = {
     color: [0.75, 0.86, 1, 1],
     // No em of its own: always the minimum size.
     textHeight: { mpc: 0 },
-    // Today's recede window (camera distance 12 → 40 sphere radii) as apparent diameter at the
-    // default 60° lens on a 900 CSS px tall canvas: 2 × 779 px / 40 = 39, / 12 = 130.
+    // The sphere's recede window (camera distance 12 → 40 sphere radii) as apparent diameter at
+    // the default 60° lens on a 900 CSS px tall canvas: 2 × 779 px / 40 = 39, / 12 = 130.
     appear: { fromPx: 39, bandPx: 91 },
     placement: 'above',
     lift: { radii: 1, minPx: 0 },

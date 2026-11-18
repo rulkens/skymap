@@ -17,6 +17,6 @@ export type BodySpherePickArgs = {
   readonly mvp: Float32Array;
   /** Camera in the body's local frame, in FLOORED-pick-radius units — the ray origin. */
   readonly camPosLocal: Readonly<Vec3>;
-  /** Fully-packed pick id (`packSelection(code, seedIndex + offset)`). */
+  /** Fully-packed pick id (`packPickWord(code, seedIndex)`). */
   readonly packedId: number;
 };

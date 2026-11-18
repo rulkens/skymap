@@ -68,8 +68,8 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   the first cold run gets a clean 600 ms dissolve at arrival instead.
 - **The subject's ring category gates its focused label** (beat 06,
   `cosmicFlows`): under focusedOnly a focus() cue only names the subject if
-  its structure category's rings are lit — `produceStructureLabels` skips
-  labels whose ring category is disabled+faded. So pick the beat's subject
+  its structure category's rings are lit — the structure label source's
+  per-category fade zeroes labels whose ring category is disabled+faded. So pick the beat's subject
   from a category that's on at that scale (the flows beat focuses
   `supercluster-laniakea-sc`, whose rings survive from the web beat, rather
   than the Norma/Great-Attractor `cluster`, hidden since the Virgo→web step)

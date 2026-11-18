@@ -10,7 +10,7 @@ import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { streamTintRgb } from '../utils/streamTintRgb';
-import { STELLAR_STREAM_LABEL_ALPHA } from '../data/stellarStreamLabelStyle.constants';
+import { LABEL_STYLES } from '../../../../data/labels/labelStyles';
 
 export function stellarStreamLabelSource(
   runtime: Pick<StellarStreamsRuntime, 'meta' | 'pickCode'>,
@@ -25,7 +25,7 @@ export function stellarStreamLabelSource(
       text: m.names[0]!,
       position: [...m.anchorMpc],
       subjectRadiusMpc: (m.lengthKpc * SCALE_UNITS.KPC_TO_MPC) / 2,
-      color: [...streamTintRgb(m.colourT), STELLAR_STREAM_LABEL_ALPHA],
+      color: [...streamTintRgb(m.colourT), LABEL_STYLES.stellarStream.color[3]],
       pick: { code: runtime.pickCode, index: i },
     }),
   });

@@ -20,7 +20,7 @@
  * instanced draw per non-empty bucket, binding that category's
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 6-bit `sourceCode`, which the ringPick fragment composes into
- * `(sourceCode << 26) | structureIndex + PICK_SENTINEL_OFFSET` — the same
+ * `packPickWord(sourceCode, structureIndex)`'s word — the same
  * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
  * the categories handed to the factory (one instance per slab), so a new
  * structure source needs no change here.

@@ -10,10 +10,6 @@ Direction: a `from: 'anchor'` value on label entries only, evaluated per label i
 
 ## Kind 3: apparent size in px
 
-Famous-galaxy labels (`produceFamousGalaxyLabels.ts`), structure rings' `markerMinApparent*`, core's `bodyGlint`, and the Milky Way's `milkyWayFadeAlpha`. Direction: a measurement tag on the band (apparent px).
+Structure rings' `markerMinApparent*` (labels now read their style's `appear` band in core), core's `bodyGlint`, and the Milky Way's `milkyWayFadeAlpha`. Direction: a measurement tag on the band (apparent px).
 
 Greenfield note: both kinds vary per subject inside one item, so a resolved number cannot be handed in. The consumer needs the band's edges, and core hands those instead (`bandValueOf` returns a value; a per-subject kind returns the declared edges for the consumer to evaluate at its own subject).
-
-## First prep: L1, one camera-relative label frame
-
-Kind 2 needs a label's camera distance to be one expression for every label. NEAR0 producers emit camera-relative `worldPos` (`near0LabelProjection` rebases on `drawCamPos`; load-bearing for f32 precision at solar-system zoom). COSMO producers (famous galaxies, the Milky Way label, cosmic structure labels) emit absolute positions (`cosmoLabelProjection` passes `ctx.vp`), by history only. L1 unifies them: the three COSMO producers and `cosmoLabelProjection` follow NEAR0's rebase, so a label's camera distance is always `|worldPos|`. It touches two producers that lift through `ctx.vp` themselves, and it should be a pixel-identical refactor in its own commit.

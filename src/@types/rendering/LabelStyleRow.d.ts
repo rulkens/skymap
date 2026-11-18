@@ -14,7 +14,7 @@ export type LabelStyleRow = {
   readonly appear?: { readonly fromPx: number; readonly bandPx: number };
   readonly placement: 'centre' | 'above';
   /** For 'above': the text sits `radii` subject angular radii above the subject's centre, and at
-   *  least `minPx` up. Today's rule is 1.5 diameters and 28 px, so captions use { radii: 3, minPx: 28 }. */
+   *  least `minPx` up. A caption lifts 1.5 diameters (radii: 3) and at least 14 CSS px. */
   readonly lift?: { readonly radii: number; readonly minPx: number };
   /** A line from the subject's rim (plus `gapPx`) or its centre to just under the text. */
   readonly leader?: {

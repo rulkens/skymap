@@ -4,7 +4,9 @@ import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fo
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 import { GLYPH_INSTANCE_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { LABEL_RECORD_WORDS } from '../../../../../src/data/labels/labelRecordLayout';
-import { stageRecords } from '../../../../helpers/labels/labelStageFixture';
+import { LABEL_RECORD_UNIFORM_OFFSETS as RU } from '../../../../../src/data/labels/labelRecordUniformLayout';
+import { LABEL_TEXT_PX } from '../../../../../src/data/labels/labelTextPx';
+import { STAGE_CAMERA, stageRecords } from '../../../../helpers/labels/labelStageFixture';
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65), enough for the
 // factory to size its atlas.
@@ -40,6 +42,7 @@ const FIXTURE_ATLASES: LoadedFontAtlases = {
 // device that records them is what makes them assertable without WebGPU.
 function build() {
   const writes: { label: string; words: number }[] = [];
+  const uniforms: Float32Array[] = [];
   const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
   const pipelineLayouts: GPUPipelineLayoutDescriptor[] = [];
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
@@ -65,8 +68,11 @@ function build() {
     createBindGroup: vi.fn(() => ({})),
     queue: {
       writeBuffer: vi.fn(
-        (buffer: GPUBuffer, _at: number, _data: unknown, _from?: number, words?: number) =>
-          writes.push({ label: buffer.label, words: words ?? -1 }),
+        (buffer: GPUBuffer, _at: number, data: unknown, _from?: number, words?: number) => {
+          if (buffer.label === 'label-uniforms')
+            uniforms.push(new Float32Array(data as Float32Array));
+          writes.push({ label: buffer.label, words: words ?? -1 });
+        },
       ),
       copyExternalImageToTexture: vi.fn(),
     },
@@ -83,7 +89,7 @@ function build() {
     targetFormat: ctx.format,
     atlases: FIXTURE_ATLASES,
   });
-  return { renderer, writes, bindGroupLayouts, pipelineLayouts, renderPipelines };
+  return { renderer, writes, uniforms, bindGroupLayouts, pipelineLayouts, renderPipelines };
 }
 
 describe('LabelRenderer set', () => {
@@ -107,6 +113,25 @@ describe('LabelRenderer set', () => {
     records.generation++;
     renderer.set(records);
     expect(uploads()).toEqual([{ label: 'label-glyphs', words: (3 * GLYPH_INSTANCE_BYTES) / 4 }]);
+  });
+});
+
+describe('LabelRenderer draw', () => {
+  it.each([1, 2, 3])("clamps the drawn text to the CPU rect's px range at dpr %i", (dpr) => {
+    const records = stageRecords([{ text: 'A', position: [0, 0, -1] }]);
+    const { renderer, uniforms } = build();
+    renderer.set(records);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const projection = { ...STAGE_CAMERA.output, pxScale: dpr };
+    renderer.draw(pass, { projection, hoveredPick: null, selectedPick: null });
+    const sent = uniforms.at(-1)!;
+    expect(sent[RU.minTextPx / 4]).toBe(LABEL_TEXT_PX.min * dpr);
+    expect(sent[RU.maxTextPx / 4]).toBe(LABEL_TEXT_PX.max * dpr);
   });
 });
 
