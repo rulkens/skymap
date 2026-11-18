@@ -13,8 +13,8 @@ export type StructureMarkerStyle = {
   readonly markerMaxApparentRadiusPx: number;
   /** Smoothstep band width for the close-approach fade-out. */
   readonly markerMaxApparentFadeBandPx: number;
-  /** Apparent on-screen radius (px) below which the marker fades OUT. */
+  /** Apparent on-screen radius (CSS px, × dpr) below which the marker fades OUT. */
   readonly markerMinApparentRadiusPx: number;
-  /** Smoothstep band width for the far-distance fade-out. */
+  /** Smoothstep band width (CSS px, × dpr) for the far-distance fade-out. */
   readonly markerMinApparentFadeBandPx: number;
 };

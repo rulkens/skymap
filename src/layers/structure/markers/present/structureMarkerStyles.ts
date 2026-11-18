@@ -15,8 +15,8 @@ import { hexToGl } from '../../../../utils/color/hexToGl';
 const MILKY_WAY_STYLE: Omit<StructureMarkerStyle, 'haloColor' | 'ringColor'> = {
   markerMaxApparentRadiusPx: 700,
   markerMaxApparentFadeBandPx: 400,
-  markerMinApparentRadiusPx: 5,
-  markerMinApparentFadeBandPx: 4,
+  markerMinApparentRadiusPx: 2.5,
+  markerMinApparentFadeBandPx: 2,
 };
 
 /**
@@ -30,8 +30,8 @@ export const STRUCTURE_MARKER_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
+    markerMinApparentRadiusPx: 2.5,
+    markerMinApparentFadeBandPx: 2,
   },
   supercluster: {
     // Orange end of the warm ramp — saturated enough to read clearly
@@ -40,16 +40,16 @@ export const STRUCTURE_MARKER_STYLES = {
     ringColor: hexToGl('#A05F2E66'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 28,
-    markerMinApparentFadeBandPx: 20,
+    markerMinApparentRadiusPx: 14,
+    markerMinApparentFadeBandPx: 10,
   },
   void: {
     haloColor: hexToGl('#73B3D9A5'),
     ringColor: hexToGl('#73B3D9'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 28,
-    markerMinApparentFadeBandPx: 20,
+    markerMinApparentRadiusPx: 14,
+    markerMinApparentFadeBandPx: 10,
   },
   'galaxy-group': {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
@@ -68,12 +68,12 @@ export const STRUCTURE_MARKER_STYLES = {
     ringColor: hexToGl('#AB9C6E9E'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    // High far-distance floor (well above the void/SC 28) so groups fade out
+    // High far-distance floor (well above the void/SC 14) so groups fade out
     // early with distance: they're a Local Volume feature meant to be read up
-    // close, so once a group ring shrinks past ~44px it smoothsteps away rather
+    // close, so once a group ring shrinks past ~22 CSS px it smoothsteps away rather
     // than lingering as a faint speck while you explore larger scales.
-    markerMinApparentRadiusPx: 44,
-    markerMinApparentFadeBandPx: 24,
+    markerMinApparentRadiusPx: 22,
+    markerMinApparentFadeBandPx: 12,
   },
   'open-cluster': {
     ...MILKY_WAY_STYLE,
