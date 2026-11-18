@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
-import { GLYPH_INSTANCE_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
+import { GLYPH_INSTANCE_BYTES } from '../../../../../src/data/labels/glyphInstanceBytes';
 import { LABEL_RECORD_WORDS } from '../../../../../src/data/labels/labelRecordLayout';
 import { LABEL_RECORD_UNIFORM_OFFSETS as RU } from '../../../../../src/data/labels/labelRecordUniformLayout';
 import { LABEL_TEXT_PX } from '../../../../../src/data/labels/labelTextPx';

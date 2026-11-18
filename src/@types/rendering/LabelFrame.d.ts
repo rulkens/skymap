@@ -4,7 +4,6 @@
  * across frames and follows each record's key across a re-encode.
  */
 export type LabelFrame = {
-  readonly capacity: number;
   // resolveAnchors
   /** 1 = the record has a position this frame. */
   readonly located: Uint8Array;
@@ -13,11 +12,6 @@ export type LabelFrame = {
   readonly visible: Uint8Array;
   /** 1 = the drawn anchor is inside the image. */
   readonly onScreen: Uint8Array;
-  /** The drawn (lifted) anchor, output px, +y down; two per record. */
-  readonly px: Float32Array;
-  /** Image-up at the anchor; two per record. */
-  readonly up: Float32Array;
-  readonly pxPerRad: Float32Array;
   /** The subject's apparent diameter, px on the axis scale (0 without a radius). */
   readonly diameterPx: Float32Array;
   readonly distanceMpc: Float64Array;

@@ -32,7 +32,7 @@ import {
 import { writeOutputProjection } from '../../lib/outputProjectionUniform';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-import { GLYPH_INSTANCE_BYTES } from '../../../../data/labels/labelBufferStrides';
+import { GLYPH_INSTANCE_BYTES } from '../../../../data/labels/glyphInstanceBytes';
 import type { LabelRecords } from '../../../../@types/rendering/LabelRecords';
 import type { LabelRecordView } from '../../../../@types/rendering/LabelRecordView';
 import { LABEL_RECORD, LABEL_RECORD_WORDS } from '../../../../data/labels/labelRecordLayout';

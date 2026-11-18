@@ -4,13 +4,9 @@ import type { LabelFrame } from '../../../@types/rendering/LabelFrame';
 
 export function createLabelFrame(capacity: number): LabelFrame {
   return {
-    capacity,
     located: new Uint8Array(capacity),
     visible: new Uint8Array(capacity),
     onScreen: new Uint8Array(capacity),
-    px: new Float32Array(capacity * 2),
-    up: new Float32Array(capacity * 2),
-    pxPerRad: new Float32Array(capacity),
     diameterPx: new Float32Array(capacity),
     distanceMpc: new Float64Array(capacity),
     depthMpc: new Float64Array(capacity),

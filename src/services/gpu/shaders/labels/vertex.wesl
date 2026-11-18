@@ -16,7 +16,6 @@ import package::labels::io::LeaderVsOut;
 import package::labels::io::STYLE_INDEX_MASK;
 import package::labels::io::STYLE_ABOVE;
 import package::labels::io::STYLE_LEADER_FROM_RIM;
-import package::labels::io::STYLE_LEADER_FROM_CENTRE;
 import package::labels::io::STYLE_LEADER_COLOR;
 import package::lib::projectLabel::ProjectedLabel;
 import package::lib::projectLabel::projectLabel;
@@ -24,10 +23,10 @@ import package::lib::projectLabel::liftedAnchor;
 import package::lib::projectLabel::scaledLength;
 
 // Must match 'ATLAS_FONT_SIZE' and 'DISTANCE_RANGE_PX' in src/data/fonts.ts
-// (fontConstants.parity) and 'LEADER_LINE_PADDING_PX' in src/data/labels/leaderLinePaddingPx.ts
-// (labelRecord.parity).
+// (fontConstants.parity).
 const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
+// Gap between a leader's far end and the text's ink bottom; no CPU twin (pick rects omit leaders).
 const LEADER_LINE_PADDING_PX: f32 = 3.0;
 // Behind the near plane on every corner: a hidden label rasterises nothing.
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
@@ -111,8 +110,7 @@ fn leaderDirection(placed: PlacedRecord) -> vec2<f32> {
 
 fn expandRecordLeader(corner: vec2<f32>, record: LabelRecord, style: LabelStyle, placed: PlacedRecord, occludeWeight: f32) -> LeaderVsOut {
   let span = leaderSpanPx(style, placed);
-  let hasLeader = (style.flags & (STYLE_LEADER_FROM_RIM | STYLE_LEADER_FROM_CENTRE)) != 0u;
-  let drawn = placed.drawn && hasLeader && style.leaderWidthPx > 0.0 && span.y > span.x;
+  let drawn = placed.drawn && style.leaderWidthPx > 0.0 && span.y > span.x;
   let along = leaderDirection(placed);
   let across = vec2<f32>(-along.y, along.x);
   let leaderPx = placed.subject.px + along * mix(span.x, span.y, corner.x)

@@ -8,7 +8,7 @@ export const DEBUG_LINE_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
   stepMode: 'instance',
   attributes: [
     { shaderLocation: 1, offset: 0, format: 'float32x4' }, // from.xyz, pixelWidth
-    { shaderLocation: 2, offset: 16, format: 'float32x4' }, // to.xyz, fadeAlpha
+    { shaderLocation: 2, offset: 16, format: 'float32x3' }, // to.xyz (word 7 is padding)
     { shaderLocation: 3, offset: 32, format: 'float32x4' }, // premultiplied rgba
   ],
 };

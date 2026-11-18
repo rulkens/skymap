@@ -27,7 +27,6 @@ export function packLabelStyleTable(): Float32Array {
     u32[base + G.flags] =
       (row.placement === 'above' ? F.above : 0) |
       (row.leader?.from === 'rim' ? F.leaderFromRim : 0) |
-      (row.leader?.from === 'centre' ? F.leaderFromCentre : 0) |
       (row.leader?.color ? F.leaderColor : 0);
   });
   return f32;

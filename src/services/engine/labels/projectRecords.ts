@@ -59,11 +59,6 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     frame.visible[i] = 1;
     const x = out.px[0];
     const y = out.px[1];
-    frame.px[i * 2] = x;
-    frame.px[i * 2 + 1] = y;
-    frame.up[i * 2] = out.up[0];
-    frame.up[i * 2 + 1] = out.up[1];
-    frame.pxPerRad[i] = out.pxPerRad;
     frame.onScreen[i] = x >= 0 && x <= width && y >= 0 && y <= height ? 1 : 0;
     const em =
       'mpc' in style.textHeight ? style.textHeight.mpc : style.textHeight.timesRadius * radius;

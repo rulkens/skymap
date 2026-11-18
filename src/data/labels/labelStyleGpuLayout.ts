@@ -23,6 +23,5 @@ export const LABEL_STYLE_GPU_WORDS = 20;
 export const LABEL_STYLE_FLAGS = {
   above: 1,
   leaderFromRim: 2,
-  leaderFromCentre: 4,
   leaderColor: 8,
 } as const;

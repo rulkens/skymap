@@ -14,7 +14,6 @@ const RECORD_GROUNDED: u32 = 0x10000u;
 // Must equal 'LABEL_STYLE_FLAGS' (src/data/labels/labelStyleGpuLayout.ts).
 const STYLE_ABOVE: u32 = 1u;
 const STYLE_LEADER_FROM_RIM: u32 = 2u;
-const STYLE_LEADER_FROM_CENTRE: u32 = 4u;
 const STYLE_LEADER_COLOR: u32 = 8u;
 
 // The vertex stage's uniforms; byte offsets in

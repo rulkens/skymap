@@ -19,7 +19,7 @@ fn vs(input: VsIn) -> VsOut {
   let clipPos = expandSegmentQuad(
     uniforms.cam,
     input.fromAndWidth.xyz,
-    input.toAndAlpha.xyz,
+    input.to,
     input.uv,
     input.fromAndWidth.w * 0.5,
   ).clip;
@@ -28,6 +28,6 @@ fn vs(input: VsIn) -> VsOut {
   var out: VsOut;
   out.pos = vec4<f32>(clipPos.xy, min(clipPos.z, clipPos.w * (1.0 - CLIP_Z_EPS)), clipPos.w);
   out.uv = input.uv;
-  out.color = input.color * input.toAndAlpha.w;
+  out.color = input.color;
   return out;
 }

@@ -27,18 +27,28 @@ describe('textLayoutOf', () => {
   const metricsByFont = { cormorant: METRICS };
 
   it('keys the memo on alignment, not just the text', () => {
-    const left = textLayoutOf(metricsByFont, { text: 'A', font: 'cormorant', alignX: 'left' });
-    const center = textLayoutOf(metricsByFont, { text: 'A', font: 'cormorant', alignX: 'center' });
+    const left = textLayoutOf(metricsByFont, {
+      text: 'A',
+      font: 'cormorant',
+      alignX: 'left',
+      alignY: 'baseline',
+    });
+    const center = textLayoutOf(metricsByFont, {
+      text: 'A',
+      font: 'cormorant',
+      alignX: 'center',
+      alignY: 'baseline',
+    });
     expect(center.quads[0]!.localOffsetX).not.toBe(left.quads[0]!.localOffsetX);
   });
 
   it('returns the same object for repeated calls', () => {
-    const label = { text: 'AA', font: 'cormorant' } as const;
+    const label = { text: 'AA', font: 'cormorant', alignX: 'left', alignY: 'baseline' } as const;
     expect(textLayoutOf(metricsByFont, label)).toBe(textLayoutOf(metricsByFont, { ...label }));
   });
 
   it('does not share entries between metrics records', () => {
-    const label = { text: 'AA', font: 'cormorant' } as const;
+    const label = { text: 'AA', font: 'cormorant', alignX: 'left', alignY: 'baseline' } as const;
     expect(textLayoutOf({ cormorant: METRICS }, label)).not.toBe(
       textLayoutOf({ cormorant: METRICS }, label),
     );

@@ -17,7 +17,6 @@ import {
   LABEL_RECORD_UNIFORM_BYTES,
   LABEL_RECORD_UNIFORM_OFFSETS,
 } from '../../../../src/data/labels/labelRecordUniformLayout';
-import { LEADER_LINE_PADDING_PX } from '../../../../src/data/labels/leaderLinePaddingPx';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { OUTPUT_PROJECTION_BYTES } from '../../../../src/services/gpu/lib/outputProjectionUniform';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
@@ -82,12 +81,10 @@ describe('labels/io.wesl LabelRecord parity', () => {
     expect(wgslU32('RECORD_GROUNDED')).toBe(LABEL_RECORD_FLAGS.grounded);
     expect(wgslU32('STYLE_ABOVE')).toBe(LABEL_STYLE_FLAGS.above);
     expect(wgslU32('STYLE_LEADER_FROM_RIM')).toBe(LABEL_STYLE_FLAGS.leaderFromRim);
-    expect(wgslU32('STYLE_LEADER_FROM_CENTRE')).toBe(LABEL_STYLE_FLAGS.leaderFromCentre);
     expect(wgslU32('STYLE_LEADER_COLOR')).toBe(LABEL_STYLE_FLAGS.leaderColor);
   });
 
   it('shader constants match their TS homes', () => {
-    expect(wgslF32('vertex.wesl', 'LEADER_LINE_PADDING_PX')).toBe(LEADER_LINE_PADDING_PX);
     const mpcToKm = SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
     expect(wgslF32('vertexOcclude.wesl', 'MPC_TO_KM') / mpcToKm).toBeCloseTo(1, 12);
   });

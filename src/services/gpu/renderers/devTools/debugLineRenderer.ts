@@ -38,7 +38,7 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
  * `maxLines` defaults to 1024: a clip-path snapshot draws one route segment AND
  * one target-path segment per sample pair (2·(n−1), hundreds each at the
  * inspector's sampleCount) plus the 9-line scrub gizmo, so the buffer must be
- * far larger than the marker overlay's 64. `setLines` clamps silently, so this
+ * large. `setLines` clamps silently, so this
  * ceiling must stay above 2·(sampleCount−1)+9.
  */
 export function createDebugLineRenderer(
@@ -132,8 +132,6 @@ export function createDebugLineRenderer(
       instanceBuf[base + 4] = line.to[0];
       instanceBuf[base + 5] = line.to[1];
       instanceBuf[base + 6] = line.to[2];
-      // fadeAlpha slot — debug lines never fade, so a constant 1.0.
-      instanceBuf[base + 7] = 1;
       instanceBuf[base + 8] = line.color[0]!;
       instanceBuf[base + 9] = line.color[1]!;
       instanceBuf[base + 10] = line.color[2]!;

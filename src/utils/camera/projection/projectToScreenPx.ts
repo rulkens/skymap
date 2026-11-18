@@ -1,8 +1,7 @@
 /**
  * projectToScreenPx — a camera-relative anchor through a rebased vp to
  * backing-store screen pixels, or `null` when it sits on/behind the camera
- * plane (no screen position). Screen +Y points DOWN, matching the caption
- * declutter's separation metric (pure pixel distance, orientation-agnostic).
+ * plane (no screen position). Screen +Y points DOWN.
  *
  * Its one caller is `starPointsPass`'s pick. The forward-projection
  * arithmetic itself lives in `forwardProjectPoint` — this wrapper just adapts

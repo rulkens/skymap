@@ -1,8 +1,8 @@
 /**
  * deriveLightTimeLiveness — the one derivation of "which spheres draw this
- * frame, how strongly, and around what point", shared by the sphere pass and
- * the captions so the two cannot disagree: each hands its own value (the pass
- * its show value, the captions their label value). `null` when no sphere would draw.
+ * frame, how strongly, and around what point", for the sphere pass: it hands
+ * its show value. The captions fade by `subjectSizeFade` alone and never read
+ * this. `null` when no sphere would draw.
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';

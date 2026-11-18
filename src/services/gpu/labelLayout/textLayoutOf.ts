@@ -7,9 +7,7 @@
  * output, so callers need no handle.
  */
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
-import type { FontId } from '../../../@types/data/FontId';
-import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
-import type { LabelAlignY } from '../../../@types/rendering/LabelAlignY';
+import type { TextLayoutRequest } from '../../../@types/rendering/TextLayoutRequest';
 import type { LaidOutText } from '../../../@types/rendering/LaidOutText';
 import { layoutLabel } from './labelLayout';
 import { measureLabel } from './measureLabel';
@@ -19,20 +17,14 @@ const memoByMetrics = new WeakMap<LoadedFontAtlases['metricsByFont'], Map<string
 
 export function textLayoutOf(
   metricsByFont: LoadedFontAtlases['metricsByFont'],
-  label: {
-    readonly text: string;
-    readonly font: FontId;
-    readonly alignX?: LabelAlignX;
-    readonly alignY?: LabelAlignY;
-  },
+  label: TextLayoutRequest,
 ): LaidOutText {
   let memo = memoByMetrics.get(metricsByFont);
   if (memo === undefined) {
     memo = new Map();
     memoByMetrics.set(metricsByFont, memo);
   }
-  const alignX = label.alignX ?? 'left';
-  const alignY = label.alignY ?? 'baseline';
+  const { alignX, alignY } = label;
   const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
   let laidOut = memo.get(key);
   if (laidOut === undefined) {

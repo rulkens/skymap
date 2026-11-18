@@ -4,7 +4,7 @@
  */
 
 import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
-import { GLYPH_INSTANCE_BYTES } from '../../../data/labels/labelBufferStrides';
+import { GLYPH_INSTANCE_BYTES } from '../../../data/labels/glyphInstanceBytes';
 
 export function writeGlyphInstances(
   quads: readonly GlyphQuad[],

@@ -3,7 +3,7 @@
 import type { LabelRecords } from '../../@types/rendering/LabelRecords';
 import type { LoadedFontAtlases } from '../../@types/rendering/LoadedFontAtlases';
 import { LABEL_RECORD_WORDS } from '../../data/labels/labelRecordLayout';
-import { GLYPH_INSTANCE_BYTES } from '../../data/labels/labelBufferStrides';
+import { GLYPH_INSTANCE_BYTES } from '../../data/labels/glyphInstanceBytes';
 
 export function createLabelRecords(
   capacity: number,
