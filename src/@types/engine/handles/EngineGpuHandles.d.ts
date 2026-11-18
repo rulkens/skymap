@@ -105,7 +105,7 @@ export type EngineGpuHandles = {
   uiCtx: Omit<GpuContext, 'format'> | null;
   /**
    * MSDF text label renderer; the atlas load is async and optional, so it is excluded
-   * from `isEngineReady` and `labelsCosmoPass` null-checks it.
+   * from `isEngineReady` and the `labels-cosmo` pass null-checks it.
    */
   labelRendererCosmo: LabelRenderer | null;
   /**

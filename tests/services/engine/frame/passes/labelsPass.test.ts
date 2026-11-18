@@ -1,5 +1,5 @@
 /**
- * labelsCosmoPass — enable gate + the coverage-view thread-through (Task 12).
+ * labelsPass — enable gate + the coverage-view thread-through (Task 12).
  *
  * `draw` occludes captions per-pixel behind an opaque body by sampling
  * 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl) for
@@ -12,13 +12,20 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { labelsCosmoPass } from '../../../../../src/services/engine/frame/passes/labelsCosmoPass';
+import { labelsPass } from '../../../../../src/services/engine/frame/passes/labelsPass';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { LabelRecordView } from '../../../../../src/@types/rendering/LabelRecordView';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
-import { COSMO } from '../../../../../src/services/engine/frame/slabs';
+import { COSMO, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
+
+const labelsCosmoPass = labelsPass({
+  name: 'labels-cosmo',
+  slab: COSMO,
+  renderer: 'labelRendererCosmo',
+  pickRenderer: 'labelPickRendererCosmo',
+});
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 // A null row leaves the depth frame unresolved, so the joint must carry the
@@ -74,16 +81,37 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-describe('labelsCosmoPass.enabled', () => {
+describe('labelsPass.enabled', () => {
   it('is false while the director holds no records, true otherwise', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
     expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 0), ctx, VIEW_STUB)).toBe(false);
     expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(true);
     expect(labelsCosmoPass.enabled(makeState(null, 3), ctx, VIEW_STUB)).toBe(false);
   });
+
+  it('follows the director each call: closed while idle, open again when it shows', () => {
+    const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
+    const state = makeState(makeRenderer(), 2);
+    const director = state.subsystems.labelDirectors[0] as { idle: boolean };
+    director.idle = true;
+    expect(labelsCosmoPass.enabled(state, ctx, VIEW_STUB)).toBe(false);
+    director.idle = false;
+    expect(labelsCosmoPass.enabled(state, ctx, VIEW_STUB)).toBe(true);
+  });
+
+  it("reads its own row's renderer and director, not another row's", () => {
+    const near = labelsPass({
+      name: 'labels-near',
+      slab: NEAR0,
+      renderer: 'labelRendererNear',
+      pickRenderer: 'labelPickRendererNear',
+    });
+    const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
+    expect(near.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(false);
+  });
 });
 
-describe('labelsCosmoPass.draw', () => {
+describe('labelsPass.draw', () => {
   it("passes the foreground:0 colour view (not a depthViewOf lookup) in draw's joint when the body pass ran", () => {
     const renderer = makeRenderer();
     const sentinelColorView = {} as GPUTextureView;

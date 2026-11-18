@@ -40,7 +40,7 @@
  * clears its own depth (spec §7.3), so the buffer never holds more than the
  * last-cleared row and can't back a cross-row occlusion test. The caption
  * occlusion pass
- * (`labelsNearPass` and the other overlay layers, via
+ * (the `labels-near` pass and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
