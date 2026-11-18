@@ -76,8 +76,8 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   pins the orbit target to its centre whenever no clip runs (a tour pause), so
   a shot aimed off a body clears the focus.
 - **Beats state their pole and roll on entry** (fix round 1 of beat 02): the
-  ladder is now galactic (park, rise) → ecliptic (Earth and Moon, and the
-  Solar System and neighbourhood beats to come; the Moon and planets orbit near
+  ladder is now galactic (park, rise) → ecliptic (Earth and Moon, the
+  Solar System and the neighbourhood; the Moon and planets orbit near
   it, so the gap runs flat) → galactic (Milky Way) → supergalactic (M31 out) →
   galactic (home). Like the date, each beat up to the M31 approach states its
   pole with `frameTo` (instant where a cut or the sky arm hides the roll), so a

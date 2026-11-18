@@ -13,7 +13,7 @@
  * race and `paused` is a boolean — not a second code path duplicating the
  * navigation arms. While running, the race offers a `timeout` arm and forks the
  * ambient clip; while paused it offers neither, so the countdown and the camera
- * both hold until the next toggle (the sim clock too: see the toggle branch). `togglePause` flips the boolean; only a
+ * both hold until the next toggle. `togglePause` flips the boolean; only a
  * running→paused flip subtracts the elapsed slice from `remainingMs`, so resume
  * CONTINUES the countdown rather than restarting it.
  *

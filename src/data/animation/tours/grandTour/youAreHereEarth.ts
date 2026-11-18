@@ -151,7 +151,4 @@ export const youAreHereEarth: ClipData = {
   ],
 };
 
-export const youAreHereEarthDwell: ClipData = {
-  start: 'live',
-  timeline: dwellDrift(DWELL_SEC).timeline,
-};
+export const youAreHereEarthDwell: ClipData = dwellDrift(DWELL_SEC);

@@ -48,7 +48,7 @@
  *
  * `flowIn` makes the yaw enter already turning at `cruiseRate` (a velocity
  * hold, easing to rest over the final `rampSec`) instead of from rest: the
- * beat's enter clip spins up to the same rate with `dwellLeadIn`, so the camera
+ * beat's enter clip spins up to the same rate with a `rate('yaw')` ramp, so the camera
  * never stops where the enter clip lands.
  *
  * `coastMpcPerSec` does the same for the zoom: the dwell enters still moving

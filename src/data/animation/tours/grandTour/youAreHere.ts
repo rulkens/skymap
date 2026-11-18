@@ -74,7 +74,7 @@ export const youAreHere: ClipData = {
       ]),
     ]),
     focus(MW),
-    // Placeholder: the beats between Earth and here are to claim these.
+    // The names and trails the Earth beats kept hidden come back here.
     show([...OPENING_HIDDEN_LABELS, 'missionTrails'], 0),
     show(['label:milkyWay'], REVEAL_SEC),
   ],

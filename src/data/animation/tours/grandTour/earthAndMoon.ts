@@ -26,7 +26,6 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
-import { dwellLeadIn } from '../../../../state/tour/dwellLeadIn';
 import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
@@ -85,7 +84,7 @@ export const earthAndMoon: ClipData = {
       seq([
         wait(PULL_BACK_SEC - LEAD_IN_SEC),
         all([
-          dwellLeadIn(DWELL_YAW_RATE, LEAD_IN_SEC),
+          rate('yaw', { to: DWELL_YAW_RATE, over: LEAD_IN_SEC, ease: 'easeInOutSine' }),
           rate('distance', { to: COAST_MPC_PER_SEC, over: LEAD_IN_SEC, ease: 'easeInOutSine' }),
         ]),
       ]),
