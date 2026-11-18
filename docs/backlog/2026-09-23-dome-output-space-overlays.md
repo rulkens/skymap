@@ -63,3 +63,12 @@ constant is re-based to CSS px as the label constants were. Run
 - `outputProjectionOf` ignores `ViewSpec.clipYFlip`.
 - `ViewRig.outputProjection` is optional, so the dome rig falls back to the
   canvas pinhole silently; the dome PR should make it required.
+
+## Carried from the labels prep
+
+- The light-time spheres fade by their size in face pixels, so on the dome the fade distance
+  depends on the dome's resolution (2205 px, dpr 1: full to 17 radii, gone at 57; the screen
+  rule gives 12 and 40 at the reference lens). The dome PR gives spheres and labels the dome's
+  own pixel scale.
+- Recordings render at dpr 1, so label text on film is half its former size. The owner
+  accepted this (2026-11-18).
