@@ -42,9 +42,7 @@ export type LabelFrame = {
   /** 1 = kept by declutter (or exempt from it). */
   readonly survivor: Uint8Array;
   // labelEnvelope
-  /** exponentialApproach: the filter's running alpha. */
-  readonly shown: Float32Array;
-  /** smoothstepRamp: the last non-zero target, which a fade-out tail keeps drawing at. */
+  /** the last non-zero target, which a fade-out tail keeps drawing at. */
   readonly held: Float32Array;
   readonly rampFrom: Float32Array;
   readonly rampTo: Uint8Array;
@@ -54,7 +52,6 @@ export type LabelFrame = {
   /** The record key each envelope row belongs to, as of `generation`. */
   keys: readonly string[];
   generation: number;
-  lastNowMs: number;
   /** True while any envelope is mid-ramp; the caller keeps the loop awake. */
   ramping: boolean;
 };

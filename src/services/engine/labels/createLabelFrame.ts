@@ -24,7 +24,6 @@ export function createLabelFrame(capacity: number): LabelFrame {
     orderCount: 0,
     accepted: new Uint32Array(capacity),
     survivor: new Uint8Array(capacity),
-    shown: new Float32Array(capacity),
     held: new Float32Array(capacity),
     rampFrom: new Float32Array(capacity),
     rampTo: new Uint8Array(capacity),
@@ -32,7 +31,6 @@ export function createLabelFrame(capacity: number): LabelFrame {
     fresh: new Uint8Array(capacity),
     keys: [],
     generation: -1,
-    lastNowMs: -1,
     ramping: false,
   };
 }
