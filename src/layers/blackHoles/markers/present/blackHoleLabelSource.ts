@@ -4,7 +4,7 @@
  */
 
 import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import { hexToGl } from '../../../../utils/color/hexToGl';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
 import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
@@ -19,7 +19,7 @@ import { blackHoleAnchorId } from './blackHoleAnchorId';
  * A hole has no light to take a colour from, so the tint is authored: a warm accretion amber,
  * distinct from every blue-to-white star tint so the Galactic Centre reads as a landmark.
  */
-const BLACK_HOLE_CAPTION_TINT: Readonly<Vec4> = [1, 0.66, 0.32, 1];
+const BLACK_HOLE_CAPTION_TINT = hexToGl('#FFA852');
 
 export function blackHoleLabelSource(runtime: Pick<BlackHolesRuntime, 'pickCode'>) {
   return labelSource({

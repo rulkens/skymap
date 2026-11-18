@@ -7,10 +7,9 @@
 
 import type { LabelStyleId } from '../../@types/rendering/LabelStyleId';
 import type { LabelStyleRow } from '../../@types/rendering/LabelStyleRow';
-import type { Vec4 } from '../../@types/math/Vec4';
 import { hexToGl } from '../../utils/color/hexToGl';
 
-const OUTLINE = { color: [0, 0, 0, 0.1] as Vec4, emFrac: 0.16 };
+const OUTLINE = { color: hexToGl('#0000001A'), emFrac: 0.16 };
 const TEXT = { font: 'cormorant', outline: OUTLINE } as const;
 const CLUSTER_APPEAR = { fromPx: 5, bandPx: 4 };
 const VOLUME_APPEAR = { fromPx: 28, bandPx: 20 };
@@ -97,18 +96,18 @@ export const LABEL_STYLES = {
   },
   milkyWay: {
     ...TEXT,
-    color: [1, 1, 1, 1],
+    color: hexToGl('#FFFFFF'),
     textHeight: { mpc: 0.0125 },
     placement: 'above',
     lift: CAPTION_LIFT,
-    leader: { from: 'centre', gapPx: 0, widthPx: 1.5, color: [1, 1, 1, 1] },
+    leader: { from: 'centre', gapPx: 0, widthPx: 1.5, color: hexToGl('#FFFFFF') },
     // Above every other band: the orientation anchor always wins.
     priority: 1000,
   },
   stellarStream: {
     ...TEXT,
     // Each stream passes its own tint; this row's alpha is the one they all use.
-    color: [1, 1, 1, 0.85],
+    color: hexToGl('#FFFFFFD9'),
     textHeight: { mpc: 5e-4 },
     // Diameter here is the stream's length.
     appear: { fromPx: 75, bandPx: 25 },
@@ -117,7 +116,7 @@ export const LABEL_STYLES = {
   },
   caption: {
     ...TEXT,
-    color: [1, 1, 1, 1],
+    color: hexToGl('#FFFFFF'),
     textHeight: { timesRadius: 1 },
     placement: 'above',
     lift: CAPTION_LIFT,
@@ -126,7 +125,7 @@ export const LABEL_STYLES = {
   },
   constellation: {
     ...TEXT,
-    color: [0.7, 0.8, 0.92, 0.84],
+    color: hexToGl('#B3CCEBD6'),
     // A sky figure has no depth of its own: always the minimum size, so every name matches.
     textHeight: { mpc: 0 },
     placement: 'centre',
@@ -134,7 +133,7 @@ export const LABEL_STYLES = {
   },
   lightTime: {
     ...TEXT,
-    color: [0.75, 0.86, 1, 1],
+    color: hexToGl('#BFDBFF'),
     // No em of its own: always the minimum size.
     textHeight: { mpc: 0 },
     // The sphere's recede window (camera distance 12 → 40 sphere radii) as apparent diameter at

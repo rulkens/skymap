@@ -5,7 +5,7 @@
  * drifts from the seeds. A click on a name picks what a click on its body does.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import { hexToGl } from '../../../../utils/color/hexToGl';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
@@ -19,7 +19,7 @@ import { BODY_CAPTION_ROWS } from '../data/bodyCaptionRows';
 import { bodyCodeOf } from '../../selection/present/bodyCodeOf';
 
 // `EarthBody` carries a texture rather than a colour, so this is the one authored tint.
-const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
+const EARTH_TINT = hexToGl('#80B8FF');
 
 /**
  * A raw albedo makes a dark body's caption dark text on a black sky (Mercury and the Moon peak
