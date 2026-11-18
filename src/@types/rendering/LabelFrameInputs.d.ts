@@ -7,7 +7,7 @@ import type { OutputProjection } from './OutputProjection';
 
 /**
  * What the label stages read besides the records, gathered by the director once per frame.
- * Per-source arrays are indexed by the source's ordinal in `LabelRecords.sources`.
+ * Per-source arrays are indexed by the source's ordinal in `LabelDirectorState.sources`.
  */
 export type LabelFrameInputs = {
   readonly director: LabelDirectorRow;

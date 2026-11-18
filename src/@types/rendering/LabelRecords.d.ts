@@ -20,7 +20,7 @@ export type LabelRecords = {
   readonly glyphU32: Uint32Array;
   /** Text is laid out at encode time, so records exist only once the font atlases have loaded. */
   readonly metricsByFont: LoadedFontAtlases['metricsByFont'];
-  /** Per record: its source's ordinal in `sources`. */
+  /** Per record: its source's ordinal in the director's `sources`. */
   readonly source: Uint16Array;
   /** Per record: the body id `resolveAnchors` places it at each frame, or null for a fixed position. */
   readonly anchorIds: (string | null)[];
@@ -30,9 +30,7 @@ export type LabelRecords = {
   readonly keys: string[];
   /** Per record: the text's ink box in atlas px (minX, minY, maxX, maxY); zeros when it has no ink. */
   readonly textBox: Float32Array;
-  /** Ordinal → source, assigned on first encode. */
-  readonly sources: LabelSource<unknown>[];
-  /** Ordinal → its toggle's address, built once beside `sources` so a frame formats no strings. */
+  /** Ordinal → its source's toggle address, built once so a frame formats no strings. */
   readonly toggleAddresses: LabelAddress[];
   /** Per source: what its last encode saw, so an unchanged source is not described again. */
   readonly encoded: Map<

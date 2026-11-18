@@ -35,7 +35,7 @@ describe('labelEnvelope', () => {
     const records = createLabelRecords(4, 16, LETTER_A_METRICS);
     const frame = createLabelFrame(records.capacity);
     const step = (nowMs: number) => {
-      records.count = encodeLabelSource(source, {} as EngineState, records, 0);
+      records.count = encodeLabelSource(source, {} as EngineState, records, 0, 0);
       const inputs = stageInputs({ director: cosmo, nowMs, toggleFades: [{ a: 0.5, b: 1 }] });
       for (const stage of LABEL_STAGES) stage(records, frame, inputs);
     };

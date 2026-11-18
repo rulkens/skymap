@@ -42,7 +42,7 @@ describe('encodeLabelSource', () => {
             : { text: 'A', position: { anchorId: 'earth' }, fadeKey: 'planets' },
     });
 
-    expect(encodeLabelSource(source, state, into, 0)).toBe(2);
+    expect(encodeLabelSource(source, state, into, 0, 0)).toBe(2);
 
     const kept = Array.from(into.u32.subarray(0, LABEL_RECORD_WORDS));
     const f32 = (word: number) => Math.fround(into.f32[word]!);
@@ -82,14 +82,14 @@ describe('encodeLabelSource', () => {
       },
     });
 
-    encodeLabelSource(source, state, into, 0);
-    encodeLabelSource(source, state, into, 0);
+    encodeLabelSource(source, state, into, 0, 0);
+    encodeLabelSource(source, state, into, 0, 0);
     expect(calls).toBe(1);
     version = 2;
-    encodeLabelSource(source, state, into, 0);
+    encodeLabelSource(source, state, into, 0, 0);
     expect(calls).toBe(2);
     // Same value, but an earlier source grew: the records move, so they are written again.
-    encodeLabelSource(source, state, into, 1);
+    encodeLabelSource(source, state, into, 1, 0);
     expect(calls).toBe(3);
   });
 
@@ -112,8 +112,8 @@ describe('encodeLabelSource', () => {
       describe: (text: string) => ({ text, position: [0, 0, 0] }),
     });
     const encode = () => {
-      const count = encodeLabelSource(first, state, into, 0);
-      return count + encodeLabelSource(second, state, into, count);
+      const count = encodeLabelSource(first, state, into, 0, 0);
+      return count + encodeLabelSource(second, state, into, count, 1);
     };
     // The second source's record: its glyph start sits right after the first source's glyphs.
     const secondGlyphStart = (at: number) =>
@@ -136,7 +136,7 @@ describe('encodeLabelSource', () => {
       items: () => ['AAA', 'AAA', 'AA'],
       describe: (text: string) => ({ text, position: [0, 0, 0] }),
     });
-    expect(encodeLabelSource(source, state, into, 0)).toBe(2);
+    expect(encodeLabelSource(source, state, into, 0, 0)).toBe(2);
     const glyphCount = (at: number) => into.u32[at * LABEL_RECORD_WORDS + LABEL_RECORD.glyphCount];
     expect([glyphCount(0), glyphCount(1)]).toEqual([3, 2]);
   });
@@ -155,7 +155,7 @@ describe('encodeLabelSource', () => {
       items: () => [at],
       describe: (position: Vec3) => ({ text: 'A', position }),
     });
-    encodeLabelSource(source, state, into, 0);
+    encodeLabelSource(source, state, into, 0, 0);
 
     const cam = new Float32Array(6);
     writeHiLoVertex(eye, 0, cam, 0);

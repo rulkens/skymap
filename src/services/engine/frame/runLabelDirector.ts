@@ -16,6 +16,7 @@ import {
 } from '../../../data/labels/labelRecordCapacity';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { createLabelRecords } from '../../../utils/labels/createLabelRecords';
+import type { LabelAddress } from '../../../@types/animation/LabelAddress';
 import { encodeLabelSource } from '../../../utils/labels/encodeLabelSource';
 import { outputProjectionOf } from '../../../utils/labels/outputProjectionOf';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
@@ -33,16 +34,23 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
   )!;
   const fontAtlases = state.gpu.fontAtlases;
   if (director.sources.length === 0 || fontAtlases === null) return false;
-  director.records ??= createLabelRecords(
-    LABEL_RECORD_CAPACITY,
-    LABEL_GLYPH_CAPACITY,
-    fontAtlases.metricsByFont,
-  );
+  if (director.records === null) {
+    director.records = createLabelRecords(
+      LABEL_RECORD_CAPACITY,
+      LABEL_GLYPH_CAPACITY,
+      fontAtlases.metricsByFont,
+    );
+    director.records.toggleAddresses.push(
+      ...director.sources.map((s): LabelAddress => `label:${s.toggle}`),
+    );
+  }
   director.frame ??= createLabelFrame(LABEL_RECORD_CAPACITY);
   const { records, frame } = director;
 
   let at = 0;
-  for (const source of director.sources) at += encodeLabelSource(source, state, records, at);
+  director.sources.forEach((source, ordinal) => {
+    at += encodeLabelSource(source, state, records, at, ordinal);
+  });
   records.count = at;
 
   const toggleFades = records.toggleAddresses.map((address) =>

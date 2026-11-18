@@ -38,7 +38,7 @@ export function stageRecords(
     items: () => descriptions,
     describe: (d: LabelDescription) => d,
   });
-  records.count = encodeLabelSource(source, {} as EngineState, records, 0);
+  records.count = encodeLabelSource(source, {} as EngineState, records, 0, 0);
   return records;
 }
 

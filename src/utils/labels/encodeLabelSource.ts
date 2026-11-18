@@ -24,6 +24,7 @@ export function encodeLabelSource<Item>(
   state: EngineState,
   into: LabelRecords,
   start: number,
+  ordinal: number,
 ): number {
   const anySource = source as LabelSource<unknown>;
   const value = source.changes?.(state);
@@ -40,11 +41,6 @@ export function encodeLabelSource<Item>(
     return last.count;
   }
 
-  let ordinal = into.sources.indexOf(anySource);
-  if (ordinal < 0) {
-    ordinal = into.sources.push(anySource) - 1;
-    into.toggleAddresses.push(`label:${source.toggle}`);
-  }
   const items = source.items(state);
   let at = start;
   let glyph = glyphStart;

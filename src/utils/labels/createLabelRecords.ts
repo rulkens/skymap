@@ -26,7 +26,6 @@ export function createLabelRecords(
     fadeKeys: new Array<string | null>(capacity).fill(null),
     keys: new Array<string>(capacity).fill(''),
     textBox: new Float32Array(capacity * 4),
-    sources: [],
     toggleAddresses: [],
     encoded: new Map(),
     generation: 0,
