@@ -324,10 +324,10 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-clip-what',
     about: 'app',
-    text: 'A clip is one flight of the camera with no captions and no steps. The interface stays up, the clock is paused while it plays, Esc stops it, and when it ends the address has nothing after it again. The app knows 26: ten of their own and one for each of the 16 flights “The Long Way Out” is made of.',
+    text: 'A clip is one flight of the camera with no captions and no steps. The interface stays up, the clock is paused while it plays, Esc stops it, and when it ends the address has nothing after it again. The app knows 35: ten of their own and one for each of the 25 flights “The Long Way Out” is made of.',
     source: `${REPO_BLOB}/src/data/animation/clips/clipRegistry.ts`,
     sourceLabel: `the camera flights, ${IN_REPO}`,
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   {
     id: 'ref-dome-spelling',

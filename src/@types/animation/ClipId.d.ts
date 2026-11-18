@@ -20,7 +20,6 @@ export type ClipId =
   | 'flowOrbit'
   | 'flyPathDemo'
   | 'famousFlythrough'
-  | 'tourOpeningTitle'
   | 'tourYouAreHere'
   | 'tourYouAreHereDwell'
   | 'tourApproachM31'
@@ -35,4 +34,14 @@ export type ClipId =
   | 'tourTheEdge'
   | 'tourHomeAgain'
   | 'tourLocalGroup'
-  | 'tourNeighbourhoodReveal';
+  | 'tourNeighbourhoodReveal'
+  | 'tourParkOpening'
+  | 'tourParkOpeningDwell'
+  | 'tourYouAreHereEarth'
+  | 'tourYouAreHereEarthDwell'
+  | 'tourEarthAndMoon'
+  | 'tourEarthAndMoonDwell'
+  | 'tourSolarSystem'
+  | 'tourSolarSystemDwell'
+  | 'tourStellarNeighbourhood'
+  | 'tourStellarNeighbourhoodDwell';

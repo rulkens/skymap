@@ -24,6 +24,7 @@ import { skyExitLift } from './utils/skyExitLift';
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
   parent: 'body',
+  pinsEye: true,
   emptyMemory: null,
 
   channels: {

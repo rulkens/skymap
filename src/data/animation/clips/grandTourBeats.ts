@@ -11,12 +11,19 @@
  *
  * Caveat for standalone playback: a registry clip runs without
  * `withSceneSnapshotSaga`, so a beat's scene cues (the opening hide sweep,
- * focusedOnly flips) persist after the clip ends — wind them back via the
- * settings panel or a reload.
+ * focusedOnly flips, the clock) persist after the clip ends — wind them back
+ * via the settings panel or a reload.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
-import { openingTitle } from '../tours/grandTour/openingTitle';
+import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
+import { youAreHereEarth, youAreHereEarthDwell } from '../tours/grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from '../tours/grandTour/earthAndMoon';
+import { solarSystem, solarSystemDwell } from '../tours/grandTour/solarSystem';
+import {
+  stellarNeighbourhood,
+  stellarNeighbourhoodDwell,
+} from '../tours/grandTour/stellarNeighbourhood';
 import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
 import { approachM31 } from '../tours/grandTour/approachM31';
 import { localGroup } from '../tours/grandTour/localGroup';
@@ -31,114 +38,177 @@ import { deepField } from '../tours/grandTour/deepField';
 import { theEdge } from '../tours/grandTour/theEdge';
 import { homeAgain } from '../tours/grandTour/homeAgain';
 
-export const tourOpeningTitle: Clip = {
-  id: 'tourOpeningTitle',
-  label: 'Grand tour 00 — opening title',
+export const tourParkOpening: Clip = {
+  id: 'tourParkOpening',
+  label: 'Grand tour 00 — the long way out',
   dev: true,
-  data: openingTitle,
+  data: parkOpening,
+};
+
+export const tourParkOpeningDwell: Clip = {
+  id: 'tourParkOpeningDwell',
+  label: 'Grand tour 00 — noon to night',
+  dev: true,
+  data: parkOpeningDwell,
+};
+
+export const tourYouAreHereEarth: Clip = {
+  id: 'tourYouAreHereEarth',
+  label: 'Grand tour 01 — the rise',
+  dev: true,
+  data: youAreHereEarth,
+};
+
+export const tourYouAreHereEarthDwell: Clip = {
+  id: 'tourYouAreHereEarthDwell',
+  label: 'Grand tour 01 — whole-Earth dwell',
+  dev: true,
+  data: youAreHereEarthDwell,
+};
+
+export const tourEarthAndMoon: Clip = {
+  id: 'tourEarthAndMoon',
+  label: 'Grand tour 02 — Earth and Moon',
+  dev: true,
+  data: earthAndMoon,
+};
+
+export const tourEarthAndMoonDwell: Clip = {
+  id: 'tourEarthAndMoonDwell',
+  label: 'Grand tour 02 — the gap dwell',
+  dev: true,
+  data: earthAndMoonDwell,
+};
+
+export const tourSolarSystem: Clip = {
+  id: 'tourSolarSystem',
+  label: 'Grand tour 03 — the Solar System',
+  dev: true,
+  data: solarSystem,
+};
+
+export const tourSolarSystemDwell: Clip = {
+  id: 'tourSolarSystemDwell',
+  label: 'Grand tour 03 — the orbits dwell',
+  dev: true,
+  data: solarSystemDwell,
+};
+
+export const tourStellarNeighbourhood: Clip = {
+  id: 'tourStellarNeighbourhood',
+  label: 'Grand tour 04 — our stellar neighbourhood',
+  dev: true,
+  data: stellarNeighbourhood,
+};
+
+export const tourStellarNeighbourhoodDwell: Clip = {
+  id: 'tourStellarNeighbourhoodDwell',
+  label: 'Grand tour 04 — the near-stars dwell',
+  dev: true,
+  data: stellarNeighbourhoodDwell,
 };
 
 export const tourYouAreHere: Clip = {
   id: 'tourYouAreHere',
-  label: 'Grand tour 01 — you are here',
+  label: 'Grand tour 05 — the Milky Way',
   dev: true,
   data: youAreHere,
 };
 
 export const tourYouAreHereDwell: Clip = {
   id: 'tourYouAreHereDwell',
-  label: 'Grand tour 01 — push-in dwell',
+  label: 'Grand tour 05 — push-in dwell',
   dev: true,
   data: youAreHereDwell,
 };
 
 export const tourApproachM31: Clip = {
   id: 'tourApproachM31',
-  label: 'Grand tour 02 — approach M31',
+  label: 'Grand tour 06 — approach M31',
   dev: true,
   data: approachM31,
 };
 
 export const tourLocalGroup: Clip = {
   id: 'tourLocalGroup',
-  label: 'Grand tour 03 — the local group',
+  label: 'Grand tour 07 — the local group',
   dev: true,
   data: localGroup,
 };
 
 export const tourNeighbourhoodReveal: Clip = {
   id: 'tourNeighbourhoodReveal',
-  label: 'Grand tour 04 — neighbourhood reveal',
+  label: 'Grand tour 08 — neighbourhood reveal',
   dev: true,
   data: neighbourhoodReveal,
 };
 
 export const tourNeighbourhood: Clip = {
   id: 'tourNeighbourhood',
-  label: 'Grand tour 05 — neighbourhood flythrough',
+  label: 'Grand tour 09 — neighbourhood flythrough',
   dev: true,
   data: neighbourhoodFlythrough,
 };
 
 export const tourApproachVirgo: Clip = {
   id: 'tourApproachVirgo',
-  label: 'Grand tour 06 — approach Virgo',
+  label: 'Grand tour 10 — approach Virgo',
   dev: true,
   data: approachVirgo,
 };
 
 export const tourLaniakea: Clip = {
   id: 'tourLaniakea',
-  label: 'Grand tour 07 — Laniakea',
+  label: 'Grand tour 11 — Laniakea',
   dev: true,
   data: laniakea,
 };
 
 export const tourCosmicWeb: Clip = {
   id: 'tourCosmicWeb',
-  label: 'Grand tour 08 — cosmic web',
+  label: 'Grand tour 12 — cosmic web',
   dev: true,
   data: cosmicWeb,
 };
 
 export const tourCosmicWebDwell: Clip = {
   id: 'tourCosmicWebDwell',
-  label: 'Grand tour 08 — web pull-back dwell',
+  label: 'Grand tour 12 — web pull-back dwell',
   dev: true,
   data: cosmicWebDwell,
 };
 
 export const tourCosmicFlows: Clip = {
   id: 'tourCosmicFlows',
-  label: 'Grand tour 09 — cosmic flows',
+  label: 'Grand tour 13 — cosmic flows',
   dev: true,
   data: cosmicFlows,
 };
 
 export const tourEmptiness: Clip = {
   id: 'tourEmptiness',
-  label: 'Grand tour 10 — the emptiness',
+  label: 'Grand tour 14 — the emptiness',
   dev: true,
   data: emptiness,
 };
 
 export const tourDeepField: Clip = {
   id: 'tourDeepField',
-  label: 'Grand tour 11 — deep field',
+  label: 'Grand tour 15 — deep field',
   dev: true,
   data: deepField,
 };
 
 export const tourTheEdge: Clip = {
   id: 'tourTheEdge',
-  label: 'Grand tour 12 — the edge',
+  label: 'Grand tour 16 — the edge',
   dev: true,
   data: theEdge,
 };
 
 export const tourHomeAgain: Clip = {
   id: 'tourHomeAgain',
-  label: 'Grand tour 13 — home again',
+  label: 'Grand tour 17 — home again',
   dev: true,
   data: homeAgain,
 };

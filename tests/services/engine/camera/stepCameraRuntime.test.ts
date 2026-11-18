@@ -225,6 +225,7 @@ describe('stepCameraRuntime', () => {
         tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: asSceneBodyId('earth') },
         intent,
         gestureHeld: false,
+        clipAuthored: false,
         ctx: {
           bodies: BODIES,
           poseBasis: B,
