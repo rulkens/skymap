@@ -1,66 +1,14 @@
 /**
  * compositor — the single 'merge one offscreen texture into a target'
- * primitive. Every historical variant of that operation collapses into
- * one draw through this factory:
+ * primitive: HDR → swap chain with tone-mapping (blend 'replace', tone set),
+ * a foreground layer OVER the swap (blend 'over', tone null), an additive
+ * field contribution → HDR (blend 'additive', tone null). Only the hdr→swap
+ * tone-map draw takes a tone, and with it the film variant. Blend and dst
+ * format are data in a table; the film look is a pipeline variant.
  *
- *   - HDR → swap chain with tone-mapping   (blend 'replace', tone set)
- *   - foreground LDR layer OVER the swap    (blend 'over', tone set)
- *   - additive field contribution → HDR     (blend 'additive', tone null)
- *
- * Tone-null is the general pass-through for a source that is already
- * display-ready; the foreground-over composite is the one exception — it
- * shares the HDR composite's tone object, so it runs tone-enabled too.
- *
- * Before this primitive, each of those lived in its own bespoke pass
- * (`postProcess.ts`, a foreground compositor, `additiveUpsample.ts`) with
- * three copies of the covering-triangle vertex stage, three sampler
- * declarations, and three near-identical pipeline builds. The compositor
- * unifies the pipeline plumbing while keeping the parts that genuinely
- * differ — blend mode and dst format — as *data* in a table.
- *
- * ### Why a pipeline cache keyed by (blend, dstFormat)
- *
- * A render pipeline is immutable once built: its blend state and target
- * format are baked in. The compositor may be asked for any (blend,
- * dstFormat) combination, so it builds each on first use and caches it.
- * The key includes the dst format because 'replace' into the swap chain
- * and 'replace' into the HDR target are two distinct pipelines even
- * though they share a blend mode — the format is part of the pipeline's
- * immutable identity. The alternative — pre-building every combination
- * at construction — wastes GPU objects on combinations no consumer uses.
- *
- * ### Why one uniform buffer PER cache entry, not one shared buffer
- *
- * A single shared uniform buffer would make two composite draws in the
- * same frame race: `queue.writeBuffer` + `submit` ordering is not
- * guaranteed to interleave, so the second draw's uniform write can land
- * before the first draw reads it — last-write-wins garbage (the exact
- * bite documented in CLAUDE.md 'Things that have bitten us'). Giving
- * each (blend, dstFormat) pipeline its own buffer means a frame that
- * does 'replace' then 'over' writes two independent buffers with no
- * cross-contamination, because 'replace' and 'over' are distinct cache
- * keys.
- *
- * That guarantee is per-key, not per-draw: two composite draws that
- * share one (blend, dstFormat) key in the same frame still share that
- * key's single buffer, so the second `writeBuffer` overwrites the first
- * before either draw's commands execute at `submit` — both draws run
- * with whichever uniforms were written last. Every current caller draws
- * each key at most once per frame, so this hasn't bitten yet. A future
- * consumer that draws the same key more than once per frame — e.g.
- * several additive field composites that all key to `additive:hdr` —
- * will need a per-draw ring or pool of buffers for that key before it
- * can share it safely within a frame.
- *
- * ### JS-mirror curves for unit tests
- *
- * Each WGSL tone-map curve has a JS twin exported below (`linearClamp`,
- * `reinhardExtended`, ...). Their math matches `lib/tonemap.wesl`
- * byte-for-byte so a Vitest unit test catches a shader regression
- * without booting WebGPU. The shader owner (this module, now that the
- * tone-map draw lives here) owns the mirror — keep them in sync: if the
- * WGSL changes, the JS must change. `tests/services/gpu/passes/toneMap.test.ts`
- * exercises monotonicity, asymptotic behaviour, and curve-specific shape.
+ * Each WGSL tone curve has a JS twin below, matching `lib/tonemap.wesl`
+ * byte-for-byte so `tests/services/gpu/passes/toneMap.test.ts` catches a
+ * shader regression without WebGPU: change one, change the other.
  */
 
 // `?static` runs the WESL linker at build time and returns a flat WGSL
@@ -185,16 +133,19 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'compositor.fragment');
 
-  // Why nearest, not linear?  The source and dst are the same resolution
-  // (the HDR target resizes in lockstep with the swap chain), so the
-  // fullscreen pass samples each texel exactly once at its centre.
-  // Linear filtering would just average a texel with itself — pointless
-  // work, and on some GPUs `linear` requires `'float32-filterable'` even
-  // on rgba16float.  `nearest` is universally supported.
+  // Nearest: source and dst are the same size, so the composite must stay a 1:1 copy.
   const sampler = device.createSampler({
     label: 'compositor-sampler',
     magFilter: 'nearest',
     minFilter: 'nearest',
+  });
+
+  // The film variant's aberration and softness taps land between texels. Both
+  // variants bind it: one layout, and an unused binding costs nothing.
+  const linearSampler = device.createSampler({
+    label: 'compositor-linear-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
   });
 
   const bindGroupLayout = device.createBindGroupLayout({
@@ -203,6 +154,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
     ],
   });
 
@@ -211,30 +163,31 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
     bindGroupLayouts: [bindGroupLayout],
   });
 
-  // Lazy pipeline + per-entry uniform-buffer cache. See module header for
-  // both the key composition and the one-buffer-per-entry rationale. The dst
-  // format is no longer derived from the blend — it arrives per draw from the
-  // dest target, so the same blend can key two entries for two formats.
+  // Pipelines are immutable with blend, target format and override constants
+  // baked in, so each (blend, dstFormat, film) is built on first use and
+  // cached. Each entry owns its uniform buffer: one shared buffer would let a
+  // later draw's `writeBuffer` land before an earlier draw reads it at submit.
+  // That holds per key, not per draw: a key drawn twice in one frame would
+  // need a per-draw ring of buffers first (every caller today draws each key
+  // at most once).
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
-  // Mixed f32/u32 uniform — pack via two views over one 32-byte
-  // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the extended-range
-  // `hdrKnee` / `hdrHeadroom` — see the `if (tone)` / `else` branches
-  // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
-  // is zero-filled), satisfying the uniform 16-byte-stride requirement with
-  // no unused padding left in the buffer.
-  const uniformBytes = new ArrayBuffer(32);
+  // Mixed f32/u32 lanes over one scratch buffer, laid out per
+  // `shaders/compositor/io.wesl`'s `CompositorUniforms` table: 20 lanes.
+  const UNIFORM_BYTES = 80;
+  const uniformBytes = new ArrayBuffer(UNIFORM_BYTES);
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
 
   function entryFor(
     blend: CompositeBlend,
     dstFormat: GPUTextureFormat,
+    film: boolean,
   ): {
     pipeline: GPURenderPipeline;
     uniformBuffer: GPUBuffer;
   } {
-    const key = `${blend}:${dstFormat}`;
+    const key = `${blend}:${dstFormat}:${film ? 'film' : 'plain'}`;
     const existing = cache.get(key);
     if (existing) return existing;
 
@@ -245,6 +198,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
       fragment: {
         module: fsModule,
         entryPoint: 'fs',
+        constants: film ? { FILM: 1 } : undefined,
         targets: [{ format: dstFormat, blend: BLEND_TABLE[blend].blend }],
       },
       primitive: { topology: 'triangle-list' },
@@ -252,7 +206,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
 
     const uniformBuffer = device.createBuffer({
       label: `compositor-uniform-${key}`,
-      size: 32,
+      size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -270,7 +224,8 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
       tone: ToneMap | null,
       dstFormat: GPUTextureFormat,
     ): void {
-      const entry = entryFor(blend, dstFormat);
+      const film = tone?.film ?? null;
+      const entry = entryFor(blend, dstFormat, film !== null);
 
       if (tone) {
         // Clamp at point of use: the store holds raw intent, this pass
@@ -295,6 +250,19 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         uniformF32[6] = 0;
         uniformF32[7] = 0;
       }
+      if (film) {
+        const { grade } = film;
+        uniformF32[8] = grade.contrast;
+        uniformF32[9] = grade.lift;
+        uniformF32[10] = grade.splitTone;
+        uniformF32[11] = grade.grain;
+        uniformF32[12] = grade.grainSizePx;
+        uniformF32[13] = grade.vignette;
+        uniformF32[14] = grade.chromaticPx;
+        uniformF32[15] = grade.softnessPx;
+        uniformF32[16] = grade.squeeze;
+        uniformU32[17] = film.seed >>> 0;
+      }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.
       uniformU32[5] = BLEND_TABLE[blend].preserveAlpha;
@@ -311,6 +279,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
           { binding: 0, resource: src },
           { binding: 1, resource: sampler },
           { binding: 2, resource: { buffer: entry.uniformBuffer } },
+          { binding: 3, resource: linearSampler },
         ],
       });
 

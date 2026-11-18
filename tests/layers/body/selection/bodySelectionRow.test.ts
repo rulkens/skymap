@@ -37,6 +37,18 @@ describe('bodySelectionRow pick codes', () => {
     expect(row.pickSources).toEqual(expect.arrayContaining(stamped));
   });
 
+  it("a meshed asteroid's number link opens its body; other asteroid numbers are not its claim", () => {
+    const opens = { 1: 'ceres', 4: 'vesta', 101955: 'bennu', 134340: 'pluto' };
+    for (const [number, id] of Object.entries(opens)) {
+      expect(row.focusId!.claims(`asteroid-${number}`)).toBe(true);
+      expect(row.focusId!.decode(`asteroid-${number}`)).toEqual({ kind: 'hit', ref: bodyRef(id) });
+    }
+    expect(row.focusId!.encode(bodyRef('vesta'))).toBe('body-vesta');
+    for (const id of ['asteroid-433', 'asteroid-04', 'asteroid-']) {
+      expect(row.focusId!.claims(id)).toBe(false);
+    }
+  });
+
   it('places Earth at its footprint radius, in Mpc', () => {
     const earth = row.extractRow(bodyRef(SCENE_EARTH.id), CONST_J2000) as PlacedRow;
     expect(relErr(earth.radiusMpc, 2.067568250898234e-16)).toBeLessThan(1e-12);

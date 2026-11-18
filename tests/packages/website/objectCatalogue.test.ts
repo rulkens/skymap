@@ -45,9 +45,9 @@ const structureIds = new Set(buildStaticAnchorStructures().map((structure) => st
 
 /** Whether the app has something behind an id of a `focus` link, by the same decoder or table the app resolves it with. */
 const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
-  sun: (id) => decodeStarFocusId(id, false) !== null,
-  star: (id) => decodeStarFocusId(id, false) !== null,
-  sStar: (id) => decodeStarFocusId(id, false) !== null,
+  sun: (id) => decodeStarFocusId(id, false).kind === 'hit',
+  star: (id) => decodeStarFocusId(id, false).kind === 'hit',
+  sStar: (id) => decodeStarFocusId(id, false).kind === 'hit',
   planet: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   moon: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   spacecraft: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),

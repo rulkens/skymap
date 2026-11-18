@@ -122,6 +122,10 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
+  /** Whether the film look (grain, glow, softer lens) is on. */
+  filmEnabled: boolean;
+  /** Called with the toggled flag when the Film look switch is clicked. */
+  onFilmEnabledChange: (next: boolean) => void;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -153,6 +157,8 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
+  filmEnabled,
+  onFilmEnabledChange,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
@@ -246,6 +252,25 @@ function DisplaySection({
           />
         </div>
       </CollapsibleSection>
+
+      {/* A switch with nothing to unfold: the Bloom/HDR header shape (toggle, then
+          the uppercase title) minus the chevron, which stays as a blank so the
+          toggles line up down the column. */}
+      <div className={styles.switchHeader}>
+        <span className={styles.switchHeaderChevron} aria-hidden>
+          ▸
+        </span>
+        <input
+          id="film-look"
+          type="checkbox"
+          className={styles.switchHeaderToggle}
+          checked={filmEnabled}
+          onChange={(e) => onFilmEnabledChange(e.target.checked)}
+        />
+        <label htmlFor="film-look" className={styles.switchHeaderTitle}>
+          Film look
+        </label>
+      </div>
 
       {/* Master toggle drives settings.hdr.enabled, which the swap-chain saga
           watches to reconfigure the surface at runtime. Disabled + hinted

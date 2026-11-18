@@ -32,7 +32,7 @@ describe('blackHoleSelectionRow', () => {
   it('focus id round-trips', () => {
     const focusId = ROW.focusId!;
     expect(focusId.encode(SGR_A_STAR_REF)).toBe('blackhole-sgr-a-star');
-    expect(focusId.decode('blackhole-sgr-a-star')).toEqual(SGR_A_STAR_REF);
+    expect(focusId.decode('blackhole-sgr-a-star')).toEqual({ kind: 'hit', ref: SGR_A_STAR_REF });
   });
 
   it('extracted row poses at the galactic centre', () => {

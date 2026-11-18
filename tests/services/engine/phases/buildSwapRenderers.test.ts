@@ -22,6 +22,9 @@ vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
 vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub()),
 }));
+vi.mock('../../../../src/services/gpu/renderers/letterbox/letterboxRenderer', () => ({
+  createLetterboxRenderer: vi.fn(() => makeStub()),
+}));
 vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub()),
 }));
@@ -50,6 +53,7 @@ function makeState(): EngineState {
       fontAtlases: { __mockAtlases: true },
       labelRendererCosmo: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
       labelRendererNear: null,
@@ -66,6 +70,7 @@ describe('buildSwapRenderers', () => {
     const firstRound = {
       labelRendererCosmo: state.gpu.labelRendererCosmo,
       debugLineRenderer: state.gpu.debugLineRenderer,
+      letterboxRenderer: state.gpu.letterboxRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
       labelRendererNear: state.gpu.labelRendererNear,

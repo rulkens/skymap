@@ -155,6 +155,8 @@ type RecordOptions = {
   rebuild: boolean;
   /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
   dome: boolean;
+  /** --film: the take plays with the film look on (`#film=1`, the Display switch's hash row). */
+  film: boolean;
   /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
   frames: number | undefined;
 };
@@ -202,6 +204,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     serve: false,
     rebuild: false,
     dome: false,
+    film: false,
     frames: undefined,
   };
   // Tracked separately from options.url: the default url must not trip the
@@ -227,6 +230,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     }
     if (arg === '--dome') {
       options.dome = true;
+      continue;
+    }
+    if (arg === '--film') {
+      options.film = true;
       continue;
     }
     if (
@@ -291,7 +298,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       throw new Error(
         `unknown flag '${arg}' ` +
           '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
-          '--serve, --rebuild, --dome, --frames; positional: tour id)',
+          '--serve, --rebuild, --dome, --film, --frames; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -836,7 +843,12 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
+    const captureUrl = buildCaptureUrl({
+      base: options.url,
+      simTime,
+      dome: options.dome,
+      film: options.film,
+    });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;

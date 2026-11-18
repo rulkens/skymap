@@ -40,7 +40,10 @@ describe('starSearch', () => {
     const all = await rows();
     SEEDED.forEach(({ source, index }, i) => {
       expect(focusId.claims(all[i]!.id)).toBe(true);
-      expect(focusId.decode(all[i]!.id)).toEqual({ type: 'starCatalog', source, index });
+      expect(focusId.decode(all[i]!.id)).toEqual({
+        kind: 'hit',
+        ref: { type: 'starCatalog', source, index },
+      });
     });
   });
 

@@ -20,6 +20,7 @@ import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
 import { createLabel3DRenderer } from '../../gpu/renderers/labels3d/label3DRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
+import { createLetterboxRenderer } from '../../gpu/renderers/letterbox/letterboxRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
@@ -58,7 +59,7 @@ export const GPU_HANDLE_ROWS = [
         state,
       ),
   },
-  // The 6 swap-chain-format rows, in buildSwapRenderers.ts order.
+  // The swap-chain-format rows, in buildSwapRenderers.ts order.
   {
     key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
@@ -73,6 +74,12 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createDebugLineRenderer(deps.ctx, deps.ctx.format, 8192),
+  },
+  {
+    key: 'letterboxRenderer',
+    rebuildOnSwapFormat: true,
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLetterboxRenderer({ device: deps.ctx.device, targetFormat: deps.ctx.format }),
   },
   {
     key: 'selectionRingRenderer',

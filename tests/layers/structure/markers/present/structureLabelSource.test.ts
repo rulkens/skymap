@@ -13,7 +13,7 @@ import { createStructureStore } from '../../../../../src/layers/structure/catalo
 import { COSMO, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { structurePickCodes } from '../../../../support/layerPickCodes';
+import { structurePickCodes, structureRowRuntime } from '../../../../support/layerPickCodes';
 
 const STATE = {} as EngineState;
 const record = (over: Partial<StructureInfo>) =>
@@ -39,7 +39,7 @@ describe('structureLabelSource', () => {
     const items = cosmic.items(STATE);
     expect(items.map((p) => p.id)).toEqual(['coma', 'boo', 'virgo']);
     const labels = items.map((p, i) => cosmic.describe(p, i)!);
-    const row = structureSelectionRow(runtime);
+    const row = structureSelectionRow(structureRowRuntime(store));
     items.forEach((p, i) => {
       const { code, index } = labels[i]!.pick!;
       expect(packPickWord(code, index)).toBe(row.encodePick({ type: 'structure', id: p.id }));

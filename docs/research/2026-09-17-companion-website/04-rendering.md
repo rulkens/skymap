@@ -39,7 +39,7 @@ Authored list: `engine/frame/frameOrder.ts`; `expandFrameOrder.ts` → `executeF
 - Volume raymarching — `gpu/shaders/lib/volumeRaymarch.wesl`
 - Closed-form anisotropic-Gaussian line integral (erf / erfc) replacing a march — `gpu/shaders/lib/gaussianIntegral.wesl`
 - Black hole: Schwarzschild deflection LUT, capture / escape / annulus ray classification — `gpu/shaders/bodies/sgrAStarLensing/fragment.wesl` — **Bruneton 2020**
-- Bloom / HDR / tonemap: soft-knee prefilter + firefly clamp — `gpu/shaders/bloom/bright.wesl`, `shaders/lib/tonemap.wesl` — **Narkowicz 2015**, **Lupton 2004**
+- Bloom / HDR / tonemap: soft-knee prefilter + firefly clamp — `gpu/shaders/bloom/brightFragment.wesl`, `shaders/lib/tonemap.wesl` — **Narkowicz 2015**, **Lupton 2004**
 - Galaxy generator v1 (GPU compute, stateless hash RNG, ~150k sprites) — `engine/galaxyGenerator/v1/`
 - Galaxy generator v2 analytic field: Gaussian-mixture splats, HII Strömgren shells, 4-slice dust attenuation, arm ridges, semi-Lagrangian ISM map — `src/layers/milkyWay/field/` — **Reid et al. 2019**, **Freudenreich 1998**, **Drimmel & Spergel 2001**, **Kennicutt 1989**, **Kormendy & Kennicutt 2004**
 - MCPM / Polyphorm port: agent propagate + deposit, Woodcock delta-tracking path tracer, Henyey-Greenstein phase — `gpu/shaders/mcpm/**`, `tools/mcpm-workbench/`

@@ -15,7 +15,7 @@ import { SLAB_ROW_CEILING } from './slabRowCeiling';
 import { ALL_CUBE_FACES } from '../../../../data/rendering/cubemapCaptures';
 
 export const MAX_FRAME_INPUTS: FrameInputs = {
-  tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
+  tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0, film: null },
   bloomEnabled: true,
   // NEAR0 plus every capacity body row — sized off the registry, never by hand.
   foregroundChain: [NEAR0, ...Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)],

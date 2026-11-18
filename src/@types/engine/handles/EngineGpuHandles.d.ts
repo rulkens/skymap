@@ -21,6 +21,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
+import type { LetterboxRenderer } from '../../rendering/LetterboxRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
@@ -128,6 +129,10 @@ export type EngineGpuHandles = {
    * `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
    */
   debugLineRenderer: DebugLineRenderer | null;
+  /**
+   * The film look's letterbox bars, drawn last on the swap target by `letterboxPass`.
+   */
+  letterboxRenderer: LetterboxRenderer | null;
   /**
    * Selection-ring overlay: a white annulus around the selected galaxy on the swap-chain
    * UI overlay.

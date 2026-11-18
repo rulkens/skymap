@@ -22,6 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { setFilmEnabled } from '../../../src/state/settings/core/filmSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
@@ -38,6 +39,7 @@ import type { SelectionRowBase } from '../../../src/@types/engine/selection/Sele
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const filmSource = HASH_PARAM_SOURCES.find((source) => source.key === 'film')!;
 const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
@@ -56,8 +58,10 @@ const virgoRow = placedStructureRow({
 
 const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
+// The URL reads only the id, so any ref stands in for the one it was encoded from.
 function focusedOn(row: SelectionRowBase, focusId: string): RootState {
-  return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
+  const id = { id: focusId, ref: { type: row.type } };
+  return stateAfter(setSelectionRow({ slot: 'focus', row, id }));
 }
 
 afterEach(() => {
@@ -91,7 +95,11 @@ describe('focus row', () => {
     // still resolved would otherwise republish the OLD id until the new one
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({
+        slot: 'focus',
+        row: virgoRow,
+        id: { id: 'cluster-virgo-m87', ref: { type: 'structure', id: 'cluster-virgo-m87' } },
+      }),
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');
@@ -145,6 +153,16 @@ describe('orientation row', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('film row', () => {
+  it('film writes 1 only while on, reads 1 as on, and absent turns it off', () => {
+    expect(filmSource.write(stateAfter(setFilmEnabled(true)))).toBe('1');
+    expect(filmSource.write(stateAfter(setFilmEnabled(false)))).toBeNull();
+    expect(filmSource.read('1')).toEqual({ film: true });
+    expect(filmSource.read('0')).toEqual({});
+    expect(filmSource.readAbsent()).toEqual([setFilmEnabled(false)]);
   });
 });
 

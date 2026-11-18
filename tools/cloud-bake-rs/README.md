@@ -17,7 +17,7 @@ libjpeg-turbo's SIMD decoder; without it the build falls back to plain C.
 ## Usage
 
 ```bash
-npm run fetch-cloud-inputs -- --confirm   # once: the twelve Blue Marble months, ~360 MB
+npm run fetch-cloud-inputs -- --confirm   # once: the baseline TIFF and twelve Blue Marble months, ~400 MB, from the R2 mirror
 npm run bake-clouds -- --out cloud.webp   # yesterday (UTC); add --date 2026-11-09 and/or --offline
 ```
 

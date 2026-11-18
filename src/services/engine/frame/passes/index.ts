@@ -15,6 +15,7 @@ import { labelsNearPass } from './labelsNearPass';
 import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
+import { letterboxPass } from './letterboxPass';
 
 /** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
@@ -27,4 +28,5 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   clipPathDebugPass,
   skyCubemapBlitPass,
   domeResamplePass,
+  letterboxPass,
 ];

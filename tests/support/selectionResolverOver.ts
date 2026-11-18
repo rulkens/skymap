@@ -32,7 +32,7 @@ export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams
  * `resolveFocusId`/`focusIdOf` directly. `structures` feeds the structure row;
  * `galaxies`/`stars` append the galaxyCatalog/starCatalog Layers' rows the way
  * `createLayers` does — omit either for a composition with no such data, where
- * its ids resolve to null exactly as before that Layer is created.
+ * its ids resolve to absent exactly as before that Layer is created.
  */
 export function selectionResolverOver(
   structures: StructureRowFixture,

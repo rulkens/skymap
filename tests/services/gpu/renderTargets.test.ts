@@ -20,6 +20,7 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
 import { clearValueOf } from '../../../src/utils/gpu/clearValueOf';
+import { DEFAULT_FILM } from '../../../src/data/film/filmDefaults';
 
 const DEFAULT_DEBUG_STATE = {
   settings: { debug: { matteWhite: false } },
@@ -73,6 +74,7 @@ function stateWithDivisor(
     settings: {
       milkyWay: { renderer: 'v1', cloud: { aggregateDivisor } },
       blackHoleLensingTuning: { cubemapResolutionPx },
+      film: DEFAULT_FILM,
     },
     cubemapCaptures: makeCubemapCaptureRuntimes({
       sgrAStar: { lastBandActive, lastAnchorDistanceMpc },

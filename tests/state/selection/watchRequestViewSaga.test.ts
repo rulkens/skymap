@@ -73,7 +73,8 @@ function withFixedTargets(real: SelectionResolver): SelectionResolver {
   const rows: Record<string, typeof ABOVE> = { above: ABOVE, below: BELOW };
   return {
     ...real,
-    resolveFocusId: (id) => (id in rows ? { type: 'fixed', id } : real.resolveFocusId(id)),
+    resolveFocusId: (id) =>
+      id in rows ? { kind: 'hit', ref: { type: 'fixed', id } } : real.resolveFocusId(id),
     extractRow: (ref, t) =>
       ref?.type === 'fixed' ? rows[ref.id as string]! : real.extractRow(ref, t),
   };

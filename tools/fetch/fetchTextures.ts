@@ -10,7 +10,7 @@
  * corrupt it. Completeness is tracked per FILE (`.part` + rename, `.sha256`).
  */
 
-import { createWriteStream, mkdirSync, renameSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -21,12 +21,13 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { ALL_BODY_TEXTURE_KEYS } from '../../src/layers/body/textures/data/bodyTextureKeys';
 import { BLACK_MARBLE_QUADRANT_KEYS } from '../utils/io/blackMarbleQuadrantKeys';
-import { BMNG_MONTHS } from '../utils/io/BMNG_MONTHS';
-import { bmngMonthKey } from '../utils/io/bmngMonthKey';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
+import { CLOUD_INPUT_KEYS } from '../utils/io/CLOUD_INPUT_KEYS';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
+import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
-import { skipIfAlreadyFetched, upsertSha256Sidecar } from './fetchDesi';
+import { verifyPinnedSha256 } from '../utils/io/verifyPinnedSha256';
+import { upsertSha256Sidecar } from './fetchDesi';
 
 /** MB, spec §3 hand-tally — GET-only means no Content-Lengths to sum. */
 const BODY_SOURCES_APPROX_MB = 700;
@@ -49,8 +50,8 @@ export const FULL_FETCH_APPROX_MB =
 /** MB: the 2k SSS variants + the 5400x2700 BMNG sibling. */
 export const DEV_FETCH_APPROX_MB = 7;
 
-/** MB, all twelve 21600x10800 BMNG equirects (~30 MB each) — the cloud bake's ice-mask months. */
-const BMNG_MONTHS_APPROX_MB = 360;
+/** MB: the twelve 21600x10800 BMNG equirects (~30 MB each, the ice-mask months) + the 36 MB baseline TIFF. */
+const CLOUD_INPUTS_APPROX_MB = 396;
 
 export type TextureSource = {
   readonly url: string;
@@ -148,12 +149,16 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   return [...downloadable.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
 }
 
-/** The twelve BMNG equirects (`--bmng-months`); the full pull fetches only the `BMNG_VINTAGE` one. */
-function bmngMonthSources(): readonly TextureSource[] {
-  return BMNG_MONTHS.map(({ month }) => {
-    const key = bmngMonthKey(month);
-    return { url: RAW_DATA[key].upstream, destPath: rawDataPath(key) };
-  });
+/**
+ * The cloud bake's fixed inputs (`--cloud-inputs`), from our R2 mirror at their registry paths, never
+ * their `upstream`: eoimages.gsfc.nasa.gov timed out the nightly CI run. `upstream` stays as provenance.
+ */
+function cloudInputSources(): readonly TextureSource[] {
+  const base = readEnvProductionValue('VITE_DATA_BASE_URL');
+  return CLOUD_INPUT_KEYS.map((key) => ({
+    url: `${base}/${RAW_DATA[key].path}`,
+    destPath: rawDataPath(key),
+  }));
 }
 
 /**
@@ -216,13 +221,13 @@ async function main(): Promise<void> {
   const dev = args.includes('--dev');
   const confirm = args.includes('--confirm');
 
-  const bmngMonths = args.includes('--bmng-months');
+  const cloudInputs = args.includes('--cloud-inputs');
 
-  const sources = bmngMonths ? bmngMonthSources() : textureSourcesFor(dev);
+  const sources = cloudInputs ? cloudInputSources() : textureSourcesFor(dev);
 
-  if (bmngMonths ? !confirm : requiresConfirm(dev, confirm)) {
+  if (cloudInputs ? !confirm : requiresConfirm(dev, confirm)) {
     process.stderr.write(
-      `fetchTextures: the ${bmngMonths ? 'twelve-month Blue Marble' : 'full raw texture'} pull is ~${bmngMonths ? BMNG_MONTHS_APPROX_MB : FULL_FETCH_APPROX_MB} MB across ` +
+      `fetchTextures: the ${cloudInputs ? 'cloud bake input' : 'full raw texture'} pull is ~${cloudInputs ? CLOUD_INPUTS_APPROX_MB : FULL_FETCH_APPROX_MB} MB across ` +
         `${sources.length} sources.\n` +
         `  Re-run with --confirm to proceed, or --dev for the ~${DEV_FETCH_APPROX_MB} MB ` +
         `dev subset (2k SSS variants + the 5400x2700 BMNG Earth).\n`,
@@ -231,8 +236,10 @@ async function main(): Promise<void> {
   }
 
   const sidecarPath = rawDataPath('textures.sha256');
+  // The mirror's bytes must match a committed pin; the other pulls pin a file on first download.
+  const checkHash = cloudInputs ? verifyPinnedSha256 : upsertSha256Sidecar;
   process.stderr.write(
-    `fetchTextures: ${dev ? 'dev subset' : 'full pull'} — ${sources.length} source(s) ` +
+    `fetchTextures: ${cloudInputs ? 'cloud bake inputs' : dev ? 'dev subset' : 'full pull'} — ${sources.length} source(s) ` +
       `-> ${dirname(sources[0]!.destPath)}\n`,
   );
 
@@ -241,14 +248,15 @@ async function main(): Promise<void> {
 
     // Resume, GET-only style: skip what is already whole on disk. A pinned-hash
     // mismatch throws through to the CLI catch -> exit 1.
-    if (await skipIfAlreadyFetched(destPath, filename, sidecarPath)) {
+    if (existsSync(destPath)) {
+      await checkHash(destPath, filename, sidecarPath);
       process.stderr.write(`  ${filename}: already present — verified, skipping\n`);
       continue;
     }
 
     process.stderr.write(`  ${filename}: GET ${url}\n`);
     const { totalBytes } = await downloadGetOnly(url, destPath);
-    const digest = await upsertSha256Sidecar(destPath, filename, sidecarPath);
+    const digest = await checkHash(destPath, filename, sidecarPath);
     process.stderr.write(`    ${totalBytes.toLocaleString()} bytes, sha256 ${digest}\n`);
   }
 

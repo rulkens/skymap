@@ -14,6 +14,8 @@ import DebugSlider from './DebugSlider';
 
 export type DebugTuningSectionProps<K extends string> = {
   readonly title: string;
+  /** Initial open state, as `DebugSection`'s; closed by default. */
+  readonly defaultOpen?: boolean;
   readonly fields: readonly SliderField<K>[];
   /** The settings cluster; only the row keys are read, all numeric. */
   readonly values: { [P in K]: number };
@@ -24,13 +26,14 @@ export type DebugTuningSectionProps<K extends string> = {
 
 function DebugTuningSection<K extends string>({
   title,
+  defaultOpen,
   fields,
   values,
   onSliderChange,
   children,
 }: DebugTuningSectionProps<K>): ReactElement {
   return (
-    <DebugSection title={title}>
+    <DebugSection title={title} defaultOpen={defaultOpen}>
       {fields.map((f) => (
         <DebugSlider
           key={f.key}

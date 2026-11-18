@@ -169,6 +169,7 @@ export function createEngine(
       labelPickRendererCosmo: null,
       labelPickRendererNear: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
@@ -243,6 +244,7 @@ export function createEngine(
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
+    frameIndex: 0,
     // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
     // that getter, above, is the unrelated saga display cache.
     layers: [],
@@ -286,9 +288,8 @@ export function createEngine(
 
   // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
   // createLayers fills it once, in tuple order. `selection` reads it lazily (never
-  // rebuilds a list), so a deep link or the home ref seen before createLayers
-  // resolves nothing yet and waits on the engineStatusChanged pulse
-  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
+  // rebuilds a list). Before createLayers a focus id answers absent and its request
+  // retires; the home ref waits on the engineStatusChanged pulse (watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.off,

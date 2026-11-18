@@ -34,6 +34,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'sky-view' },
     // Any line ahead of SCENE's star draws would do; inputs come from the `star-catalog` plan row.
     { kind: 'compute', name: 'star-cut' },
+    // Ahead of the POST_FOREGROUND `asteroids` dots, which read the positions it writes.
+    { kind: 'compute', name: 'asteroid-kepler' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
@@ -279,7 +281,14 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites'],
+      passes: [
+        'orbit-trails',
+        'mission-trails',
+        'satellite-orbits',
+        'satellites',
+        'asteroid-orbits',
+        'asteroids',
+      ],
       slot: 'POST_FOREGROUND',
     },
   ],
@@ -350,6 +359,10 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
           ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
           : ['labels-near'],
       },
+      // The film look's bars, after every overlay so they mask captions the way a real
+      // matte would. Its own line: it binds no depth, and the line above must fill the
+      // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+      { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
     ],
   };
 }
