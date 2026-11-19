@@ -80,6 +80,12 @@ describe('lib/projectLabel.wesl parity', () => {
     expect(wgslCode('KIND_EQUIDISTANT')).not.toBe(wgslCode('KIND_PINHOLE'));
   });
 
+  it('the fisheye branch is taken on the equidistant code and measures its angle with atan2', () => {
+    expect(source).toMatch(/projection\.kind\s*==\s*KIND_EQUIDISTANT/);
+    expect(source).toMatch(/\batan2\s*\(/);
+    expect(source).not.toMatch(/\bacos\s*\(/);
+  });
+
   it('projectLabel.wesl names the same fields as projectLabel.ts', () => {
     const names = (struct: string) =>
       parseWgslStructFields(source, struct)

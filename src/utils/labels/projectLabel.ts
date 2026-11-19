@@ -1,23 +1,45 @@
 /**
  * projectLabel — a view-space vector onto the output image (`OutputProjection`),
  * written into `out`. The TS twin of `lib/projectLabel.wesl::projectLabel`.
- * Pinhole maths runs on the ratios `v.xy / v.z`, so it never squares an Mpc
- * magnitude: the WGSL twin sees metre-range anchors (~1e-22 Mpc) whose squares
- * flush to zero in f32.
+ * Neither kind squares an Mpc magnitude (pinhole runs on `v.xy / v.z`, the
+ * fisheye on `v` over its largest component): the WGSL twin sees metre-range
+ * anchors (~1e-22 Mpc) whose squares flush to zero in f32.
  */
 
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../@types/rendering/ProjectedLabel';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { PARALLEL_TANGENT_EPS } from '../../data/labels/parallelTangentEps';
 
 export function projectLabel(v: Readonly<Vec3>, p: OutputProjection, out: ProjectedLabel): void {
   out.up[0] = 0;
   out.up[1] = -1;
-  out.visible = v[2] > 0;
+  const equidistant = p.kind === 'equidistant';
+  const largest = Math.max(Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[2]));
+  // The dome frame sees its upper half (+y is the zenith); a pinhole sees +z.
+  out.visible = equidistant ? largest > 0 && v[1] >= 0 : v[2] > 0;
   if (!out.visible) {
     out.px[0] = 0;
     out.px[1] = 0;
     out.pxPerRad = 0;
+    return;
+  }
+  if (equidistant) {
+    const x = v[0] / largest;
+    const z = v[2] / largest;
+    const horizontal = Math.sqrt(x * x + z * z);
+    out.px[0] = p.centrePx[0];
+    out.px[1] = p.centrePx[1];
+    out.pxPerRad = p.focalPx;
+    // At the zenith no direction leads away from it: the centre, image-up.
+    if (horizontal < PARALLEL_TANGENT_EPS) return;
+    // Angle from the zenith by atan2: an arccosine loses all precision near it.
+    const radiusPx = Math.atan2(horizontal, v[1] / largest) * p.focalPx;
+    // Front (+z) runs down the image, and up points back at the zenith.
+    out.up[0] = -x / horizontal;
+    out.up[1] = -z / horizontal;
+    out.px[0] -= radiusPx * out.up[0];
+    out.px[1] -= radiusPx * out.up[1];
     return;
   }
   const tx = v[0] / v[2];

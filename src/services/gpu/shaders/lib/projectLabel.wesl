@@ -1,7 +1,8 @@
 // lib/projectLabel.wesl — the WGSL twin of 'utils/labels/projectLabel.ts',
 // 'liftedAnchor.ts' and 'tangentToward.ts', field for field; the
 // 'projectLabel.parity' test holds the structs and constants equal.
-// View space looks down +z, +y up. No function squares a raw Mpc offset:
+// Pinhole view space looks down +z, +y up; equidistant view space is the dome
+// frame (+y zenith, +z front, +x right). No function squares a raw Mpc offset:
 // metre-range anchors (~1e-22 Mpc) flush to zero when squared in f32.
 
 // Byte layout written by 'gpu/lib/outputProjectionUniform.ts'.
@@ -45,7 +46,33 @@ fn scaledLength(offset: vec3<f32>) -> f32 {
   return largest * length(offset / largest);
 }
 
+// The dome's fisheye: the zenith at the centre, the front horizon at the bottom
+// edge, up pointing back at the zenith. Sees the upper half of the dome frame.
+fn projectEquidistant(viewVec: vec3<f32>, projection: OutputProjection) -> ProjectedLabel {
+  let largest = max(abs(viewVec.x), max(abs(viewVec.y), abs(viewVec.z)));
+  if (largest == 0.0 || viewVec.y < 0.0) {
+    return ProjectedLabel(vec2<f32>(0.0), 0.0, IMAGE_UP, false);
+  }
+  let scaled = viewVec / largest;
+  let horizontal = length(scaled.xz);
+  if (horizontal < PARALLEL_TANGENT_EPS) {
+    return ProjectedLabel(projection.centrePx, projection.focalPx, IMAGE_UP, true);
+  }
+  let outward = scaled.xz / horizontal;
+  // Angle from the zenith by atan2: an arccosine loses all precision near it.
+  let radiusPx = atan2(horizontal, scaled.y) * projection.focalPx;
+  return ProjectedLabel(
+    projection.centrePx + radiusPx * outward,
+    projection.focalPx,
+    -outward,
+    true,
+  );
+}
+
 fn projectLabel(viewVec: vec3<f32>, projection: OutputProjection) -> ProjectedLabel {
+  if (projection.kind == KIND_EQUIDISTANT) {
+    return projectEquidistant(viewVec, projection);
+  }
   if (!(viewVec.z > 0.0)) {
     return ProjectedLabel(vec2<f32>(0.0), 0.0, IMAGE_UP, false);
   }
