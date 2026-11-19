@@ -342,8 +342,21 @@ export const DOME_RESAMPLE: FrameSection = {
 
 // The overlays, with the selection rings and the clip-path inspector or without them
 // (a rig with no single cursor, the dome); one builder so both keep one pass per slab
-// and one draw order. Private until a second rig lists it.
-function overlays({ selectionRings }: { readonly selectionRings: boolean }): FrameSection {
+// and one draw order. `occlusion` is what the two overlay lines are hidden by: the
+// `foreground:0` joint where the output IS the image the bodies drew in, or the mask
+// carried to the output where it is not (the dome, whose `foreground:0` holds the last
+// face only by the time these lines run).
+function overlays({
+  selectionRings,
+  occlusion,
+}: {
+  readonly selectionRings: boolean;
+  readonly occlusion: 'sampled-depth' | 'mask';
+}): FrameSection {
+  const occludedBy =
+    occlusion === 'mask'
+      ? { mask: { sample: 'dome-occlusion' } }
+      : { depth: { sample: 'foreground:0' } };
   return {
     scope: 'once',
     steps: [
@@ -361,7 +374,7 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
         kind: 'render',
         target: 'swap',
         slab: COSMO,
-        depth: { sample: 'foreground:0' },
+        ...occludedBy,
         passes: selectionRings ? ['selection-ring', 'labels-cosmo'] : ['labels-cosmo'],
       },
       // Near-field overlays, last, so scene-body captions land on top of the bodies.
@@ -373,7 +386,7 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
         kind: 'render',
         target: 'swap',
         slab: NEAR0,
-        depth: { sample: 'foreground:0' },
+        ...occludedBy,
         passes: selectionRings
           ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
           : ['labels-near'],
@@ -386,4 +399,11 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
   };
 }
 
-export const OVERLAYS: FrameSection = overlays({ selectionRings: true });
+export const OVERLAYS: FrameSection = overlays({
+  selectionRings: true,
+  occlusion: 'sampled-depth',
+});
+
+// Labels and their leaders, once, on the fisheye image itself: upright toward the
+// zenith at the dome's own pixel scale, which no per-face draw could give.
+export const DOME_OVERLAYS: FrameSection = overlays({ selectionRings: false, occlusion: 'mask' });
