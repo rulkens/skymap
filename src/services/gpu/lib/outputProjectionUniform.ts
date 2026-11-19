@@ -13,7 +13,11 @@ import type { OutputProjection } from '../../../@types/rendering/OutputProjectio
 
 export const OUTPUT_PROJECTION_BYTES = 112;
 
-const KIND_CODE: Readonly<Record<OutputProjection['kind'], number>> = { pinhole: 0 };
+// Mirrored by `KIND_PINHOLE` / `KIND_EQUIDISTANT` in the shader (same parity test).
+const KIND_CODE: Readonly<Record<OutputProjection['kind'], number>> = {
+  pinhole: 0,
+  equidistant: 1,
+};
 
 /** Writes `p` at f32 index `at` of `target`; allocates nothing beyond a u32 view. */
 export function writeOutputProjection(target: Float32Array, at: number, p: OutputProjection): void {

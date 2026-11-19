@@ -24,8 +24,7 @@ const basis: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 
 const hiLo = new Float32Array(6);
 
 export function outputProjectionOf(view: FrameView, rig: ViewRig): OutputProjection {
-  // A rig naming none (the dome, until its labels PR) keeps the canvas pinhole.
-  const kind = rig.outputProjection ?? 'pinhole';
+  const kind = rig.outputProjection;
   const { cam, drawCamPos: eye, frustum, canvasSize } = view;
 
   orbitForwardOf(cam, forward);

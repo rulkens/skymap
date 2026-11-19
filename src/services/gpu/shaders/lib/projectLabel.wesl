@@ -12,7 +12,7 @@ struct OutputProjection {
   camLo: vec3<f32>,
   pxScale: f32,
   up3: vec3<f32>,
-  // 0 = pinhole; the dome PR adds equidistant.
+  // KIND_PINHOLE or KIND_EQUIDISTANT.
   kind: u32,
   sizePx: vec2<f32>,
   centrePx: vec2<f32>,
@@ -24,6 +24,10 @@ struct ProjectedLabel {
   up: vec2<f32>,
   visible: bool,
 };
+
+// Must equal 'KIND_CODE' in 'gpu/lib/outputProjectionUniform.ts'.
+const KIND_PINHOLE: u32 = 0u;
+const KIND_EQUIDISTANT: u32 = 1u;
 
 // Must equal 'PARALLEL_TANGENT_EPS' in src/data/labels/parallelTangentEps.ts.
 const PARALLEL_TANGENT_EPS: f32 = 0.000001;

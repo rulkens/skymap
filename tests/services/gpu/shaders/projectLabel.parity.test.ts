@@ -67,6 +67,19 @@ describe('lib/projectLabel.wesl parity', () => {
     expect([buf[AT + 3], buf[AT + 7], buf[AT + 11]]).toEqual([0, 0, 0]);
   });
 
+  it('the kind codes the writer packs are the constants the shader branches on', () => {
+    const wgslCode = (name: string) =>
+      Number(new RegExp(`const\\s+${name}\\s*:\\s*u32\\s*=\\s*(\\d+)u\\s*;`).exec(source)![1]);
+    const written = (kind: OutputProjection['kind']) => {
+      const buf = new Float32Array(OUTPUT_PROJECTION_BYTES / 4);
+      writeOutputProjection(buf, 0, { ...projection, kind });
+      return new Uint32Array(buf.buffer)[92 / 4];
+    };
+    expect(written('pinhole')).toBe(wgslCode('KIND_PINHOLE'));
+    expect(written('equidistant')).toBe(wgslCode('KIND_EQUIDISTANT'));
+    expect(wgslCode('KIND_EQUIDISTANT')).not.toBe(wgslCode('KIND_PINHOLE'));
+  });
+
   it('projectLabel.wesl names the same fields as projectLabel.ts', () => {
     const names = (struct: string) =>
       parseWgslStructFields(source, struct)
