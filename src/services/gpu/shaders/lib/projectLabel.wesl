@@ -46,8 +46,9 @@ fn scaledLength(offset: vec3<f32>) -> f32 {
   return largest * length(offset / largest);
 }
 
-// The dome's fisheye: the zenith at the centre, the front horizon at the bottom
-// edge, up pointing back at the zenith. Sees the upper half of the dome frame.
+// The dome's fisheye: the zenith at the centre, the horizon stretched over the
+// canvas edge as the resample draws it (front at the bottom), up pointing back
+// at the zenith in px. Sees the upper half of the dome frame.
 fn projectEquidistant(viewVec: vec3<f32>, projection: OutputProjection) -> ProjectedLabel {
   let largest = max(abs(viewVec.x), max(abs(viewVec.y), abs(viewVec.z)));
   if (largest == 0.0 || viewVec.y < 0.0) {
@@ -58,13 +59,14 @@ fn projectEquidistant(viewVec: vec3<f32>, projection: OutputProjection) -> Proje
   if (horizontal < PARALLEL_TANGENT_EPS) {
     return ProjectedLabel(projection.centrePx, projection.focalPx, IMAGE_UP, true);
   }
-  let outward = scaled.xz / horizontal;
+  // Where this bearing meets the horizon, px from the centre: one radius per axis.
+  let edgePx = 0.5 * projection.sizePx * scaled.xz / horizontal;
   // Angle from the zenith by atan2: an arccosine loses all precision near it.
-  let radiusPx = atan2(horizontal, scaled.y) * projection.focalPx;
+  let horizonFraction = atan2(horizontal, scaled.y) / HALF_PI;
   return ProjectedLabel(
-    projection.centrePx + radiusPx * outward,
+    projection.centrePx + horizonFraction * edgePx,
     projection.focalPx,
-    -outward,
+    -normalize(edgePx),
     true,
   );
 }

@@ -38,7 +38,9 @@ the dome its sizes.
 - **P2. Declutter on the dome uses the axis-aligned bounds of the rotated box.** One rule
   for both rigs; a label near a diagonal claims slightly more room than its ink. The dome
   is unpickable, so pick boxes need nothing more.
-- **P3. `N` is the fisheye circle's diameter: `min(canvas width, height)` in device px.**
+- **P3. `N` is `min(canvas width, height)` in device px, and it sets sizes only.** Positions
+  follow the resample, which stretches the horizon over the whole canvas: on a non-square
+  canvas the image is an ellipse and a label lands on its subject there too.
 - **P4. The light-time spheres' fade stays in face pixels.** It needs the output scale in
   the shared camera prefix, which is the pixel-floors backlog item's work; the carried line
   stays in that file.
@@ -57,12 +59,14 @@ centre is the zenith and the front lands at the bottom.
 
 ```
 θ      = atan2(length(d.xz), d.y)          // never acos(dot)
-rPx    = θ × focalPx                       // focalPx = N/π
-px     = centrePx + rPx × (d.x, d.z) / length(d.xz)     // image y runs down
+px     = centrePx + (θ / (π/2)) × (sizePx / 2) × (d.x, d.z) / length(d.xz)   // image y runs down
 up     = normalize(centrePx − px)          // toward the zenith
-pxPerRad = focalPx
+pxPerRad = focalPx                         // N/π: sizes, not positions
 visible  = θ ≤ π/2
 ```
+
+The offset is per axis because the resample maps the horizon to the canvas edge in NDC; on a
+square canvas it is `θ × focalPx` along the bearing.
 
 Within `PARALLEL_TANGENT_EPS` of the zenith `px = centrePx` and `up` is image-up
 `(0, −1)`.

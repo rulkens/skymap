@@ -102,6 +102,16 @@ describe('projectLabel, equidistant', () => {
     expect(project([0.3, 0.2, -0.9]).pxPerRad).toBe(2000 / Math.PI);
   });
 
+  it('a wide canvas stretches the horizon to its edges, as the resample does', () => {
+    const wide = equidistantFixture(2000, 1000);
+    const out: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
+    projectLabel([1, 0, 0], wide, out);
+    expectVec2(out.px, [2000, 500]);
+    projectLabel([0, 0, 1], wide, out);
+    expectVec2(out.px, [1000, 1000]);
+    expect(out.pxPerRad).toBe(1000 / Math.PI);
+  });
+
   it('scale does not matter', () => {
     const v: Vec3 = [0.3, 0.2, -0.9];
     expectVec2(project([v[0] * 1e-22, v[1] * 1e-22, v[2] * 1e-22]).px, project(v).px);

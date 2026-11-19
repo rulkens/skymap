@@ -34,12 +34,17 @@ export function projectLabel(v: Readonly<Vec3>, p: OutputProjection, out: Projec
     // At the zenith no direction leads away from it: the centre, image-up.
     if (horizontal < PARALLEL_TANGENT_EPS) return;
     // Angle from the zenith by atan2: an arccosine loses all precision near it.
-    const radiusPx = Math.atan2(horizontal, v[1] / largest) * p.focalPx;
-    // Front (+z) runs down the image, and up points back at the zenith.
-    out.up[0] = -x / horizontal;
-    out.up[1] = -z / horizontal;
-    out.px[0] -= radiusPx * out.up[0];
-    out.px[1] -= radiusPx * out.up[1];
+    const horizonFraction = Math.atan2(horizontal, v[1] / largest) / (Math.PI / 2);
+    // The resample stretches the horizon over the whole canvas, so each axis has its own
+    // radius. Front (+z) runs down the image.
+    const edgeX = ((p.sizePx[0] / 2) * x) / horizontal;
+    const edgeY = ((p.sizePx[1] / 2) * z) / horizontal;
+    const edge = Math.sqrt(edgeX * edgeX + edgeY * edgeY);
+    out.px[0] += horizonFraction * edgeX;
+    out.px[1] += horizonFraction * edgeY;
+    // Up points back at the zenith, in px.
+    out.up[0] = -edgeX / edge;
+    out.up[1] = -edgeY / edge;
     return;
   }
   const tx = v[0] / v[2];

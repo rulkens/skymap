@@ -5,7 +5,7 @@
  * an f32 hi/lo pair, and the frustum's principal point and focal length. Authored
  * px are CSS px, so `pxScale` is the view's device pixel ratio. Equidistant: that
  * rotation turned into the dome frame by the basis the dome faces are built from,
- * over a fisheye circle as wide as the canvas's short side.
+ * with sizes set by the canvas's short side (positions follow the resample: `projectLabel`).
  */
 
 import { mat4d } from 'wgpu-matrix';
