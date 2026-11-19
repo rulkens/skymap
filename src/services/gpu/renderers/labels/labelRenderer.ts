@@ -69,11 +69,16 @@ export function createLabelRenderer(
   const firstMetrics: FontMetrics = atlases.metricsByFont[FONT_IDS[0]!];
 
   // Group 0: uniforms and records for the vertex stage, the atlas (2, 3, read by
-  // lib/msdf.wesl), and the style table at 4.
+  // lib/msdf.wesl), and the style table at 4. The mask fragment reads the uniforms too:
+  // the output size maps its px onto a mask of another size.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'label-bgl',
     entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       {
         binding: 2,

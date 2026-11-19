@@ -8,6 +8,7 @@
  * reconcile / destroy tests can detect view replacement and per-texture
  * teardown by call count.
  */
+import { OCCLUSION_MASK_DOWNSCALE } from '../../../src/data/rendering/occlusionMaskDownscale';
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
@@ -600,6 +601,22 @@ describe('createRenderTargets', () => {
     targets.reconcile({ ...stateWithDivisor(MW_DIVISOR), viewRig: 'dome' }, canvas);
     expect(labels()).toContain('render-target-dome-cube-occlusion');
     expect(labels()).toContain('render-target-dome-occlusion');
+    // Reduced: full size cost 233 MB at 2205 px.
+    const sizeOf = (label: string): GPUExtent3DDict =>
+      (device.createTexture as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c) => c[0].label === label,
+      )![0].size;
+    const reduced = canvas.width / OCCLUSION_MASK_DOWNSCALE;
+    expect(sizeOf('render-target-dome-cube-occlusion')).toEqual({
+      width: reduced,
+      height: reduced,
+      depthOrArrayLayers: DOME_FACE_COUNT,
+    });
+    expect(sizeOf('render-target-dome-occlusion')).toEqual({
+      width: reduced,
+      height: reduced,
+      depthOrArrayLayers: 1,
+    });
     // A layer per face: `ViewSpec.layer` indexes them as it does `dome-cube`'s.
     expect(() => targets.layerViewOf('dome-cube-occlusion', DOME_FACE_COUNT - 1)).not.toThrow();
   });

@@ -78,6 +78,7 @@ import {
   OCCLUSION_MASK_FORMAT,
 } from '../../data/renderTargetFormats';
 import { OCCLUSION_MASK_CLEAR } from '../../data/rendering/occlusionMaskClear';
+import { OCCLUSION_MASK_DOWNSCALE } from '../../data/rendering/occlusionMaskDownscale';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
@@ -215,12 +216,13 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // Each face's occlusion mask (`occlusionMaskPass`), a layer per face beside its
     // `dome-cube` layer, and their resample onto the fisheye image, which the dome's
     // overlays read. Both clear to "nothing in front", so a frame that writes no mask
-    // occludes nothing. Another 5 × N² × 8 B, hence the same gate.
+    // occludes nothing. Reduced (`OCCLUSION_MASK_DOWNSCALE`): every writer and reader maps by
+    // uv or by the texture's own size, never 1:1 texels.
     {
       id: 'dome-cube-occlusion',
       format: OCCLUSION_MASK_FORMAT,
       depth: null,
-      scale: 1,
+      scale: OCCLUSION_MASK_DOWNSCALE,
       layers: DOME_FACE_COUNT,
       clearValue: OCCLUSION_MASK_CLEAR,
       allocateWhen: (state) => state.viewRig === 'dome',
@@ -229,7 +231,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       id: 'dome-occlusion',
       format: OCCLUSION_MASK_FORMAT,
       depth: null,
-      scale: 1,
+      scale: OCCLUSION_MASK_DOWNSCALE,
       clearValue: OCCLUSION_MASK_CLEAR,
       allocateWhen: (state) => state.viewRig === 'dome',
     },

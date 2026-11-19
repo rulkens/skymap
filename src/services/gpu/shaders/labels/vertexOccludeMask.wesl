@@ -9,6 +9,7 @@ import package::labels::io::VsOut;
 import package::labels::io::LeaderVsOut;
 import package::labels::io::LabelRecord;
 import package::labels::io::RECORD_GROUNDED;
+import package::labels::vertex::recordUniforms;
 import package::labels::vertex::records;
 import package::labels::vertex::styleOf;
 import package::labels::vertex::PlacedRecord;
@@ -24,7 +25,11 @@ fn maskVerdictAt(atPx: vec2<f32>, record: LabelRecord, placed: PlacedRecord) -> 
   if (!placed.subject.visible || (record.style & RECORD_GROUNDED) != 0u) {
     return 0.0;
   }
-  return maskOccludes(atPx, (placed.distanceMpc - record.radiusMpc) * MPC_TO_KM);
+  return maskOccludes(
+    atPx,
+    (placed.distanceMpc - record.radiusMpc) * MPC_TO_KM,
+    recordUniforms.out.sizePx,
+  );
 }
 
 @vertex

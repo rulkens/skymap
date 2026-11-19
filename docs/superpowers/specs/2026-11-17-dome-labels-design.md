@@ -254,9 +254,10 @@ row of 5–15 lines.
 from the list above, this note wins.
 
 - **Occlusion (P1, M3).** The mask is built as D9 says: one pass writes coverage and distance
-  per face, and the resample carries the five to `dome-occlusion` at output size. M3's ruling
-  is two sources: mono keeps its sampled depth; the dome's labels read the mask through their
-  own pipeline pair.
+  per face, and the resample carries the five to `dome-occlusion`. Both masks are half the
+  linear size of the face and the output (`OCCLUSION_MASK_DOWNSCALE`; full size cost 233 MB
+  and about 4% of the frame at 2205 px). M3's ruling is two sources: mono keeps its sampled
+  depth; the dome's labels read the mask through their own pipeline pair.
 - **Boxes (P2).** Declutter judges upright bounds: the bounds of the label's four card
   corners as projected (`labelCornerPx`).
 - **`N` (P3).** `N` is the side of the dome canvas, which CSS boxes to a square.
