@@ -57,7 +57,6 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
       out = lifted;
     }
     frame.distanceMpc[i] = distance;
-    frame.depthMpc[i] = view[2];
     frame.diameterPx[i] = distance > 0 ? ((2 * radius) / distance) * p.focalPx : 0;
     if (!subject.visible || !out.visible) continue;
 

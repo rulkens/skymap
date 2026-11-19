@@ -9,7 +9,6 @@ export function createLabelFrame(capacity: number): LabelFrame {
     onScreen: new Uint8Array(capacity),
     diameterPx: new Float32Array(capacity),
     distanceMpc: new Float64Array(capacity),
-    depthMpc: new Float64Array(capacity),
     textPx: new Float32Array(capacity),
     rect: new Float32Array(capacity * 4),
     target: new Float32Array(capacity),

@@ -1,7 +1,7 @@
 /**
  * targetAlpha — the alpha each label heads for, from the rules every label obeys (spec D6),
  * written once here instead of per Layer. Focus, hover and select match by packed pick word.
- *  - no position, behind the eye, or nearer than the director's `nearHideMpc`: 0
+ *  - no position, not visible, or nearer the eye than the director's `nearHideMpc`: 0
  *  - "focused only": 0 unless it names the focused, hovered or selected subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
@@ -50,7 +50,7 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     const pick = u32[base + W.pick]!;
     const named = pick !== 0 && (pick === hoveredPick || pick === selectedPick);
     frame.named[i] = named ? 1 : 0;
-    if (!frame.visible[i] || frame.depthMpc[i]! < nearHideMpc) continue;
+    if (!frame.visible[i] || frame.distanceMpc[i]! < nearHideMpc) continue;
     const focused = pick !== 0 && pick === focusPickId;
     if (inputs.focusedOnly && !focused && !named) continue;
 
