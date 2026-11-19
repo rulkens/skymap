@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ForwardProjectedPoint } from '../../../src/@types/camera/projection/ForwardProjectedPoint';
 import type { ProjectedLabel } from '../../../src/@types/rendering/ProjectedLabel';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
-import type { ViewRig } from '../../../src/@types/engine/frame/ViewRig';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { DOME_LABEL_SCALE } from '../../../src/data/labels/domeLabelScale';
 import { REFERENCE_PX_PER_RAD } from '../../../src/data/labels/referencePxPerRad';
@@ -80,7 +79,6 @@ describe('outputProjectionOf', () => {
 });
 
 describe('outputProjectionOf, equidistant', () => {
-  const FISHEYE: ViewRig = { ...VIEW_RIGS.dome, outputProjection: 'equidistant' };
   const at = { eyeMpc: [3e-12, -2e-12, 1e-12] as Vec3, forward: [0.3, -0.5, 0.81] as Vec3 };
   // A square canvas: the resample stretches its circle over the whole output.
   const square = (view: FrameView): FrameView => ({
@@ -88,7 +86,7 @@ describe('outputProjectionOf, equidistant', () => {
     canvasSize: { width: 2000, height: 2000 },
   });
   const [canvas] = frameViewsAt({ ...at, distanceMpc: 1e-3 }).map(square);
-  const output = outputProjectionOf(canvas!, FISHEYE);
+  const output = outputProjectionOf(canvas!, VIEW_RIGS.dome);
   // Rows of the pinhole rotation are the camera's right, up and forward in world.
   const pinhole = outputProjectionOf(canvas!, VIEW_RIGS.mono).viewFromWorld;
   const camUp: Vec3 = [pinhole[1], pinhole[4], pinhole[7]];
@@ -151,6 +149,6 @@ describe('outputProjectionOf, equidistant', () => {
       ...canvas!,
       canvasSize: { width: 4000, height: Math.PI * REFERENCE_PX_PER_RAD },
     };
-    expect(outputProjectionOf(view, FISHEYE).pxScale).toBeCloseTo(DOME_LABEL_SCALE, 12);
+    expect(outputProjectionOf(view, VIEW_RIGS.dome).pxScale).toBeCloseTo(DOME_LABEL_SCALE, 12);
   });
 });

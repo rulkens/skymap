@@ -4,8 +4,9 @@
 // so no slab matrix is needed. An 'above' style stands its text on
 // 'liftedAnchor' (alignY bottom, so the lift alone clears the subject); text
 // height is the style's em over the subject's distance, at the subject's own
-// pixels per radian, clamped to LABEL_TEXT_PX (the CPU twin is 'projectRecords'). Hover and select whiten the
-// colour here, by pick word, so only alpha changes per frame on the CPU.
+// pixels per radian, clamped to LABEL_TEXT_PX (the CPU twin is
+// 'projectRecords'). Hover and select whiten the colour here, by pick word, so
+// only alpha changes per frame on the CPU.
 
 import package::labels::io::RecordUniforms;
 import package::labels::io::LabelRecord;

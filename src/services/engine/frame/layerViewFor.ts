@@ -1,7 +1,6 @@
 /**
- * layerViewFor — a render step's colour view in a layered target row: the layer THIS
- * view owns (`FrameView.layer`), since WebGPU rejects a multi-layer view as an
- * attachment. A view that owns none is a wiring bug, hence the throw.
+ * layerViewFor — the layer of a layered target row THIS view owns (`FrameView.layer`):
+ * WebGPU rejects a multi-layer view as an attachment.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';

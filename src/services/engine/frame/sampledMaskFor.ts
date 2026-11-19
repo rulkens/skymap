@@ -1,8 +1,7 @@
 /**
- * sampledMaskFor — what a `mask: { sample }` step hands its passes as
- * `SlabView.sampledMask`: the source row's view, or `null` unless a step wrote that row
- * THIS frame. `rendered` is the frame-wide set (`executeFrame`), right for a mask the
- * whole frame builds once and every later step reads.
+ * sampledMaskFor — a `mask: { sample }` step's `SlabView.sampledMask`: `null` unless a
+ * step wrote the source row THIS frame. `rendered` is frame-wide: right for a mask the
+ * frame builds once, wrong for a per-view row.
  */
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';

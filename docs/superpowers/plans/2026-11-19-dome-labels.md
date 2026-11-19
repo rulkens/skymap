@@ -172,29 +172,6 @@ Tests:
 > Superseded by B3: `rotatedBoxBounds` and its test were deleted, and `projectRecords` takes
 > the ink box as the bounds of the four box corners through `labelCornerPx`.
 
-**Files:** `src/services/engine/labels/projectRecords.ts`, `src/utils/labels/rotatedBoxBounds.ts` (new),
-`tests/utils/labels/rotatedBoxBounds.test.ts` (new), `tests/services/engine/labels/projectRecords.test.ts`
-
-```ts
-/** Axis-aligned bounds of `box` (x0, y0, x1, y1 around the origin, image y down) turned so
- *  its up edge faces `up`, then moved to `at`; written into `out` at `outAt`. */
-export function rotatedBoxBounds(
-  box: ArrayLike<number>, boxAt: number, scale: number,
-  up: Readonly<Vec2>, at: Readonly<Vec2>,
-  out: Float32Array, outAt: number,
-): void;
-```
-
-The turn is the shader's: `cornerPx = at + (across × x − up × y) × scale` with
-`across = (−up.y, up.x)` (`expandRecordGlyph`). `projectRecords` calls it in place of the
-four `frame.rect` lines and drops "Pinhole only" from its header.
-
-Tests:
-
-- `image-up returns the box itself` — `up = (0, −1)` → `out` equals `at + box × scale`.
-- `a quarter turn swaps width and height` — `up = (−1, 0)`, box 100 × 20 → bounds 20 × 100.
-- `a diagonal up bounds all four corners`.
-
 ---
 
 ### Task B3: dome text lies on a card facing the viewer

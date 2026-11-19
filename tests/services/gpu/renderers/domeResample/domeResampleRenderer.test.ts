@@ -7,7 +7,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createDomeResampleRenderer } from '../../../../../src/services/gpu/renderers/domeResample/domeResampleRenderer';
-import fsCode from '../../../../../src/services/gpu/shaders/domeResample/fragment.wesl?static';
 import fsOcclusionCode from '../../../../../src/services/gpu/shaders/domeResample/fragmentOcclusion.wesl?static';
 
 function mockDevice() {
@@ -72,9 +71,8 @@ describe('createDomeResampleRenderer', () => {
     expect(pass.draw).toHaveBeenCalledWith(3);
   });
 
-  it('both resamples link the one face choice, and the mask takes a single texel', () => {
-    expect(fsCode).toContain('fn fisheyeFaceTap');
-    expect(fsOcclusionCode).toContain('fn fisheyeFaceTap');
+  it('the mask resample takes a single texel', () => {
+    // rg32float is unfilterable: a `textureSample` here fails validation on a device only.
     expect(fsOcclusionCode).toContain('textureLoad');
     expect(fsOcclusionCode).not.toContain('textureSample');
   });

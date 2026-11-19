@@ -1,8 +1,9 @@
 /**
  * domeOcclusionResamplePass — the five faces' occlusion masks resampled into
  * `dome-occlusion`, the one mask the dome's overlays read on the fisheye image.
- * Off on a frame no face wrote its mask, so it never carries a stale layer forward;
- * a reader then finds `dome-occlusion` unrendered and draws unoccluded.
+ * Off when no face wrote its mask (the mask pass switched off in the DebugPanel), so it
+ * never carries a stale layer forward; a reader then finds `dome-occlusion` unrendered
+ * and draws unoccluded.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

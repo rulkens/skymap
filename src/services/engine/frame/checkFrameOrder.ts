@@ -2,12 +2,11 @@
  * checkFrameOrder — the once-at-boot cross-check over every `ViewRig`'s
  * program: catches a pass/compute/planner a Layer contributes but no line
  * runs, a name listed twice, a mistyped target, a mask sampled before it is
- * written, or a plan row that doesn't lead its section. "Listed twice" is checked PER PROGRAM (a section two
- * rigs share, like `PRELUDE`, submits separately in each rig's own encoder);
- * "some program runs it" is checked ACROSS every program. A `plan` row is
- * strict: it always names a registered `FrameContentPlanner` whose scope
- * matches its section's, so an unmatched name throws immediately — unlike a
- * pass/compute, which a composition without that Layer simply omits.
+ * written, or a plan row that doesn't lead its section. "Listed twice" is
+ * checked PER PROGRAM (a section two rigs share, like `PRELUDE`, submits in
+ * each rig's own encoder); "some program runs it" ACROSS every program. A
+ * `plan` row is strict: its `FrameContentPlanner` must be registered with its
+ * section's scope, where a pass/compute of an absent Layer is simply omitted.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

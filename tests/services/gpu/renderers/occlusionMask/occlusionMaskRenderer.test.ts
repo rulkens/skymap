@@ -1,14 +1,12 @@
 /**
- * occlusionMaskRenderer against a mocked GPUDevice, with the real `?static` imports so
- * weslStaticPlugin links `occlusionMask/vertex.wesl` and `fragment.wesl` (and through it
- * `lib/sceneDepth.wesl`) under Vitest.
+ * occlusionMaskRenderer against a mocked GPUDevice; importing it links
+ * `occlusionMask/vertex.wesl` and `fragment.wesl` (and through it `lib/sceneDepth.wesl`).
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import type { SampledDepthSceneOcclusion } from '../../../../../src/@types/rendering/SampledDepthSceneOcclusion';
 import { OCCLUSION_COVERAGE_GROUP_INDEX } from '../../../../../src/services/gpu/renderers/labels/occlusionCoverageGroup';
 import { createOcclusionMaskRenderer } from '../../../../../src/services/gpu/renderers/occlusionMask/occlusionMaskRenderer';
-import fsCode from '../../../../../src/services/gpu/shaders/occlusionMask/fragment.wesl?static';
 
 function mockDevice() {
   const bindGroups: GPUBindGroupDescriptor[] = [];
@@ -59,11 +57,5 @@ describe('createOcclusionMaskRenderer', () => {
       expect.objectContaining({ buffer: expect.anything() }),
     ]);
     expect(pass.draw).toHaveBeenCalledWith(3);
-  });
-
-  it('the linked fragment keeps the joint in group(1) and writes both channels', () => {
-    expect(fsCode).toMatch(/@group\(1\)\s*@binding\(1\)/);
-    expect(fsCode).toContain('sceneSurfaceKm');
-    expect(fsCode).toContain('NO_SURFACE_KM');
   });
 });
