@@ -4,6 +4,7 @@ import type { ProjectedLabel } from '../../../src/@types/rendering/ProjectedLabe
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ViewRig } from '../../../src/@types/engine/frame/ViewRig';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { DOME_LABEL_SCALE } from '../../../src/data/labels/domeLabelScale';
 import { REFERENCE_PX_PER_RAD } from '../../../src/data/labels/referencePxPerRad';
 import { DOME_FACES } from '../../../src/data/rendering/domeFaces';
 import { DOME_PARAMS } from '../../../src/data/rendering/domeParams';
@@ -145,11 +146,11 @@ describe('outputProjectionOf, equidistant', () => {
     });
   });
 
-  it('pxScale is 1 on a dome whose N/π equals the reference', () => {
+  it('pxScale is the dome label scale on a dome whose N/π equals the reference', () => {
     const view = {
       ...canvas!,
       canvasSize: { width: 4000, height: Math.PI * REFERENCE_PX_PER_RAD },
     };
-    expect(outputProjectionOf(view, FISHEYE).pxScale).toBeCloseTo(1, 12);
+    expect(outputProjectionOf(view, FISHEYE).pxScale).toBeCloseTo(DOME_LABEL_SCALE, 12);
   });
 });

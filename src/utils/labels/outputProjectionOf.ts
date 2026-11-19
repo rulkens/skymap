@@ -15,6 +15,7 @@ import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ImagePlaneBasis } from '../../@types/camera/pose/ImagePlaneBasis';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { DOME_LABEL_SCALE } from '../../data/labels/domeLabelScale';
 import { REFERENCE_PX_PER_RAD } from '../../data/labels/referencePxPerRad';
 import { DOME_PARAMS } from '../../data/rendering/domeParams';
 import { frameUp } from '../camera/orbitPose/frameUp';
@@ -63,7 +64,7 @@ export function outputProjectionOf(view: FrameView, rig: ViewRig): OutputProject
       sizePx: [canvasSize.width, canvasSize.height],
       centrePx: [canvasSize.width / 2, canvasSize.height / 2],
       focalPx,
-      pxScale: focalPx / REFERENCE_PX_PER_RAD,
+      pxScale: (focalPx / REFERENCE_PX_PER_RAD) * DOME_LABEL_SCALE,
     };
   }
   const width = frustum.tanRight - frustum.tanLeft;
