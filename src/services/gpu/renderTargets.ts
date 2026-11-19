@@ -72,7 +72,12 @@ import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpe
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { DOME_FACE_COUNT } from '../../data/rendering/domeFaces';
-import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
+import {
+  HDR_TARGET_FORMAT,
+  FOREGROUND_DEPTH_FORMAT,
+  OCCLUSION_MASK_FORMAT,
+} from '../../data/renderTargetFormats';
+import { OCCLUSION_MASK_CLEAR } from '../../data/rendering/occlusionMaskClear';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
@@ -205,6 +210,27 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1,
       layers: DOME_FACE_COUNT,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      allocateWhen: (state) => state.viewRig === 'dome',
+    },
+    // Each face's occlusion mask (`occlusionMaskPass`), a layer per face beside its
+    // `dome-cube` layer, and their resample onto the fisheye image, which the dome's
+    // overlays read. Both clear to "nothing in front", so a frame that writes no mask
+    // occludes nothing. Another 5 × N² × 8 B, hence the same gate.
+    {
+      id: 'dome-cube-occlusion',
+      format: OCCLUSION_MASK_FORMAT,
+      depth: null,
+      scale: 1,
+      layers: DOME_FACE_COUNT,
+      clearValue: OCCLUSION_MASK_CLEAR,
+      allocateWhen: (state) => state.viewRig === 'dome',
+    },
+    {
+      id: 'dome-occlusion',
+      format: OCCLUSION_MASK_FORMAT,
+      depth: null,
+      scale: 1,
+      clearValue: OCCLUSION_MASK_CLEAR,
       allocateWhen: (state) => state.viewRig === 'dome',
     },
     {

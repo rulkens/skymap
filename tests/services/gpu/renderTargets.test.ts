@@ -21,6 +21,8 @@ import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTa
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
 import { clearValueOf } from '../../../src/utils/gpu/clearValueOf';
 import { DEFAULT_FILM } from '../../../src/data/film/filmDefaults';
+import { DOME_FACE_COUNT } from '../../../src/data/rendering/domeFaces';
+import { OCCLUSION_MASK_NO_SURFACE_KM } from '../../../src/data/rendering/occlusionMaskClear';
 
 const DEFAULT_DEBUG_STATE = {
   settings: { debug: { matteWhite: false } },
@@ -578,6 +580,41 @@ describe('createRenderTargets', () => {
       // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
       const clearValue = clearValueOf(spec, DEFAULT_DEBUG_STATE) as GPUColorDict;
       expect(clearValue.a).toBe(expectedAlpha);
+    }
+  });
+
+  it('dome-cube-occlusion is allocated only on the dome rig', () => {
+    const device = mockDevice();
+    const labels = (): string[] =>
+      (device.createTexture as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0].label);
+    const canvas = { width: 640, height: 640 };
+    const targets = createRenderTargets(
+      device,
+      CORE_AND_LENS_ROWS,
+      canvas,
+      stateWithDivisor(MW_DIVISOR),
+    );
+    expect(labels()).not.toContain('render-target-dome-cube-occlusion');
+    expect(labels()).not.toContain('render-target-dome-occlusion');
+
+    targets.reconcile({ ...stateWithDivisor(MW_DIVISOR), viewRig: 'dome' }, canvas);
+    expect(labels()).toContain('render-target-dome-cube-occlusion');
+    expect(labels()).toContain('render-target-dome-occlusion');
+    // A layer per face: `ViewSpec.layer` indexes them as it does `dome-cube`'s.
+    expect(() => targets.layerViewOf('dome-cube-occlusion', DOME_FACE_COUNT - 1)).not.toThrow();
+  });
+
+  // A mask texel no pass wrote must read "nothing in front": that is what makes a frame
+  // with no foreground safe to read.
+  it('the occlusion-mask rows clear to coverage 0 and no surface', () => {
+    for (const id of ['dome-cube-occlusion', 'dome-occlusion']) {
+      const row = renderTargetRows(SWAP_FORMAT).find((spec) => spec.id === id)!;
+      expect(clearValueOf(row, DEFAULT_DEBUG_STATE)).toEqual({
+        r: 0,
+        g: OCCLUSION_MASK_NO_SURFACE_KM,
+        b: 0,
+        a: 0,
+      });
     }
   });
 

@@ -143,7 +143,11 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'domeResampleRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+      createDomeResampleRenderer({
+        device: deps.ctx.device,
+        targetFormat: HDR_TARGET_FORMAT,
+        occlusionFormat: OCCLUSION_MASK_FORMAT,
+      }),
   },
   {
     key: 'occlusionMaskRenderer',

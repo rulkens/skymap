@@ -313,12 +313,31 @@ export const POST: FrameSection = {
 // the whole row back into `hdr` for `POST`.
 export const SCENE_TO_DOME_CUBE: FrameSection = {
   scope: 'perView',
-  steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }],
+  steps: [
+    ...SCENE.steps,
+    { kind: 'copy', source: 'hdr' },
+    // What this face's foreground puts in front of an overlay, into the face's own
+    // layer (`ViewSpec.layer`). After the whole foreground chain, whose last row's depth
+    // it samples. The overlays read the resampled mask, never `foreground:0`: by the
+    // time they draw it holds the last face alone.
+    {
+      kind: 'render',
+      target: 'dome-cube-occlusion',
+      slab: NEAR0,
+      depth: { sample: 'foreground:0' },
+      passes: ['occlusion-mask'],
+    },
+  ],
 };
 
 export const DOME_RESAMPLE: FrameSection = {
   scope: 'once',
-  steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
+  steps: [
+    { kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] },
+    // The masks follow the image through the same face choice, so a label hides
+    // exactly where the resampled body covers it.
+    { kind: 'render', target: 'dome-occlusion', slab: COSMO, passes: ['dome-occlusion-resample'] },
+  ],
 };
 
 // The overlays, with the selection rings and the clip-path inspector or without them
