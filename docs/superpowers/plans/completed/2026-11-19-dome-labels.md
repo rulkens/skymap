@@ -1,6 +1,6 @@
 # Labels on the dome: implementation plan
 
-**Spec:** `docs/superpowers/specs/2026-11-17-dome-labels-design.md` (§7; decisions D8–D10).
+**Spec:** `docs/superpowers/specs/completed/2026-11-17-dome-labels-design.md` (§7; decisions D8–D10).
 **Prep (merged):** #1144, `docs/superpowers/plans/completed/2026-11-17-labels-as-data-prep.md`.
 **Carried risks:** `docs/backlog/2026-09-23-dome-output-space-overlays.md`, last two sections.
 
@@ -421,17 +421,21 @@ recording P1–P4 and M3's ruling.
 
 - [x] Labels and leaders draw on `?dome`, upright toward the zenith, at all four poses (owner-signed shots).
 - [x] A label's subject and its text agree on the dome (the C1 face-centre test, plus the shots).
-- [ ] Mono shots at the four poses match main's.
-      Not measured: no main server ran, so there is no pixel diff. Mono does change by design
-      above the 60° lens (the fill-the-view fade, owner-accepted).
+- [x] Mono matches the base outside the owner-accepted changes.
+      Pixel diff against d4051fb77 at six poses, clock pinned, two rounds: at dpr 2 nothing
+      differs beyond the dither floor except 4 px on two glyph edges at star-field (cause not
+      confirmed; likely f32 rounding in the rewritten text-height expression). At dpr 1 only
+      leaders differ (the accepted one-pixel rule). The wide-lens fade and near-hide changes
+      were not exercised by these poses.
 - [x] `ViewRig.outputProjection` is required; no `?? 'pinhole'` fallback remains.
 - [x] No label-path line reads `v.z` or `focalPx` for a size except subject diameter, the
       fill-the-view span (`FILL_SPAN_RAD`) and the card's px per radian (`labelCornerPx`).
 - [x] `projectLabel` TS and WGSL agree under the parity test for both kinds.
-- [ ] Perf at the four poses is neutral in mono.
-      One run, no before/after against main: label GPU rows 0.3–0.7 ms, CPU 0.08–0.14 ms; mono
-      lists no mask or dome pass.
-- [ ] A dome label hides behind a body and is cut along its edge (owner-signed shot).
-      Seen on the Saturn and Hubble shots; no separate owner check is recorded here.
+- [x] Perf in mono, A-B-A-B against the base at the four poses: GPU totals and label rows
+      inside the run-to-run spread; no mask or dome pass in mono. Main-thread `labels:near0` is
+      0.02–0.035 ms slower per frame (0.13 → 0.16 ms), above the spread: reported to the owner.
+      Dome: the half-size mask costs 1.7–2.0 ms per frame and 58 MB at 2205 px (headless Mac).
+- [x] A dome label hides behind a body and is cut along its edge (owner passed the Hubble
+      edge check, 2026-11-19).
 - [x] Backlog: closed risks removed.
-- [ ] `npm test`, `npm run typecheck`, format: green in CI.
+- [x] `npm test`, `npm run typecheck`, format: green in CI (675457efb).
