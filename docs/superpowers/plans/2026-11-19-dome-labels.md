@@ -194,27 +194,57 @@ Tests:
 
 ---
 
-### Task B3: a label keeps its proportions on the dome
+### Task B3: dome text lies on a card facing the viewer
 
-**Files:** `src/@types/rendering/ProjectedLabel.d.ts`, `src/utils/labels/projectLabel.ts`,
+**Files:** `src/utils/labels/labelCornerPx.ts` (new), `src/utils/labels/unprojectLabel.ts` (new),
 `src/services/gpu/shaders/lib/projectLabel.wesl`, `src/services/gpu/shaders/labels/vertex.wesl`,
-`src/services/engine/labels/projectRecords.ts`, `src/utils/labels/rotatedBoxBounds.ts`, their tests
+`src/services/engine/labels/projectRecords.ts`, `src/utils/labels/rotatedBoxBounds.ts` (deleted),
+their tests, `tests/services/gpu/shaders/projectLabel.parity.test.ts`
 
 **review: yes** (shader + CPU twin)
 
-Owner ruling 2026-11-19. An equidistant image keeps heights true and stretches widths by
-`θ / sin θ` (1 at the zenith, π/2 at the horizon), so a flat label reads condensed on the dome.
-`ProjectedLabel` gains `acrossScale: number`: how many times wider than tall one radian is at
-this point of the image. Pinhole: 1 (a flat screen wants flat text). Equidistant: `θ / sin θ`,
-1 within the zenith cone. The glyph quad's across axis and the ink box's width are multiplied
-by the ANCHOR's `acrossScale`; leaders are not widened. No file outside `projectLabel` names a
-projection kind.
+Owner ruling 2026-11-19 (option 3: glyphs placed on the sphere, not a flat rectangle on the
+fisheye image). An equidistant image stretches widths by `θ / sin θ`, so flat text reads
+condensed on the dome, up to 36% at the horizon. Each glyph corner is instead placed on a flat
+card tangent to the dome at the label's anchor, upright toward the zenith, and projected on
+its own:
+
+```ts
+/** Where a point `offsetPx` from a label's anchor lands on the image: x along the text,
+ *  y toward the label's up, in output px at the anchor. Written into `out`. */
+export function labelCornerPx(
+  anchor: ProjectedLabel, offsetPx: Readonly<Vec2>, p: OutputProjection, out: Vec2,
+): void;
+
+/** The unit view direction that `projectLabel` sends to `px`. */
+export function unprojectLabel(px: Readonly<Vec2>, p: OutputProjection, out: Vec3): void;
+```
+
+- Pinhole: `anchor.px + across × x − up × y`, today's rigid quad (a flat screen wants flat text).
+- Equidistant: `dir = unprojectLabel(anchor.px)`; `upT = tangentToward(dir, p.up3)`;
+  `right = cross(upT, dir)` (sign chosen so text reads left to right for a viewer inside the
+  dome; the test pins it); the corner is `projectLabel(dir + (right × x + upT × y) / focalPx)`.
+  At the zenith (`tangentToward` gives none) the card's up is image-up.
+
+WGSL twins of both functions live in `lib/projectLabel.wesl`; `expandRecordGlyph` calls
+`labelCornerPx` for each corner (fringe included) in place of its rigid expression. No file
+outside the projection lib names a projection kind. `projectRecords` takes the ink box as the
+bounds of the four box corners through `labelCornerPx`, which replaces `rotatedBoxBounds`
+(delete it and its test). Leaders are unchanged.
 
 Tests:
 
-- `acrossScale is 1 for a pinhole anywhere`.
-- `acrossScale is 1 at the zenith and π/2 at the horizon`.
-- `a dome label at the horizon claims a box π/2 times wider` (`projectRecords`).
+- `a pinhole corner is the rigid offset` — equals `anchor.px + (x, −y)` for image-up.
+- `unprojectLabel inverts projectLabel` — both kinds, three directions each, to 1e-9.
+- `a dome label at the horizon is π/2 times wider in the image than at the zenith` — the px
+  distance between corners `(−50, 0)` and `(50, 0)`.
+- `dome text reads left to right from inside the dome` — at the front horizon, the `+x`
+  corner lands at larger image x than the `−x` corner... or smaller: derive it from the
+  resample's mirror convention, state the derivation in the test name's comment, and confirm
+  it on a shot.
+- `a dome label's height is the same at the zenith and the horizon` — corners `(0, 0)`, `(0, 50)`.
+- `the ink box bounds all four card corners` (`projectRecords`, dome fixture).
+- `mono ink boxes are unchanged` (`projectRecords`, existing fixture).
 
 ---
 
