@@ -1,7 +1,8 @@
 /**
  * liftedAnchor — where a label above a sphere of `radiusMpc` sits: the view direction turned
  * toward `p.up3` by `lift.radii` angular radii (at most 90°, and never past `up3`: beyond the
- * zenith a fisheye shows the label upside down), projected, then pushed further
+ * zenith a fisheye shows the label upside down; it is visible only where the full turn would
+ * be, and a pinhole's full turn past view-up is behind the eye), projected, then pushed further
  * along image-up until it stands at least `lift.minPx · pxScale` above the subject. Turning in
  * 3D rather than lifting on screen keeps the rule valid for a fisheye. The TS twin of
  * `lib/projectLabel.wesl::liftedAnchor`.
@@ -44,12 +45,19 @@ export function liftedAnchor(
       p.up3[0] * dir[0] + p.up3[1] * dir[1] + p.up3[2] * dir[2],
     );
     const turn = Math.min(angle, Math.max(toUp - LIFT_ZENITH_MARGIN_RAD, 0));
-    const c = Math.cos(turn);
-    const s = Math.sin(turn);
-    turned[0] = c * dir[0] + s * tangent[0];
-    turned[1] = c * dir[1] + s * tangent[1];
-    turned[2] = c * dir[2] + s * tangent[2];
-    projectLabel(turned, p, out);
+    let fullTurnVisible = true;
+    // The full turn first, for its visibility alone; then the capped one, which is kept.
+    for (let pass = 0; pass < 2; pass++) {
+      const by = pass === 0 ? angle : turn;
+      const c = Math.cos(by);
+      const s = Math.sin(by);
+      turned[0] = c * dir[0] + s * tangent[0];
+      turned[1] = c * dir[1] + s * tangent[1];
+      turned[2] = c * dir[2] + s * tangent[2];
+      projectLabel(turned, p, out);
+      if (pass === 0) fullTurnVisible = out.visible;
+    }
+    out.visible &&= fullTurnVisible;
     const moved = subject.visible
       ? Math.sqrt((out.px[0] - subject.px[0]) ** 2 + (out.px[1] - subject.px[1]) ** 2)
       : 0;

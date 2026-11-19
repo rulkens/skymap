@@ -43,6 +43,20 @@ describe('liftedAnchor', () => {
   });
 });
 
+describe('liftedAnchor, past view-up', () => {
+  it('a pinhole lift that would pass view-up hides', () => {
+    // 25° above the axis, 65° short of view-up; three 24° radii would turn 72°, behind the eye.
+    const v: Vec3 = [0, Math.tan((25 * Math.PI) / 180), 1];
+    const radius = Math.hypot(...v) * Math.sin((24 * Math.PI) / 180);
+    const past = fresh();
+    const within = fresh();
+    liftedAnchor(v, radius, { radii: 3, minPx: 0 }, camera.output, past);
+    liftedAnchor(v, radius, { radii: 2, minPx: 0 }, camera.output, within);
+    expect(past.visible).toBe(false);
+    expect(within.visible).toBe(true);
+  });
+});
+
 describe('liftedAnchor, equidistant', () => {
   const dome = { ...equidistantFixture(2000), pxScale: 2 };
 
