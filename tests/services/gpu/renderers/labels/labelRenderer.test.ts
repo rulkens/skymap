@@ -147,21 +147,39 @@ describe('LabelRenderer draw', () => {
 });
 
 describe('LabelRenderer occlusion variant', () => {
-  it('builds both a plain single-BGL pipeline and a two-BGL occlusion pipeline', () => {
-    // The plain pipeline uses one BGL; the occlusion pipeline adds the group(1)
-    // coverage joint. Both are built, because `draw` falls back to it on a frame with no
-    // scene colour (no body drew). A device-only pipeline-validation error
-    // (wrong group count) never surfaces in a headless suite, so pin the
-    // two-pipeline / two-layout shape structurally here.
-    const { bindGroupLayouts, pipelineLayouts } = build();
+  it('builds the plain and sampled-depth pairs up front, the mask pair on its first draw', () => {
+    // A device-only pipeline-validation error (wrong group count) never surfaces in a
+    // headless suite, so the layout shape is pinned here. Only the dome hands a mask over:
+    // mono must not carry its modules and pipelines.
+    const { renderer, device, bindGroupLayouts, pipelineLayouts, renderPipelines } = build();
+    renderer.set(stageRecords([{ text: 'A', position: [0, 0, -1] }]));
+    const draw = (scene: OverlaySceneOcclusion): void => {
+      const pass = {
+        setPipeline: vi.fn(),
+        setBindGroup: vi.fn(),
+        setVertexBuffer: vi.fn(),
+        draw: vi.fn(),
+      };
+      const view = { projection: STAGE_CAMERA.output, hoveredPick: null, selectedPick: null };
+      renderer.draw(pass as unknown as GPURenderPassEncoder, view, scene);
+    };
+    const groupCounts = () =>
+      pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length);
+    const texView = {} as GPUTextureView;
 
-    // Three BGLs: the label BGL (shared by every pipeline), the coverage joint, the mask.
+    draw({ kind: 'sampled-depth', colorView: texView, depthView: texView, frame: null });
+    // The label BGL (shared by every pipeline) and the coverage joint; glyphs + leaders each.
+    expect(bindGroupLayouts).toHaveLength(2);
+    expect(groupCounts()).toEqual([1, 2]);
+    expect(renderPipelines).toHaveLength(4);
+    expect(device.createShaderModule).toHaveBeenCalledTimes(4);
+
+    draw({ kind: 'mask', maskView: texView });
+    draw({ kind: 'mask', maskView: texView });
     expect(bindGroupLayouts).toHaveLength(3);
-    expect(pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length)).toEqual([
-      1, // plain
-      2, // occlusion, sampled depth
-      2, // occlusion, mask
-    ]);
+    expect(groupCounts()).toEqual([1, 2, 2]);
+    expect(renderPipelines).toHaveLength(6);
+    expect(device.createShaderModule).toHaveBeenCalledTimes(6);
   });
 
   it('picks the pipeline pair from the occlusion it is handed', () => {
