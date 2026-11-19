@@ -34,6 +34,9 @@ const KIND_EQUIDISTANT: u32 = 1u;
 // Must equal 'PARALLEL_TANGENT_EPS' in src/data/labels/parallelTangentEps.ts.
 const PARALLEL_TANGENT_EPS: f32 = 0.000001;
 
+// Must equal 'LIFT_ZENITH_MARGIN_RAD' in src/data/labels/liftZenithMarginRad.ts.
+const LIFT_ZENITH_MARGIN_RAD: f32 = 0.001;
+
 const IMAGE_UP: vec2<f32> = vec2<f32>(0.0, -1.0);
 
 const HALF_PI: f32 = 1.5707963;
@@ -137,7 +140,8 @@ fn labelCornerPx(anchor: ProjectedLabel, offsetPx: vec2<f32>, projection: Output
   return projectEquidistant(onCard, projection).px;
 }
 
-// Turned 'liftRadii' angular radii toward up3 (at most 90 degrees), then
+// Turned 'liftRadii' angular radii toward up3 (at most 90 degrees, and never
+// past up3: beyond the zenith a fisheye shows the label upside down), then
 // pushed along image-up until it stands 'minLiftPx' above the subject.
 fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, liftRadii: f32, minLiftPx: f32, projection: OutputProjection) -> ProjectedLabel {
   let len = scaledLength(viewVec);
@@ -153,7 +157,10 @@ fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, liftRadii: f32, minLiftPx: f
     projected = subject;
     liftPx = max(angle * projected.pxPerRad, floorPx);
   } else {
-    projected = projectLabel(cos(angle) * dir + sin(angle) * tangent, projection);
+    // The angle left to up3, from its tangent and radial parts.
+    let toUp = atan2(dot(projection.up3, tangent), dot(projection.up3, dir));
+    let turn = min(angle, max(toUp - LIFT_ZENITH_MARGIN_RAD, 0.0));
+    projected = projectLabel(cos(turn) * dir + sin(turn) * tangent, projection);
     let moved = select(0.0, distance(projected.px, subject.px), subject.visible);
     liftPx = max(floorPx - moved, 0.0);
   }

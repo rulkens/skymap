@@ -66,6 +66,18 @@ describe('liftedAnchor, equidistant', () => {
     expect(anchor.px[1]).toBeCloseTo(1000, 9);
   });
 
+  it('a lift never crosses the zenith', () => {
+    // 17° in front of the zenith, the eye inside the sphere: three radii would turn 90°,
+    // landing behind the zenith with its up reversed.
+    const anchor = fresh();
+    liftedAnchor([0, 1, 0.3], 5, { radii: 3, minPx: 0 }, dome, anchor);
+    expect(anchor.visible).toBe(true);
+    expect(anchor.px[0]).toBeCloseTo(1000, 9);
+    expect(anchor.px[1]).toBeGreaterThan(1000);
+    expect(anchor.px[1]).toBeLessThan(1001);
+    expect(anchor.up[1]).toBeCloseTo(-1, 9);
+  });
+
   it('a subject at the zenith lifts toward image-up', () => {
     const anchor = fresh();
     liftedAnchor([0, 5, 0], 0.5, { radii: 2, minPx: 0 }, dome, anchor);

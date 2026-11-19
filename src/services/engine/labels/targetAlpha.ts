@@ -63,7 +63,7 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     const diameterPx = frame.diameterPx[i]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
-    alpha *= subjectSizeFade(style, diameterPx, shortSidePx, p.pxScale, !named);
+    alpha *= subjectSizeFade(style, diameterPx, shortSidePx, p.focalPx, p.pxScale, !named);
     if (!focused && !named) alpha *= inputs.recessions[source]!;
     if (!(alpha > 0)) continue;
 
