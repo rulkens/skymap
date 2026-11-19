@@ -3,12 +3,13 @@
  * function the label shader runs) or `liftedAnchor` for an 'above' style, so declutter and pick
  * judge each label where it is drawn. The view vector is the hi/lo difference taken in f64.
  * Text size is the shader's rule: em height over distance × the subject's px per radian × the em
- * retune, clamped to `LABEL_TEXT_PX`. The ink rect is the bounds of the box turned along the
- * anchor's up (`rotatedBoxBounds`).
+ * retune, clamped to `LABEL_TEXT_PX`. The ink rect is the bounds of the box's four corners, each
+ * placed as the shader places a glyph corner (`labelCornerPx`).
  */
 
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
 import type { ProjectedLabel } from '../../../@types/rendering/ProjectedLabel';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import {
   LABEL_RECORD as W,
@@ -21,12 +22,14 @@ import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import { projectLabel } from '../../../utils/labels/projectLabel';
 import { liftedAnchor } from '../../../utils/labels/liftedAnchor';
-import { rotatedBoxBounds } from '../../../utils/labels/rotatedBoxBounds';
+import { labelCornerPx } from '../../../utils/labels/labelCornerPx';
 
 const world: Vec3 = [0, 0, 0];
 const view: Vec3 = [0, 0, 0];
 const subject: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
 const lifted: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
+const offsetPx: Vec2 = [0, 0];
+const cornerPx: Vec2 = [0, 0];
 
 export const projectRecords: LabelStage = (records, frame, { projection: p }) => {
   const { f32, u32 } = records;
@@ -72,6 +75,23 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     );
     frame.textPx[i] = textPx;
     const s = textPx / ATLAS_FONT_SIZE;
-    rotatedBoxBounds(records.textBox, i * 4, s, out.up, out.px, frame.rect, i * 4);
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let corner = 0; corner < 4; corner++) {
+      // The box is x0, y0, x1, y1 with y down the glyph; a card offset's y runs up.
+      offsetPx[0] = records.textBox[i * 4 + (corner & 1) * 2]! * s;
+      offsetPx[1] = -records.textBox[i * 4 + (corner >> 1) * 2 + 1]! * s;
+      labelCornerPx(out, offsetPx, p, cornerPx);
+      minX = Math.min(minX, cornerPx[0]);
+      minY = Math.min(minY, cornerPx[1]);
+      maxX = Math.max(maxX, cornerPx[0]);
+      maxY = Math.max(maxY, cornerPx[1]);
+    }
+    frame.rect[i * 4] = minX;
+    frame.rect[i * 4 + 1] = minY;
+    frame.rect[i * 4 + 2] = maxX;
+    frame.rect[i * 4 + 3] = maxY;
   }
 };

@@ -86,6 +86,15 @@ describe('lib/projectLabel.wesl parity', () => {
     expect(source).not.toMatch(/\bacos\s*\(/);
   });
 
+  it("the card's hand and its zenith fallback are labelCornerPx.ts's", () => {
+    // TS: right = cross(cardUp, dir), fallback up (0, 0, −1); a swap mirrors every dome label.
+    const body = /fn labelCornerPx\([\s\S]*?\n}/.exec(source)![0];
+    expect(body).toMatch(/cross\(cardUp,\s*dir\)/);
+    expect(body).toMatch(/cardUp = vec3<f32>\(0\.0, 0\.0, -1\.0\)/);
+    expect(body).toMatch(/across \* offsetPx\.x \+ anchor\.up \* offsetPx\.y/);
+    expect(source).toMatch(/fn unprojectLabel\(/);
+  });
+
   it('projectLabel.wesl names the same fields as projectLabel.ts', () => {
     const names = (struct: string) =>
       parseWgslStructFields(source, struct)

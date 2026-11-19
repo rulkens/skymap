@@ -1,6 +1,7 @@
 // lib/projectLabel.wesl — the WGSL twin of 'utils/labels/projectLabel.ts',
-// 'liftedAnchor.ts' and 'tangentToward.ts', field for field; the
-// 'projectLabel.parity' test holds the structs and constants equal.
+// 'unprojectLabel.ts', 'labelCornerPx.ts', 'liftedAnchor.ts' and
+// 'tangentToward.ts', field for field; the 'projectLabel.parity' test holds the
+// structs, constants and function list equal.
 // Pinhole view space looks down +z, +y up; equidistant view space is the dome
 // frame (+y zenith, +z front, +x right). No function squares a raw Mpc offset:
 // metre-range anchors (~1e-22 Mpc) flush to zero when squared in f32.
@@ -48,16 +49,18 @@ fn scaledLength(offset: vec3<f32>) -> f32 {
 
 // The dome's fisheye: the zenith at the centre, the horizon stretched over the
 // canvas edge as the resample draws it (front at the bottom), up pointing back
-// at the zenith in px. Sees the upper half of the dome frame.
+// at the zenith in px. Sees the upper half of the dome frame, and still places a
+// direction under the horizon (outside the circle) for 'labelCornerPx'.
 fn projectEquidistant(viewVec: vec3<f32>, projection: OutputProjection) -> ProjectedLabel {
   let largest = max(abs(viewVec.x), max(abs(viewVec.y), abs(viewVec.z)));
-  if (largest == 0.0 || viewVec.y < 0.0) {
+  if (largest == 0.0) {
     return ProjectedLabel(vec2<f32>(0.0), 0.0, IMAGE_UP, false);
   }
+  let visible = viewVec.y >= 0.0;
   let scaled = viewVec / largest;
   let horizontal = length(scaled.xz);
   if (horizontal < PARALLEL_TANGENT_EPS) {
-    return ProjectedLabel(projection.centrePx, projection.focalPx, IMAGE_UP, true);
+    return ProjectedLabel(projection.centrePx, projection.focalPx, IMAGE_UP, visible);
   }
   // Where this bearing meets the horizon, px from the centre: one radius per axis.
   let edgePx = 0.5 * projection.sizePx * scaled.xz / horizontal;
@@ -67,7 +70,7 @@ fn projectEquidistant(viewVec: vec3<f32>, projection: OutputProjection) -> Proje
     projection.centrePx + horizonFraction * edgePx,
     projection.focalPx,
     -normalize(edgePx),
-    true,
+    visible,
   );
 }
 
@@ -95,6 +98,43 @@ fn tangentToward(dir: vec3<f32>, toward: vec3<f32>) -> vec3<f32> {
     return vec3<f32>(0.0);
   }
   return across / len;
+}
+
+// The unit view direction 'projectLabel' sends to 'atPx'.
+fn unprojectLabel(atPx: vec2<f32>, projection: OutputProjection) -> vec3<f32> {
+  if (projection.kind == KIND_EQUIDISTANT) {
+    // Fractions of the horizon radius, one radius per axis.
+    let offset = (atPx - projection.centrePx) / (0.5 * projection.sizePx);
+    let horizonFraction = length(offset);
+    if (horizonFraction == 0.0) {
+      return vec3<f32>(0.0, 1.0, 0.0);
+    }
+    let fromZenith = horizonFraction * HALF_PI;
+    let horizontal = sin(fromZenith) * offset / horizonFraction;
+    return vec3<f32>(horizontal.x, cos(fromZenith), horizontal.y);
+  }
+  let tangent = (atPx - projection.centrePx) / projection.focalPx;
+  return normalize(vec3<f32>(tangent.x, -tangent.y, 1.0));
+}
+
+// Where a point 'offsetPx' from a label's anchor lands: x along the text, y
+// toward the label's up. Pinhole: the rigid offset. Equidistant: the point on a
+// card tangent to the dome at the anchor, projected on its own, so text keeps
+// its proportions on the dome; cross(up, dir) reads left to right from inside.
+fn labelCornerPx(anchor: ProjectedLabel, offsetPx: vec2<f32>, projection: OutputProjection) -> vec2<f32> {
+  if (projection.kind != KIND_EQUIDISTANT) {
+    let across = vec2<f32>(-anchor.up.y, anchor.up.x);
+    return anchor.px + across * offsetPx.x + anchor.up * offsetPx.y;
+  }
+  let dir = unprojectLabel(anchor.px, projection);
+  var cardUp = tangentToward(dir, projection.up3);
+  if (all(cardUp == vec3<f32>(0.0))) {
+    // At the zenith the card's up is image-up, the dome's back.
+    cardUp = vec3<f32>(0.0, 0.0, -1.0);
+  }
+  let cardRight = cross(cardUp, dir);
+  let onCard = dir + (cardRight * offsetPx.x + cardUp * offsetPx.y) / projection.focalPx;
+  return projectEquidistant(onCard, projection).px;
 }
 
 // Turned 'liftRadii' angular radii toward up3 (at most 90 degrees), then

@@ -3,6 +3,9 @@ import type { LabelDescription } from '../../../../src/@types/rendering/LabelDes
 import { createLabelFrame } from '../../../../src/services/engine/labels/createLabelFrame';
 import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAnchors';
 import { projectRecords } from '../../../../src/services/engine/labels/projectRecords';
+import type { ProjectedLabel } from '../../../../src/@types/rendering/ProjectedLabel';
+import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
+import { projectLabel } from '../../../../src/utils/labels/projectLabel';
 import { LABEL_STYLES } from '../../../../src/data/labels/labelStyles';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 import { LABEL_TEXT_PX } from '../../../../src/data/labels/labelTextPx';
@@ -61,19 +64,36 @@ describe('projectRecords', () => {
     expect(frame.textPx[1]).toBeCloseTo(frame.textPx[0]!, 5);
   });
 
-  it('the ink box turns with the anchor up on the dome', () => {
-    // On the right horizon up points left, so the line of text runs down the image.
-    const label: LabelDescription = { text: 'AAA', position: [1, 0, 0] };
-    const rectOf = (projection = STAGE_CAMERA.output, position = label.position) => {
-      const records = stageRecords([{ ...label, position }], 'constellation');
+  it('mono ink boxes are unchanged', () => {
+    const label: LabelDescription = { text: 'AAA', position: [0.3, -0.2, -1] };
+    const records = stageRecords([label], 'constellation');
+    const frame = createLabelFrame(records.capacity);
+    for (const stage of [resolveAnchors, projectRecords]) stage(records, frame, stageInputs());
+    const anchor: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
+    projectLabel([0.3, -0.2, 1], STAGE_CAMERA.output, anchor);
+    const scale = frame.textPx[0]! / ATLAS_FONT_SIZE;
+    const box = records.textBox;
+    expect(box[2]! - box[0]!).toBeGreaterThan(0);
+    expect([...frame.rect.subarray(0, 4)]).toEqual(
+      [0, 1, 2, 3].map((k) => Math.fround(anchor.px[k % 2]! + box[k]! * scale)),
+    );
+  });
+
+  it('the ink box bounds all four card corners', () => {
+    // On the right horizon up points left, so the line of text runs down the image,
+    // stretched by the fisheye: longer than the same text at the zenith.
+    const rectOf = (position: [number, number, number]) => {
+      const records = stageRecords([{ text: 'AAA', position }], 'constellation');
       const frame = createLabelFrame(records.capacity);
-      const inputs = stageInputs({ projection });
+      const inputs = stageInputs({ projection: equidistantFixture(2000) });
       for (const stage of [resolveAnchors, projectRecords]) stage(records, frame, inputs);
-      return frame.rect.subarray(0, 4);
+      const [x0, y0, x1, y1] = frame.rect;
+      return { width: x1! - x0!, height: y1! - y0! };
     };
-    const mono = rectOf(STAGE_CAMERA.output, [0, 0, -1]);
-    const dome = rectOf(equidistantFixture(2000));
-    expect(dome[2]! - dome[0]!).toBeCloseTo(mono[3]! - mono[1]!, 3);
-    expect(dome[3]! - dome[1]!).toBeCloseTo(mono[2]! - mono[0]!, 3);
+    const zenith = rectOf([0, 1, 0]);
+    const horizon = rectOf([1, 0, 0]);
+    expect(horizon.height / zenith.width).toBeCloseTo(Math.PI / 2, 1);
+    expect(horizon.width).toBeGreaterThan(0.9 * zenith.height);
+    expect(horizon.width).toBeLessThan(1.1 * zenith.height);
   });
 });

@@ -1,7 +1,8 @@
 /**
  * ProjectedLabel — `projectLabel`'s output, written in place: the anchor in
  * output px (+y down), the local pixels per radian there, and the image-up
- * direction the glyph quad is built along. `px`, `pxPerRad` are 0 when hidden.
+ * direction the glyph quad is built along. `px`, `pxPerRad` are 0 when a pinhole hides it;
+ * a fisheye still places a direction under its horizon, outside the circle.
  */
 
 import type { Vec2 } from '../math/Vec2';

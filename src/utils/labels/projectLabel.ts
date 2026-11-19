@@ -18,7 +18,9 @@ export function projectLabel(v: Readonly<Vec3>, p: OutputProjection, out: Projec
   const largest = Math.max(Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[2]));
   // The dome frame sees its upper half (+y is the zenith); a pinhole sees +z.
   out.visible = equidistant ? largest > 0 && v[1] >= 0 : v[2] > 0;
-  if (!out.visible) {
+  // The fisheye still places a direction under the horizon, outside the circle: a card
+  // corner of a label standing on the horizon lands there (`labelCornerPx`).
+  if (equidistant ? largest === 0 : !out.visible) {
     out.px[0] = 0;
     out.px[1] = 0;
     out.pxPerRad = 0;

@@ -20,6 +20,7 @@ import package::labels::io::STYLE_LEADER_COLOR;
 import package::lib::projectLabel::ProjectedLabel;
 import package::lib::projectLabel::projectLabel;
 import package::lib::projectLabel::liftedAnchor;
+import package::lib::projectLabel::labelCornerPx;
 import package::lib::projectLabel::scaledLength;
 
 // Must match 'ATLAS_FONT_SIZE' and 'DISTANCE_RANGE_PX' in src/data/fonts.ts
@@ -131,10 +132,10 @@ fn expandRecordGlyph(input: VsIn, record: LabelRecord, style: LabelStyle, placed
   let atlasToPx = placed.textPx / ATLAS_EM_PX;
   let fringeAtlasPx = style.outlineEmFrac * ATLAS_EM_PX;
   let outward = input.corner * 2.0 - vec2<f32>(1.0, 1.0);
-  // Atlas +y runs down the glyph, the opposite of image-up.
   let cornerAtlasPx = input.localOffset + input.corner * input.localSize + outward * fringeAtlasPx;
-  let across = vec2<f32>(-anchor.up.y, anchor.up.x);
-  let cornerPx = anchor.px + (across * cornerAtlasPx.x - anchor.up * cornerAtlasPx.y) * atlasToPx;
+  // Atlas +y runs down the glyph, the opposite of the label's up.
+  let offsetPx = vec2<f32>(cornerAtlasPx.x, -cornerAtlasPx.y) * atlasToPx;
+  let cornerPx = labelCornerPx(anchor, offsetPx, recordUniforms.out);
 
   let uvSpan = input.uvRect.zw - input.uvRect.xy;
   let uvBase = mix(input.uvRect.xy, input.uvRect.zw, input.corner);
