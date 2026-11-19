@@ -9,7 +9,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
+import { sampledDepthOcclusion } from '../sampledDepthOcclusion';
 
 export const occlusionMaskPass: ContentPass = {
   name: 'occlusion-mask',
@@ -23,7 +23,7 @@ export const occlusionMaskPass: ContentPass = {
     if (renderer === null || view.sampledDepth === undefined || view.sampledDepth.row === null) {
       return;
     }
-    const scene = overlaySceneOcclusion(ctx, view);
+    const scene = sampledDepthOcclusion(ctx, view);
     if (scene === undefined) return;
     renderer.draw(pass, scene, [ctx.canvasSize.width, ctx.canvasSize.height]);
   },

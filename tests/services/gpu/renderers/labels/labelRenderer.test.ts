@@ -7,6 +7,9 @@ import { LABEL_RECORD_WORDS } from '../../../../../src/data/labels/labelRecordLa
 import { LABEL_RECORD_UNIFORM_OFFSETS as RU } from '../../../../../src/data/labels/labelRecordUniformLayout';
 import { LABEL_TEXT_PX } from '../../../../../src/data/labels/labelTextPx';
 import { STAGE_CAMERA, stageRecords } from '../../../../helpers/labels/labelStageFixture';
+import type { OverlaySceneOcclusion } from '../../../../../src/@types/rendering/OverlaySceneOcclusion';
+import vsOccludeMaskCode from '../../../../../src/services/gpu/shaders/labels/vertexOccludeMask.wesl?static';
+import fsOccludeMaskCode from '../../../../../src/services/gpu/shaders/labels/fragmentOccludeMask.wesl?static';
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65), enough for the
 // factory to size its atlas.
@@ -60,7 +63,7 @@ function build() {
     }),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       renderPipelines.push(desc);
-      return {};
+      return { label: desc.label };
     }),
     createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
     createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
@@ -89,7 +92,15 @@ function build() {
     targetFormat: ctx.format,
     atlases: FIXTURE_ATLASES,
   });
-  return { renderer, writes, uniforms, bindGroupLayouts, pipelineLayouts, renderPipelines };
+  return {
+    renderer,
+    device,
+    writes,
+    uniforms,
+    bindGroupLayouts,
+    pipelineLayouts,
+    renderPipelines,
+  };
 }
 
 describe('LabelRenderer set', () => {
@@ -144,12 +155,51 @@ describe('LabelRenderer occlusion variant', () => {
     // two-pipeline / two-layout shape structurally here.
     const { bindGroupLayouts, pipelineLayouts } = build();
 
-    // Two BGLs: the label BGL (shared by the plain and occlusion pipelines) + the coverage BGL.
-    expect(bindGroupLayouts).toHaveLength(2);
+    // Three BGLs: the label BGL (shared by every pipeline), the coverage joint, the mask.
+    expect(bindGroupLayouts).toHaveLength(3);
     expect(pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length)).toEqual([
       1, // plain
-      2, // occlusion
+      2, // occlusion, sampled depth
+      2, // occlusion, mask
     ]);
+  });
+
+  it('picks the pipeline pair from the occlusion it is handed', () => {
+    // The dome's labels must go through the mask pair: the sampled-depth pair bound to
+    // a mask view is a device-only validation error, and the plain pair hides nothing.
+    const { renderer, device } = build();
+    renderer.set(stageRecords([{ text: 'A', position: [0, 0, -1] }]));
+    const leadersOf = (scene?: OverlaySceneOcclusion): string => {
+      const setPipeline = vi.fn();
+      const pass = { setPipeline, setBindGroup: vi.fn(), setVertexBuffer: vi.fn(), draw: vi.fn() };
+      const view = { projection: STAGE_CAMERA.output, hoveredPick: null, selectedPick: null };
+      renderer.draw(pass as unknown as GPURenderPassEncoder, view, scene);
+      return (setPipeline.mock.calls[0]![0] as { label: string }).label;
+    };
+    const maskView = { id: 'mask' } as unknown as GPUTextureView;
+
+    expect(leadersOf()).toBe('label-pipeline-leaders');
+    expect(leadersOf({ kind: 'mask', maskView })).toBe('label-pipeline-occlude-mask-leaders');
+    const maskGroup = (device.createBindGroup as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0];
+    expect(Array.from(maskGroup.entries as GPUBindGroupEntry[])).toEqual([
+      { binding: 0, resource: maskView },
+    ]);
+    expect(
+      leadersOf({ kind: 'sampled-depth', colorView: maskView, depthView: maskView, frame: null }),
+    ).toBe('label-pipeline-occlude-leaders');
+  });
+
+  it('the mask stages link without the sampled-depth joint, and read the mask in both', () => {
+    // group(1) is one texture in the mask layout: a stray `lib::sceneDepth` binding in
+    // either stage is a pipeline-validation error only a device reports.
+    for (const code of [vsOccludeMaskCode, fsOccludeMaskCode]) {
+      expect(code).toContain('occlusionMaskTex');
+      expect(code).not.toContain('sceneDepthTex');
+      expect(code).not.toContain('sceneColorTex');
+    }
+    expect(vsOccludeMaskCode).toContain('fn vsOccludeMask');
+    expect(vsOccludeMaskCode).toContain('fn vsLeaderOccludeMask');
+    expect(vsOccludeMaskCode).not.toContain('fn vsOcclude(');
   });
 
   it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {

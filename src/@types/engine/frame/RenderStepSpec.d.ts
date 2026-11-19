@@ -5,6 +5,7 @@
 
 import type { BodyRowSource } from './BodyRowSource';
 import type { DepthSampleSource } from './DepthSampleSource';
+import type { MaskSampleSource } from './MaskSampleSource';
 
 export type RenderStepSpec = {
   readonly kind: 'render';
@@ -14,6 +15,8 @@ export type RenderStepSpec = {
   readonly passes: readonly string[];
   /** See `FrameStep`'s `depth`. */
   readonly depth?: 'clear' | 'load' | DepthSampleSource;
+  /** See `FrameStep`'s `mask`. */
+  readonly mask?: MaskSampleSource;
   /**
    * GPU-timing slot suffix, appended to `groupKeyOf(step)` with the same
    * separator; the one line in a group without it owns the bare key. A name, not

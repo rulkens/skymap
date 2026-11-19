@@ -724,6 +724,29 @@ describe('executeFrame', () => {
     expect(depthOpOf(env, after)).toBe('clear');
   });
 
+  it('hands a mask-sampling step the mask only once a step has written it this frame', () => {
+    const writer = makeContentPass({ name: 'writer' });
+    const reader = makeContentPass({ name: 'reader' });
+    const read = (slab: number): FrameStep => ({
+      kind: 'render',
+      target: 'swap',
+      slab,
+      mask: { sample: 'cosmic-web-density' },
+      passes: [reader],
+    });
+    const program: FrameStep[] = [
+      read(COSMO),
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: [writer] },
+      read(NEAR0),
+    ];
+    const { args } = makeArgs({ program });
+    executeFrame(args);
+    const maskOf = (call: number) => (reader.draw.mock.calls[call]![1] as SlabView).sampledMask;
+    // Before the write the row holds last frame's content: no view, so no stale read.
+    expect(maskOf(0)).toEqual({ view: null });
+    expect(maskOf(1)).toEqual({ view: DENSITY_VIEW });
+  });
+
   it('hands a sampling step the far placeholder and row null when nothing cleared its source', () => {
     const sampler = makeContentPass({ name: 'sampler' });
     const program: FrameStep[] = [

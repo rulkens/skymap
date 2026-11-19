@@ -35,6 +35,8 @@ the dome its sizes.
   same mask (one occlusion source, at the price of one pass and one target in mono) or keep
   their sampled depth (a second label pipeline variant) is ruled at Task M3, on a measured
   number, as spec §7.4 asks.
+  **M3 ruling (owner, 2026-11-19): two sources.** Mono keeps its sampled-depth occlusion
+  unchanged; the dome's labels read the mask through their own pipeline pair.
 - **P2. Declutter on the dome uses the axis-aligned bounds of the rotated box.** One rule
   for both rigs; a label near a diagonal claims slightly more room than its ink. The dome
   is unpickable, so pick boxes need nothing more.
@@ -342,7 +344,13 @@ controller takes the numbers to the owner:
 The verdicts keep their meaning: a label is judged once at its subject's px (a leader at its
 bottom end) as "the mask's distance is nearer than the subject's near surface", and each
 fragment is dimmed by the mask's coverage weighted by that verdict. A grounded record still
-reads nothing. Detailed contract written when M3 is ruled.
+reads nothing.
+
+Built under the two-sources ruling: `OverlaySceneOcclusion` is a union (`sampled-depth` |
+`mask`), and `labelRenderer` picks plain, sampled-depth or mask pipelines from the value it
+is handed (`labels/vertexOccludeMask.wesl`, `fragmentOccludeMask.wesl`, `lib/occlusionMask.wesl`).
+A render step names its mask with `mask: { sample: <target> }` beside `depth`; it reaches the
+passes as `SlabView.sampledMask`, and `checkFrameOrder` refuses one no earlier line writes.
 
 ---
 

@@ -5,8 +5,8 @@
  * second storage buffer uploaded once. The fragment takes the median of the atlas's R/G/B
  * distances with an `fwidth` edge: crisp at any scale, so the atlas has no mipmaps (mip
  * filtering would blur the distances). Blend is premultiplied OVER, not additive: labels are
- * UI overlay and must occlude the sky. A second pipeline pair adds the group(1) coverage joint
- * and scene-attenuated shaders.
+ * UI overlay and must occlude the sky. Two more pipeline pairs attenuate by the scene, one
+ * per `OverlaySceneOcclusion` kind: group(1) is the sampled-depth joint, or one mask texture.
  */
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
@@ -20,6 +20,8 @@ import vsCode from '../../shaders/labels/vertex.wesl?static';
 import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
+import vsOccludeMaskCode from '../../shaders/labels/vertexOccludeMask.wesl?static';
+import fsOccludeMaskCode from '../../shaders/labels/fragmentOccludeMask.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import {
@@ -87,6 +89,18 @@ export function createLabelRenderer(
   // view changes on every resize — see occlusionCoverageGroup.ts).
   const occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
   const occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(device, 'label-depth-frame');
+  // The mask kind's whole group(1) (`lib/occlusionMask.wesl`): a 32-bit float texture read
+  // by `textureLoad`, in the vertex stage for the verdict and the fragment for coverage.
+  const occlusionMaskBGL = device.createBindGroupLayout({
+    label: 'label-occlusion-mask-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+        texture: { sampleType: 'unfilterable-float' },
+      },
+    ],
+  });
 
   const vertexBuffers: GPUVertexBufferLayout[] = [
     UNIT_QUAD_VERTEX_LAYOUT,
@@ -128,9 +142,9 @@ export function createLabelRenderer(
     };
   }
 
-  // BOTH pairs, picked per draw: a frame in which no foreground body drew has no scene views,
-  // and still paints its labels through a valid plain draw rather than an occlusion draw with
-  // group(1) unbound.
+  // ALL pairs, picked per draw from the occlusion value handed over: a frame in which no
+  // foreground body drew has none, and still paints its labels through a valid plain draw
+  // rather than an occlusion draw with group(1) unbound.
   const plainPipelines = pipelinePair(
     'label-pipeline',
     device.createPipelineLayout({
@@ -163,6 +177,23 @@ export function createLabelRenderer(
       module: createShaderModuleWithDevLog(device, fsOccludeCode, 'labels.fragmentOcclude'),
       glyphs: 'fs',
       leaders: 'fsLeaderOcclude',
+    },
+  );
+  const maskPipelines = pipelinePair(
+    'label-pipeline-occlude-mask',
+    device.createPipelineLayout({
+      label: 'label-pipeline-occlude-mask-layout',
+      bindGroupLayouts: [bindGroupLayout, occlusionMaskBGL],
+    }),
+    {
+      module: createShaderModuleWithDevLog(device, vsOccludeMaskCode, 'labels.vertexOccludeMask'),
+      glyphs: 'vsOccludeMask',
+      leaders: 'vsLeaderOccludeMask',
+    },
+    {
+      module: createShaderModuleWithDevLog(device, fsOccludeMaskCode, 'labels.fragmentOccludeMask'),
+      glyphs: 'fs',
+      leaders: 'fsLeaderOccludeMask',
     },
   );
 
@@ -285,13 +316,25 @@ export function createLabelRenderer(
     }
   }
 
-  /** Binds group(1) from this frame's scene views; false when there are none (plain draw). */
+  /** Binds group(1) for the occlusion handed over and returns the pair that reads it. */
   function bindScene(
     pass: GPURenderPassEncoder,
     scene: OverlaySceneOcclusion | undefined,
     sizePx: readonly [number, number],
-  ): boolean {
-    if (!scene) return false;
+  ): LabelPipelines {
+    if (!scene) return plainPipelines;
+    if (scene.kind === 'mask') {
+      // Rebuilt per draw, as the coverage group is: `reconcile()` replaces the view.
+      pass.setBindGroup(
+        OCCLUSION_COVERAGE_GROUP_INDEX,
+        device.createBindGroup({
+          label: 'label-occlusion-mask-bg',
+          layout: occlusionMaskBGL,
+          entries: [{ binding: 0, resource: scene.maskView }],
+        }),
+      );
+      return maskPipelines;
+    }
     writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, sizePx);
     pass.setBindGroup(
       OCCLUSION_COVERAGE_GROUP_INDEX,
@@ -302,7 +345,7 @@ export function createLabelRenderer(
         occlusionDepthFrameBuffer,
       ),
     );
-    return true;
+    return occludePipelines;
   }
 
   function draw(
@@ -322,7 +365,7 @@ export function createLabelRenderer(
     uniformF32[RU.selectedWhiten / 4] = SELECTED_LABEL_WHITEN;
     device.queue.writeBuffer(uniformBuffer, 0, uniformF32);
 
-    const pipelines = bindScene(pass, scene, projection.sizePx) ? occludePipelines : plainPipelines;
+    const pipelines = bindScene(pass, scene, projection.sizePx);
     // Leaders first, so the glyphs composite over the line where they meet; the shader
     // collapses the quad of a record without one.
     pass.setPipeline(pipelines.leaders);

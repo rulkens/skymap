@@ -4,10 +4,14 @@
  */
 
 import type { Vec2 } from '../math/Vec2';
-import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
+import type { SampledDepthSceneOcclusion } from './SampledDepthSceneOcclusion';
 import type { Renderer } from './Renderer';
 
 export type OcclusionMaskRenderer = Renderer & {
   /** `scene`: the overlay joint this view resolved; `viewportPx`: the mask target's size. */
-  draw(pass: GPURenderPassEncoder, scene: OverlaySceneOcclusion, viewportPx: Readonly<Vec2>): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    scene: SampledDepthSceneOcclusion,
+    viewportPx: Readonly<Vec2>,
+  ): void;
 };

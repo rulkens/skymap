@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { OverlaySceneOcclusion } from '../../../../../src/@types/rendering/OverlaySceneOcclusion';
+import type { SampledDepthSceneOcclusion } from '../../../../../src/@types/rendering/SampledDepthSceneOcclusion';
 import { OCCLUSION_COVERAGE_GROUP_INDEX } from '../../../../../src/services/gpu/renderers/labels/occlusionCoverageGroup';
 import { createOcclusionMaskRenderer } from '../../../../../src/services/gpu/renderers/occlusionMask/occlusionMaskRenderer';
 import fsCode from '../../../../../src/services/gpu/shaders/occlusionMask/fragment.wesl?static';
@@ -38,10 +38,11 @@ describe('createOcclusionMaskRenderer', () => {
     const m = mockDevice();
     const renderer = createOcclusionMaskRenderer({ device: m.device, targetFormat: 'rg32float' });
     const scene = {
+      kind: 'sampled-depth',
       colorView: { id: 'color' },
       depthView: { id: 'depth' },
       frame: null,
-    } as unknown as OverlaySceneOcclusion;
+    } as unknown as SampledDepthSceneOcclusion;
     const pass = { setPipeline: vi.fn(), setBindGroup: vi.fn(), draw: vi.fn() };
     renderer.draw(pass as unknown as GPURenderPassEncoder, scene, [640, 480]);
 
