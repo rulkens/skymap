@@ -3,7 +3,8 @@
  * function the label shader runs) or `liftedAnchor` for an 'above' style, so declutter and pick
  * judge each label where it is drawn. The view vector is the hi/lo difference taken in f64.
  * Text size is the shader's rule: em height over distance × the subject's px per radian × the em
- * retune, clamped to `LABEL_TEXT_PX`. Pinhole only: the ink rect is axis-aligned, which a rotated (dome) up is not.
+ * retune, clamped to `LABEL_TEXT_PX`. The ink rect is the bounds of the box turned along the
+ * anchor's up (`rotatedBoxBounds`).
  */
 
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
@@ -20,6 +21,7 @@ import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import { projectLabel } from '../../../utils/labels/projectLabel';
 import { liftedAnchor } from '../../../utils/labels/liftedAnchor';
+import { rotatedBoxBounds } from '../../../utils/labels/rotatedBoxBounds';
 
 const world: Vec3 = [0, 0, 0];
 const view: Vec3 = [0, 0, 0];
@@ -71,10 +73,6 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     );
     frame.textPx[i] = textPx;
     const s = textPx / ATLAS_FONT_SIZE;
-    const box = records.textBox;
-    frame.rect[i * 4] = x + box[i * 4]! * s;
-    frame.rect[i * 4 + 1] = y + box[i * 4 + 1]! * s;
-    frame.rect[i * 4 + 2] = x + box[i * 4 + 2]! * s;
-    frame.rect[i * 4 + 3] = y + box[i * 4 + 3]! * s;
+    rotatedBoxBounds(records.textBox, i * 4, s, out.up, out.px, frame.rect, i * 4);
   }
 };

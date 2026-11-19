@@ -60,4 +60,20 @@ describe('projectRecords', () => {
     expect(frame.textPx[0]).toBeLessThan(LABEL_TEXT_PX.max);
     expect(frame.textPx[1]).toBeCloseTo(frame.textPx[0]!, 5);
   });
+
+  it('the ink box turns with the anchor up on the dome', () => {
+    // On the right horizon up points left, so the line of text runs down the image.
+    const label: LabelDescription = { text: 'AAA', position: [1, 0, 0] };
+    const rectOf = (projection = STAGE_CAMERA.output, position = label.position) => {
+      const records = stageRecords([{ ...label, position }], 'constellation');
+      const frame = createLabelFrame(records.capacity);
+      const inputs = stageInputs({ projection });
+      for (const stage of [resolveAnchors, projectRecords]) stage(records, frame, inputs);
+      return frame.rect.subarray(0, 4);
+    };
+    const mono = rectOf(STAGE_CAMERA.output, [0, 0, -1]);
+    const dome = rectOf(equidistantFixture(2000));
+    expect(dome[2]! - dome[0]!).toBeCloseTo(mono[3]! - mono[1]!, 3);
+    expect(dome[3]! - dome[1]!).toBeCloseTo(mono[2]! - mono[0]!, 3);
+  });
 });
