@@ -1,8 +1,7 @@
 /**
  * tangentToward — the unit tangent at the unit direction `d` that points toward
  * `toward` along their great circle, written into `out`. Returns false (and
- * zeroes `out`) when the two are parallel: no great circle is defined, and
- * `liftedAnchor` then lifts along image-up instead.
+ * zeroes `out`) when the two are parallel: no great circle is defined.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

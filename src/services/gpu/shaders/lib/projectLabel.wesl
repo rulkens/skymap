@@ -140,10 +140,11 @@ fn labelCornerPx(anchor: ProjectedLabel, offsetPx: vec2<f32>, projection: Output
   return projectEquidistant(onCard, projection).px;
 }
 
-// Turned 'liftRadii' angular radii toward up3 (at most 90 degrees, and never
-// past up3: beyond the zenith a fisheye shows the label upside down; visible
-// only where the full turn would be, which for a pinhole past view-up is behind
-// the eye), then pushed along image-up until it stands 'minLiftPx' above the subject.
+// Turned 'liftRadii' angular radii toward up3 (at most 90 degrees), then pushed
+// along image-up until it stands 'minLiftPx' above the subject. Neither step
+// passes up3: beyond the zenith a fisheye draws the card upside down, over its
+// subject. Visible only where the full turn would be (a pinhole's turn past
+// view-up is behind the eye).
 fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, liftRadii: f32, minLiftPx: f32, projection: OutputProjection) -> ProjectedLabel {
   let len = scaledLength(viewVec);
   let dir = viewVec / len;
@@ -151,24 +152,20 @@ fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, liftRadii: f32, minLiftPx: f
   let floorPx = minLiftPx * projection.pxScale;
   let tangent = tangentToward(dir, projection.up3);
   let subject = projectLabel(dir, projection);
-  var liftPx: f32;
-  var projected: ProjectedLabel;
   if (all(tangent == vec3<f32>(0.0))) {
-    // Looking along up3: no turn is defined, so the angular lift goes on screen.
-    projected = subject;
-    liftPx = max(angle * projected.pxPerRad, floorPx);
-  } else {
-    // The angle left to up3, from its tangent and radial parts.
-    let toUp = atan2(dot(projection.up3, tangent), dot(projection.up3, dir));
-    let turn = min(angle, max(toUp - LIFT_ZENITH_MARGIN_RAD, 0.0));
-    projected = projectLabel(cos(turn) * dir + sin(turn) * tangent, projection);
-    let fullTurn = projectLabel(cos(angle) * dir + sin(angle) * tangent, projection);
-    projected.visible = projected.visible && fullTurn.visible;
-    let moved = select(0.0, distance(projected.px, subject.px), subject.visible);
-    liftPx = max(floorPx - moved, 0.0);
+    // Looking along up3: no turn is defined and every push leads past it, so no lift.
+    return subject;
   }
+  // The angle left to up3, from its tangent and radial parts.
+  let toUp = atan2(dot(projection.up3, tangent), dot(projection.up3, dir));
+  let turn = min(angle, max(toUp - LIFT_ZENITH_MARGIN_RAD, 0.0));
+  let fullTurn = projectLabel(cos(angle) * dir + sin(angle) * tangent, projection);
+  var projected = projectLabel(cos(turn) * dir + sin(turn) * tangent, projection);
+  projected.visible = projected.visible && fullTurn.visible;
   if (projected.visible) {
-    projected.px += projected.up * liftPx;
+    let moved = select(0.0, distance(projected.px, subject.px), subject.visible);
+    let leftPx = max(toUp - turn - LIFT_ZENITH_MARGIN_RAD, 0.0) * projected.pxPerRad;
+    projected.px += projected.up * min(max(floorPx - moved, 0.0), leftPx);
   }
   return projected;
 }

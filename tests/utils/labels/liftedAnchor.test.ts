@@ -92,10 +92,21 @@ describe('liftedAnchor, equidistant', () => {
     expect(anchor.up[1]).toBeCloseTo(-1, 9);
   });
 
-  it('a subject at the zenith lifts toward image-up', () => {
+  it('the pixel floor never crosses the zenith either', () => {
+    // 0.29° in front of the zenith (3.2 px), far too small to turn: a 15.4 px floor pushed
+    // in full would land 12 px behind the zenith, the card flipped over its subject.
     const anchor = fresh();
-    liftedAnchor([0, 5, 0], 0.5, { radii: 2, minPx: 0 }, dome, anchor);
+    liftedAnchor([0, 1, 0.005], 1e-9, { radii: 3, minPx: 14 }, { ...dome, pxScale: 1.1 }, anchor);
+    expect(anchor.visible).toBe(true);
     expect(anchor.px[0]).toBeCloseTo(1000, 9);
-    expect(anchor.px[1]).toBeCloseTo(1000 - 2 * Math.asin(0.1) * (2000 / Math.PI), 6);
+    expect(anchor.px[1]).toBeGreaterThan(1000);
+    expect(anchor.px[1]).toBeLessThan(1001);
+  });
+
+  it('a subject at the zenith is not lifted: every direction leads past it', () => {
+    const anchor = fresh();
+    liftedAnchor([0, 5, 0], 0.5, { radii: 2, minPx: 14 }, dome, anchor);
+    expect(anchor.visible).toBe(true);
+    expect(anchor.px).toEqual([1000, 1000]);
   });
 });
