@@ -9,7 +9,7 @@
  */
 
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { packPickWord } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../seededStars/data/seededStarCatalogsBySource';
@@ -72,9 +72,7 @@ export function starCatalogSelectionRow(
       const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source)
         ? ref.index
         : runtime.renderer.poolRecordIndex(ref.source, ref.index);
-      return index === null
-        ? null
-        : packSelection(runtime.pickCodes.pickCodeOf(ref.source), index + PICK_SENTINEL_OFFSET);
+      return index === null ? null : packPickWord(runtime.pickCodes.pickCodeOf(ref.source), index);
     },
     extractRow: (ref, simDays) => {
       const seededRow = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);

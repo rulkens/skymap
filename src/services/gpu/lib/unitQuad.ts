@@ -5,7 +5,7 @@
  *
  * ## Why one definition instead of a per-renderer copy
  *
- * `debugLineRenderer`, `labelRenderer`, `markerLineRenderer`, and
+ * `debugLineRenderer`, `labelRenderer`, and
  * `filamentRenderer` each carried a byte-identical
  * `new Float32Array([0,0,1,0,0,1,1,1])` plus a byte-identical
  * `{ arrayStride: 8, stepMode: 'vertex', attributes: [{ shaderLocation: 0,

@@ -2,7 +2,7 @@
  * blackHolePickable — whether the marker pass stamps a hole this frame: while its
  * marker shows. Inside the lens band the marker has faded and the lens is a
  * fullscreen triangle that cannot stamp a point, so the caption's own ink box
- * (`labelsNearPass.drawPick`, packing the same selection id) takes the click there.
+ * (the `labels-near` pick draw, packing the same selection id) takes the click there.
  * A hole outside the focus sphere is not a target either.
  * `pickEnabled` and `drawPick` both call this, so the gate and the stamp cannot
  * disagree.

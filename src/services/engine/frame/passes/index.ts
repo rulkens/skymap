@@ -8,24 +8,34 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
-import { markerLinesPass } from './markerLinesPass';
-import { labelsCosmoPass } from './labelsCosmoPass';
+import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
-import { labelsNearPass } from './labelsNearPass';
 import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 import { letterboxPass } from './letterboxPass';
+import { COSMO, NEAR0 } from '../slabs';
 
 /** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   orbitTrailsPass,
   selectionRingPass,
   near0SelectionRingPass,
-  markerLinesPass,
-  labelsCosmoPass,
-  labelsNearPass,
+  labelsPass({
+    name: 'labels-cosmo',
+    slab: COSMO,
+    renderer: 'labelRendererCosmo',
+    pickRenderer: 'labelPickRendererCosmo',
+  }),
+  labelsPass({
+    name: 'labels-near',
+    slab: NEAR0,
+    renderer: 'labelRendererNear',
+    pickRenderer: 'labelPickRendererNear',
+    // Ranks a caption over the body disc it draws on — `ContentPass.pickTarget`.
+    pickTarget: 'overlay',
+  }),
   labelsWorldPass,
   clipPathDebugPass,
   skyCubemapBlitPass,

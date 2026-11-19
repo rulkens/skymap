@@ -37,7 +37,7 @@ export function bodyApparentDiameterPx(input: {
   const dx = positionMpc[0] - camPosMpc[0];
   const dy = positionMpc[1] - camPosMpc[1];
   const dz = positionMpc[2] - camPosMpc[2];
-  const distanceMpc = Math.hypot(dx, dy, dz);
+  const distanceMpc = Math.sqrt(dx * dx + dy * dy + dz * dz);
   // Camera inside the body — maximally resolved, so hand every threshold a value
   // that clears it (see the docblock). This is the single home for what used to
   // be three copies of the distance-0 guard.

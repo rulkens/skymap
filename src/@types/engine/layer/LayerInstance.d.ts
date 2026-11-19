@@ -7,7 +7,7 @@ import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { LayerScreenLabel } from './LayerScreenLabel';
+import type { LabelSource } from './LabelSource';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitTrailGroup } from './OrbitTrailGroup';
 
@@ -19,7 +19,7 @@ export type LayerInstance = {
   readonly planners: readonly FrameContentPlanner<unknown>[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
-  readonly screenLabels: readonly LayerScreenLabel[];
+  readonly screenLabels: readonly LabelSource<unknown>[];
   readonly worldLabels: readonly LayerWorldLabel[];
   /** `[]` or `[the Layer's group]`. */
   readonly orbitTrails: readonly OrbitTrailGroup[];

@@ -1,7 +1,7 @@
 // selectionRing/io.wesl — shared struct definitions for the selection-ring
 // renderer.  Imported by vertex.wesl + fragment.wesl; bindings themselves
 // are re-declared in the consuming files (WESL has no global state — same
-// pattern as markerLines/io.wesl).
+// pattern as debugLines/io.wesl).
 //
 // ## Uniform layout (two UBOs, two bindings)
 //

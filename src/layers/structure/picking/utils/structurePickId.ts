@@ -5,7 +5,7 @@
  * the caption and on the ring name the same structure.
  */
 
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
 
@@ -14,5 +14,5 @@ export function structurePickId(
   categoryIndex: number,
   pickCodes: Pick<CatalogPickCodes<StructureId>, 'pickCodeOf'>,
 ): number {
-  return packSelection(pickCodes.pickCodeOf(category), categoryIndex + PICK_SENTINEL_OFFSET);
+  return packPickWord(pickCodes.pickCodeOf(category), categoryIndex);
 }

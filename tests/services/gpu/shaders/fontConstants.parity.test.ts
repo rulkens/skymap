@@ -3,7 +3,7 @@
  * are the two canonical bake-time atlas constants; `labels/vertex.wesl` and
  * `labels3d/vertex.wesl` each carry an unguarded `ATLAS_EM_PX` copy (and
  * `labels/vertex.wesl` additionally carries `DISTANCE_RANGE_PX`, used for its
- * outline-fringe math — `labels3d/vertex.wesl` has no outline pass, so it
+ * outline math — `labels3d/vertex.wesl` has no outline pass, so it
  * doesn't mirror that one) with only a must-match comment. `?static` linking
  * injects no values, so nothing else catches one shader drifting from the TS
  * source — same discipline as the sibling `*.parity.test.ts` suites in this

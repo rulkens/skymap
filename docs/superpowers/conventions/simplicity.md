@@ -348,7 +348,7 @@ has more. Don't model new code on them.
 - **Positional factory args** on `galaxyPointRenderer` / `galaxyPickRenderer` / `filamentRenderer` /
   `scalarVolumeRenderer` (`renderers.md`) — `(device, format, …)` braids argument _order_ into
   every call site; convert to a named bag when you next add an arg (#3; #6, _what/how_).
-- **`render` vs `draw` naming** on `labelRenderer` / `markerLineRenderer` (`renderers.md`) — a
+- **`render` vs `draw` naming** on the renderers (`renderers.md`) — a
   small consistency strand; rename when you touch them.
 - **`unpackPickGalaxyOnly` shim** (`selectionEncoding.ts`) — a deprecated transitional duplicate
   of `unpackPick`; remove when the last caller is migrated.

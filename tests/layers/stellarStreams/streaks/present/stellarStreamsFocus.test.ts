@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { stellarStreamsFocus } from '../../../../../src/layers/stellarStreams/streaks/present/stellarStreamsFocus';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import { STREAM_META } from '../../fixtures/streamMeta';
@@ -10,7 +10,7 @@ const STREAM_CODE = 9;
 const GD_1_INDEX = 1;
 const ctxOf = (focusPickId: number | null, focusBlend: number) =>
   ({ snapshot: { focusPickId, focusBlend } }) as unknown as FrameView;
-const streamWord = (index: number) => packSelection(STREAM_CODE, index + PICK_SENTINEL_OFFSET);
+const streamWord = (index: number) => packPickWord(STREAM_CODE, index);
 
 describe('stellarStreamsFocus', () => {
   it('at rest no stream is focused, none recedes and none brightens', () => {
@@ -40,7 +40,7 @@ describe('stellarStreamsFocus', () => {
   });
 
   it('another kind’s focus recedes every stream, its index naming none and brightening none', () => {
-    const structureWord = packSelection(STREAM_CODE + 1, GD_1_INDEX + PICK_SENTINEL_OFFSET);
+    const structureWord = packPickWord(STREAM_CODE + 1, GD_1_INDEX);
     expect(stellarStreamsFocus(ctxOf(structureWord, 1), STREAM_CODE, STREAM_META)).toEqual({
       recede: STRONG_RECESSION,
       focusedStream: -1,

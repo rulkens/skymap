@@ -9,7 +9,7 @@
  */
 
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { packPickWord } from '../../../data/selectionEncoding';
 import { encodeGalaxyId } from './utils/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from './utils/placedGalaxyRow';
@@ -38,9 +38,7 @@ export function galaxyCatalogSelectionRow(
     },
     encodePick: (ref) => {
       const pick = runtime.records.get(ref.source)?.pickOfOrdinal(ref.index) ?? null;
-      return pick === null
-        ? null
-        : packSelection(runtime.pickCodes.pickCodeOf(ref.source), pick + PICK_SENTINEL_OFFSET);
+      return pick === null ? null : packPickWord(runtime.pickCodes.pickCodeOf(ref.source), pick);
     },
     extractRow: (ref) => {
       const row = runtime.recordBridge.row(ref.source, ref.index);

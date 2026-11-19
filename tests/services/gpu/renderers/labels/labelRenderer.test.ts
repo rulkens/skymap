@@ -1,13 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { LABEL_DATA_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
-import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
+import { GLYPH_INSTANCE_BYTES } from '../../../../../src/data/labels/glyphInstanceBytes';
+import { LABEL_RECORD_WORDS } from '../../../../../src/data/labels/labelRecordLayout';
+import { LABEL_RECORD_UNIFORM_OFFSETS as RU } from '../../../../../src/data/labels/labelRecordUniformLayout';
+import { LABEL_TEXT_PX } from '../../../../../src/data/labels/labelTextPx';
+import { STAGE_CAMERA, stageRecords } from '../../../../helpers/labels/labelStageFixture';
 
-// Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can
-// test that the renderer counts known glyphs and silently drops
-// unknown ones.
+// Minimal BMFont fixture: just the uppercase A (codepoint 65), enough for the
+// factory to size its atlas.
 const FIXTURE_METRICS = parseFontMetrics({
   pages: ['x.png'],
   common: { lineHeight: 50, base: 38, scaleW: 512, scaleH: 512 },
@@ -36,68 +38,118 @@ const FIXTURE_ATLASES: LoadedFontAtlases = {
   bitmaps: [],
 };
 
+// The factory's descriptors and uploads are the only observable surface here — a
+// device that records them is what makes them assertable without WebGPU.
+function build() {
+  const writes: { label: string; words: number }[] = [];
+  const uniforms: Float32Array[] = [];
+  const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
+  const pipelineLayouts: GPUPipelineLayoutDescriptor[] = [];
+  const renderPipelines: GPURenderPipelineDescriptor[] = [];
+  const device = {
+    createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
+      bindGroupLayouts.push(desc);
+      return {};
+    }),
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
+    createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => {
+      pipelineLayouts.push(desc);
+      return {};
+    }),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+      renderPipelines.push(desc);
+      return {};
+    }),
+    createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
+    createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
+    createSampler: vi.fn(() => ({})),
+    createBindGroup: vi.fn(() => ({})),
+    queue: {
+      writeBuffer: vi.fn(
+        (buffer: GPUBuffer, _at: number, data: unknown, _from?: number, words?: number) => {
+          if (buffer.label === 'label-uniforms')
+            uniforms.push(new Float32Array(data as Float32Array));
+          writes.push({ label: buffer.label, words: words ?? -1 });
+        },
+      ),
+      copyExternalImageToTexture: vi.fn(),
+    },
+  } as unknown as GPUDevice;
+
+  const ctx = {
+    device,
+    context: null as unknown as GPUCanvasContext,
+    format: 'rgba16float' as GPUTextureFormat,
+    canvas: null as unknown as HTMLCanvasElement,
+    hdrCapable: false,
+  };
+  const renderer = createLabelRenderer(ctx, {
+    targetFormat: ctx.format,
+    atlases: FIXTURE_ATLASES,
+  });
+  return { renderer, writes, uniforms, bindGroupLayouts, pipelineLayouts, renderPipelines };
+}
+
+describe('LabelRenderer set', () => {
+  it('a rebuilt renderer uploads every record and glyph, whatever the dirty range', () => {
+    const records = stageRecords([
+      { text: 'AA', position: [0, 0, -1] },
+      { text: 'A', position: [0, 0, -1] },
+    ]);
+    // The director spent the range on the renderer this one replaces.
+    records.dirtyFrom = records.dirtyTo;
+    const { renderer, writes } = build();
+    const uploads = () => writes.splice(0).filter((w) => w.label !== 'label-uniforms');
+    uploads();
+    renderer.set(records);
+    expect(uploads()).toEqual([
+      { label: 'label-glyphs', words: (3 * GLYPH_INSTANCE_BYTES) / 4 },
+      { label: 'label-records', words: 2 * LABEL_RECORD_WORDS },
+    ]);
+    renderer.set(records);
+    expect(uploads()).toEqual([]);
+    records.generation++;
+    renderer.set(records);
+    expect(uploads()).toEqual([{ label: 'label-glyphs', words: (3 * GLYPH_INSTANCE_BYTES) / 4 }]);
+  });
+});
+
+describe('LabelRenderer draw', () => {
+  it.each([1, 2, 3])("clamps the drawn text to the CPU rect's px range at dpr %i", (dpr) => {
+    const records = stageRecords([{ text: 'A', position: [0, 0, -1] }]);
+    const { renderer, uniforms } = build();
+    renderer.set(records);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const projection = { ...STAGE_CAMERA.output, pxScale: dpr };
+    renderer.draw(pass, { projection, hoveredPick: null, selectedPick: null });
+    const sent = uniforms.at(-1)!;
+    expect(sent[RU.minTextPx / 4]).toBe(LABEL_TEXT_PX.min * dpr);
+    expect(sent[RU.maxTextPx / 4]).toBe(LABEL_TEXT_PX.max * dpr);
+  });
+});
+
 describe('LabelRenderer occlusion variant', () => {
-  // The factory's descriptors are the only observable surface here — a device
-  // that records them is what makes pipeline shape and blend state assertable
-  // without WebGPU.
-  function buildOccluding() {
-    const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
-    const pipelineLayouts: GPUPipelineLayoutDescriptor[] = [];
-    const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
-        bindGroupLayouts.push(desc);
-        return {};
-      }),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => {
-        pipelineLayouts.push(desc);
-        return {};
-      }),
-      createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
-        renderPipelines.push(desc);
-        return {};
-      }),
-      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
-      createSampler: vi.fn(() => ({})),
-      createBindGroup: vi.fn(() => ({})),
-      queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
-    } as unknown as GPUDevice;
-
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
-    createLabelRenderer(ctx, {
-      targetFormat: ctx.format,
-      atlases: FIXTURE_ATLASES,
-      occludeAgainstScene: true,
-    });
-    return { bindGroupLayouts, pipelineLayouts, renderPipelines };
-  }
-
   it('builds both a plain single-BGL pipeline and a two-BGL occlusion pipeline', () => {
-    // The plain path builds one BGL and a single-BGL pipeline layout; the
-    // occludeAgainstScene path adds the group(1) coverage joint AND still builds
-    // the plain pipeline, because `draw` falls back to it on a frame with no
+    // The plain pipeline uses one BGL; the occlusion pipeline adds the group(1)
+    // coverage joint. Both are built, because `draw` falls back to it on a frame with no
     // scene colour (no body drew). A device-only pipeline-validation error
     // (wrong group count) never surfaces in a headless suite, so pin the
     // two-pipeline / two-layout shape structurally here.
-    const { bindGroupLayouts, pipelineLayouts } = buildOccluding();
+    const { bindGroupLayouts, pipelineLayouts } = build();
 
-    // Two BGLs: the label BGL (shared by both pipelines) + the coverage BGL.
+    // Two BGLs: the label BGL (shared by the plain and occlusion pipelines) + the coverage BGL.
     expect(bindGroupLayouts).toHaveLength(2);
-    // Two pipeline layouts: the plain single-BGL layout and the two-BGL
-    // occlusion layout — the occlusion instance builds both and picks per-draw.
-    expect(pipelineLayouts).toHaveLength(2);
-    expect(Array.from(pipelineLayouts[0]!.bindGroupLayouts)).toHaveLength(1); // plain
-    expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
+    expect(pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length)).toEqual([
+      1, // plain
+      2, // occlusion
+    ]);
   });
 
   it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {
@@ -107,9 +159,9 @@ describe('LabelRenderer occlusion variant', () => {
     // module's 'vsOcclude' entry — a device-only pipeline-validation error
     // (group(1) used but not in the layout) never surfaces in this headless
     // suite, so pin the entry point here.
-    const { renderPipelines } = buildOccluding();
-    const plain = renderPipelines.find((p) => p.label === 'label-pipeline');
-    const occlude = renderPipelines.find((p) => p.label === 'label-pipeline-occlude');
+    const { renderPipelines } = build();
+    const plain = renderPipelines.find((p) => p.label === 'label-pipeline-glyphs');
+    const occlude = renderPipelines.find((p) => p.label === 'label-pipeline-occlude-glyphs');
     expect(plain!.vertex.entryPoint).toBe('vs');
     expect(occlude!.vertex.entryPoint).toBe('vsOcclude');
   });
@@ -121,121 +173,10 @@ describe('LabelRenderer occlusion variant', () => {
     // straight-alpha OVER (`src-alpha`) and the hardware multiplies by alpha a
     // SECOND time — captions crush toward black instead of fading out, on a
     // device only. The shader can't state the requirement; this can.
-    const { renderPipelines } = buildOccluding();
+    const { renderPipelines } = build();
     const occlude = renderPipelines.find((p) => p.label?.includes('occlude'));
     const target = Array.from(occlude!.fragment!.targets!)[0]!;
     expect(target!.blend?.color.srcFactor).toBe('one');
     expect(target!.blend?.color.dstFactor).toBe('one-minus-src-alpha');
-  });
-});
-
-function makeLabel(id: string): Label2D {
-  return { id, worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' };
-}
-
-describe('LabelRenderer capacity growth', () => {
-  // Tracks descriptors by their `label` field so an assertion can tell the
-  // construction-time buffer/bind-group apart from a growth-time one without
-  // hardcoding byte sizes derived from private constants.
-  // Each createBuffer call returns a DISTINCT object (never a shared stub) so
-  // growth assertions can tell the pre- and post-reallocation buffer apart by
-  // identity — the thing the bind group must reference correctly.
-  type TrackedBuffer = { desc: GPUBufferDescriptor; buffer: { destroy: ReturnType<typeof vi.fn> } };
-
-  function buildTrackingDevice() {
-    const createdBuffers: TrackedBuffer[] = [];
-    const createBindGroupCalls: GPUBindGroupDescriptor[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({})),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
-        const buffer = { destroy: vi.fn() };
-        createdBuffers.push({ desc, buffer });
-        return buffer;
-      }),
-      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
-      createSampler: vi.fn(() => ({})),
-      createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
-        createBindGroupCalls.push(desc);
-        return {};
-      }),
-      queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
-    } as unknown as GPUDevice;
-
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
-    return { ctx, createdBuffers, createBindGroupCalls };
-  }
-
-  it('writes clipScale into the uniform tail after the 80-byte camera prefix', () => {
-    const { ctx, createdBuffers } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, {
-      targetFormat: ctx.format,
-      atlases: FIXTURE_ATLASES,
-    });
-    r.setLabels([makeLabel('a')]);
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-    const uniformBuffer = createdBuffers.find((b) => b.desc.label === 'label-uniforms')!;
-    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
-    const lastUniformWrite = () =>
-      writeBuffer.mock.calls
-        .filter((c) => c[0] === uniformBuffer.buffer)
-        .at(-1)![2] as Float32Array;
-
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000);
-    expect(lastUniformWrite()[20]).toBe(1);
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
-    expect(lastUniformWrite()[20]).toBe(3);
-  });
-
-  it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
-    const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, {
-      targetFormat: ctx.format,
-      atlases: FIXTURE_ATLASES,
-    });
-    const bindGroupCallsAtConstruction = createBindGroupCalls.length;
-
-    // 65 crosses INITIAL_LABEL_CAPACITY (64); the next power of two is 128,
-    // so both buffers must exactly double.
-    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
-    r.setLabels(labels);
-
-    expect(createBindGroupCalls.length).toBeGreaterThan(bindGroupCallsAtConstruction);
-    const storageBuffers = createdBuffers.filter((b) => b.desc.label === 'label-storage');
-    expect(storageBuffers).toHaveLength(2);
-    expect(storageBuffers[1]!.desc.size).toBe(storageBuffers[0]!.desc.size * 2);
-    const instanceBuffers = createdBuffers.filter((b) => b.desc.label === 'label-instances');
-    expect(instanceBuffers).toHaveLength(2);
-    expect(instanceBuffers[1]!.desc.size).toBe(instanceBuffers[0]!.desc.size * 2);
-
-    // The landmine this test exists for: binding 1 must point at the NEW
-    // storage buffer, not a bind group rebuilt against the destroyed one.
-    const lastBindGroup = createBindGroupCalls[createBindGroupCalls.length - 1]!;
-    const entries = Array.from(lastBindGroup.entries) as GPUBindGroupEntry[];
-    const binding1 = entries.find((e) => e.binding === 1)!;
-    expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
-
-    // No truncation: the upload after growth covers all 65 labels' f32s.
-    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
-    const storageWrite = writeBuffer.mock.calls.find((c) => c[0] === storageBuffers[1]!.buffer)!;
-    expect(storageWrite[4]).toBe((65 * LABEL_DATA_BYTES) / 4);
-
-    expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
-    expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();
   });
 });

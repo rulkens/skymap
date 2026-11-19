@@ -1,5 +1,5 @@
 /**
- * buildSwapRenderers — (re)builds the eight renderers whose pipelines are
+ * buildSwapRenderers — (re)builds the six renderers whose pipelines are
  * baked against the swap-chain colour-target format, deriving the set from
  * `GPU_HANDLE_ROWS`'s `rebuildOnSwapFormat` flag rather than a hand-written
  * list — see docs/superpowers/plans/2026-07-30-hdr-display-toggle.md for why
@@ -9,7 +9,6 @@
  */
 
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
-import { attachLabelDirectors } from '../wiring/attachLabelDirectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
@@ -21,7 +20,7 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
   const uiCtx = state.gpu.uiCtx!;
   const fontAtlases = state.gpu.fontAtlases!;
 
-  // fadeBgl/sourceBgl/focusBgl/envBrdfLut: none of the 8 rows below read them,
+  // fadeBgl/sourceBgl/focusBgl/envBrdfLut: none of the 6 rows below read them,
   // and the code this replaces never touched `state.gpu.fadeBgl` et al. here
   // either — getters keep that true instead of widening this call's state
   // requirement.
@@ -51,10 +50,4 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
     (state.gpu as Record<GpuHandleKey, Disposable | null>)[row.key]?.destroy();
     (state.gpu as Record<GpuHandleKey, unknown>)[row.key] = row.construct(state, deps);
   }
-
-  // Re-wire every label director onto its just-rebuilt renderer pair — both
-  // renderer keys above are `rebuildOnSwapFormat` rows, so skipping this
-  // would leave a director drawing into destroyed buffers (see
-  // `attachLabelDirectors`'s header for why).
-  attachLabelDirectors(state);
 }

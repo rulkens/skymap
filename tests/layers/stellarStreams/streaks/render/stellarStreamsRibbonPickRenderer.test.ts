@@ -4,7 +4,7 @@ import { createStellarStreamsRibbonPickRenderer } from '../../../../../src/layer
 import { STELLAR_STREAM_RIBBON_RECORD_LANES as LANES } from '../../../../../src/layers/stellarStreams/streaks/data/stellarStreamRibbonRecord.constants';
 import { GD_1, SAGITTARIUS, SHORT } from '../../fixtures/streamMeta';
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 
 function setup() {
   const writeBuffer =
@@ -76,6 +76,6 @@ describe('createStellarStreamsRibbonPickRenderer', () => {
     const eye = CAMERA_UNIFORM_BYTES / 4;
     expect(block.byteLength).toBe(112);
     expect(block[eye + 3]).toBe(2);
-    expect(new Uint32Array(block.buffer)[eye + 4]).toBe(packSelection(7, PICK_SENTINEL_OFFSET));
+    expect(new Uint32Array(block.buffer)[eye + 4]).toBe(packPickWord(7, 0));
   });
 });

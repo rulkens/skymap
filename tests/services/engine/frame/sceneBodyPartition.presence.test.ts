@@ -7,7 +7,10 @@ import { assembleOrbitCamera } from '../../../../src/services/engine/camera/asse
 import { bodySceneBodyPartition } from '../../../../src/layers/body/slabs/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
-import { produceMissionCaptions } from '../../../../src/layers/missions/craft/present/produceMissionCaptions';
+import { missionLabelSource } from '../../../../src/layers/missions/craft/present/missionLabelSource';
+import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAnchors';
+import { createLabelFrame } from '../../../../src/services/engine/labels/createLabelFrame';
+import { stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
@@ -83,11 +86,17 @@ const drawnIds = (simDays: number): string[] => {
   const { glints, meshes } = sceneBodyPartition(STATE as never, view, roster, () => false);
   return [...glints, ...meshes].map((body) => body.id);
 };
-// The missions Layer captions every craft; core captions none.
-const labelIds = (simDays: number): string[] =>
-  produceMissionCaptions(missionsPickCode())(STATE, viewAt(simDays), { craft: 1 }).labels.map(
-    (label) => label.id,
+// The missions Layer captions every craft; a caption draws only where its craft is located.
+const labelIds = (simDays: number): string[] => {
+  const { snapshot } = viewAt(simDays);
+  const source = missionLabelSource(missionsPickCode());
+  const labels = source.items(STATE).map((item, i) => source.describe(item, i)!);
+  const frame = createLabelFrame(16);
+  resolveAnchors(stageRecords(labels, 'caption'), frame, stageInputs(snapshot));
+  return labels.flatMap((label, i) =>
+    frame.located[i] === 1 ? [(label.position as { anchorId: string }).anchorId] : [],
   );
+};
 
 describe('spacecraft presence', () => {
   it('a body with a presence date is absent before it, present after', () => {
@@ -95,16 +104,16 @@ describe('spacecraft presence', () => {
     const after = 2460000.5; // 2023
     for (const id of ['hubble', 'spirit', 'opportunity', 'curiosity', 'perseverance']) {
       expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).not.toContain(id);
-      expect(labelIds(before)).not.toContain(`sceneBody-${id}`);
+      expect(labelIds(before)).not.toContain(id);
       expect(viewAt(after).snapshot.meshBodies.map((b) => b.id)).toContain(id);
-      expect(labelIds(after)).toContain(`sceneBody-${id}`);
+      expect(labelIds(after)).toContain(id);
     }
     expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).toContain('whale');
   });
 
   it('an absent craft is in neither glints nor meshes and has no label', () => {
     expect(drawnIds(T0 + 5)).not.toContain('voyager1');
-    expect(labelIds(T0 + 5)).not.toContain('sceneBody-voyager1');
+    expect(labelIds(T0 + 5)).not.toContain('voyager1');
   });
 
   it('a present craft is', () => {
@@ -115,12 +124,12 @@ describe('spacecraft presence', () => {
       velKmS: new Float32Array(6),
     });
     expect(viewAt(T0 + 5).snapshot.meshBodies.map((b) => b.id)).toContain('voyager1');
-    expect(labelIds(T0 + 5)).toContain('sceneBody-voyager1');
+    expect(labelIds(T0 + 5)).toContain('voyager1');
     // Before launch the track exists but the craft does not.
     const preLaunch = 2443000.5; // 1976
     expect(viewAt(preLaunch).snapshot.meshBodies.map((b) => b.id)).not.toContain('voyager1');
     expect(drawnIds(preLaunch)).not.toContain('voyager1');
-    expect(labelIds(preLaunch)).not.toContain('sceneBody-voyager1');
+    expect(labelIds(preLaunch)).not.toContain('voyager1');
   });
 });
 

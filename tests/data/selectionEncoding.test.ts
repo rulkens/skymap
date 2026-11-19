@@ -8,11 +8,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  SELECTION_SOURCE_SHIFT,
+  PICK_SENTINEL_OFFSET,
   SELECTION_LOCAL_IDX_MASK,
   SELECTION_NONE_SENTINEL,
   SELECTION_SOURCE_SENTINEL_CODE,
-  PICK_SENTINEL_OFFSET,
+  SELECTION_SOURCE_SHIFT,
   packSelection,
   unpackPick,
 } from '../../src/data/selectionEncoding';
@@ -78,7 +78,10 @@ describe('selectionEncoding', () => {
   it('sentinel does not collide with any allocated packed identity', () => {
     // Pick codes run 1..62 (63 is the all-ones sentinel). Packing the largest
     // code with the largest localIdx must remain < SELECTION_NONE_SENTINEL.
-    const largestAllocated = packSelection(SELECTION_SOURCE_SENTINEL_CODE - 1, SELECTION_LOCAL_IDX_MASK);
+    const largestAllocated = packSelection(
+      SELECTION_SOURCE_SENTINEL_CODE - 1,
+      SELECTION_LOCAL_IDX_MASK,
+    );
     expect(largestAllocated).toBeLessThan(SELECTION_NONE_SENTINEL);
   });
 });

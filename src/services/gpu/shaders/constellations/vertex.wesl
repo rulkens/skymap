@@ -7,7 +7,7 @@
 //
 //   1. Thickness — expands the corner into a screen-aligned quad of half-width
 //      'uniforms.halfWidthPx' via the shared 'lib::segmentQuad::expandSegmentQuad'
-//      helper (the same expansion filaments + markerLines use). This owns the
+//      helper (the same expansion filaments + debugLines use). This owns the
 //      endpoint choice (corner.x >0.5 -> b) and the +/- perpendicular offset.
 //
 //   2. The endpoint gap (Q4) — pulls each end INWARD along the screen-space

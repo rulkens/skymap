@@ -1,7 +1,6 @@
 /**
  * labels — cross-cutting label-presentation knobs that MULTIPLY on top of
- * each layer's own label gates; see `LabelSettings` for which producers read
- * `focusedOnly` and which draw through a separate pass entirely.
+ * each layer's own label gates; see `LabelSettings`.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';

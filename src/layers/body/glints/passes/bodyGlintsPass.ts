@@ -20,7 +20,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { bodySceneBodyPartition } from '../../slabs/present/bodySceneBodyPartition';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
@@ -135,7 +135,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             earthPos[1] - camPos[1],
             earthPos[2] - camPos[2],
           ] as Vec3,
-          packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
+          packedId: packPickWord(runtime.pickCodes.pickCodeOf('earth'), 0),
           bandClass: glintBandClass('earth'),
         });
       }
@@ -170,10 +170,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             positionMpc[1] - camPos[1],
             positionMpc[2] - camPos[2],
           ] as Vec3,
-          packedId: packSelection(
-            runtime.pickCodes.pickCodeOf('planet'),
-            seedIndex + PICK_SENTINEL_OFFSET,
-          ),
+          packedId: packPickWord(runtime.pickCodes.pickCodeOf('planet'), seedIndex),
           bandClass: glintBandClass(body.id),
         });
       }

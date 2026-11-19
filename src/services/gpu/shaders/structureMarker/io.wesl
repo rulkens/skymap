@@ -53,7 +53,7 @@ const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 //   [48..51] pickable            f32        (1 = takes a click, 0 = excluded by the focus)
 //
 // Packing the radius into the trailing slot of the world-position
-// vec4 saves a vertex-attribute slot — same trick as markerLines'
+// vec4 saves a vertex-attribute slot — same trick as debugLines'
 // fromAndWidth.  haloAlpha / ringAlpha ride in the trailing slot of
 // their respective colour vec4s for the same reason.
 //

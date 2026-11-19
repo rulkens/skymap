@@ -19,8 +19,11 @@ import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { canvasDpr } from '../../../utils/browser/canvasDpr';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runLabel3DProducers } from './runLabel3DProducers';
+import { runLabelDirector } from './runLabelDirector';
+import { COSMO, NEAR0 } from './slabs';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
@@ -181,6 +184,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     mainViewSpec(
       { width: deps.canvas.width, height: deps.canvas.height },
       state.cameraRuntime.outputs.frustum,
+      canvasDpr(deps.canvas),
     ),
   );
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
@@ -210,14 +214,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
 
-  // Before the GPU dispatch (they upload the label buffers). Three statements,
-  // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
+  // Before the GPU dispatch (they upload the label buffers). Separate statements,
+  // not `a() || b() || c()`: each call uploads as a side effect and `||`
   // short-circuits.
   const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  const cosmoLabelsAnimating = runLabelDirector(state, canvas, COSMO);
   if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
   const nearStartMs = cpuSpans.on ? performance.now() : 0;
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  const nearLabelsAnimating = runLabelDirector(state, canvas, NEAR0);
   if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;

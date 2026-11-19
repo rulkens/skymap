@@ -2,11 +2,9 @@
 // screen-space rectangle per legible label, stamping the label subject's
 // packed identity into the r32uint pick target.
 //
-// The rect arrives ALREADY in device pixels ('labelScreenRect' on the CPU —
-// the same measured-ink + em-clamp math the COSMO declutter runs), so nothing
-// is projected here; the vertex stage only maps px -> NDC. A shader-side
-// second copy of that clamp is precisely the drift the shared CPU helper
-// exists to prevent. It is also why this is not 'lib/billboard's
+// The rect arrives ALREADY in device pixels (the ink box 'projectRecords'
+// made for declutter), so nothing is projected here; the vertex stage only
+// maps px -> NDC. That is also why this is not 'lib/billboard's
 // 'expandBillboardScreen': that expands a uniform radius about a projected
 // centre, and a line of text is an asymmetric box about its anchor.
 //
@@ -21,7 +19,7 @@
 // a fragment pinned to the plane has to be broken.
 //
 // Every label in a pass shares its band, and the depth test rejects EQUAL, so
-// the FIRST instance drawn wins a contested pixel — 'labelPickQuads' emits
+// the FIRST instance drawn wins a contested pixel — 'recordPickQuads' emits
 // them nearest-subject-first for that reason.
 //
 // ## Attribute layout (stepMode 'instance', stride 20 bytes)

@@ -16,11 +16,12 @@ export const VIEW_RIGS: Readonly<Record<ViewRigKey, ViewRig>> = {
     views: () => null,
     program: [PRELUDE, SCENE, POST, OVERLAYS],
     pickable: true,
+    outputProjection: 'pinhole',
   },
   // Five dome-cube faces, no canvas draw of its own: the resample step reads
   // them back into `hdr`, which `POST` composites to the canvas like mono's
-  // own. No `OVERLAYS` — see `docs/backlog/2026-09-23-dome-output-space-overlays.md`
-  // for why labels are off and what wiring restoring them needs.
+  // own. No `OVERLAYS` and no `outputProjection` yet: dome labels are the dome
+  // PR's (spec `2026-11-17-dome-labels-design.md` §7).
   dome: {
     views: domeFaceSpecs,
     program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST],

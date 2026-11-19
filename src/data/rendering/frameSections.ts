@@ -321,41 +321,50 @@ export const DOME_RESAMPLE: FrameSection = {
   steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
 };
 
-export const OVERLAYS: FrameSection = {
-  scope: 'once',
-  steps: [
-    // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
-    // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
-    // which goes incoherent across the per-layer timing pass boundaries (additive rows
-    // never read it). The Sun/Earth still occlude cosmological labels, via the
-    // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
-    // leads so lines and labels composite over its stroke.
-    //
-    // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
-    // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
-    // joint, so every pipeline binding it must fill its depth entries.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: COSMO,
-      depth: { sample: 'foreground:0' },
-      passes: ['selection-ring', 'marker-lines', 'labels-cosmo'],
-    },
-    // Near-field overlays, last, so scene-body captions land on top of the bodies.
-    // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
-    // would clip a picked survey star); each ring lands only in the slab whose frustum
-    // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
-    // painted last by intent.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: NEAR0,
-      depth: { sample: 'foreground:0' },
-      passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
-    },
-    // The film look's bars, after every overlay so they mask captions the way a real
-    // matte would. Its own line: it binds no depth, and the line above must fill the
-    // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
-    { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
-  ],
-};
+// The overlays, with the selection rings and the clip-path inspector or without them
+// (a rig with no single cursor, the dome); one builder so both keep one pass per slab
+// and one draw order. Private until a second rig lists it.
+function overlays({ selectionRings }: { readonly selectionRings: boolean }): FrameSection {
+  return {
+    scope: 'once',
+    steps: [
+      // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
+      // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
+      // which goes incoherent across the per-layer timing pass boundaries (additive rows
+      // never read it). The Sun/Earth still occlude cosmological labels, via the
+      // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
+      // leads so leaders and labels composite over its stroke.
+      //
+      // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
+      // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
+      // joint, so every pipeline binding it must fill its depth entries.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: COSMO,
+        depth: { sample: 'foreground:0' },
+        passes: selectionRings ? ['selection-ring', 'labels-cosmo'] : ['labels-cosmo'],
+      },
+      // Near-field overlays, last, so scene-body captions land on top of the bodies.
+      // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
+      // would clip a picked survey star); each ring lands only in the slab whose frustum
+      // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
+      // painted last by intent.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: NEAR0,
+        depth: { sample: 'foreground:0' },
+        passes: selectionRings
+          ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
+          : ['labels-near'],
+      },
+      // The film look's bars, after every overlay so they mask captions the way a real
+      // matte would. Its own line: it binds no depth, and the line above must fill the
+      // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+      { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
+    ],
+  };
+}
+
+export const OVERLAYS: FrameSection = overlays({ selectionRings: true });

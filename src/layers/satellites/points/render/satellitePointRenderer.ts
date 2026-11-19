@@ -24,7 +24,7 @@ import { SATELLITE_PROFILE_CAPACITY } from '../data/satelliteProfileCapacity';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import {
   OCCLUDER_UNIFORM_BYTES,
   createTrailOcclusionUniforms,
@@ -131,9 +131,9 @@ export function createSatellitePointRenderer({
   let instanceCount = 0;
   let sweep: SatelliteSweep | null = null;
   const uniformScratch = new Float32Array(SATELLITE_UNIFORM_BYTES / 4);
-  new Uint32Array(uniformScratch.buffer)[SATELLITE_UNIFORM_OFFSETS.pickBase / 4] = packSelection(
+  new Uint32Array(uniformScratch.buffer)[SATELLITE_UNIFORM_OFFSETS.pickBase / 4] = packPickWord(
     dotPickCode,
-    PICK_SENTINEL_OFFSET,
+    0,
   );
 
   /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view changes. */

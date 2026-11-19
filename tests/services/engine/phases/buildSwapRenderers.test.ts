@@ -3,7 +3,7 @@
  * `rebuildOnSwapFormat` renderers `GPU_HANDLE_ROWS` flags. Each factory
  * builds a real `GPURenderPipeline` against `device`, which JSDOM's stub
  * `GPUDevice` can't service — mocked so the run completes and its
- * `state.gpu.*` writes + label-director wiring can be observed directly.
+ * `state.gpu.*` writes can be observed directly.
  * Importing this file also imports the REST of `GPU_HANDLE_ROWS`'s
  * factories transitively; those stay unmocked safely because only the 8
  * flagged rows' `construct` ever runs here.
@@ -18,9 +18,6 @@ function makeStub() {
 
 vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub()),
-}));
-vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
-  createMarkerLineRenderer: vi.fn(() => makeStub()),
 }));
 vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub()),
@@ -39,7 +36,7 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
 import { buildSwapRenderers } from '../../../../src/services/engine/phases/buildSwapRenderers';
 
 /**
- * The eight handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
+ * The six handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
  * `uiCtx` / `fontAtlases` inputs it reads, plus one NOT-flagged row
  * (`label3DRenderer`) — the untouched-identity proof's subject.
  */
@@ -55,22 +52,12 @@ function makeState(): EngineState {
       },
       fontAtlases: { __mockAtlases: true },
       labelRendererCosmo: null,
-      markerLineRendererCosmo: null,
       debugLineRenderer: null,
       letterboxRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
       labelRendererNear: null,
-      markerLineRendererNear: null,
       label3DRenderer: makeStub(),
-    },
-    subsystems: {
-      cosmoLabelDirector: {
-        attachRenderers: vi.fn(),
-      },
-      foregroundLabelDirector: {
-        attachRenderers: vi.fn(),
-      },
     },
   } as unknown as EngineState;
 }
@@ -82,13 +69,11 @@ describe('buildSwapRenderers', () => {
 
     const firstRound = {
       labelRendererCosmo: state.gpu.labelRendererCosmo,
-      markerLineRendererCosmo: state.gpu.markerLineRendererCosmo,
       debugLineRenderer: state.gpu.debugLineRenderer,
       letterboxRenderer: state.gpu.letterboxRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
       labelRendererNear: state.gpu.labelRendererNear,
-      markerLineRendererNear: state.gpu.markerLineRendererNear,
     } as const;
 
     buildSwapRenderers(state, 'rgba16float');
@@ -99,31 +84,6 @@ describe('buildSwapRenderers', () => {
       const current = state.gpu[key as keyof typeof firstRound];
       expect(current).not.toBe(prevHandle);
     }
-  });
-
-  it('re-attaches the label director to the new renderers', () => {
-    const state = makeState();
-    buildSwapRenderers(state, 'bgra8unorm');
-    const firstLabelRenderer = state.gpu.labelRendererCosmo;
-    const firstMarkerLineRenderer = state.gpu.markerLineRendererCosmo;
-
-    buildSwapRenderers(state, 'rgba16float');
-
-    const attachRenderers = state.subsystems.cosmoLabelDirector.attachRenderers as ReturnType<
-      typeof vi.fn
-    >;
-    // Must be re-wired onto the SECOND-round instances — attaching the stale
-    // first-round refs would leave the director drawing into destroyed
-    // buffers, so labels/marker-lines would silently stop appearing. Read the
-    // LAST call's actual args (not `not.toHaveBeenCalledWith`, which would
-    // also inspect the first, legitimately-first-round call) and check both
-    // that they match the final field values and that they are NOT the
-    // first-round instances.
-    const [lastLabelArg, lastMarkerArg] = attachRenderers.mock.calls.at(-1)!;
-    expect(lastLabelArg).toBe(state.gpu.labelRendererCosmo);
-    expect(lastMarkerArg).toBe(state.gpu.markerLineRendererCosmo);
-    expect(lastLabelArg).not.toBe(firstLabelRenderer);
-    expect(lastMarkerArg).not.toBe(firstMarkerLineRenderer);
   });
 
   it("a non-swap-format row's handle identity is unchanged across a rebuild", () => {

@@ -137,7 +137,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         title: 'Names in dome mode',
         text: 'Names drawn on the fisheye picture, which has none today, and stars sized in the dome’s own pixels.',
         state: 'planned',
-        backlog: 'Dome output-space overlays: labels plus pixel floors in fisheye pixels',
+        backlog: 'Dome pixel floors in fisheye pixels',
       },
       {
         id: 'structure-shapes',

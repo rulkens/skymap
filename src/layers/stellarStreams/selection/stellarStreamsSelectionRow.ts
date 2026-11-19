@@ -3,7 +3,7 @@
  * pick index is the stream's meta position, which is its index in the bin (the pair check holds
  * the two in step). Everything reads the meta alone, so a deep link resolves before the bin lands.
  */
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { packPickWord } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { encodeStellarStreamFocusId } from './utils/encodeStellarStreamFocusId';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
@@ -26,7 +26,7 @@ export function stellarStreamsSelectionRow(
     },
     encodePick: (ref) => {
       const k = indexOf(ref.slug);
-      return k < 0 ? null : packSelection(runtime.pickCode, k + PICK_SENTINEL_OFFSET);
+      return k < 0 ? null : packPickWord(runtime.pickCode, k);
     },
     extractRow: (ref): StellarStreamSelectionRow | null => {
       const entry = runtime.meta()?.[indexOf(ref.slug)];

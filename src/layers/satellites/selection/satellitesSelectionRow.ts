@@ -5,7 +5,7 @@
  * focused one every frame and place it under `driver.poseId` (`placeLiveSelection`), which the
  * camera follows. With no catalog loaded there is no row: the satellites live only near Earth.
  */
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { packPickWord } from '../../../data/selectionEncoding';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
@@ -48,7 +48,7 @@ export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKin
     encodePick: (ref) => {
       const catalog = runtime.propagator.catalog();
       const k = catalog === null ? -1 : catalogIndexOf(catalog, ref.noradId);
-      return k < 0 ? null : packSelection(runtime.pickCode, k + PICK_SENTINEL_OFFSET);
+      return k < 0 ? null : packPickWord(runtime.pickCode, k);
     },
     extractRow: (ref, simDays) => {
       const catalog = runtime.propagator.catalog();

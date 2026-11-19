@@ -28,6 +28,7 @@ export function domeFaceSpecs(canvas: FrameView, _state: EngineState): readonly 
       eyeOffsetMpc,
       frustum: FRUSTUM,
       sizePx: canvas.canvasSize,
+      dpr: canvas.dpr,
       slot: DOME_PARAMS.viewSlotBase + i,
       kind: 'frame',
       output: canvas.snapshot.renderTargets.layerViewOf('dome-cube', i),

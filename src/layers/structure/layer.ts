@@ -1,13 +1,12 @@
 /**
  * The structure Layer: the extended-structure categories of both scales (cosmic
  * on COSMO, Milky Way on NEAR0) — the record store and its bulk catalog, the
- * per-view marker planner, one ring/halo pass and one label producer per slab,
+ * per-view marker planner, one ring/halo pass and one label source per slab,
  * the ring and label entries, the selection row, the Structures settings
  * section and the InfoCard detail cards.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 import { structureLayerSettings } from './state/slices';
 import { structureVisibility } from './visibility';
 import { STRUCTURE_SOURCE_ROWS } from './sources/structureSourceRows';
@@ -17,7 +16,7 @@ import { structureMarkersPlanner } from './frame';
 import { structureAssetRows } from './catalog/load/structureAssetRows';
 import { structureMarkersCosmoPass } from './markers/passes/structureMarkersCosmoPass';
 import { structureMarkersNearPass } from './markers/passes/structureMarkersNearPass';
-import { produceStructureLabels } from './markers/present/produceStructureLabels';
+import { structureLabelSource } from './markers/present/structureLabelSource';
 import { structureSelectionRow } from './selection/structureSelectionRow';
 import { structureSelectionKinds } from './selection/kinds';
 import StructuresSectionContainer from './controls/ui/StructuresSectionContainer';
@@ -40,18 +39,8 @@ export const structureLayer = defineLayer({
   planners: (runtime) => [structureMarkersPlanner(runtime)],
   guides: (runtime) => ({
     screenLabels: [
-      {
-        id: 'structureLabelsCosmo',
-        slab: COSMO,
-        label: 'structure',
-        produceLabels: produceStructureLabels(runtime, 'cosmic'),
-      },
-      {
-        id: 'structureLabelsNear',
-        slab: NEAR0,
-        label: 'structure',
-        produceLabels: produceStructureLabels(runtime, 'milkyWay'),
-      },
+      structureLabelSource(runtime, 'cosmic'),
+      structureLabelSource(runtime, 'milkyWay'),
     ],
   }),
   selection: {

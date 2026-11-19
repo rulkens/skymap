@@ -108,7 +108,6 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
   - Spec §4 body infrastructure: the position solver, the body tables and fold, `bodyPickRenderer`, `meshBodyRenderer` + `meshAssets.generated`, `orbitTrail*`, `bodyGlintRenderer` (4 Layers), `BodyDetailCard` (3 Layers), the `satellite`/`meshBody` makers (2 Layers each), `sceneEarth`, `utils/scene/*`.
   - Shared places and constants: the `galactic-centre` place, `sgrAStarMassSolar`, `galacticCenter`.
   - Labels, marker lines, selection ring, debug lines.
-  - `famousLabelStyle`, despite its name: it is also used by `bodyCaption`.
   - Tours, `featuredTabs`, the tier slice, and `SettingsAction`, which names flow and galaxyCatalog actions for tour beats: cross-Layer editorial composition.
 
 ## Quality debt noted in passing

@@ -16,7 +16,7 @@
  * ## Why a factory closure
  *
  * Convention every lightweight renderer follows here. See
- * `markerLineRenderer.ts` for the rationale; we apply it verbatim.
+ * `labelRenderer.ts` for the rationale; we apply it verbatim.
  *
  * ## Why two uniform bindings
  *
