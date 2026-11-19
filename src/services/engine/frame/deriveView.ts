@@ -143,5 +143,6 @@ export function deriveView(
     viewSlot: spec.slot,
     viewKind: spec.kind,
     output: spec.output,
+    layer: spec.layer,
   };
 }

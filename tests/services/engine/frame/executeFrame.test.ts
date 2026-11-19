@@ -148,7 +148,20 @@ const SKY_CUBEMAP_FACE_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4, 5].map
   (face) => ({ __id: `sky-cubemap-face${face}-view` }) as unknown as GPUTextureView,
 );
 
+// A layered target row: each view attaches the layer it owns (`FrameView.layer`).
+const LAYERED_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4].map(
+  (layer) => ({ __id: `layered-layer${layer}-view` }) as unknown as GPUTextureView,
+);
+
 const EXEC_SPECS = [
+  {
+    id: 'layered',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    layers: 5,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
   {
     id: 'hdr',
     format: 'rgba16float' as const,
@@ -213,7 +226,12 @@ function makeCtx(): FrameView {
       throw new Error(`mock renderTargets: no view for '${id}'`);
     },
     layerViewOf: (id: string, face: number) => {
-      const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+      const view =
+        id === 'sky-cubemap'
+          ? SKY_CUBEMAP_FACE_VIEWS[face]
+          : id === 'layered'
+            ? LAYERED_VIEWS[face]
+            : undefined;
       if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
       return view;
     },
@@ -492,6 +510,16 @@ describe('executeFrame', () => {
     expect(attachment.view).toBe(outputView);
     expect(attachment.loadOp).toBe('clear');
     expect(attachment.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it('a render step into a layered target attaches the layer the view owns', () => {
+    const contentPass = makeContentPass({ name: 'mask' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'layered', slab: NEAR0, passes: [contentPass] },
+    ];
+    const { args, env } = makeArgs({ program, ctx: { ...makeCtx(), layer: 3 } });
+    executeFrame(args);
+    expect(attachmentOfDraw(env, contentPass).view).toBe(LAYERED_VIEWS[3]);
   });
 
   it('copy step without a view output throws', () => {

@@ -93,6 +93,7 @@ import {
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
 import { captureTimingSlotName } from './timing/captureTimingSlotName';
 import { captureFaceAttachment } from './captureFaceAttachment';
+import { layerViewFor } from './layerViewFor';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
@@ -312,7 +313,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           destination = {
             label: step.target,
             dest: {
-              view: viewFor(step.target, ctx, swapView),
+              view:
+                (spec.layers ?? 1) > 1
+                  ? layerViewFor(step.target, ctx)
+                  : viewFor(step.target, ctx, swapView),
               clearValue: clearValueOf(spec, state),
             },
             depth:
