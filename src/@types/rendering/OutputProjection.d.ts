@@ -10,8 +10,8 @@ import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 
 export type OutputProjection = {
-  /** The dome PR adds `'equidistant'`. */
-  readonly kind: 'pinhole';
+  /** `'equidistant'` is the dome's fisheye: view space is then the dome frame, +y at the zenith. */
+  readonly kind: 'pinhole' | 'equidistant';
   /** World → view, rotation only; the camera position travels as `camHi`/`camLo`. */
   readonly viewFromWorld: Mat3;
   /** The eye in world Mpc as an f32 hi/lo pair (`writeHiLoVertex`'s split). */

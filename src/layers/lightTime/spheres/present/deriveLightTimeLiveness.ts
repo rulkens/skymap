@@ -37,6 +37,7 @@ export function deriveLightTimeLiveness(
         LABEL_STYLES.lightTime,
         ((2 * sphere.radiusMpc) / camDistMpc) * ctx.drawPxPerRad,
         shortSidePx,
+        ctx.drawPxPerRad,
         ctx.dpr,
       ),
   );

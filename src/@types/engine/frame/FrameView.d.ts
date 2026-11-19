@@ -57,4 +57,7 @@ export type FrameView = {
   /** Where a `swap`-targeted step resolves for THIS view; unset falls back
    *  to the acquired swap-chain view (the canvas view, every mono view). */
   output?: GPUTextureView;
+  /** The array layer a render step into a layered target attaches for THIS view
+   *  (`ViewSpec.layer`); unset on a view that owns none. */
+  layer?: number;
 };

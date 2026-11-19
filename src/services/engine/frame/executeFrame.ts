@@ -93,8 +93,10 @@ import {
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
 import { captureTimingSlotName } from './timing/captureTimingSlotName';
 import { captureFaceAttachment } from './captureFaceAttachment';
+import { layerViewFor } from './layerViewFor';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
+import { sampledMaskFor } from './sampledMaskFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
@@ -263,7 +265,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // carry no sample marker (`bodyRowSteps`'s module header), so a
         // capture step never takes this branch.
         const slab = slabViewOf(stepCtx, step.slab);
-        const view: SlabView =
+        const sampled: SlabView =
           step.capture === undefined && typeof step.depth === 'object'
             ? {
                 ...slab,
@@ -274,6 +276,17 @@ export function executeFrame(args: ExecuteFrameArgs): void {
                 ),
               }
             : slab;
+        const view: SlabView =
+          step.mask === undefined
+            ? sampled
+            : {
+                ...sampled,
+                sampledMask: sampledMaskFor(
+                  step.mask.sample,
+                  frameRendered,
+                  ctx.snapshot.renderTargets,
+                ),
+              };
         const group = step.passes.filter(
           (l) => l.enabled(state, stepCtx, view) && disabledPasses[l.name] !== true,
         );
@@ -312,7 +325,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           destination = {
             label: step.target,
             dest: {
-              view: viewFor(step.target, ctx, swapView),
+              view:
+                (spec.layers ?? 1) > 1
+                  ? layerViewFor(step.target, ctx)
+                  : viewFor(step.target, ctx, swapView),
               clearValue: clearValueOf(spec, state),
             },
             depth:

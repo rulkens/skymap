@@ -1,18 +1,10 @@
 /**
- * OverlaySceneOcclusion — everything the shared group(1) occlusion joint binds,
- * as ONE value: a coverage colour view, the sampled scene depth, and the frame
- * that turns a depth texel into km. All three or none — an overlay renderer
- * handed this draws through its occlusion pipeline, handed nothing through its
- * plain one, and no pipeline can ever reach a half-filled joint.
+ * OverlaySceneOcclusion — what a swap-target overlay is occluded by, as ONE value its
+ * renderer picks a pipeline from: the sampled-depth joint read in the scene's own image,
+ * or a mask already carried to the output image. Handed nothing, an overlay draws plain.
  */
 
-import type { SampledDepthKmFrame } from './SampledDepthKmFrame';
+import type { MaskSceneOcclusion } from './MaskSceneOcclusion';
+import type { SampledDepthSceneOcclusion } from './SampledDepthSceneOcclusion';
 
-export type OverlaySceneOcclusion = {
-  /** `foreground:0`'s colour — its ALPHA is the coverage `sceneTransmittance` reads. */
-  readonly colorView: GPUTextureView;
-  /** The sampled depth, or the far-cleared placeholder when `frame` is null. */
-  readonly depthView: GPUTextureView;
-  /** Null ⇒ `depthView` is the placeholder and the shader's FAR_DEPTH arm rules. */
-  readonly frame: SampledDepthKmFrame | null;
-};
+export type OverlaySceneOcclusion = SampledDepthSceneOcclusion | MaskSceneOcclusion;

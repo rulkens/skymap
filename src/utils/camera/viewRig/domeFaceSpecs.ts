@@ -32,6 +32,7 @@ export function domeFaceSpecs(canvas: FrameView, _state: EngineState): readonly 
       slot: DOME_PARAMS.viewSlotBase + i,
       kind: 'frame',
       output: canvas.snapshot.renderTargets.layerViewOf('dome-cube', i),
+      layer: i,
     });
   }
   return specs;

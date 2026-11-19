@@ -20,7 +20,6 @@ export type ViewRig = {
   /** Whether the canvas cursor maps to one of this rig's views — false turns
    *  off picking and the terrain pick marker (a dome has no single cursor ray). */
   readonly pickable: boolean;
-  /** How this rig's labels land on its output image (`outputProjectionOf`); a rig
-   *  that names none (the dome, until its labels PR) gets its canvas pinhole. */
-  readonly outputProjection?: OutputProjection['kind'];
+  /** How this rig's labels land on its output image (`outputProjectionOf`). */
+  readonly outputProjection: OutputProjection['kind'];
 };

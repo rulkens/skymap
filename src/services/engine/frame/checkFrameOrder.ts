@@ -1,13 +1,12 @@
 /**
  * checkFrameOrder — the once-at-boot cross-check over every `ViewRig`'s
  * program: catches a pass/compute/planner a Layer contributes but no line
- * runs, a name listed twice, a mistyped target, or a plan row that doesn't
- * lead its section. "Listed twice" is checked PER PROGRAM (a section two
- * rigs share, like `PRELUDE`, submits separately in each rig's own encoder);
- * "some program runs it" is checked ACROSS every program. A `plan` row is
- * strict: it always names a registered `FrameContentPlanner` whose scope
- * matches its section's, so an unmatched name throws immediately — unlike a
- * pass/compute, which a composition without that Layer simply omits.
+ * runs, a name listed twice, a mistyped target, a mask sampled before it is
+ * written, or a plan row that doesn't lead its section. "Listed twice" is
+ * checked PER PROGRAM (a section two rigs share, like `PRELUDE`, submits in
+ * each rig's own encoder); "some program runs it" ACROSS every program. A
+ * `plan` row is strict: its `FrameContentPlanner` must be registered with its
+ * section's scope, where a pass/compute of an absent Layer is simply omitted.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -29,9 +28,18 @@ type StepFacts = {
   readonly targets: readonly string[];
   /** A `render` line's declared `{ sample }` source id, when it has one. */
   readonly sampled: readonly string[];
+  /** A `render` line's declared `mask: { sample }` source id, when it has one. */
+  readonly sampledMasks: readonly string[];
 };
 
-const NONE: StepFacts = { drawn: [], computed: [], captured: [], targets: [], sampled: [] };
+const NONE: StepFacts = {
+  drawn: [],
+  computed: [],
+  captured: [],
+  targets: [],
+  sampled: [],
+  sampledMasks: [],
+};
 
 // A table rather than a switch, for the reason `expandFrameOrder` gives.
 const STEP_FACTS: {
@@ -57,6 +65,7 @@ const STEP_FACTS: {
     drawn: spec.passes,
     targets: [spec.target],
     sampled: typeof spec.depth === 'object' ? [spec.depth.sample] : [],
+    sampledMasks: spec.mask === undefined ? [] : [spec.mask.sample],
   }),
   foreground: (spec) => ({
     ...NONE,
@@ -90,6 +99,9 @@ export function checkFrameOrder(
   const sampled: string[] = [];
 
   for (const program of programs) {
+    // Render targets this program has written so far, in authored order: a mask
+    // sampled before any line writes it would read nothing, every frame.
+    const written = new Set<string>();
     // Fresh per program: two rigs sharing a section (`PRELUDE`) each submit it
     // in their own encoder, so only a repeat WITHIN one program is the silent
     // double-run this guards against — a pass/compute/planner name may repeat
@@ -152,6 +164,14 @@ export function checkFrameOrder(
         if (!drops) {
           touchedTargets.push(...facts.targets);
           sampled.push(...facts.sampled);
+          for (const source of facts.sampledMasks) {
+            if (!written.has(source)) {
+              throw new Error(
+                `checkFrameOrder: step samples mask '${source}', which no earlier line of its program writes`,
+              );
+            }
+          }
+          if (spec.kind === 'render') written.add(spec.target);
         }
       }
     }

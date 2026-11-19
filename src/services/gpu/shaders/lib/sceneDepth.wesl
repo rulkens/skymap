@@ -56,18 +56,27 @@ fn sceneTransmittance(fragXY: vec2f) -> f32 {
  * relief away.
  */
 fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
+  // No surface reads as 'nearKm' itself, which is never nearer than 'nearKm'.
+  return select(0.0, 1.0, sceneSurfaceKm(fragXY, nearKm) < nearKm);
+}
+
+/**
+ * Distance along this pixel's ray to the sampled scene surface, km, or
+ * 'noSurfaceKm' where the texel still holds the far clear. The texel rescale
+ * is the one 'sceneDepthOccludes' documents.
+ */
+fn sceneSurfaceKm(fragXY: vec2f, noSurfaceKm: f32) -> f32 {
   let texel = vec2i(fragXY * vec2f(textureDimensions(sceneDepthTex)) / depthFrame.viewportPx);
   let depth = textureLoad(sceneDepthTex, texel, 0);
   if (depth == FAR_DEPTH) {
-    return 0.0;
+    return noSurfaceKm;
   }
-  let sceneKm = sceneRayDistance(
+  return sceneRayDistance(
     fragXY / depthFrame.viewportPx,
     depth,
     depthFrame.invMvp,
     depthFrame.camPosKm,
   );
-  return select(0.0, 1.0, sceneKm < nearKm);
 }
 
 /**

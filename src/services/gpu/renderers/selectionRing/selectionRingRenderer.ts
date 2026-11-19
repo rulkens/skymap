@@ -43,7 +43,7 @@ import vsCode from '../../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../../shaders/selectionRing/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/selectionRing/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
+import type { SampledDepthSceneOcclusion } from '../../../../@types/rendering/SampledDepthSceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,
   OCCLUSION_COVERAGE_LAYOUT_DESC,
@@ -70,7 +70,7 @@ const SELECTION_UNIFORM_BYTES = 32;
  * behind the solar-system bodies. When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
  * `fragmentOcclude.wesl` alongside the plain entry; `draw` then selects the
- * occlude pipeline on any frame handed an `OverlaySceneOcclusion`. The default
+ * occlude pipeline on any frame handed an `SampledDepthSceneOcclusion`. The default
  * (init omitted) keeps the plain single-BGL pipeline the NEAR0 selection ring
  * relies on — byte-for-byte unchanged, since that sibling passes nothing.
  */
@@ -192,7 +192,7 @@ export function createSelectionRingRenderer(
     viewportSize: Vec2,
     pxPerRad: number,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
-    scene?: OverlaySceneOcclusion,
+    scene?: SampledDepthSceneOcclusion,
   ): void {
     if (!device || !plainPipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
     if (selection === null) return;

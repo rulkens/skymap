@@ -181,6 +181,7 @@ export function createEngine(
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
+      occlusionMaskRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until

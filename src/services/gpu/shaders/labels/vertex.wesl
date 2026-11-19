@@ -3,9 +3,10 @@
 // position minus the camera's pair gives the view vector, exact near the camera,
 // so no slab matrix is needed. An 'above' style stands its text on
 // 'liftedAnchor' (alignY bottom, so the lift alone clears the subject); text
-// height is the style's em at the subject's view depth, clamped to
-// LABEL_TEXT_PX (the CPU twin is 'projectRecords'). Hover and select whiten the
-// colour here, by pick word, so only alpha changes per frame on the CPU.
+// height is the style's em over the subject's distance, at the subject's own
+// pixels per radian, clamped to LABEL_TEXT_PX (the CPU twin is
+// 'projectRecords'). Hover and select whiten the colour here, by pick word, so
+// only alpha changes per frame on the CPU.
 
 import package::labels::io::RecordUniforms;
 import package::labels::io::LabelRecord;
@@ -20,6 +21,7 @@ import package::labels::io::STYLE_LEADER_COLOR;
 import package::lib::projectLabel::ProjectedLabel;
 import package::lib::projectLabel::projectLabel;
 import package::lib::projectLabel::liftedAnchor;
+import package::lib::projectLabel::labelCornerPx;
 import package::lib::projectLabel::scaledLength;
 
 // Must match 'ATLAS_FONT_SIZE' and 'DISTANCE_RANGE_PX' in src/data/fonts.ts
@@ -28,6 +30,10 @@ const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
 // Gap between a leader's far end and the text's ink bottom; no CPU twin (pick rects omit leaders).
 const LEADER_LINE_PADDING_PX: f32 = 3.0;
+// The fragment's one-pixel edge fade sits inside the quad, so a line shows a pixel
+// less ink than its quad is wide. Two pixels of quad is the least that still shows
+// a whole pixel of ink; a narrower one fades to a ghost.
+const LEADER_MIN_QUAD_PX: f32 = 2.0;
 // Behind the near plane on every corner: a hidden label rasterises nothing.
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 
@@ -62,7 +68,7 @@ fn placeRecord(record: LabelRecord, style: LabelStyle) -> PlacedRecord {
   let distanceMpc = scaledLength(viewVec);
   let emMpc = style.emMpc + style.emTimesRadius * record.radiusMpc;
   let textPx = clamp(
-    emMpc / viewVec.z * projection.focalPx * recordUniforms.emRetune,
+    emMpc / distanceMpc * subject.pxPerRad * recordUniforms.emRetune,
     recordUniforms.minTextPx,
     recordUniforms.maxTextPx,
   );
@@ -113,8 +119,9 @@ fn expandRecordLeader(corner: vec2<f32>, record: LabelRecord, style: LabelStyle,
   let drawn = placed.drawn && style.leaderWidthPx > 0.0 && span.y > span.x;
   let along = leaderDirection(placed);
   let across = vec2<f32>(-along.y, along.x);
+  let quadWidthPx = max(style.leaderWidthPx * recordUniforms.out.pxScale, LEADER_MIN_QUAD_PX);
   let leaderPx = placed.subject.px + along * mix(span.x, span.y, corner.x)
-    + across * (corner.y - 0.5) * style.leaderWidthPx * recordUniforms.out.pxScale;
+    + across * (corner.y - 0.5) * quadWidthPx;
   let color = select(placed.color, style.leaderColor, (style.flags & STYLE_LEADER_COLOR) != 0u);
   return LeaderVsOut(
     select(HIDDEN_POS, ndcOf(leaderPx), drawn),
@@ -131,10 +138,10 @@ fn expandRecordGlyph(input: VsIn, record: LabelRecord, style: LabelStyle, placed
   let atlasToPx = placed.textPx / ATLAS_EM_PX;
   let fringeAtlasPx = style.outlineEmFrac * ATLAS_EM_PX;
   let outward = input.corner * 2.0 - vec2<f32>(1.0, 1.0);
-  // Atlas +y runs down the glyph, the opposite of image-up.
   let cornerAtlasPx = input.localOffset + input.corner * input.localSize + outward * fringeAtlasPx;
-  let across = vec2<f32>(-anchor.up.y, anchor.up.x);
-  let cornerPx = anchor.px + (across * cornerAtlasPx.x - anchor.up * cornerAtlasPx.y) * atlasToPx;
+  // Atlas +y runs down the glyph, the opposite of the label's up.
+  let offsetPx = vec2<f32>(cornerAtlasPx.x, -cornerAtlasPx.y) * atlasToPx;
+  let cornerPx = labelCornerPx(anchor, offsetPx, recordUniforms.out);
 
   let uvSpan = input.uvRect.zw - input.uvRect.xy;
   let uvBase = mix(input.uvRect.xy, input.uvRect.zw, input.corner);

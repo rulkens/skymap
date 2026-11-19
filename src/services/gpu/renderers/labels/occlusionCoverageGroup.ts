@@ -33,7 +33,7 @@
  * next to the caption pass it carries, and it sidesteps that trap entirely.
  */
 
-import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
+import type { SampledDepthSceneOcclusion } from '../../../../@types/rendering/SampledDepthSceneOcclusion';
 import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 
@@ -112,7 +112,7 @@ export function writeOcclusionDepthFrame(
 export function createOcclusionCoverageBindGroup(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
-  scene: OverlaySceneOcclusion,
+  scene: SampledDepthSceneOcclusion,
   frameBuffer: GPUBuffer,
 ): GPUBindGroup {
   return device.createBindGroup({

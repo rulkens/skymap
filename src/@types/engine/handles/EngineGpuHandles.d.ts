@@ -21,6 +21,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
+import type { OcclusionMaskRenderer } from '../../rendering/OcclusionMaskRenderer';
 import type { LetterboxRenderer } from '../../rendering/LetterboxRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
@@ -172,6 +173,11 @@ export type EngineGpuHandles = {
    * one image, once per frame.
    */
   domeResampleRenderer: DomeResampleRenderer | null;
+  /**
+   * Writes the occlusion mask `occlusionMaskPass` draws: what stands in front of an
+   * overlay at each pixel, as (coverage, distance km).
+   */
+  occlusionMaskRenderer: OcclusionMaskRenderer | null;
   /**
    * The r32uint pick provider for the NEAR0 foreground bodies (Earth, planets, scene
    * stars incl. the Sun): one body sphere per `drawSphere` call through a 256-byte-

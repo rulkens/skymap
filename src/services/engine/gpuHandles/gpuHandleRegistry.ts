@@ -12,6 +12,7 @@ import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
+import { createOcclusionMaskRenderer } from '../../gpu/renderers/occlusionMask/occlusionMaskRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
@@ -24,7 +25,11 @@ import { createLetterboxRenderer } from '../../gpu/renderers/letterbox/letterbox
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
-import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
+import {
+  HDR_TARGET_FORMAT,
+  FOREGROUND_DEPTH_FORMAT,
+  OCCLUSION_MASK_FORMAT,
+} from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
@@ -138,7 +143,16 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'domeResampleRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+      createDomeResampleRenderer({
+        device: deps.ctx.device,
+        targetFormat: HDR_TARGET_FORMAT,
+        occlusionFormat: OCCLUSION_MASK_FORMAT,
+      }),
+  },
+  {
+    key: 'occlusionMaskRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createOcclusionMaskRenderer({ device: deps.ctx.device, targetFormat: OCCLUSION_MASK_FORMAT }),
   },
   {
     key: 'bodyPickRenderer',

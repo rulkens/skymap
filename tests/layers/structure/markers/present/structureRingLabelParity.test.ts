@@ -18,7 +18,7 @@ describe.each([1, 2, 3])('structure ring and label at dpr %i', (dpr) => {
     const band = ring.markerMinApparentFadeBandPx * dpr;
     for (const radiusPx of [from, from + band * 0.25, from + band * 0.5, from + band * 2]) {
       expect(structureApparentRadiusFade(ring, radiusPx, dpr)).toBeCloseTo(
-        subjectSizeFade(label, 2 * radiusPx, 1e9, dpr),
+        subjectSizeFade(label, 2 * radiusPx, 1e9, 1e9, dpr),
         12,
       );
     }

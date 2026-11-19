@@ -250,6 +250,32 @@ row of 5–15 lines.
 
 `REFERENCE_PX_PER_RAD` is mono's value on a 1080-px-high canvas at the default 60° lens.
 
+**As built (2026-11-19, PR #1145; plan `2026-11-19-dome-labels.md`).** Where this differs
+from the list above, this note wins.
+
+- **Occlusion (P1, M3).** The mask is built as D9 says: one pass writes coverage and distance
+  per face, and the resample carries the five to `dome-occlusion`. Both masks are half the
+  linear size of the face and the output (`OCCLUSION_MASK_DOWNSCALE`; full size cost 233 MB
+  and about 4% of the frame at 2205 px). M3's ruling is two sources: mono keeps its sampled
+  depth; the dome's labels read the mask through their own pipeline pair.
+- **Boxes (P2).** Declutter judges upright bounds: the bounds of the label's four card
+  corners as projected (`labelCornerPx`).
+- **`N` (P3).** `N` is the side of the dome canvas, which CSS boxes to a square.
+- **Near-hide** is by distance to the eye, not view depth.
+- **Text on a tangent card (owner ruling, option 3).** Each glyph corner sits on a card
+  tangent to the dome at the label's anchor and is projected on its own, so text keeps its
+  proportions where the fisheye stretches widths.
+- **Fill-the-view fade.** A caption fades once its subject spans the 60° lens's short side,
+  on every view (`FILL_SPAN_RAD`). The owner accepted the change this makes in mono above 60°.
+- **Size.** Dome text is 1.5× the reference (`DOME_LABEL_SCALE`), so `pxScale` is
+  `(N/π) / REFERENCE_PX_PER_RAD × 1.5`.
+- **Leaders** show at least one device pixel of ink, by one rule for every width: the quad
+  is `max(width, 2)` px, its outer pixel on each side the fade (owner ruling: mono's thin
+  leaders on a non-Retina screen brighten with it).
+- **A lift never crosses the zenith**; a pinhole lift that would pass view-up hides, as before.
+- **Contract additions:** `ViewSpec.layer` (the array layer a view owns in a layered target)
+  and a render step's `mask: { sample }` (read as `SlabView.sampledMask`).
+
 ## 8. Ground preparation
 
 The prep PR, mono only, three commits in this order. Verdicts from the refactor-ground pass: every

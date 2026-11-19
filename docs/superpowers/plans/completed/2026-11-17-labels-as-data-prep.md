@@ -1,6 +1,6 @@
 # Labels as data: the prep PR (mono only)
 
-**Spec:** [`docs/superpowers/specs/2026-11-17-dome-labels-design.md`](../specs/2026-11-17-dome-labels-design.md)
+**Spec:** [`docs/superpowers/specs/completed/2026-11-17-dome-labels-design.md`](../../specs/completed/2026-11-17-dome-labels-design.md)
 (§3–§6 the target, §8 this PR, §9 the perf baseline). The dome PR (§7) gets its own plan after this lands.
 
 **Goal.** Layers describe labels as data; core encodes them into one record buffer and does all

@@ -125,6 +125,7 @@ describe('labelsPass.draw', () => {
     expect(depthViewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledWith(PASS_STUB, VIEW_RECORDS, {
+      kind: 'sampled-depth',
       colorView: sentinelColorView,
       depthView: FAR_DEPTH_VIEW,
       frame: null,

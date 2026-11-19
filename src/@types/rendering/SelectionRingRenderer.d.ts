@@ -13,7 +13,7 @@
 
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
-import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
+import type { SampledDepthSceneOcclusion } from './SampledDepthSceneOcclusion';
 
 export type SelectionRingRenderer = {
   /** Human-readable identifier (`'selectionRingRenderer'`). */
@@ -41,7 +41,7 @@ export type SelectionRingRenderer = {
     viewportSize: Vec2,
     pxPerRad: number,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
-    scene?: OverlaySceneOcclusion,
+    scene?: SampledDepthSceneOcclusion,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

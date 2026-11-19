@@ -14,6 +14,8 @@ import { orbitTrailsPass } from './orbitTrailsPass';
 import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
+import { domeOcclusionResamplePass } from './domeOcclusionResamplePass';
+import { occlusionMaskPass } from './occlusionMaskPass';
 import { letterboxPass } from './letterboxPass';
 import { COSMO, NEAR0 } from '../slabs';
 
@@ -40,5 +42,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   clipPathDebugPass,
   skyCubemapBlitPass,
   domeResamplePass,
+  occlusionMaskPass,
+  domeOcclusionResamplePass,
   letterboxPass,
 ];

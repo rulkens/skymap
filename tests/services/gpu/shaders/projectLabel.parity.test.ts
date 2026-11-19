@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OutputProjection } from '../../../../src/@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../../../src/@types/rendering/ProjectedLabel';
+import { LIFT_ZENITH_MARGIN_RAD } from '../../../../src/data/labels/liftZenithMarginRad';
 import { PARALLEL_TANGENT_EPS } from '../../../../src/data/labels/parallelTangentEps';
 import {
   OUTPUT_PROJECTION_BYTES,
@@ -67,6 +68,34 @@ describe('lib/projectLabel.wesl parity', () => {
     expect([buf[AT + 3], buf[AT + 7], buf[AT + 11]]).toEqual([0, 0, 0]);
   });
 
+  it('the kind codes the writer packs are the constants the shader branches on', () => {
+    const wgslCode = (name: string) =>
+      Number(new RegExp(`const\\s+${name}\\s*:\\s*u32\\s*=\\s*(\\d+)u\\s*;`).exec(source)![1]);
+    const written = (kind: OutputProjection['kind']) => {
+      const buf = new Float32Array(OUTPUT_PROJECTION_BYTES / 4);
+      writeOutputProjection(buf, 0, { ...projection, kind });
+      return new Uint32Array(buf.buffer)[92 / 4];
+    };
+    expect(written('pinhole')).toBe(wgslCode('KIND_PINHOLE'));
+    expect(written('equidistant')).toBe(wgslCode('KIND_EQUIDISTANT'));
+    expect(wgslCode('KIND_EQUIDISTANT')).not.toBe(wgslCode('KIND_PINHOLE'));
+  });
+
+  it('the fisheye branch is taken on the equidistant code and measures its angle with atan2', () => {
+    expect(source).toMatch(/projection\.kind\s*==\s*KIND_EQUIDISTANT/);
+    expect(source).toMatch(/\batan2\s*\(/);
+    expect(source).not.toMatch(/\bacos\s*\(/);
+  });
+
+  it("the card's hand and its zenith fallback are labelCornerPx.ts's", () => {
+    // TS: right = cross(cardUp, dir), fallback up (0, 0, −1); a swap mirrors every dome label.
+    const body = /fn labelCornerPx\([\s\S]*?\n}/.exec(source)![0];
+    expect(body).toMatch(/cross\(cardUp,\s*dir\)/);
+    expect(body).toMatch(/cardUp = vec3<f32>\(0\.0, 0\.0, -1\.0\)/);
+    expect(body).toMatch(/across \* offsetPx\.x \+ anchor\.up \* offsetPx\.y/);
+    expect(source).toMatch(/fn unprojectLabel\(/);
+  });
+
   it('projectLabel.wesl names the same fields as projectLabel.ts', () => {
     const names = (struct: string) =>
       parseWgslStructFields(source, struct)
@@ -76,5 +105,7 @@ describe('lib/projectLabel.wesl parity', () => {
     expect(names('ProjectedLabel')).toEqual(Object.keys(projected).sort());
     const eps = /const\s+PARALLEL_TANGENT_EPS\s*:\s*f32\s*=\s*([0-9.e-]+)\s*;/.exec(source);
     expect(Number(eps![1])).toBe(PARALLEL_TANGENT_EPS);
+    const margin = /const\s+LIFT_ZENITH_MARGIN_RAD\s*:\s*f32\s*=\s*([0-9.e-]+)\s*;/.exec(source);
+    expect(Number(margin![1])).toBe(LIFT_ZENITH_MARGIN_RAD);
   });
 });
