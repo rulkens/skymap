@@ -169,6 +169,9 @@ Tests:
 
 ### Task B2: the ink box follows `up`
 
+> Superseded by B3: `rotatedBoxBounds` and its test were deleted, and `projectRecords` takes
+> the ink box as the bounds of the four box corners through `labelCornerPx`.
+
 **Files:** `src/services/engine/labels/projectRecords.ts`, `src/utils/labels/rotatedBoxBounds.ts` (new),
 `tests/utils/labels/rotatedBoxBounds.test.ts` (new), `tests/services/engine/labels/projectRecords.test.ts`
 
@@ -220,7 +223,8 @@ export function labelCornerPx(
 export function unprojectLabel(px: Readonly<Vec2>, p: OutputProjection, out: Vec3): void;
 ```
 
-- Pinhole: `anchor.px + across × x − up × y`, today's rigid quad (a flat screen wants flat text).
+- Pinhole: `anchor.px + across × x + up × y` (y runs toward the label's up, as the signature
+  says), today's rigid quad (a flat screen wants flat text).
 - Equidistant: `dir = unprojectLabel(anchor.px)`; `upT = tangentToward(dir, p.up3)`;
   `right = cross(upT, dir)` (sign chosen so text reads left to right for a viewer inside the
   dome; the test pins it); the corner is `projectLabel(dir + (right × x + upT × y) / focalPx)`.
@@ -269,7 +273,7 @@ For `kind: 'equidistant'`, with `N = min(canvasSize.width, canvasSize.height)`:
   same basis `domeFaceRotations(DOME_PARAMS.tiltDeg)` uses, so a label lands where the
   resample puts its subject;
 - `up3 = (0, 1, 0)`, `sizePx` = the canvas, `centrePx` = its centre, `focalPx = N/π`,
-  `pxScale = (N/π) / REFERENCE_PX_PER_RAD`.
+  `pxScale = (N/π) / REFERENCE_PX_PER_RAD × DOME_LABEL_SCALE` (1.5, owner ruling 2026-11-19).
 
 The pinhole branch is untouched.
 
@@ -281,7 +285,7 @@ Tests:
 - `a face-centre direction lands where the resample samples it` — for each of the five
   `DOME_FACES` forwards, `projectLabel` gives the px whose resample direction (the formula in
   `domeResample/fragment.wesl`, restated in the test) is that forward, to 1e-6.
-- `pxScale is 1 on a dome whose N/π equals the reference`.
+- `pxScale is the dome label scale on a dome whose N/π equals the reference`.
 
 ### Task C2: overlays on the dome program
 
@@ -438,13 +442,19 @@ recording P1–P4 and M3's ruling.
 
 ## Definition of Done
 
-- [ ] Labels and leaders draw on `?dome`, upright toward the zenith, at all four poses (owner-signed shots).
-- [ ] A label's subject and its text agree on the dome (the C1 face-centre test, plus the shots).
+- [x] Labels and leaders draw on `?dome`, upright toward the zenith, at all four poses (owner-signed shots).
+- [x] A label's subject and its text agree on the dome (the C1 face-centre test, plus the shots).
 - [ ] Mono shots at the four poses match main's.
-- [ ] `ViewRig.outputProjection` is required; no `?? 'pinhole'` fallback remains.
-- [ ] No label-path line reads `v.z` or `focalPx` for a size except subject diameter.
-- [ ] `projectLabel` TS and WGSL agree under the parity test for both kinds.
+      Not measured: no main server ran, so there is no pixel diff. Mono does change by design
+      above the 60° lens (the fill-the-view fade, owner-accepted).
+- [x] `ViewRig.outputProjection` is required; no `?? 'pinhole'` fallback remains.
+- [x] No label-path line reads `v.z` or `focalPx` for a size except subject diameter, the
+      fill-the-view span (`FILL_SPAN_RAD`) and the card's px per radian (`labelCornerPx`).
+- [x] `projectLabel` TS and WGSL agree under the parity test for both kinds.
 - [ ] Perf at the four poses is neutral in mono.
+      One run, no before/after against main: label GPU rows 0.3–0.7 ms, CPU 0.08–0.14 ms; mono
+      lists no mask or dome pass.
 - [ ] A dome label hides behind a body and is cut along its edge (owner-signed shot).
-- [ ] Backlog: closed risks removed.
+      Seen on the Saturn and Hubble shots; no separate owner check is recorded here.
+- [x] Backlog: closed risks removed.
 - [ ] `npm test`, `npm run typecheck`, format: green in CI.

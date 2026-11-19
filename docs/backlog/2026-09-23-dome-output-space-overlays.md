@@ -2,9 +2,10 @@
 
 **Raised:** 2026-09-23, brainstorm at the end of the dome PR (#800). Trimmed
 2026-11-17 by the labels-as-data prep PR, which built the label half's joint
-(`OutputProjection`); dome labels themselves are the dome PR's work, specified
-in `docs/superpowers/specs/2026-11-17-dome-labels-design.md` §7. What is left
-here is the pixel floors, plus the risks that PR carries (last section).
+(`OutputProjection`), and again 2026-11-19 by the dome labels PR (#1145), which
+drew the labels on the fisheye image and closed the risks it carried. What is
+left here is the pixel floors, plus two lines carried from the label work (last
+section).
 
 ## Problem
 
@@ -40,8 +41,8 @@ radian, 1.6× to 3× coarser than a face. So:
 
 Labels already measure their constants this way: `OutputProjection.pxScale`
 multiplies every authored label px (CSS px): mono's is the device pixel
-ratio, and the dome PR sets its own to `(N/π) / REFERENCE_PX_PER_RAD`. The
-floors' scale should come from the same rig-level value rather than a second
+ratio, and the dome's is `(N/π) / REFERENCE_PX_PER_RAD × DOME_LABEL_SCALE`
+(`outputProjectionOf`). The floors' scale should come from the same rig-level value rather than a second
 one minted beside it.
 
 ## Not decided
@@ -50,25 +51,11 @@ Where the output scale enters the camera prefix, and whether each floor
 constant is re-based to CSS px as the label constants were. Run
 `refactor-ground` before the spec.
 
-## Risks the dome labels PR carries (from the prep PR)
-
-- Text size divides by view depth (`v.z`), which is right for a pinhole and
-  wrong for a fisheye, where text should size by distance.
-- A subject's apparent diameter (appear bands, declutter rank, leader rim)
-  uses the pinhole `focalPx`, not the equidistant scale.
-- `labelRenderer` writes its uniform per draw, so two label draws in one
-  submit share the last projection written.
-- Ink and pick boxes are axis-aligned; a label rotated toward the zenith
-  needs rotated boxes for declutter and picking.
-- `outputProjectionOf` ignores `ViewSpec.clipYFlip`.
-- `ViewRig.outputProjection` is optional, so the dome rig falls back to the
-  canvas pinhole silently; the dome PR should make it required.
-
-## Carried from the labels prep
+## Carried from the label work
 
 - The light-time spheres fade by their size in face pixels, so on the dome the fade distance
   depends on the dome's resolution (2205 px, dpr 1: full to 17 radii, gone at 57; the screen
-  rule gives 12 and 40 at the reference lens). The dome PR gives spheres and labels the dome's
-  own pixel scale.
+  rule gives 12 and 40 at the reference lens). Labels now use the dome's own pixel scale; the
+  spheres need the output scale in the shared camera prefix, which is this item's work.
 - Recordings render at dpr 1, so label text on film is half its former size. The owner
   accepted this (2026-11-18).
