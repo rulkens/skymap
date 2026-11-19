@@ -194,6 +194,30 @@ Tests:
 
 ---
 
+### Task B3: a label keeps its proportions on the dome
+
+**Files:** `src/@types/rendering/ProjectedLabel.d.ts`, `src/utils/labels/projectLabel.ts`,
+`src/services/gpu/shaders/lib/projectLabel.wesl`, `src/services/gpu/shaders/labels/vertex.wesl`,
+`src/services/engine/labels/projectRecords.ts`, `src/utils/labels/rotatedBoxBounds.ts`, their tests
+
+**review: yes** (shader + CPU twin)
+
+Owner ruling 2026-11-19. An equidistant image keeps heights true and stretches widths by
+`θ / sin θ` (1 at the zenith, π/2 at the horizon), so a flat label reads condensed on the dome.
+`ProjectedLabel` gains `acrossScale: number`: how many times wider than tall one radian is at
+this point of the image. Pinhole: 1 (a flat screen wants flat text). Equidistant: `θ / sin θ`,
+1 within the zenith cone. The glyph quad's across axis and the ink box's width are multiplied
+by the ANCHOR's `acrossScale`; leaders are not widened. No file outside `projectLabel` names a
+projection kind.
+
+Tests:
+
+- `acrossScale is 1 for a pinhole anywhere`.
+- `acrossScale is 1 at the zenith and π/2 at the horizon`.
+- `a dome label at the horizon claims a box π/2 times wider` (`projectRecords`).
+
+---
+
 ## Group C: the dome rig lists the labels
 
 ### Task C1: the dome's output projection
