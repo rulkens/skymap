@@ -269,7 +269,9 @@ from the list above, this note wins.
   on every view (`FILL_SPAN_RAD`). The owner accepted the change this makes in mono above 60°.
 - **Size.** Dome text is 1.5× the reference (`DOME_LABEL_SCALE`), so `pxScale` is
   `(N/π) / REFERENCE_PX_PER_RAD × 1.5`.
-- **Leaders** are never thinner than one device pixel.
+- **Leaders** show at least one device pixel of ink, by one rule for every width: the quad
+  is `max(width, 2)` px, its outer pixel on each side the fade (owner ruling: mono's thin
+  leaders on a non-Retina screen brighten with it).
 - **A lift never crosses the zenith**; a pinhole lift that would pass view-up hides, as before.
 - **Contract additions:** `ViewSpec.layer` (the array layer a view owns in a layered target)
   and a render step's `mask: { sample }` (read as `SlabView.sampledMask`).

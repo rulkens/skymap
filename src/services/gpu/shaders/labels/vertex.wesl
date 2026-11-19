@@ -30,12 +30,10 @@ const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
 // Gap between a leader's far end and the text's ink bottom; no CPU twin (pick rects omit leaders).
 const LEADER_LINE_PADDING_PX: f32 = 3.0;
-// The fragment's one-pixel edge fade sits inside the quad, so a line shows about a
-// pixel less than its quad. From this width up (the thinnest mono draws) that is
-// the authored look; below it (the dome's pxScale is under 1) the fade would erase
-// the line, so it gets a one-pixel line: a two-pixel quad, half of it fade.
-const LEADER_INSIDE_FADE_MIN_PX: f32 = 1.25;
-const LEADER_THIN_QUAD_PX: f32 = 2.0;
+// The fragment's one-pixel edge fade sits inside the quad, so a line shows a pixel
+// less ink than its quad is wide. Two pixels of quad is the least that still shows
+// a whole pixel of ink; a narrower one fades to a ghost.
+const LEADER_MIN_QUAD_PX: f32 = 2.0;
 // Behind the near plane on every corner: a hidden label rasterises nothing.
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 
@@ -121,8 +119,7 @@ fn expandRecordLeader(corner: vec2<f32>, record: LabelRecord, style: LabelStyle,
   let drawn = placed.drawn && style.leaderWidthPx > 0.0 && span.y > span.x;
   let along = leaderDirection(placed);
   let across = vec2<f32>(-along.y, along.x);
-  let widthPx = style.leaderWidthPx * recordUniforms.out.pxScale;
-  let quadWidthPx = select(LEADER_THIN_QUAD_PX, widthPx, widthPx >= LEADER_INSIDE_FADE_MIN_PX);
+  let quadWidthPx = max(style.leaderWidthPx * recordUniforms.out.pxScale, LEADER_MIN_QUAD_PX);
   let leaderPx = placed.subject.px + along * mix(span.x, span.y, corner.x)
     + across * (corner.y - 0.5) * quadWidthPx;
   let color = select(placed.color, style.leaderColor, (style.flags & STYLE_LEADER_COLOR) != 0u);
