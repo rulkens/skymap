@@ -3,8 +3,8 @@
 // position minus the camera's pair gives the view vector, exact near the camera,
 // so no slab matrix is needed. An 'above' style stands its text on
 // 'liftedAnchor' (alignY bottom, so the lift alone clears the subject); text
-// height is the style's em at the subject's view depth, clamped to
-// LABEL_TEXT_PX (the CPU twin is 'projectRecords'). Hover and select whiten the
+// height is the style's em over the subject's distance, at the subject's own
+// pixels per radian, clamped to LABEL_TEXT_PX (the CPU twin is 'projectRecords'). Hover and select whiten the
 // colour here, by pick word, so only alpha changes per frame on the CPU.
 
 import package::labels::io::RecordUniforms;
@@ -62,7 +62,7 @@ fn placeRecord(record: LabelRecord, style: LabelStyle) -> PlacedRecord {
   let distanceMpc = scaledLength(viewVec);
   let emMpc = style.emMpc + style.emTimesRadius * record.radiusMpc;
   let textPx = clamp(
-    emMpc / viewVec.z * projection.focalPx * recordUniforms.emRetune,
+    emMpc / distanceMpc * subject.pxPerRad * recordUniforms.emRetune,
     recordUniforms.minTextPx,
     recordUniforms.maxTextPx,
   );

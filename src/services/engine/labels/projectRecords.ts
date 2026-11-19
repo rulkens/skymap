@@ -2,8 +2,8 @@
  * projectRecords — every located record onto the output image, through `projectLabel` (the
  * function the label shader runs) or `liftedAnchor` for an 'above' style, so declutter and pick
  * judge each label where it is drawn. The view vector is the hi/lo difference taken in f64.
- * Text size is the shader's rule: em height over view depth × focal px × the em retune, clamped
- * to `LABEL_TEXT_PX`. Pinhole only: the ink rect is axis-aligned, which a rotated (dome) up is not.
+ * Text size is the shader's rule: em height over distance × the subject's px per radian × the em
+ * retune, clamped to `LABEL_TEXT_PX`. Pinhole only: the ink rect is axis-aligned, which a rotated (dome) up is not.
  */
 
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
@@ -23,7 +23,8 @@ import { liftedAnchor } from '../../../utils/labels/liftedAnchor';
 
 const world: Vec3 = [0, 0, 0];
 const view: Vec3 = [0, 0, 0];
-const out: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
+const subject: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
+const lifted: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
 
 export const projectRecords: LabelStage = (records, frame, { projection: p }) => {
   const { f32, u32 } = records;
@@ -46,15 +47,17 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     const radius = f32[base + W.radiusMpc]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
-    // An 'above' label draws only while its subject is in front too, as the shader requires.
+    // An 'above' label draws only while its subject is visible too, as the shader requires.
+    projectLabel(view, p, subject);
+    let out = subject;
     if (style.placement === 'above' && 'lift' in style) {
-      liftedAnchor(view, radius, style.lift, p, out);
-      out.visible &&= view[2] > 0;
-    } else projectLabel(view, p, out);
+      liftedAnchor(view, radius, style.lift, p, lifted);
+      out = lifted;
+    }
     frame.distanceMpc[i] = distance;
     frame.depthMpc[i] = view[2];
     frame.diameterPx[i] = distance > 0 ? ((2 * radius) / distance) * p.focalPx : 0;
-    if (!out.visible) continue;
+    if (!subject.visible || !out.visible) continue;
 
     frame.visible[i] = 1;
     const x = out.px[0];
@@ -63,7 +66,7 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     const em =
       'mpc' in style.textHeight ? style.textHeight.mpc : style.textHeight.timesRadius * radius;
     const textPx = Math.min(
-      Math.max((em / view[2]) * p.focalPx * LABEL_EM_PX_RETUNE, minPx),
+      Math.max((em / distance) * subject.pxPerRad * LABEL_EM_PX_RETUNE, minPx),
       maxPx,
     );
     frame.textPx[i] = textPx;
