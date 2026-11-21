@@ -13,6 +13,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderScheduler } from '../../../../src/services/engine/subsystems/renderScheduler';
+import { MAX_FRAMES_IN_FLIGHT } from '../../../../src/data/rendering/maxFramesInFlight';
 
 /**
  * Build a fake rAF / cAF pair that captures pending callbacks in an
@@ -285,6 +286,113 @@ describe('createRenderScheduler', () => {
       fake.fireOne();
       await inner;
       expect(settled).toBe(true);
+    });
+  });
+
+  describe('frames in flight', () => {
+    /** A scheduler whose every frame's GPU work stays pending until the test settles it. */
+    function makeCapped() {
+      const fake = makeFakeRaf();
+      const onFrame = vi.fn();
+      const pending: Array<{ resolve: () => void; reject: (e: Error) => void }> = [];
+      const sched = createRenderScheduler({
+        onFrame,
+        frameWorkDone: () =>
+          new Promise<void>((resolve, reject) => pending.push({ resolve, reject })),
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+      function saturate(): void {
+        for (let i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+          sched.requestRender();
+          fake.fireOne();
+        }
+      }
+      return { fake, onFrame, pending, sched, saturate };
+    }
+    // `.then(release, release)` settles one microtask after the promise does.
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve));
+
+    it('holds the frame at the cap and runs it once a slot frees', async () => {
+      const { fake, onFrame, pending, sched, saturate } = makeCapped();
+      saturate();
+
+      sched.requestRender();
+      fake.fireOne();
+      expect(onFrame).toHaveBeenCalledTimes(MAX_FRAMES_IN_FLIGHT);
+      // Parked, not spinning: no rAF until the GPU reports a finished frame.
+      expect(fake.pendingCount()).toBe(0);
+
+      pending[0]?.resolve();
+      await settle();
+      expect(fake.pendingCount()).toBe(1);
+      fake.fireOne();
+      expect(onFrame).toHaveBeenCalledTimes(MAX_FRAMES_IN_FLIGHT + 1);
+    });
+
+    it('a finished frame does not wake a loop that owes no frame', async () => {
+      const { fake, pending, saturate } = makeCapped();
+      saturate();
+      for (const frame of pending) frame.resolve();
+      await settle();
+      expect(fake.pendingCount()).toBe(0);
+    });
+
+    it('a rejected completion still frees its slot', async () => {
+      const { fake, onFrame, pending, sched, saturate } = makeCapped();
+      saturate();
+      sched.requestRender();
+      fake.fireOne();
+
+      pending[0]?.reject(new Error('device lost'));
+      await settle();
+      fake.fireOne();
+      expect(onFrame).toHaveBeenCalledTimes(MAX_FRAMES_IN_FLIGHT + 1);
+    });
+
+    it('a held tick leaves nextFrame waiters for the frame that really runs', async () => {
+      const { fake, pending, sched, saturate } = makeCapped();
+      saturate();
+      let resolved = false;
+      const waiter = sched.nextFrame().then(() => {
+        resolved = true;
+      });
+      fake.fireOne(); // held
+      await settle();
+      expect(resolved).toBe(false);
+
+      pending[0]?.resolve();
+      await settle();
+      fake.fireOne();
+      await waiter;
+    });
+
+    it('destroy drops the owed frame, so a late completion queues nothing', async () => {
+      const { fake, pending, sched, saturate } = makeCapped();
+      saturate();
+      sched.requestRender();
+      fake.fireOne();
+      sched.destroy();
+
+      pending[0]?.resolve();
+      await settle();
+      expect(fake.pendingCount()).toBe(0);
+    });
+
+    it('a frame that submitted nothing takes no slot', () => {
+      const fake = makeFakeRaf();
+      const onFrame = vi.fn();
+      const sched = createRenderScheduler({
+        onFrame,
+        frameWorkDone: () => null,
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+      for (let i = 0; i < MAX_FRAMES_IN_FLIGHT + 1; i++) {
+        sched.requestRender();
+        fake.fireOne();
+      }
+      expect(onFrame).toHaveBeenCalledTimes(MAX_FRAMES_IN_FLIGHT + 1);
     });
   });
 });

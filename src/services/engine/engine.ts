@@ -63,6 +63,7 @@ import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { isCinemaMode } from '../../utils/url/isCinemaMode';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -221,6 +222,11 @@ export function createEngine(
           frameStats.fps = next.fps;
           frameStats.cpuMs = next.cpuMs;
         },
+        // Off while recording: the recorder grants one frame of virtual time per
+        // captured frame, so a held tick would film the previous frame twice.
+        frameWorkDone: isCinemaMode()
+          ? undefined
+          : () => state.gpu.uiCtx?.device.queue.onSubmittedWorkDone() ?? null,
       }),
 
       fades: createFadeRegistry({

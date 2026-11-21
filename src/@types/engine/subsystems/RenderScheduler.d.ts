@@ -37,7 +37,7 @@ export type RenderScheduler = {
   destroy(): void;
   /**
    * `true` when a frame is queued and pending; `false` when the loop is
-   * idle. Mostly for tests; also useful for assertions in DevTools.
+   * idle, or holding a frame until the GPU finishes an earlier one. Mostly for tests; also useful for assertions in DevTools.
    */
   isScheduled(): boolean;
 };

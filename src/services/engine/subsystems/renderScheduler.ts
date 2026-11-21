@@ -46,6 +46,7 @@
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { RenderScheduler } from '../../../@types/engine/subsystems/RenderScheduler';
 import type { RenderSchedulerOptions } from '../../../@types/engine/subsystems/RenderSchedulerOptions';
+import { MAX_FRAMES_IN_FLIGHT } from '../../../data/rendering/maxFramesInFlight';
 
 export function createRenderScheduler(opts: RenderSchedulerOptions): RenderScheduler {
   const raf = opts.rafImpl ?? requestAnimationFrame.bind(window);
@@ -70,12 +71,29 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   // Resolvers for `nextFrame()` callers, drained by the tick that serves them.
   let frameWaiters: Array<() => void> = [];
 
+  // Frames submitted whose GPU work has not finished, and whether a tick was
+  // held back for them. See `MAX_FRAMES_IN_FLIGHT` for why the loop is fenced.
+  let framesInFlight = 0;
+  let frameOwed = false;
+
+  function frameWorkSettled(): void {
+    framesInFlight--;
+    if (!frameOwed) return; // at rest: a finished frame must not wake the loop
+    frameOwed = false;
+    requestRender();
+  }
+
   function tick(): void {
     // Clear the token BEFORE running the frame body so that a
     // `requestRender()` call from inside `onFrame` (e.g. the engine's
     // "still animating" tail) is allowed to schedule the *next* frame
     // rather than being short-circuited as a duplicate of this one.
     token = 0;
+    // Held before the waiter snapshot: `nextFrame()` promises a frame that ran.
+    if (framesInFlight >= MAX_FRAMES_IN_FLIGHT) {
+      frameOwed = true;
+      return;
+    }
     // Snapshot first: a `nextFrame()` made from inside `onFrame` lands in the
     // fresh array and waits for the following frame, not this one.
     const served = frameWaiters;
@@ -86,6 +104,11 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     } finally {
       for (const resolve of served) resolve();
     }
+    const done = opts.frameWorkDone?.();
+    if (!done) return;
+    framesInFlight++;
+    // Rejection frees the slot too: a lost device must not park the loop for good.
+    void done.then(frameWorkSettled, frameWorkSettled);
   }
 
   function requestRender(): void {
@@ -123,6 +146,7 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     },
     destroy(): void {
       frameWaiters = []; // dropped, never settled: no frame will come
+      frameOwed = false; // a completion landing after teardown must queue nothing
       if (idleToken !== null) {
         clearIdleTimer(idleToken);
         idleToken = null;
