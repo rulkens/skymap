@@ -476,7 +476,9 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>; the cross-match
   table comes from the Gaia archive (`gea.esac.esa.int`).
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/hip2.dat` →
-  `tools/parsers/hipparcos2.ts`.
+  `tools/parsers/hipparcos2.ts`. The website's star field is baked from the
+  same file (`tools/site/buildStarField.ts` →
+  `packages/website/src/assets/starField.bin`).
 - **Modified:** Yes. Merged into the star set in place of the matching Gaia rows.
 - **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
   <https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe>,
@@ -3274,19 +3276,22 @@ and where they come from".
 
 <!-- attribution: id=npm-dependencies -->
 
-- **What:** The libraries the app and the website bundle. Named in
-  `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
-  `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
-  `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
-  (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
-  families under `react-markdown`, and others); the build lists every one in
-  `third-party-licenses.md`. Build-time tools are listed in `package.json`.
+- **What:** The libraries the app, the website and the desktop app bundle.
+  Named in `package.json`: `react`, `react-dom`, `react-redux`,
+  `@reduxjs/toolkit`, `redux-saga`, `typed-redux-saga`, `classnames`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`,
+  `qrcode-generator`; for the website `astro`, `@astrojs/mdx`,
+  `@astrojs/react`, `pagefind`; for the desktop app `electron`,
+  `electron-store`, `selfsigned`. The bundles also hold what those pull in
+  (`immer`, `redux`, `reselect`, `scheduler`, and others); the build lists
+  every one in `third-party-licenses.md`. Build-time tools are listed in
+  `package.json`. The Jost font package has its own entry (see entry:
+  font-jost).
 - **By:** Their authors.
-- **Licence:** MIT, each of the fifteen named, as its own `package.json`
-  states. Of the 74 packages the app's bundle holds, the build reports MIT
-  for 71, ISC for one, and no licence field for two entry points of
-  `redux-saga` (itself MIT).
+- **Licence:** MIT, each of the nineteen named, as its own `package.json`
+  states. Of the 74 packages the app's bundle held on 2026-10-07, the build
+  reported MIT for 71, ISC for one, and no licence field for two entry
+  points of `redux-saga` (itself MIT).
 - **Use:** Free with credit
 - **Attribution:** MIT asks that "The above copyright notice and this
   permission notice shall be included in all copies or substantial portions
@@ -3297,13 +3302,20 @@ and where they come from".
   (`@ungap/structured-clone`). The website's build and the three dev-tool
   pages (`/galaxy/`, `/mcpm/`, `/flow/`) write no such file.
 - **Upstream:** <https://www.npmjs.com/>
-- **Enters skymap:** `package.json`, `packages/website/package.json`.
+- **Enters skymap:** `package.json`, `packages/website/package.json`,
+  `packages/desktop/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
   installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
   `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
   satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
-  <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
+  <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`;
+  2026-11-21: the `license` field of the installed `qrcode-generator` 2.0.4,
+  `@astrojs/react` 7.0.1, `electron` 44.9.2, `electron-store` 12.0.0 and
+  `selfsigned` 5.5.0 (MIT, all five).
 - **Not verified:** what the website's scripts and the dev-tool pages bundle;
-  the package count of the app's bundle since `satellite.js` joined it.
+  the package count of the app's bundle since `satellite.js` and
+  `qrcode-generator` joined it and `react-markdown` left; which licence
+  notices the desktop installers carry for Electron and the Chromium it
+  ships.
