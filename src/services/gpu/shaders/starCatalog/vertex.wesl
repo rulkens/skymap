@@ -16,9 +16,10 @@
 //
 // ## World reconstruction
 //
-// cutIo.wesl's camera split makes node-minus-camera integer-exact, so the origin
-// arrives small and the f32 math is well-conditioned:
-//   worldRelCam = originRelCamMpc + (offset / 65536) * cellScaleMpc
+// cutIo.wesl's camera split makes node-minus-camera integer-exact, and
+// recordRelCamCells sums in the one order that stays exact up close:
+//   worldRelCam = (((node - camCell) + (offset / 65536) * 2^level) - camFrac
+//                  - camFracLo) * cellEdgeMpc
 //
 // ## Flux-integrated glow
 //
@@ -88,7 +89,7 @@ import package::octree::cutIo::CutStream;
 import package::octree::cutIo::nodeEdgeCells;
 import package::octree::cutIo::nodeOwnCount;
 import package::octree::cutIo::OPACITY_CHANNELS;
-import package::octree::cutIo::nodeMinCells;
+import package::octree::cutIo::recordRelCamCells;
 import package::octree::cutIo::leafEntryNode;
 import package::octree::cutIo::leafEntryBlock;
 import package::lib::starTint::starTint;
@@ -141,11 +142,9 @@ const GPU_COLOR_MASK: u32 = 0x3fu;
 // ignores intensity.
 const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5;
 
-// Near-sprite dissolve (visual pass only). Close to a star the f32 sum
-// 'originRelCamMpc + offset * cellScaleMpc' is a near-cancellation with AU-scale
-// ulp error for parsec-scale cells, so the sprite swims by screen-widths. The
-// nearest resolvable star gets a true-scale sphere composed in f64
-// (fieldStarSpherePass), so the sprite dissolves as that sphere resolves. The
+// Near-sprite dissolve (visual pass only). The nearest resolvable star gets a
+// true-scale sphere composed in f64 (fieldStarSpherePass), so the sprite
+// dissolves as that sphere resolves instead of sitting on top of it. The
 // fade keys on the star's would-be solar-diameter sphere size in px, the quantity
 // the sphere layer gates on, so the hand-off is single-sourced and seamless at
 // every viewport size.
@@ -189,8 +188,8 @@ fn vs(
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
-  let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
+  let edgeCells = nodeEdgeCells(bits);
+  let cellScaleMpc = edgeCells * cut.cellEdgeMpc;
   // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.
   let base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, isAgg);
   let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
@@ -206,7 +205,9 @@ fn vs(
   let colorIdx = (zMagColourWord >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
   let offset = vec3<f32>(offsetX, offsetY, offsetZ) * OFFSET_SCALE;
-  let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
+  let worldRelCam = recordRelCamCells(
+    cutNodes[nodeIdx].grid, edgeCells, offset, cut.camCell, cut.camFrac, cut.camFracLo
+  ) * cut.cellEdgeMpc;
 
   let distSqMpc2 = dot(worldRelCam, worldRelCam);
   let atten = (D_REF_MPC * D_REF_MPC) / max(distSqMpc2, MIN_D2_MPC2);
@@ -264,10 +265,10 @@ fn vs(
   let focusMult = focusAlphaMultiplier(worldRelCam, focus);
 
   // Near-sprite dissolve (constants above). It fades ANY near record, not just
-  // the focused star's: the swim is a property of proximity, so a distance-keyed
-  // fade targets exactly the set that swims and needs no per-focus uniform. A
-  // free-flown approach to a non-focused star fades its sprite with no sphere to
-  // replace it, but AU proximity is reached essentially only by focus-framing.
+  // the focused star's: the sphere's presence is keyed on proximity too, so a
+  // distance-keyed fade matches it and needs no per-focus uniform. Only the
+  // nearest star gets a sphere; a second one this close fades with none, which
+  // parsec-scale spacing between field stars makes vanishingly rare.
   // The fade starts once the sphere is ~1.7x the resolve threshold, so the sphere
   // is always resolved first; at 1080 px it runs from ~1.3 AU (start) to ~0.3 AU
   // (gone), well outside the ~0.02 AU framing distance.

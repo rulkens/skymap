@@ -5,8 +5,9 @@
 //
 // Precision: a node box is 'gridOrigin + cell * cellEdge', a parsec-scale
 // value near-equal to the camera's during a local approach. The CPU splits the
-// camera into a whole cell (i32) plus a fraction in f64, so the subtraction
-// here is integer-exact and only the small remainder is f32.
+// camera into a whole cell (i32) plus a fraction in f64, sent as an f32 pair
+// (camFrac + camFracLo), so the subtraction here is integer-exact and only the
+// small remainder is f32. recordRelCamCells is the AU-close path.
 
 // Mirrors octreeCutLayout.ts.
 const GRID_AXIS_BITS: u32 = 10u;
@@ -55,7 +56,7 @@ const CUT_MAX_VIEWS: u32 = 6u;
 //   16 camFrac vec3<f32>    28 refineThresholdSq
 //   32 fadeStep  36 drawBudget     40 worldSpread  44 leafMarginRad
 //   48 viewCount 52 nodeCount (pool rows)          56 opacity
-//   60 indexNodes 64 chunkNodeCap  68-76 pad
+//   60 indexNodes 64 camFracLo vec3<f32>  76 chunkNodeCap
 //   80 planes    6 unit planes per view, camera-relative Mpc
 struct CutUniforms {
   camCell: vec3<i32>,
@@ -70,10 +71,8 @@ struct CutUniforms {
   nodeCount: u32,
   opacity: f32,
   indexNodes: u32,
+  camFracLo: vec3<f32>,
   chunkNodeCap: u32,
-  _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   planes: array<vec4<f32>, 36>,
 };
 
@@ -113,14 +112,37 @@ fn rootNode(indexNodes: u32) -> u32 {
   return indexNodes - 1u;
 }
 
-// Box min corner relative to the camera, in leaf cells.
-fn nodeMinCells(grid: u32, camCell: vec3<i32>, camFrac: vec3<f32>) -> vec3<f32> {
-  let cell = vec3<i32>(
+// Box min corner, in leaf cells.
+fn gridCell(grid: u32) -> vec3<i32> {
+  return vec3<i32>(
     i32(grid & GRID_AXIS_MASK),
     i32((grid >> GRID_AXIS_BITS) & GRID_AXIS_MASK),
     i32((grid >> (2u * GRID_AXIS_BITS)) & GRID_AXIS_MASK),
   );
-  return vec3<f32>(cell - camCell) - camFrac;
+}
+
+// Box min corner relative to the camera, in leaf cells: ~2^-24 of a cell, fine
+// for culling; a drawn position near the camera wants recordRelCamCells.
+fn nodeMinCells(grid: u32, camCell: vec3<i32>, camFrac: vec3<f32>) -> vec3<f32> {
+  return vec3<f32>(gridCell(grid) - camCell) - camFrac;
+}
+
+// A point at 'offsetFrac' (0..1) of its node's box, relative to the camera, in
+// leaf cells. The order is the precision: near the camera the first sum is exact
+// (small integer + 16-bit fraction of a power-of-two box), so the parsec-sized
+// cancellation is one exact subtraction and camFracLo restores what camFrac
+// rounded off. Any other order snaps an AU-near star by ~0.3 AU * 2^level.
+// f32 twin: tests/helpers/starCatalog/referenceStarRecordRelCam.ts.
+fn recordRelCamCells(
+  grid: u32,
+  edgeCells: f32,
+  offsetFrac: vec3<f32>,
+  camCell: vec3<i32>,
+  camFrac: vec3<f32>,
+  camFracLo: vec3<f32>,
+) -> vec3<f32> {
+  let exact = vec3<f32>(gridCell(grid) - camCell) + offsetFrac * edgeCells;
+  return (exact - camFrac) - camFracLo;
 }
 
 // A leaf-list entry: the node index, then which block of the node's records.

@@ -153,10 +153,8 @@ describe('struct CutUniforms', () => {
     nodeCount: layout.NODE_COUNT_U32_INDEX,
     opacity: layout.OPACITY_FLOAT_INDEX,
     indexNodes: layout.INDEX_NODES_U32_INDEX,
+    camFracLo: layout.CAM_FRAC_LO_FLOAT_INDEX,
     chunkNodeCap: layout.CHUNK_NODE_CAP_U32_INDEX,
-    _pad0: layout.PLANES_FLOAT_INDEX - 3,
-    _pad1: layout.PLANES_FLOAT_INDEX - 2,
-    _pad2: layout.PLANES_FLOAT_INDEX - 1,
     planes: layout.PLANES_FLOAT_INDEX,
   };
 

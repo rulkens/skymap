@@ -1,6 +1,6 @@
 /**
  * fieldStarSpherePass — the true-scale sphere for the ONE Gaia star the camera
- * is resolving (its sprite is retired in-shader up close, where f32 swims).
+ * is resolving (its sprite dissolves in-shader as the sphere resolves).
  * Presence is PROXIMITY, never selection: `enabled` stores the nearest
  * resolvable star, under a hysteresis band (ON at `STAR_RESOLVE_PX`, OFF below
  * `OFF_FRACTION` of it); `draw`/`drawPick` read it. The f64 slab VP goes through

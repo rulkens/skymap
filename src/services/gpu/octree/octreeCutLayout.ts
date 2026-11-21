@@ -89,7 +89,7 @@ export const FLOATS_PER_VIEW = PLANES_PER_VIEW * PLANE_FLOATS;
 
 /**
  * `struct CutUniforms`: an 80-byte head, then the planes. Word slots of the
- * head, in the order `cutIo.wesl` declares them (words 17–19 are pad).
+ * head, in the order `cutIo.wesl` declares them.
  */
 export const CAM_CELL_INT_INDEX = 0;
 export const CELL_EDGE_MPC_FLOAT_INDEX = 3;
@@ -103,7 +103,8 @@ export const VIEW_COUNT_U32_INDEX = 12;
 export const NODE_COUNT_U32_INDEX = 13;
 export const OPACITY_FLOAT_INDEX = 14;
 export const INDEX_NODES_U32_INDEX = 15;
-export const CHUNK_NODE_CAP_U32_INDEX = 16;
+export const CAM_FRAC_LO_FLOAT_INDEX = 16;
+export const CHUNK_NODE_CAP_U32_INDEX = 19;
 export const PLANES_FLOAT_INDEX = 20;
 const CUT_UNIFORM_HEAD_BYTES = PLANES_FLOAT_INDEX * WORD_BYTES;
 export const CUT_UNIFORM_BYTES =
@@ -338,8 +339,10 @@ export function leafListCapacity(
 /**
  * Fill one source's `CutUniforms`. The camera splits into a whole leaf cell
  * plus a fraction HERE, in f64, so the shader's node-minus-camera is
- * integer-exact (see `cutIo.wesl`). `planes` holds `FLOATS_PER_VIEW` floats per
- * view; none means no prune.
+ * integer-exact (see `cutIo.wesl`). The fraction travels as an f32 pair, the
+ * f32 and what it rounded off: one f32 step of a ~23 pc cell is ~0.3 AU, which a
+ * star a few AU away shows as a visible jump. `planes` holds `FLOATS_PER_VIEW`
+ * floats per view; none means no prune.
  */
 export function writeOctreeCutUniforms(
   out: ArrayBuffer,
@@ -365,7 +368,9 @@ export function writeOctreeCutUniforms(
     const cells = (camPosMpc[a]! * mpcToUnit - octree.grid.origin[a]!) / octree.grid.cellEdge;
     const whole = Math.max(-CAM_CELL_LIMIT, Math.min(CAM_CELL_LIMIT, Math.floor(cells)));
     i32[CAM_CELL_INT_INDEX + a] = whole;
-    f32[CAM_FRAC_FLOAT_INDEX + a] = cells - whole;
+    const frac = cells - whole;
+    f32[CAM_FRAC_FLOAT_INDEX + a] = frac;
+    f32[CAM_FRAC_LO_FLOAT_INDEX + a] = frac - Math.fround(frac);
   }
   f32[CELL_EDGE_MPC_FLOAT_INDEX] = octree.grid.cellEdge * unitMpc;
   f32[REFINE_THRESHOLD_SQ_FLOAT_INDEX] = cut.refineThreshold * cut.refineThreshold;
