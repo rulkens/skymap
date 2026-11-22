@@ -83,7 +83,7 @@ tests/  Vitest suite — mirrors src/ tree
 npm run dev         # vite dev server (leave running)
 npm run build       # tsc --noEmit + vite build
 npm run typecheck   # both src and tools tsconfigs
-npm run typecheck:fast  # same two projects via tsgo (TS 7 preview) — ~7x faster — then the website check
+npm run typecheck:fast  # same two projects via the native TS 7 compiler — ~7x faster — then the website check
 npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
@@ -106,7 +106,7 @@ npm run brand -w packages/desktop  # icon set + dmg/installer bitmaps from the b
 npm run dist -w packages/desktop   # unsigned dmg + Windows installer into packages/desktop/release/
 ```
 
-`typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.
+`typecheck:fast` is the inner loop on TypeScript 7 (installed beside 6 as `typescript-native`, because eslint, `astro check` and `move-files` need the 6.x JavaScript API); `tsc` (6.x) stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a TS 7 difference and confirm against `tsc`.
 
 For `npm run perf`, read the `perf` skill first (measure before _and_ after any renderer/perf change); **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server.
 
