@@ -57,15 +57,15 @@ export type Subcommand = {
 } & { readonly kind: 'legacy'; readonly run: (input: LegacyInput) => void };
 ```
 
-- [ ] Replace the `if (sub === …)` chain (`refactor.ts:89-150`) with five rows in
+- [x] Replace the `if (sub === …)` chain (`refactor.ts:89-150`) with five rows in
       `SUBCOMMANDS: readonly Subcommand[]`. The driver finds the row by name.
-- [ ] Hoist the preview (`collectRefs` + `renderRefReport`, copied into four arms) into the driver:
+- [x] Hoist the preview (`collectRefs` + `renderRefReport`, copied into four arms) into the driver:
       it prints once for every subcommand, before the row runs. `refs` is a row whose `run` does
       nothing more.
-- [ ] Build `USAGE` from the rows' `usage` lines.
-- [ ] No behaviour change and no new test: `npm run refactor -- refs tools/utils/refactor/planRename.ts#planRename`
+- [x] Build `USAGE` from the rows' `usage` lines.
+- [x] No behaviour change and no new test: `npm run refactor -- refs tools/utils/refactor/planRename.ts#planRename`
       and `rename … --dry` print what they printed before.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2 (prep): shared types move to `tools/@types/refactor/`
 

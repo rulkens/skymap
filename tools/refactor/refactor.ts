@@ -1,43 +1,15 @@
 #!/usr/bin/env node
 /**
- * refactor — one ts-morph CLI whose subcommands map onto skymap's house
- * conventions (one symbol per file, filename = export name, deep relative
- * imports, no barrels): rename, extract, inline, delete, refs. Moving files is
- * `npm run move-files`, not a subcommand here.
+ * refactor: one ts-morph CLI whose subcommands follow skymap's house conventions
+ * (one symbol per file, filename = export name, deep relative imports, no barrels).
+ * Moving files is `npm run move-files`, not a subcommand here.
  *
- * ## Why the entry stays thin
- *
- * This file does argv dispatch and nothing else — parse the leading subcommand,
- * resolve the bool flags, load the shared Project, run the requested op(s)
- * against it, and save once at the tail. All the real behaviour lives in
- * one-function planners under `tools/utils/refactor/`, each unit-tested against
- * an in-memory Project. Keeping the entry logic-free means argv plumbing needs
- * no test, and a fat entry would hide the testable seams inside an untestable one.
- *
- * ## Why the driver owns the single save (all-or-nothing)
- *
- * Every mutating subcommand is a planner that resolves + validates + mutates the
- * ONE in-memory Project and throws on any validation failure WITHOUT saving. The
- * driver runs each requested op (a single invocation, or one per `--manifest`
- * batch entry) against that project, then calls `project.save()` exactly once at
- * the tail. All-or-nothing falls out structurally: a throw mid-batch aborts
- * before the save, so disk is never partially written. `--dry` skips the save and prints the
- * structured blast-radius report instead.
- *
- * ## Usage
- *
- *   npm run refactor -- <subcommand> <args...> [--dry] [--json]
- *
- *     refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
- *     refactor extract <file>#<symbol> <dest.ts>
- *     refactor inline  <file>#<symbol>
- *     refactor delete  <file>#<symbol>
- *     refactor refs    <file>#<symbol>
- *
- *   Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>
+ * The driver owns the single save: every subcommand mutates the ONE in-memory
+ * Project and throws on a validation failure before the save, so a batch
+ * (`--manifest`) is all-or-nothing. `--dry` skips the save. Behaviour lives in
+ * the unit-tested planners under `tools/utils/refactor/`.
  */
 
-import type { Project } from 'ts-morph';
 import { parseFlags } from '../utils/cli/args';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
@@ -49,109 +21,76 @@ import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
+import type { LegacyInput } from './@types/LegacyInput';
+import type { Subcommand } from './@types/Subcommand';
 
-// Every subcommand names its target as `<file>#<symbol>`.
-const SUBCOMMANDS = ['rename', 'extract', 'inline', 'delete', 'refs'] as const;
-type Subcommand = (typeof SUBCOMMANDS)[number];
+const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
 
-function isSubcommand(value: string): value is Subcommand {
-  return (SUBCOMMANDS as readonly string[]).includes(value);
+function needArg(name: string, what: string, value: string | undefined): string {
+  if (value === undefined) throw new Error(`refactor ${name}: expected ${what}.`);
+  return value;
 }
+
+// The driver has already checked the address and printed the preview; each row
+// only applies its mutation.
+const SUBCOMMANDS: readonly Subcommand[] = [
+  {
+    kind: 'legacy',
+    name: 'rename',
+    usage: 'refactor rename  <file>#<symbol> <newName>   [--no-file-rename]',
+    run: ({ project, positionals, flags }) => {
+      const newName = needArg(
+        'rename',
+        'a <file>#<symbol> address and a <newName>',
+        positionals[1],
+      );
+      const resolved = resolveSymbol(project, parseSymbolAddress(positionals[0]!));
+      planRename(project, resolved, newName, !flags['--no-file-rename']);
+    },
+  },
+  {
+    kind: 'legacy',
+    name: 'extract',
+    usage: 'refactor extract <file>#<symbol> <dest.ts>',
+    run: ({ project, positionals }) => {
+      const dest = needArg('extract', 'a <file>#<symbol> address and a <dest.ts>', positionals[1]);
+      planExtract(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!)), dest);
+    },
+  },
+  {
+    kind: 'legacy',
+    name: 'inline',
+    usage: 'refactor inline  <file>#<symbol>',
+    run: ({ project, positionals }) =>
+      planInline(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!))),
+  },
+  {
+    kind: 'legacy',
+    name: 'delete',
+    usage: 'refactor delete  <file>#<symbol>',
+    run: ({ project, positionals }) =>
+      planDelete(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!))),
+  },
+  { kind: 'legacy', name: 'refs', usage: 'refactor refs    <file>#<symbol>', run: () => {} },
+];
 
 const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
 
-  refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
-  refactor extract <file>#<symbol> <dest.ts>
-  refactor inline  <file>#<symbol>
-  refactor delete  <file>#<symbol>
-  refactor refs    <file>#<symbol>
+${SUBCOMMANDS.map((row) => `  ${row.usage}`).join('\n')}
 
 Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
 
-const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
-type Flags = Record<keyof typeof FLAG_SCHEMA, boolean>;
-
-// Run one op against the shared project. The `<file>#<symbol>` address is parsed
-// here so a malformed one fails loudly BEFORE any mutation (and, in a batch,
-// aborts the whole run before the single save).
-function runOp(
-  sub: Subcommand,
-  project: Project,
-  positionals: readonly string[],
-  flags: Flags,
-): void {
-  const address = positionals[0];
-  if (address === undefined) {
-    throw new Error(`refactor ${sub}: expected a <file>#<symbol> address.`);
-  }
-  const parsed = parseSymbolAddress(address);
-
-  if (sub === 'refs') {
-    // `refs` is read-only: it resolves the target, walks its references, and
-    // prints the classified report. It never mutates the project, so the
-    // driver's tail `project.save()` is a no-op regardless of `--dry` — no
-    // special-casing needed here.
-    const report = collectRefs(project, resolveSymbol(project, parsed));
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    return;
-  }
-
-  if (sub === 'rename') {
-    const newName = positionals[1];
-    if (newName === undefined) {
-      throw new Error('refactor rename: expected a <file>#<symbol> address and a <newName>.');
-    }
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius from the PRE-rename symbol, so the report reflects
-    // the references as they stand before the mutation. The shared reporter is
-    // every mutating subcommand's preview; --dry stops at this report.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    // File rename is the default; --no-file-rename opts out (see planRename).
-    planRename(project, resolved, newName, !flags['--no-file-rename']);
-    return;
-  }
-
-  if (sub === 'delete') {
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: when refs exist it shows what blocks the
-    // delete (planDelete then throws the refusal), and when clear it's an empty
-    // report. --dry stops at this preview; the driver's tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planDelete(project, resolved);
-    return;
-  }
-
-  if (sub === 'extract') {
-    const dest = positionals[1];
-    if (dest === undefined) {
-      throw new Error('refactor extract: expected a <file>#<symbol> address and a <dest.ts>.');
-    }
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: it previews the external importers the extract
-    // will repoint, or (on a shared-dep refusal) an empty report before
-    // planExtract throws. --dry stops at this preview; the tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planExtract(project, resolved, dest);
-    return;
-  }
-
-  if (sub === 'inline') {
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: it previews the call sites the inline will
-    // repoint, or (on a non-passthrough) the references planInline then refuses
-    // with. --dry stops at this preview; the driver's tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planInline(project, resolved);
-    return;
-  }
+// The preview prints the references as they stand BEFORE the row mutates; for a
+// refused delete it shows what blocks it. A malformed address fails here, before
+// any mutation, so a batch aborts before the single save.
+function runOp(row: Subcommand, input: LegacyInput): void {
+  const address = needArg(row.name, 'a <file>#<symbol> address', input.positionals[0]);
+  const resolved = resolveSymbol(input.project, parseSymbolAddress(address));
+  const report = collectRefs(input.project, resolved);
+  process.stdout.write(`${renderRefReport(report, input.flags['--json'])}\n`);
+  row.run(input);
 }
 
-// Decode one batch entry (a JSON array of string arguments) into the positional
-// tuple runOp expects; arity and address well-formedness are runOp's to check.
 function entryToPositionals(entry: unknown): readonly string[] {
   if (Array.isArray(entry) && entry.every((arg) => typeof arg === 'string')) {
     return entry as readonly string[];
@@ -161,12 +100,13 @@ function entryToPositionals(entry: unknown): readonly string[] {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const sub = argv[0];
-  if (sub === undefined || !isSubcommand(sub)) {
+  const name = argv[0];
+  const row = SUBCOMMANDS.find((candidate) => candidate.name === name);
+  if (row === undefined) {
     const lead =
-      sub === undefined
+      name === undefined
         ? 'refactor: missing subcommand.'
-        : `refactor: unknown subcommand '${sub}'.`;
+        : `refactor: unknown subcommand '${name}'.`;
     process.stderr.write(`${lead}\n${USAGE}\n`);
     process.exitCode = 1;
     return;
@@ -178,11 +118,11 @@ async function main(): Promise<void> {
   const manifest = readManifest(argv);
   if (manifest === null) {
     const positionals = argv.slice(1).filter((arg) => !arg.startsWith('--'));
-    runOp(sub, project, positionals, flags);
+    runOp(row, { project, positionals, flags });
   } else {
-    // Batch: every entry runs against the ONE project. A throw on any entry
-    // aborts before the single save below, so disk is never partially written.
-    for (const entry of manifest) runOp(sub, project, entryToPositionals(entry), flags);
+    for (const entry of manifest) {
+      runOp(row, { project, positionals: entryToPositionals(entry), flags });
+    }
   }
 
   if (!flags['--dry']) await project.save();
