@@ -97,17 +97,22 @@ struct ShellSample {
   hit: bool,
 };
 
-// Shared core: march bound, LUT lookups and ring occlusion. 'rayOrigin' is always
-// 'uniforms.camPosLocal'; callers pass 'dir' normalized and 'tDepth' in LOCAL units
-// ('hasDepth' false leaves it unread).
-fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSample {
-  // Off-shell default: each value is its blend's IDENTITY (multiply by 1, add 0), so
-  // a fragment surviving its discard is a no-op, not a white or black hole.
+// The miss: each value is its blend's IDENTITY (multiply by 1, add 0), so a fragment
+// surviving its discard is a no-op, not a white or black hole.
+fn missedShell() -> ShellSample {
   var out: ShellSample;
   out.transmit = vec3<f32>(1.0);
   out.emission = vec3<f32>(0.0);
   out.coverage = 0.0;
   out.hit = false;
+  return out;
+}
+
+// Shared core: march bound, LUT lookups and ring occlusion. 'rayOrigin' is always
+// 'uniforms.camPosLocal'; callers pass 'dir' normalized and 'tDepth' in LOCAL units
+// ('hasDepth' false leaves it unread).
+fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSample {
+  var out = missedShell();
 
   let rayOrigin = uniforms.camPosLocal;
 
@@ -230,25 +235,18 @@ fn sampleShell(in: FsIn) -> ShellSample {
   let texel = vec2<i32>(in.clip.xy * vec2<f32>(textureDimensions(sceneDepth)) / depthFrame.viewportPx);
   let depth = textureLoad(sceneDepth, texel, 0);
   let hasDepth = depth != FAR_DEPTH;
+  // Wrong wall <=> facing and finite depth disagree; without this the limb
+  // double-counts, neither wall being depth-tested. Tested BEFORE the segment: over
+  // the disc the far wall covers every pixel the near wall shades.
+  if (in.frontFacing != hasDepth) {
+    return missedShell();
+  }
   var tDepth = 0.0;
   if (hasDepth) {
     tDepth = sceneRayDistance(uv, depth, depthFrame.invMvp, depthFrame.camPosKm) * depthFrame.kmToLocal;
   }
 
-  var out = sampleShellSegment(dir, tDepth, hasDepth);
-  if (!out.hit) {
-    return out;
-  }
-
-  // Wrong wall <=> facing and finite depth disagree. Without this the limb
-  // double-counts, neither wall being depth-tested.
-  if (in.frontFacing != hasDepth) {
-    out.hit = false;
-    out.transmit = vec3<f32>(1.0);
-    out.emission = vec3<f32>(0.0);
-    out.coverage = 0.0;
-  }
-  return out;
+  return sampleShellSegment(dir, tDepth, hasDepth);
 }
 
 // Pass 1: blend 'zero'/'src' on both components, dst *= src; 'dst.a *= 1 - coverage'.
