@@ -10,11 +10,17 @@ import type { AerialBundleResources } from './AerialBundleResources';
 
 export type AerialPerspectiveRenderer = Renderer & {
   /**
-   * Bake body `bodyId`'s in-scatter + transmittance volumes into the caller's
-   * compute pass. The frame's ONLY write of that body's shell uniform record, which
-   * `draw` unprojects with. THROWS on an unknown `bodyId`.
+   * The frame's ONLY write of body `bodyId`'s shell uniform record, which `bake` and
+   * `draw` both unproject with. THROWS on an unknown `bodyId`.
    */
-  bake(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void;
+  writeUniforms(bodyId: string, uniforms: Float32Array): void;
+
+  /**
+   * Bake body `bodyId`'s in-scatter + transmittance volumes into the caller's
+   * compute pass, from the record `writeUniforms` wrote. Skippable on a frame whose
+   * `draw` reads no volume (`aerialBakeIsRead`). THROWS on an unknown `bodyId`.
+   */
+  bake(pass: GPUComputePassEncoder, bodyId: string): void;
 
   /**
    * Apply the fog: a full-screen MULTIPLY + ADD pair branching on `depthView`
@@ -26,7 +32,7 @@ export type AerialPerspectiveRenderer = Renderer & {
   /**
    * The sky alone, for a mesh probe's capture face: the same MULTIPLY + ADD pair with every
    * pixel on the sky branch, through the probe's own uniform record (written here, never
-   * `bake`'s) and pipelines that carry the capture's depth format. THROWS on an unknown `bodyId`.
+   * `writeUniforms`') and pipelines that carry the capture's depth format. THROWS on an unknown `bodyId`.
    */
   drawSky(
     pass: GPURenderPassEncoder,

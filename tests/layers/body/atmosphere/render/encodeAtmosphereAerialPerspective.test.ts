@@ -29,7 +29,8 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
 const MOCK_MVP = new Float64Array(16);
-const MOCK_CAM_LOCAL: Vec3 = [0.5, 0, 0];
+// Mutable so a test can lift the eye; restored by the test that moves it.
+const MOCK_CAM_LOCAL: [number, number, number] = [0.5, 0, 0];
 vi.mock('../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
@@ -57,9 +58,15 @@ const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
 const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
 const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
 
-type SpyRenderer = AtmosphereShellRenderer & { bakeAerialPerspective: ReturnType<typeof vi.fn> };
+type SpyRenderer = AtmosphereShellRenderer & {
+  writeAerialPerspectiveUniforms: ReturnType<typeof vi.fn>;
+  bakeAerialPerspective: ReturnType<typeof vi.fn>;
+};
 function spyRenderer(): SpyRenderer {
-  return { bakeAerialPerspective: vi.fn() } as unknown as SpyRenderer;
+  return {
+    writeAerialPerspectiveUniforms: vi.fn(),
+    bakeAerialPerspective: vi.fn(),
+  } as unknown as SpyRenderer;
 }
 
 const STUB_POSE = { eyeRelBodyM: [1, 2, 3] as Vec3, basisM: IDENTITY_MAT3 };
@@ -109,15 +116,32 @@ describe('encodeAtmosphereAerialPerspective', () => {
     expect(beginComputePass).toHaveBeenCalledTimes(1);
     expect(beginComputePass.mock.calls[0]![0]).toMatchObject({ label: 'atmosphere-aerial-bake' });
     expect(renderer.bakeAerialPerspective).toHaveBeenCalledTimes(1);
-    const [passArg, bodyIdArg, uniforms] = renderer.bakeAerialPerspective.mock.calls[0]! as [
-      GPUComputePassEncoder,
+    expect(renderer.bakeAerialPerspective).toHaveBeenCalledWith(computePass, 'earth');
+    const [bodyIdArg, uniforms] = renderer.writeAerialPerspectiveUniforms.mock.calls[0]! as [
       string,
       Float32Array,
     ];
-    expect(passArg).toBe(computePass);
     expect(bodyIdArg).toBe('earth');
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(44);
+  });
+
+  it('writes the record but opens no pass when the eye is too high for the apply to read the volume', () => {
+    // The apply still unprojects with the record; a claimed-but-unopened slot reports stale ticks.
+    beginComputePass.mockClear();
+    const renderer = spyRenderer();
+    const claim = vi.fn(() => ({}));
+    MOCK_CAM_LOCAL[0] = 0.999;
+    try {
+      encodeAtmosphereAerialPerspective(renderer, encoder, makeCtx(true), makeState(), claim);
+    } finally {
+      MOCK_CAM_LOCAL[0] = 0.5;
+    }
+
+    expect(renderer.writeAerialPerspectiveUniforms).toHaveBeenCalledTimes(1);
+    expect(beginComputePass).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(renderer.bakeAerialPerspective).not.toHaveBeenCalled();
   });
 
   it('the aerial bake skips a hosting row whose body draws no atmosphere', () => {
