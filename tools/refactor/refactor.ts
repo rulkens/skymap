@@ -21,6 +21,7 @@ import { openEngine } from '../utils/refactor/engine/openEngine';
 import { syncOverlay } from '../utils/refactor/engine/syncOverlay';
 import { foldPlan } from '../utils/refactor/foldPlan';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
@@ -81,13 +82,16 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     },
   },
   {
-    kind: 'legacy',
+    kind: 'plan',
     name: 'delete',
     usage: 'refactor delete  <file>#<symbol>',
-    run: async ({ project, positionals, report }) => {
-      const { planDelete } = await import('../utils/refactor/planDelete');
-      planDelete(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!)), report);
-    },
+    plan: ({ engine, read, exists, positionals }) =>
+      planDelete({
+        address: parseSymbolAddress(needArg('delete', 'a <file>#<symbol> address', positionals[0])),
+        engine,
+        read,
+        exists,
+      }),
   },
   {
     kind: 'report',

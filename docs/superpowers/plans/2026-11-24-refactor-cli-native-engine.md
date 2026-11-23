@@ -382,15 +382,15 @@ Rules (today's, from `planDelete.ts:58-100`):
 
 Tests:
 
-- [ ] `planDelete` — keep today's five cases, rewritten on `engineFixture`: refuses with a
+- [x] `planDelete` — keep today's five cases, rewritten on `engineFixture`: refuses with a
       reference in `src`; refuses with a reference only in a test; removes one export of two and
       keeps the file; deletes the file and its test mirror for a sole export; keeps a file that
       still has a side-effect statement.
-- [ ] `declarationSpan` — `takes the leading JSDoc with the statement`;
+- [x] `declarationSpan` — `takes the leading JSDoc with the statement`;
       `cuts one declarator of two`.
-- [ ] `delete` becomes `kind: 'plan'`. `npm run refactor -- delete src/@types/engine/EngineState.ts#EngineState`
+- [x] `delete` becomes `kind: 'plan'`. `npm run refactor -- delete src/@types/engine/EngineState.ts#EngineState`
       prints the refusal once and leaves `git status` clean.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8: delete the leftovers, update the docs
 
