@@ -48,7 +48,7 @@ function truthMpc(record: ReferenceStarRecord): Vec3 {
 }
 
 /**
- * Worst error of the f32 reconstruction against f64 truth, as a fraction of the
+ * Worst error of the reconstruction against f64 truth, as a fraction of the
  * star's distance (≈ the angular error in rad), over a camera that slides 1 AU
  * sideways at about `distanceAu` from the star.
  */
@@ -80,5 +80,10 @@ describe('survey star position near the camera (vertex.wesl reconstruction)', ()
   it('holds a level-5 star (a bright one, stratified high) still from 2 AU', () => {
     const record = { cell: [608, 480, 512], level: 5, offset: [40000, 12345, 51234] } as const;
     expect(worstRelativeError(record, 2)).toBeLessThan(MAX_ERROR_RAD);
+  });
+
+  it('places a star from 1 Mpc away, past where the integer sum must not overflow', () => {
+    const record = { cell: [608, 480, 512], level: 5, offset: [40000, 12345, 51234] } as const;
+    expect(worstRelativeError(record, 1 / SCALE_UNITS.AU_TO_MPC)).toBeLessThan(MAX_ERROR_RAD);
   });
 });

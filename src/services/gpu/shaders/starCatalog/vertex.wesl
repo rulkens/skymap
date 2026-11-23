@@ -18,8 +18,9 @@
 //
 // cutIo.wesl's camera split makes node-minus-camera integer-exact, and
 // recordRelCamCells sums in the one order that stays exact up close:
-//   worldRelCam = (((node - camCell) + (offset / 65536) * 2^level) - camFrac
-//                  - camFracLo) * cellEdgeMpc
+//   worldRelCam = ((node - camCell) + (offset / 65536) * 2^level - camFrac)
+//                 * cellEdgeMpc
+// summed in integer sub-cells, exact up close whatever the compiler reorders.
 //
 // ## Flux-integrated glow
 //
@@ -87,6 +88,7 @@ import package::octree::cutIo::CutNode;
 import package::octree::cutIo::CutUniforms;
 import package::octree::cutIo::CutStream;
 import package::octree::cutIo::nodeEdgeCells;
+import package::octree::cutIo::nodeLevel;
 import package::octree::cutIo::nodeOwnCount;
 import package::octree::cutIo::OPACITY_CHANNELS;
 import package::octree::cutIo::recordRelCamCells;
@@ -127,8 +129,6 @@ const STAR_COLORIDX_MIN: f32 = -0.6;
 // (4.4 - (-0.6)) / 64
 const STAR_COLORIDX_STEP: f32 = 0.078125;
 
-// Reciprocal of 65536 (OFFSET_FRACTION_LEVELS): offset 0..65535 spans one box.
-const OFFSET_SCALE: f32 = 0.0000152587890625;
 // packStarGpuRecords' word layout.
 const OFFSET_MASK: u32 = 0xffffu;
 const GPU_Y_SHIFT: u32 = 16u;
@@ -188,8 +188,7 @@ fn vs(
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let edgeCells = nodeEdgeCells(bits);
-  let cellScaleMpc = edgeCells * cut.cellEdgeMpc;
+  let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
   // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.
   let base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, isAgg);
   let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
@@ -198,15 +197,12 @@ fn vs(
   let xyWord = records[base * 2u + 0u];
   let zMagColourWord = records[base * 2u + 1u];
 
-  let offsetX = f32(xyWord & OFFSET_MASK);
-  let offsetY = f32(xyWord >> GPU_Y_SHIFT);
-  let offsetZ = f32(zMagColourWord & OFFSET_MASK);
+  let offset = vec3<u32>(xyWord & OFFSET_MASK, xyWord >> GPU_Y_SHIFT, zMagColourWord & OFFSET_MASK);
   let absMagIdx = (zMagColourWord >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
   let colorIdx = (zMagColourWord >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
-  let offset = vec3<f32>(offsetX, offsetY, offsetZ) * OFFSET_SCALE;
   let worldRelCam = recordRelCamCells(
-    cutNodes[nodeIdx].grid, edgeCells, offset, cut.camCell, cut.camFrac, cut.camFracLo
+    cutNodes[nodeIdx].grid, nodeLevel(bits), offset, cut.camCell, cut.camFrac, cut.camSub
   ) * cut.cellEdgeMpc;
 
   let distSqMpc2 = dot(worldRelCam, worldRelCam);

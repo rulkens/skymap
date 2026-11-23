@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { OFFSET_FRACTION_LEVELS } from '../../../../src/data/octree/octreeFormat';
 
 import * as layout from '../../../../src/services/gpu/octree/octreeCutLayout';
 import {
@@ -37,7 +38,7 @@ const stripComments = (text: string) => text.replace(/\/\/.*$/gm, '');
 /** Every `const NAME: u32|f32 = <expr>;`, an expression evaluated over earlier constants. */
 function weslConsts(text: string): Map<string, number> {
   const out = new Map<string, number>();
-  const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([^;]+);/g;
+  const re = /const\s+(\w+)\s*:\s*(?:u32|i32|f32)\s*=\s*([^;]+);/g;
   for (const [, name, expr] of stripComments(text).matchAll(re)) {
     const js = expr!
       .replace(/\b(\d+(?:\.\d+)?(?:e-?\d+)?)[uf]\b/g, '$1')
@@ -113,6 +114,10 @@ describe('octree cut WESL constants <-> octreeCutLayout.ts', () => {
     BLOB_OPACITY: layout.BLOB_OPACITY,
     LEAF_ENTRY_NODE_MASK: 2 ** layout.LEAF_BLOCK_INDEX_SHIFT - 1,
     CUT_MAX_VIEWS: layout.CUT_MAX_VIEWS,
+    SUB_CELL_BITS: Math.log2(OFFSET_FRACTION_LEVELS),
+    SUB_CELL_MASK: OFFSET_FRACTION_LEVELS - 1,
+    SUB_CELLS: OFFSET_FRACTION_LEVELS,
+    EXACT_CELLS: layout.EXACT_CELLS,
   };
 
   it('every WESL const equals its TS twin, and none lacks one', () => {
@@ -153,7 +158,7 @@ describe('struct CutUniforms', () => {
     nodeCount: layout.NODE_COUNT_U32_INDEX,
     opacity: layout.OPACITY_FLOAT_INDEX,
     indexNodes: layout.INDEX_NODES_U32_INDEX,
-    camFracLo: layout.CAM_FRAC_LO_FLOAT_INDEX,
+    camSub: layout.CAM_SUB_FLOAT_INDEX,
     chunkNodeCap: layout.CHUNK_NODE_CAP_U32_INDEX,
     planes: layout.PLANES_FLOAT_INDEX,
   };

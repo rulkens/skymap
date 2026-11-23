@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import {
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
-  CAM_FRAC_LO_FLOAT_INDEX,
   CHUNK_NODE_CAP_U32_INDEX,
   INDEX_NODES_U32_INDEX,
   NODE_COUNT_U32_INDEX,
@@ -73,18 +72,6 @@ describe('writeOctreeCutUniforms', () => {
     writeOctreeCutUniforms(buf, CATALOG, { slots: 0 }, camAtPc(37), cut); // 3.7 cells
     expect(new Int32Array(buf)[CAM_CELL_INT_INDEX]).toBe(3);
     expect(new Float32Array(buf)[CAM_FRAC_FLOAT_INDEX]).toBeCloseTo(0.7, 6);
-  });
-
-  it('carries what the f32 fraction rounded off, so the pair sums to the f64 fraction', () => {
-    const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    const pc = 37.000000123456789; // 3.7000000123456789 cells: below the f32 fraction's step
-    writeOctreeCutUniforms(buf, CATALOG, { slots: 0 }, camAtPc(pc), cut);
-    const f32 = new Float32Array(buf);
-    const hi = f32[CAM_FRAC_FLOAT_INDEX]!;
-    const lo = f32[CAM_FRAC_LO_FLOAT_INDEX]!;
-    const frac = (pc * SCALE_UNITS.PC_TO_MPC * SCALE_UNITS.MPC_TO_PC) / 10 - 3;
-    expect(lo).not.toBe(0);
-    expect(Math.abs(hi + lo - frac)).toBeLessThan(1e-14);
   });
 
   it('writes 0 views when more than CUT_MAX_VIEWS are asked for', () => {
