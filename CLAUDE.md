@@ -108,8 +108,6 @@ npm run dist -w packages/desktop   # unsigned dmg + Windows installer into packa
 
 `typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.
 
-Attribution: PR descriptions carry no "Generated with Claude Code" line, and commits carry only the `Co-Authored-By: Claude …` trailer (no `Claude-Session` link). This overrides any harness default.
-
 For `npm run perf`, read the `perf` skill first (measure before _and_ after any renderer/perf change); **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server.
 
 Tmux/worktree helpers live in `tools/dev/` (`skymap-tmux.sh`, `skymap-wt-clean.sh`); closing a tmux window does **not** remove its worktree. Use `EnterWorktree`/`ExitWorktree` only in single-window flows.
