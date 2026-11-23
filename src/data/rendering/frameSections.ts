@@ -82,8 +82,8 @@ export const PRELUDE: FrameSection = {
       near0Passes: [],
       bodyPasses: [
         'atmosphere-probe-sky',
-        'earth',
         'surface-tiles',
+        'earth',
         'cloud-shell',
         'planets',
         'textured-bodies',
@@ -221,7 +221,8 @@ export const SCENE: FrameSection = {
     // own) with body rows. Depth-tested opaque order is a listing choice, except:
     // `rings` writes no depth and blends OVER, so it follows every opaque sphere (the
     // far ring half is then occluded); `cloud-shell` is the same exception, placed
-    // right after the `earth` surface it depth-tests against.
+    // right after the `earth` surface it depth-tests against. `surface-tiles` leads
+    // `earth` for cost alone (see the roster).
     //
     // Mesh passes draw LAST, after the depth marker. Shells write no depth, so a late
     // mesh still depth-tests correctly and leaves its own distance in the depth the
@@ -231,10 +232,12 @@ export const SCENE: FrameSection = {
       target: 'foreground:0',
       near0Passes: ['star-spheres', 'field-star-sphere'],
       bodyPasses: [
-        'earth',
+        // Tiles BEFORE the globe: it sits at the inner bound, under every patch, so the
+        // depth test spares its shading wherever a patch already drew.
         'surface-tiles',
-        // Debug-only; right after the tiles because it writes analytic depth against
-        // the depth THEY stamped. Not in the probe roster: a cursor means nothing on a
+        'earth',
+        // Debug-only; after the surface because it writes analytic depth against
+        // the depth the tiles stamped. Not in the probe roster: a cursor means nothing on a
         // capture face.
         'terrain-pick-marker',
         'cloud-shell',
