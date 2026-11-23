@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
 import { collectRefs } from '../../../../tools/utils/refactor/collectRefs';
-import type { RefEntry } from '../../../../tools/utils/refactor/collectRefs';
+import type { RefEntry } from '../../../../tools/@types/refactor/RefEntry';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
 // In-memory Projects seed a tiny module graph and let us assert on how each

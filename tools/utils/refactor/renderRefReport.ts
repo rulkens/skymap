@@ -21,7 +21,7 @@
  * branch carries a structural test and the text branch is left un-pinned.
  */
 
-import type { RefReport } from './collectRefs';
+import type { RefReport } from '../../@types/refactor/RefReport';
 
 export function renderRefReport(report: RefReport, json: boolean): string {
   if (json) {

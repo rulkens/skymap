@@ -52,14 +52,14 @@ import type {
   VariableDeclaration,
 } from 'ts-morph';
 import { collectRefs } from './collectRefs';
-import type { RefReport } from './collectRefs';
+import type { RefReport } from '../../@types/refactor/RefReport';
 import { detectPassthrough } from './detectPassthrough';
 import type { PassthroughTarget } from './detectPassthrough';
 import { hasMeaningfulStatements } from './hasMeaningfulStatements';
 import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
 import { retargetNamedImport } from './retargetNamedImport';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export function planInline(project: Project, resolved: ResolvedSymbol): void {
   const target = detectPassthrough(resolved);

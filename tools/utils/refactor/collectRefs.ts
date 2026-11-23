@@ -43,31 +43,14 @@
  * among the results. That is not a reference to update — it is the thing being
  * pointed at — so it is filtered out by identity of its source position. Every
  * entry in `refs` is therefore a genuine USE elsewhere in the graph.
- *
- * The `RefKind` / `RefEntry` / `RefReport` types are co-located with this
- * function: they only mean anything as this collector's output.
  */
 
 import { Node, SyntaxKind } from 'ts-morph';
 import type { Project } from 'ts-morph';
-import type { ResolvedSymbol } from './resolveSymbol';
-
-export type RefKind = 'import' | 'call' | 'type-position' | 're-export' | 'test';
-
-export type RefEntry = {
-  readonly filePath: string;
-  readonly line: number;
-  readonly column: number;
-  readonly kind: RefKind;
-  readonly enclosing: string; // e.g. 'function frameTick' or '<module>'
-};
-
-export type RefReport = {
-  readonly target: string; // the '<file>#<symbol>' address
-  readonly refs: readonly RefEntry[]; // every reference except the declaration itself
-  readonly fileCount: number; // distinct files in refs
-  readonly testCount: number; // refs whose filePath is under tests/
-};
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
+import type { RefKind } from '../../@types/refactor/RefKind';
+import type { RefEntry } from '../../@types/refactor/RefEntry';
+import type { RefReport } from '../../@types/refactor/RefReport';
 
 export function collectRefs(project: Project, resolved: ResolvedSymbol): RefReport {
   void project; // resolution already bound the declaration to this project's graph.

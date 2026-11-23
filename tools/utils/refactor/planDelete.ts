@@ -49,11 +49,11 @@
 import { Node } from 'ts-morph';
 import type { Project } from 'ts-morph';
 import { collectRefs } from './collectRefs';
-import type { RefReport } from './collectRefs';
+import type { RefReport } from '../../@types/refactor/RefReport';
 import { hasMeaningfulStatements } from './hasMeaningfulStatements';
 import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export function planDelete(project: Project, resolved: ResolvedSymbol): void {
   // Validate first: any reference of any kind blocks the delete, and the throw

@@ -16,7 +16,7 @@ import type { MovePair } from '../../../packages/move-files/src/@types/MovePair'
 import { applyMoves } from './applyMoves';
 import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
 import { companionRules } from './companionRules';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export function planRename(
   project: Project,

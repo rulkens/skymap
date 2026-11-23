@@ -73,13 +73,13 @@ export type Subcommand = {
 (create), `tools/utils/refactor/{collectRefs,parseSymbolAddress,resolveSymbol}.ts` (modify),
 their importers, `tests/helpers/conventions/inlineTypeFiles.ts` (modify)
 
-- [ ] Move each type to its own file. Try `npm run refactor -- extract tools/utils/refactor/collectRefs.ts#RefKind tools/@types/refactor/RefKind.ts --dry`
+- [x] Move each type to its own file. Try `npm run refactor -- extract tools/utils/refactor/collectRefs.ts#RefKind tools/@types/refactor/RefKind.ts --dry`
       first; `extract` has a known bug with type-only imports, so if the result does not compile,
       move that type by hand and fix its importers.
-- [ ] Remove `collectRefs.ts`, `parseSymbolAddress.ts` and `resolveSymbol.ts` from the allow-list
+- [x] Remove `collectRefs.ts`, `parseSymbolAddress.ts` and `resolveSymbol.ts` from the allow-list
       (`inlineTypeFiles.ts:307-311`).
-- [ ] Move-only: no type changes shape. No new test; `npm test -- conventions tools/utils/refactor` passes.
-- [ ] Commit.
+- [x] Move-only: no type changes shape. No new test; `npm test -- conventions tools/utils/refactor` passes.
+- [x] Commit.
 
 ### Task 3: plan types and `foldEdits`
 
