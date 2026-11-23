@@ -32,6 +32,10 @@ A link copied in dome mode opens in dome mode, and a tour or an exhibit opened b
 
 If the picture stutters, the steps under [When it stutters](/docs/guide/screens-and-domes/#when-it-stutters) apply, the data size first.
 
+### If some projectors show no sky
+
+On a dome computer that spreads its projectors over two graphics cards, some projectors can show the interface and no sky. We have seen this on one system, with two NVIDIA cards, Windows and Chrome. Skymap has no fix for it yet.
+
 ## Run Skymap for a phone remote
 
 <Fact id="remote-relay" />
@@ -150,7 +154,7 @@ On a phone that is connected, tap Setup, then Add a phone. The dome shows the ca
 ## If the phone does not connect
 
 - **The QR code opens a `localhost` address on the phone.** The server was started without `--host`. Stop it with <Keys of="Ctrl+C" /> and start it with the command under [Run Skymap for a phone remote](#run-skymap-for-a-phone-remote).
-- **The phone’s browser cannot open the page.** The phone does not reach the dome’s computer: check that both are on the same network and that the firewall allows port 5173. A guest Wi-Fi often keeps its devices apart.
+- **The phone’s browser cannot open the page.** The phone does not reach the dome’s computer: check that both are on the same network and that the firewall allows port 5173. A guest Wi-Fi often keeps its devices apart. Such a network can block every port, so opening or changing a port does not help.
 - **The phone reads Looking for the dome, then Dome not there.** The room code is not the one the dome shows, or the dome’s page came from skymap.rulkens.com, which has no relay, or the room already holds three phones.
 - **The phone reads Dome needs a reload or Remote needs a reload.** The dome’s page and the phone’s page come from different versions of Skymap. Reload the page it names: tap Reload page on the phone, or reload the dome’s page and scan its new code.
 - **The dome shows no card.** Its address has no `?remote`, or a phone has paired already: tap Add a phone on that phone.
