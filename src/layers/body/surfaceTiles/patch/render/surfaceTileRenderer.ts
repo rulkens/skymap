@@ -92,10 +92,10 @@ export function createSurfaceTileRenderer(
       visibility: GPUShaderStage.VERTEX,
       buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
     },
-    // Terrain-RGB codes are `textureLoad`ed from both stages, never sampled: unfilterable.
+    // Terrain-RGB codes are `textureLoad`ed by the vertex stage, never sampled: unfilterable.
     {
       binding: 2,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      visibility: GPUShaderStage.VERTEX,
       texture: { sampleType: 'unfilterable-float' },
     },
     { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },

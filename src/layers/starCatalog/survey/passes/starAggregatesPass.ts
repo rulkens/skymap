@@ -19,7 +19,7 @@ export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass<'st
     name: 'star-aggregates',
     fade: 'starCatalog',
 
-    enabled: (_state, _ctx, _view, fade) => starCatalogVisible(runtime, fade),
+    enabled: (state, ctx, _view, fade) => starCatalogVisible(runtime, fade, state, ctx),
 
     draw(pass, view, ctx, state) {
       // The DESTINATION target's size, not the canvas: STAR_GLOW_MIN_PX floors the

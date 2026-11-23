@@ -21,6 +21,6 @@ export function starAggregateUpsamplePass(runtime: StarCatalogRuntime): ContentP
     sourceTargetId: 'star-aggregates',
     fade: 'starCatalog',
     handleOf: () => runtime.aggregateUpsample,
-    enabled: (_state, _ctx, fade) => starCatalogVisible(runtime, fade),
+    enabled: (state, ctx, fade) => starCatalogVisible(runtime, fade, state, ctx),
   });
 }

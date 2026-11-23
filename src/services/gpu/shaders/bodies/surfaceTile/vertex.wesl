@@ -7,6 +7,7 @@ import package::bodies::surfaceTile::io::VSOut;
 import package::bodies::surfaceTile::io::PatchInstance;
 import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::lattice::latticeHeightM;
+import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
 @group(0) @binding(1) var<storage, read> patches: array<PatchInstance>;
@@ -159,15 +160,22 @@ fn vs(
   // The latitude-independent unit-east tangent the bake used to write per
   // vertex, now derived.
   let lon = inst.lon0Rad + eastFraction * inst.dLonRad;
-  out.tangent = vec3<f32>(-sin(lon), cos(lon), 0.0);
+  let tangent = vec3<f32>(-sin(lon), cos(lon), 0.0);
+  out.shadingNormal = tileShadingNormal(
+    heightAtlas,
+    out.uv,
+    vec3<u32>(inst.heightSlotOrigin, inst.heightCells),
+    vec2<f32>(inst.dLonRad, inst.dLatRad),
+    normalize(out.normalLocal),
+    tangent,
+    uniforms.radiusM,
+  );
   out.atlasUvOrigin = inst.albedoRect.xy;
   out.atlasUvScale = inst.albedoRect.zw;
   out.fallbackUvOrigin = inst.fallbackRect.xy;
   out.fallbackUvScale = inst.fallbackRect.zw;
   out.fadeWeight = inst.fadeWeight;
   out.nightRect = inst.nightRect;
-  out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
-  out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the
   // 'camPosLocal - geometricNormal' this replaced (two near-unit f32 vectors).

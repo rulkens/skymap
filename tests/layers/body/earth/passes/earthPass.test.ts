@@ -408,8 +408,8 @@ describe('surfaceTilesPass', () => {
   ];
   const ATLAS_VIEW = {} as GPUTextureView;
 
-  it('is ordered immediately after the base globe in every roster that draws it', () => {
-    // The tile pipeline's depth compare needs the globe's depth already written: an ordering fact.
+  it('is ordered immediately before the base globe in every roster that draws it', () => {
+    // The globe lies under every patch; drawn second, the depth test skips its covered pixels.
     const rosters = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground'
         ? [step.bodyPasses]
@@ -419,7 +419,7 @@ describe('surfaceTilesPass', () => {
     ).filter((roster) => roster.includes('surface-tiles'));
     expect(rosters.length).toBeGreaterThan(0);
     for (const roster of rosters) {
-      expect(roster.indexOf('surface-tiles')).toBe(roster.indexOf('earth') + 1);
+      expect(roster.indexOf('earth')).toBe(roster.indexOf('surface-tiles') + 1);
     }
   });
 
