@@ -14,6 +14,7 @@ engine. Task 8 deletes what nothing uses any more and updates the docs.
 
 Two rules hold throughout:
 
+- **Every file under an `@types/` folder is a `.d.ts`** (`typeFilesAreDeclarations` test), so read each `@types/…/X.ts` below as `X.d.ts`.
 - **Only `tools/utils/refactor/engine/` imports `typescript-native`.** Import it as
   `typescript-native/unstable/sync`. Nothing outside the folder sees one of its types.
 - **Single-file syntax is read with the TypeScript 6 parser** (`import ts from 'typescript'`,
