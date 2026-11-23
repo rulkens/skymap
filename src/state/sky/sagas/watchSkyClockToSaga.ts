@@ -19,7 +19,13 @@ export function* watchSkyClockToSaga() {
   yield* takeLatest(skyClockTo, function* ({ payload }) {
     const nowMs = performance.now();
     const from = deriveSimDays(yield* select(selectTimeState), nowMs);
-    const profile = easedClockProfile(from, payload.simDays, nowMs, SKY_CLOCK_SKIP_MS);
+    const profile = easedClockProfile(
+      from,
+      payload.simDays,
+      SKY_CLOCK_SKIP_MS,
+      'easeInOutSine',
+      nowMs,
+    );
     yield* put(startClockProfile({ profile }));
     yield* delay(SKY_CLOCK_SKIP_MS);
     if (yield* select((s: RootState) => s.time.profile === profile)) {

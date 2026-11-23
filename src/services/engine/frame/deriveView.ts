@@ -136,11 +136,13 @@ export function deriveView(
     slabs,
     bodyPose,
     canvasSize: sizePx,
+    dpr: spec.dpr,
     drawCamPos,
     frustum,
     drawPxPerRad: pxPerRad,
     viewSlot: spec.slot,
     viewKind: spec.kind,
     output: spec.output,
+    layer: spec.layer,
   };
 }

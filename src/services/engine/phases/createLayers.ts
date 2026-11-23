@@ -15,12 +15,11 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceId } from '../../../@types/data/SourceId';
-import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
 import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
-import { NEAR0, COSMO, slabName } from '../frame/slabs';
+import { slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
 import { runLayerSearchSaga } from '../../../state/engine/sagas/runLayerSearchSaga';
 import {
@@ -38,7 +37,6 @@ import { assertAssetDemands } from '../wiring/assertAssetDemands';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
-import { gateLabelProducer } from '../layer/gateLabelProducer';
 import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
@@ -103,6 +101,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       focusUniform,
       settings: () => deps.cb.store.getState().settings,
       debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
+      tier: () => deps.cb.store.getState().tier,
       requestRender,
       pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };
@@ -145,7 +144,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass answering to it and
   // `checkFrameOrder` counts lines, so a core pass left under a name a Layer contributes
   // would keep drawing silently, the Layer's version never reached.
-  // Fade/label gating is applied here once, so executors never see those declarations.
+  // Fade gating is applied here once, so executors never see those declarations.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
@@ -207,20 +206,14 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ),
   );
 
-  // Two directors, one per slab's screen-space projection; a producer names its slab
-  // (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
-  const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
-    [NEAR0]: state.subsystems.foregroundLabelDirector,
-    [COSMO]: state.subsystems.cosmoLabelDirector,
-  };
-
+  // A source names its slab (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   for (const instance of instances) {
-    for (const { slab, ...producer } of instance.screenLabels) {
-      const director = screenLabelDirectors[slab];
+    for (const source of instance.screenLabels) {
+      const director = state.subsystems.labelDirectors.find((d) => d.row.slab === source.slab);
       if (!director) {
-        throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);
+        throw new Error(`createLayers: no label director for slab ${slabName(source.slab)}`);
       }
-      director.registerProducer(gateLabelProducer(producer));
+      director.sources.push(source);
     }
   }
 

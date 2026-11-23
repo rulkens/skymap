@@ -12,7 +12,6 @@ import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickProgram } from '../frame/PickProgram';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
-import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
@@ -22,6 +21,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
+import type { OcclusionMaskRenderer } from '../../rendering/OcclusionMaskRenderer';
 import type { LetterboxRenderer } from '../../rendering/LetterboxRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
@@ -106,15 +106,12 @@ export type EngineGpuHandles = {
   uiCtx: Omit<GpuContext, 'format'> | null;
   /**
    * MSDF text label renderer; the atlas load is async and optional, so it is excluded
-   * from `isEngineReady` and `labelsCosmoPass` null-checks it.
+   * from `isEngineReady` and the `labels-cosmo` pass null-checks it.
    */
   labelRendererCosmo: LabelRenderer | null;
   /**
-   * Second MSDF label renderer for the true-scale foreground bodies. Separate from
-   * `labelRendererCosmo` because scene-body captions project through the NEAR0 slab view
-   * (near plane scales with `cam.distance`) and one renderer draws with one view-
-   * projection. Shared by core's `sceneBodyLabels` and the star Layer's producer;
-   * `labelsNearPass` re-uploads both, merged and camera-relative, each frame.
+   * Second MSDF label renderer, for the NEAR0 director's records: one renderer holds one
+   * director's upload (`runLabelDirector` hands each its slab's records every frame).
    */
   labelRendererNear: LabelRenderer | null;
   /**
@@ -129,18 +126,8 @@ export type EngineGpuHandles = {
    */
   labelPickRendererNear: LabelPickRenderer | null;
   /**
-   * Leader-line sibling of `labelRendererNear`, separate from `markerLineRendererCosmo`
-   * for the same one-view-projection reason. Drawn by `labelsNearPass`, which rebases
-   * its connectors camera-relative each frame.
-   */
-  markerLineRendererNear: MarkerLineRenderer | null;
-  /**
-   * Thick screen-space line overlay renderer; `markerLinesPass` null-checks it.
-   */
-  markerLineRendererCosmo: MarkerLineRenderer | null;
-  /**
-   * Debug-draw thick-line renderer for the clip-path inspector overlay, decoupled from
-   * the label director; `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
+   * Debug-draw thick-line renderer for the clip-path inspector overlay;
+   * `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
    */
   debugLineRenderer: DebugLineRenderer | null;
   /**
@@ -186,6 +173,11 @@ export type EngineGpuHandles = {
    * one image, once per frame.
    */
   domeResampleRenderer: DomeResampleRenderer | null;
+  /**
+   * Writes the occlusion mask `occlusionMaskPass` draws: what stands in front of an
+   * overlay at each pixel, as (coverage, distance km).
+   */
+  occlusionMaskRenderer: OcclusionMaskRenderer | null;
   /**
    * The r32uint pick provider for the NEAR0 foreground bodies (Earth, planets, scene
    * stars incl. the Sun): one body sphere per `drawSphere` call through a 256-byte-

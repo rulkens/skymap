@@ -8,8 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { BLACK_HOLE_CAPTION_PRIORITY } from '../../src/layers/blackHoles/markers/data/blackHoleCaptionPriority';
 import { BODY_CAPTION_ROWS } from '../../src/layers/body/labels/data/bodyCaptionRows';
-import { CONSTELLATION_CAPTION_PRIORITY } from '../../src/layers/constellations/figures/data/constellationCaptionPriority';
-import { LIGHT_TIME_CAPTION_PRIORITY } from '../../src/layers/lightTime/spheres/data/lightTimeCaptionPriority';
+import { LABEL_STYLES } from '../../src/data/labels/labelStyles';
 import { MESH_BODY_CAPTION_PRIORITY } from '../../src/layers/missions/craft/data/meshBodyCaptionPriority';
 import { STAR_CAPTION_STYLES } from '../../src/layers/starCatalog/captions/present/starCaptionStyles';
 
@@ -23,13 +22,13 @@ describe('caption priorities across Layers', () => {
       BLACK_HOLE_CAPTION_PRIORITY,
       MESH_BODY_CAPTION_PRIORITY,
       STAR_CAPTION_STYLES.famousStar.priority,
-      CONSTELLATION_CAPTION_PRIORITY,
+      LABEL_STYLES.constellation.priority,
     ];
     expect(descending).toEqual([...descending].sort((a, b) => b - a));
     expect(new Set(descending).size).toBe(descending.length);
   });
 
   it('ranks the light-time captions with the craft captions', () => {
-    expect(LIGHT_TIME_CAPTION_PRIORITY).toBe(MESH_BODY_CAPTION_PRIORITY);
+    expect(LABEL_STYLES.lightTime.priority).toBe(MESH_BODY_CAPTION_PRIORITY);
   });
 });

@@ -17,7 +17,7 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { Label2DDirector } from '../subsystems/Label2DDirector';
+import type { LabelDirectorState } from '../../rendering/LabelDirectorState';
 import type { RecedingFocusSubsystem } from '../subsystems/RecedingFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
@@ -55,31 +55,9 @@ export type EngineSubsystemHandles = {
    * IIFE finishes.
    */
   assetQueue: PriorityQueue<void>;
-  /**
-   * Label director — owns `labelRendererCosmo.setLabels` /
-   * `markerLineRendererCosmo.setLines`, polls every registered `Label2DProducer`
-   * each frame, merges outputs, and flushes once. Lets multiple overlays
-   * (the Milky Way "you are here" pin, cluster structures, future
-   * galaxy/void labels) coexist without stomping each other's full-set
-   * replacements. The Milky Way label is contributed by the bare
-   * `produceMilkyWayLabel` function (registered inline in `engine.ts`), not a
-   * subsystem.
-   *
-   * Constructed eagerly; the two renderers are wired during
-   * `phases/initGpu.ts` via `attachRenderers(...)` once the font-atlas
-   * fetch completes. Producers register right after the state literal so
-   * they're in place before the first frame.
-   */
-  cosmoLabelDirector: Label2DDirector;
-  /**
-   * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
-   * factory, `exponentialApproach`/lift arms instead of COSMO's
-   * `smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
-   * in `src/data/labels/`). Attaches `labelRendererNear` +
-   * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
-   * attaches its own pair.
-   */
-  foregroundLabelDirector: Label2DDirector;
+  /** One per `LABEL_DIRECTORS` row: the slab's label sources and their records, run by
+   *  `runLabelDirector` each frame. */
+  labelDirectors: readonly LabelDirectorState[];
   /**
    * Focus-mode subsystem — drives the recession of the rest of the scene,
    * and a structure's "dim everything outside it" sphere. Selection-driven: `runFrame` calls

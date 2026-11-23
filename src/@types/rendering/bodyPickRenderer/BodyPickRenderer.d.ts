@@ -34,7 +34,7 @@
  *
  * ### Why the caller passes fully-packed ids
  *
- * `packedId` is already `packSelection(sourceCode, seedIndex + PICK_SENTINEL_OFFSET)`
+ * `packedId` is already `packPickWord(sourceCode, seedIndex)`
  * — composed CPU-side by the body layers (Task 11) from each body's stable seed
  * index, NOT from `@builtin(instance_index)` (which shifts as bodies enter and
  * leave the resolved/point partitions). The shaders write `packedId` RAW into

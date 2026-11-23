@@ -25,7 +25,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J5 | `bodyFacts.generated` (card facts incl. `sgr-a-star`) | body, missions, blackHoles | NEEDS-JOINT | 500 | shared `BodyDetailCard` reads one table; `LayerBody` has no `facts` |
 | J6 | Receding focus mode (`recedingFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
 | J7 | Palette famous/alias/structure arms | galaxyCatalog, structure | NEEDS-JOINT | ~250 | `LayerSearchEntry` lacks thumbnail/description/scoring class |
-| J8 | Tier-swap galaxy re-anchor (`captureGalaxyFocusIds`, half of `watchTierSaga`) | galaxyCatalog | NEEDS-JOINT | ~120 | capture must run before core's tier write: an ordering hook |
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
 | J12 | `starSphereRangeM` in core `deriveView` | starCatalog | NEEDS-JOINT | 38 | NEAR0 range is core-sized; no Layer range contribution |
 | J13 | `bodySlabRosterIds` (`SCENE_PLANETS` roster) | body | NEEDS-JOINT | ~35 | known #3; per-body slab on `LayerBody` (backlog) |
@@ -86,9 +85,6 @@ One table of card facts for 41 ids: planets, moons, craft and `sgr-a-star`. It i
 ### J7. Palette famous / alias / structure arms: ~250
 `ScoredRow` kinds `famous` / `alias` / `structure` in `rankPaletteMatches` and `paletteRows` use thumbnails (`/images/famous/<id>.webp`, `structureShotUrl`), description matching and capped lists. **Joint:** widen `LayerSearchEntry` (`thumbnail?`, `description?`, a capped class).
 
-### J8. Tier-swap galaxy re-anchor: ~120
-`state/selection/captureGalaxyFocusIds` 63, `wiring/galaxyCatalogRequest` 14, and the re-anchor half of `state/tier/watchTierSaga`. Galaxy refs are positional, so they must be captured *before* core writes the tier. **Joint:** a pre-write hook (e.g. a `tierChanging` action the Layer's saga answers). Tier itself is global and stays.
-
 ### J10. Earth places palette: ~60
 `data/palette/earthPlaces` 49 + the `flyTo` palette action. `LayerSearchEntry.id` is a focus id only. **Joint:** a search-entry action.
 
@@ -112,7 +108,6 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
   - Spec §4 body infrastructure: the position solver, the body tables and fold, `bodyPickRenderer`, `meshBodyRenderer` + `meshAssets.generated`, `orbitTrail*`, `bodyGlintRenderer` (4 Layers), `BodyDetailCard` (3 Layers), the `satellite`/`meshBody` makers (2 Layers each), `sceneEarth`, `utils/scene/*`.
   - Shared places and constants: the `galactic-centre` place, `sgrAStarMassSolar`, `galacticCenter`.
   - Labels, marker lines, selection ring, debug lines.
-  - `famousLabelStyle`, despite its name: it is also used by `bodyCaption`.
   - Tours, `featuredTabs`, the tier slice, and `SettingsAction`, which names flow and galaxyCatalog actions for tour beats: cross-Layer editorial composition.
 
 ## Quality debt noted in passing

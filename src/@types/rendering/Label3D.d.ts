@@ -4,8 +4,8 @@ import type { Vec4 } from '../math/Vec4';
 
 /**
  * Label3D — one world-anchored text label drawn by the shared
- * `label3DRenderer` (spec §3.2). Unlike `Label2D`'s perspective-clamped
- * screen sizing, a Label3D's height is a fixed PHYSICAL size in Mpc —
+ * `label3DRenderer` (spec §3.2). Unlike a screen label's perspective-clamped
+ * sizing, a Label3D's height is a fixed PHYSICAL size in Mpc —
  * lettering painted onto the sky, not UI chrome.
  */
 export type Label3D = {

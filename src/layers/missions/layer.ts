@@ -8,7 +8,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import { missionsLayerSettings } from './state/slices';
 import { missionsVisibility } from './visibility';
 import { loadSpacecraftTracksSaga } from './trails/sagas/loadSpacecraftTracksSaga';
@@ -19,7 +18,7 @@ import { missionMeshesPass } from './craft/passes/missionMeshesPass';
 import { contactShadowsPass } from './contactShadows/passes/contactShadowsPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
 import { MISSION_CRAFT_IDS } from './craft/present/missionCraftIds';
-import { produceMissionCaptions } from './craft/present/produceMissionCaptions';
+import { missionLabelSource } from './craft/present/missionLabelSource';
 import { craftSelectionRow } from './selection/craftSelectionRow';
 import { missionsSelectionKinds } from './selection/kinds';
 import { craftSearch } from './craft/present/craftSearch';
@@ -46,14 +45,7 @@ export const missionsLayer = defineLayer({
     glintsPassOver('mission-glints', MISSION_CRAFT_IDS, runtime.glintRenderer),
   ],
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'missionCaptions',
-        label: 'missions',
-        produceLabels: produceMissionCaptions(runtime.pickCode),
-      },
-    ],
+    screenLabels: [missionLabelSource(runtime.pickCode)],
   }),
   selection: {
     kinds: missionsSelectionKinds,

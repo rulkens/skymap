@@ -22,6 +22,7 @@ import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga'
 import { watchRequestViewSaga } from '../state/selection/watchRequestViewSaga';
 import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
+import { watchClockToSaga } from '../state/tour/watchClockToSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchFlyToLonLatSaga } from '../state/camera/watchFlyToLonLatSaga';
 import { watchZoomLimitSaga } from '../state/camera/watchZoomLimitSaga';
@@ -52,6 +53,7 @@ export function* mainSaga() {
     watchRequestViewSaga(),
     watchRequestSelectSaga(),
     watchFocusTweenSaga(),
+    watchClockToSaga(),
     watchOrientationChangeSaga(),
     watchFlyToLonLatSaga(),
     watchZoomLimitSaga(),

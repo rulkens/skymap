@@ -20,6 +20,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyRef } from '../../../@types/engine/selection/BodyRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const MESH_ASTEROID_ID = /^asteroid-([1-9]\d*)$/;
 
@@ -55,7 +56,7 @@ export function bodySelectionRow(
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

@@ -1,89 +1,74 @@
-// labels/io.wesl — shared structs + bind-group declarations for the
-// MSDF labels renderer. Imported by labels/vertex.wesl and
-// labels/fragment.wesl.
-//
-// ## What's an MSDF label?
-//
-// MSDF = multi-channel signed distance field. Each glyph is rasterised
-// once into an atlas where the R/G/B channels each encode a slightly
-// different SDF; the fragment shader takes their median to recover a
-// crisp edge regardless of how the glyph is scaled. The result is
-// pixel-perfect text at any zoom level from a single static atlas — no
-// per-zoom re-rasterisation, no aliasing on near/far text.
-//
-// ## Why labels look the way they do — worldEm perspective sizing
-//
-// Each label sets 'worldEmMpc' (label.worldPos.w): the em height
-// expressed in Mpc of world space.  The vertex stage projects this
-// through the anchor's clip.w to recover a screen-pixel height:
-//
-//   pxPerEm = (worldEmMpc / clip.w) * (viewportPx.y * 0.5)
-//
-// That value is clamped to [minPixelSize, maxPixelSize], keeping labels
-// legible at extreme distances (floor) and very close approach (ceiling).
-// The net effect is natural perspective growth: zoom in → labels grow;
-// zoom out → labels shrink, but never vanish below the floor.
-//
-// 'pixelSize' (sizing.x) is a LEGACY buffer slot from the previous
-// pixel-anchored model.  The field still exists in LabelData (and in
-// the CPU-side Label type) for layout stability and because existing
-// call sites still set it, but the shader no longer reads it.  It may
-// be repurposed or removed in a future cleanup once all call sites are
-// migrated.
-//
-// ## Bind-group convention
-//
-// All four bindings live in @group(0) because the labels pass is
-// self-contained — it doesn't share a bind group with any other
-// renderer. The storage buffer + atlas texture are large enough that
-// keeping them per-pass (rather than promoting to a shared @group(1))
-// avoids accidentally bloating other pipelines' layouts.
+// labels/io.wesl — shared structs for the MSDF labels renderer, imported by
+// labels/vertex.wesl and labels/fragment.wesl. MSDF = multi-channel signed
+// distance field: each glyph is rasterised once into an atlas whose R/G/B each
+// encode a slightly different SDF, and their median recovers a crisp edge at any
+// scale, from one static atlas.
 
-import package::lib::camera::CameraUniforms;
+import package::lib::projectLabel::OutputProjection;
 
-struct Uniforms {
-  // 80-byte universal camera prefix. Bytes 64..71 (viewportPx) carry the
-  // screen pixel dimensions used by the hybrid sizing math; 72..75 the
-  // 'pxPerRad' focal term the em projection reads; 76..79 stay reserved —
-  // the CPU writer must zero them so future fields don't surprise existing
-  // label buffers.
-  cam: CameraUniforms,
-  // Clip units of the matrix in 'cam' relative to Mpc (1 for the COSMO matrix;
-  // the NEAR0 overlays rescale theirs). The vertex stage multiplies the em by
-  // it so 'worldEmMpc / clip.w' stays a ratio of like units. Bytes 80..83;
-  // WGSL rounds the struct up to 96.
-  emClipScale: f32,
+// Must equal 'LABEL_RECORD_FLAGS' (src/data/labels/labelRecordLayout.ts):
+// LabelRecord.style's low half is the style index, its high half flags.
+const STYLE_INDEX_MASK: u32 = 0xffffu;
+const RECORD_GROUNDED: u32 = 0x10000u;
+
+// Must equal 'LABEL_STYLE_FLAGS' (src/data/labels/labelStyleGpuLayout.ts).
+const STYLE_ABOVE: u32 = 1u;
+const STYLE_LEADER_FROM_RIM: u32 = 2u;
+const STYLE_LEADER_COLOR: u32 = 8u;
+
+// The vertex stage's uniforms; byte offsets in
+// 'LABEL_RECORD_UNIFORM_OFFSETS' (src/data/labels/labelRecordUniformLayout.ts).
+struct RecordUniforms {
+  out: OutputProjection,
+  // Packed pick words of the hovered and selected subjects; 0 = none.
+  hoveredPick: u32,
+  selectedPick: u32,
+  // LABEL_TEXT_PX times pxScale.
+  minTextPx: f32,
+  maxTextPx: f32,
+  emRetune: f32,
+  hoveredWhiten: f32,
+  selectedWhiten: f32,
 };
 
-struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size
-  // driver — em height in world-space Mpc, projected to pixels by the
-  // vertex stage).
-  worldPos: vec4<f32>,
-  // Fill colour — premultiplied rgba.  The renderer pack loop multiplies
-  // r/g/b by a before upload, so the shader can treat (rgb, a) as the
-  // OVER-composite input directly.
+// One LABEL_STYLES row; word offsets in 'LABEL_STYLE_GPU'
+// (src/data/labels/labelStyleGpuLayout.ts). Colours are straight rgba.
+struct LabelStyle {
   color: vec4<f32>,
-  // x = outlineEmFrac (repurposed legacy pixelSize slot)
-  // y = minPixelSize, z = maxPixelSize, w = fadeAlpha
-  sizing: vec4<f32>,
-  // Outside-stroke outline colour — premultiplied rgba.  Zero alpha
-  // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
-  // How much per-pixel scene attenuation the occlusion fragment variant
-  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67.
-  occludeWeight: f32,
-  // Eye to the subject's NEAR surface, km: the sampled-depth channel's cutoff
-  // (lib/sceneDepth.wesl).  Bytes 68..71, taken out of the padding the struct's
-  // vec4 alignment already held.
-  occludeNearKm: f32,
-  // World position the sampled-depth channel judges instead of 'worldPos':
-  // a LIFTED label's own worldPos sits screen-up over OTHER terrain than its
-  // subject (label2DDirector's applyLift), so occlusion is judged here
-  // instead.  xyz = world Mpc, same frame as worldPos; w unused (zero).
-  // Bytes 80..95 — bytes 72..79 are now genuine alignment padding ahead of
-  // this vec4, not slack; 'LABEL_DATA_BYTES' in labelRenderer.ts is 96.
-  subjectPos: vec4<f32>,
+  // Read only under STYLE_LEADER_COLOR; otherwise the leader takes the label's colour.
+  leaderColor: vec4<f32>,
+  outlineEmFrac: f32,
+  // The em height: emMpc, or emTimesRadius times the subject's radius.
+  emMpc: f32,
+  emTimesRadius: f32,
+  flags: u32,
+  liftRadii: f32,
+  liftMinPx: f32,
+  leaderGapPx: f32,
+  leaderWidthPx: f32,
+};
+
+// One label as core encodes it; word offsets in 'LABEL_RECORD'
+// (src/data/labels/labelRecordLayout.ts), read by 'vertex.wesl'.
+struct LabelRecord {
+  // The position in absolute Mpc as an f32 hi/lo pair; the shader subtracts
+  // the camera's own pair, which is exact near the camera.
+  atHi: vec3<f32>,
+  radiusMpc: f32,
+  atLo: vec3<f32>,
+  // The only word written per frame.
+  alpha: f32,
+  // Packed pick word; 0 = not clickable.
+  pick: u32,
+  style: u32,
+  // rgba8; 0 = the style's colour.
+  tint: u32,
+  glyphs: u32,
+  glyphCount: u32,
+  rank: f32,
+  revealNear: f32,
+  revealFar: f32,
 };
 
 struct VsIn {
@@ -96,37 +81,37 @@ struct VsIn {
   @location(2) localSize: vec2<f32>,
   // (u0, v0, u1, v1) — atlas region for this glyph.
   @location(3) uvRect: vec4<f32>,
-  // Index into the labels[] storage buffer; all glyphs of one label
-  // share its world position, color, and fade.
+  // Index into the records[] storage buffer; all glyphs of one label
+  // share its position, style and alpha.
   @location(4) labelIndex: u32,
-  // GPU texture-array layer for the glyph's font.  All glyphs of one
-  // label share the same font, but it's carried per-glyph because the
-  // instance buffer is the only path the vertex stage has to per-label
-  // data that's not already in labels[].  Equal to
-  // 'FONT_IDS.indexOf(label.font)' (the renderer pre-computes this).
+  // GPU texture-array layer for the glyph's font (its index in FONT_IDS).
   @location(5) fontIndex: u32,
+};
+
+// A leader quad's varyings ('vsLeader').
+struct LeaderVsOut {
+  @builtin(position) pos: vec4<f32>,
+  // 0..1 across the line's width; linear, though the quad is at w = 1.
+  @location(0) @interpolate(linear) across: f32,
+  // The leader colour, pre-multiplied by the record's alpha.
+  @location(1) color: vec4<f32>,
+  @location(2) occludeWeight: f32,
 };
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
-  // Fill colour pre-multiplied by fadeAlpha so the fragment stage can
-  // alpha-blend without re-reading fadeAlpha.
+  // Fill colour pre-multiplied by the record's alpha.
   @location(1) color: vec4<f32>,
   // Flat-interpolated so the fragment shader sees the same integer
   // layer index for every fragment of one glyph quad.  Non-flat
   // interpolation of an integer is a WGSL validation error.
   @location(2) @interpolate(flat) fontIndex: u32,
-  // Outline colour pre-multiplied by fadeAlpha (same pre-fade bake as
-  // the fill colour — keeps the fragment stage simple).
+  // Outline colour, pre-multiplied the same way.
   @location(3) outlineColor: vec4<f32>,
   // Outline width in SDF units (atlas px / DISTANCE_RANGE_PX).
-  // Converted CPU-side at the vertex stage so the fragment shader has
-  // the value ready without re-deriving from per-label data.
   @location(4) outlineSdf: f32,
-  // Per-label share of the scene attenuation.  'vsOcclude' resolves this to
-  // 'max(LabelData.occludeWeight, the anchor-depth verdict)' before writing
-  // it here; 'vs' forwards LabelData's own value unchanged.  Constant per
-  // label either way, so interpolating it is exact.
+  // Per-label share of the scene attenuation: the depth verdict under
+  // 'vsOcclude', 0 under 'vs'. Constant per label, so interpolating it is exact.
   @location(5) occludeWeight: f32,
 };

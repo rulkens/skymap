@@ -55,6 +55,14 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 }
 
 /**
+ * The word a pick fragment (or a label standing for the same subject) stamps for `(sourceCode,
+ * index)`: packed, plus the sentinel offset, so it is never 0, which is "no hit".
+ */
+export function packPickWord(sourceCode: number, index: number): number {
+  return packSelection(sourceCode, index + PICK_SENTINEL_OFFSET);
+}
+
+/**
  * Decode a raw r32uint pick value into a {@link PickResult}, or `null` for no
  * hit. Reverses the `+ PICK_SENTINEL_OFFSET` and the `(code << 26) | localIdx`
  * layout. `0` is the cleared-texture background; the reserved all-ones

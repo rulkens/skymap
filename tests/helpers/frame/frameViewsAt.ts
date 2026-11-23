@@ -11,6 +11,7 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { ViewFrustum } from '../../../src/@types/camera/projection/ViewFrustum';
 import { deriveFrameContext } from '../../../src/services/engine/frame/frameContext';
 import { deriveView } from '../../../src/services/engine/frame/deriveView';
 import { assembleOrbitCamera } from '../../../src/services/engine/camera/assembleOrbitCamera';
@@ -33,6 +34,10 @@ export function frameViewsAt(input: {
   readonly distanceMpc: number;
   readonly rotations?: readonly Mat3[];
   readonly simDays?: number;
+  /** The views' frustum; the 1-rad symmetric lens when omitted. */
+  readonly frustum?: ViewFrustum;
+  /** Device px per CSS px; 1 when omitted. */
+  readonly dpr?: number;
 }): FrameView[] {
   const { eyeMpc, distanceMpc, rotations = [IDENTITY], simDays = CONST_J2000 } = input;
   const forward = normalize3([...input.forward] as Vec3);
@@ -84,8 +89,9 @@ export function frameViewsAt(input: {
       id: `view-${slot}`,
       rotation,
       eyeOffsetMpc: [0, 0, 0],
-      frustum: symmetricFrustum(FOV_Y_RAD, SIZE_PX.width / SIZE_PX.height),
+      frustum: input.frustum ?? symmetricFrustum(FOV_Y_RAD, SIZE_PX.width / SIZE_PX.height),
       sizePx: SIZE_PX,
+      dpr: input.dpr ?? 1,
       slot,
       kind: 'frame',
     }),

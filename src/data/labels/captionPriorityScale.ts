@@ -5,6 +5,6 @@
  * red dwarf out-rank the Sun. Size is clamped below this scale, so a lower
  * priority can never out-score a higher one however large its body looms.
  * Composing both into one number keeps the director's one-number rank
- * contract (`Label2D.declutterPriority`).
+ * (a record's `rank`).
  */
 export const CAPTION_PRIORITY_SCALE = 10_000;

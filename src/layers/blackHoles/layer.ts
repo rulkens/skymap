@@ -8,7 +8,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import { blackHolesLayerSettings } from './state/slices';
 import { blackHolesVisibility } from './visibility';
 import { BLACK_HOLE_SOURCE_ROWS } from './sources/blackHoleSourceRows';
@@ -21,7 +20,7 @@ import { blackHoleSlabRow } from './markers/present/blackHoleSlabRow';
 import { blackHoleSelectionRow } from './selection/blackHoleSelectionRow';
 import { blackHolesSelectionKinds } from './selection/kinds';
 import { blackHoleSearch } from './markers/present/blackHoleSearch';
-import { produceBlackHoleCaptions } from './markers/present/produceBlackHoleCaptions';
+import { blackHoleLabelSource } from './markers/present/blackHoleLabelSource';
 import { BLACK_HOLE_SKY_CAPTURES } from './lensing/data/blackHoleSkyCaptures';
 import { SKY_CUBEMAP_TARGET } from './lensing/render/skyCubemapTarget';
 import BlackHoleLensingTuningSectionContainer from './lensing/ui/BlackHoleLensingTuningSectionContainer';
@@ -40,14 +39,7 @@ export const blackHolesLayer = defineLayer({
   destroy,
   passes: (runtime) => [blackHoleLensingPass(runtime), blackHoleMarkerPass(runtime)],
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'blackHoleCaptions',
-        label: 'blackHole',
-        produceLabels: produceBlackHoleCaptions(runtime.pickCode),
-      },
-    ],
+    screenLabels: [blackHoleLabelSource(runtime)],
   }),
   selection: {
     kinds: blackHolesSelectionKinds,

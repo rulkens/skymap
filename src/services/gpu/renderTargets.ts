@@ -40,7 +40,7 @@
  * clears its own depth (spec §7.3), so the buffer never holds more than the
  * last-cleared row and can't back a cross-row occlusion test. The caption
  * occlusion pass
- * (`labelsNearPass` and the other overlay layers, via
+ * (the `labels-near` pass and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
@@ -72,7 +72,13 @@ import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpe
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { DOME_FACE_COUNT } from '../../data/rendering/domeFaces';
-import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
+import {
+  HDR_TARGET_FORMAT,
+  FOREGROUND_DEPTH_FORMAT,
+  OCCLUSION_MASK_FORMAT,
+} from '../../data/renderTargetFormats';
+import { OCCLUSION_MASK_CLEAR } from '../../data/rendering/occlusionMaskClear';
+import { OCCLUSION_MASK_DOWNSCALE } from '../../data/rendering/occlusionMaskDownscale';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
@@ -205,6 +211,28 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1,
       layers: DOME_FACE_COUNT,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      allocateWhen: (state) => state.viewRig === 'dome',
+    },
+    // Each face's occlusion mask (`occlusionMaskPass`), a layer per face beside its
+    // `dome-cube` layer, and their resample onto the fisheye image, which the dome's
+    // overlays read. Both clear to "nothing in front", so a frame that writes no mask
+    // occludes nothing. Reduced (`OCCLUSION_MASK_DOWNSCALE`): every writer and reader maps by
+    // uv or by the texture's own size, never 1:1 texels.
+    {
+      id: 'dome-cube-occlusion',
+      format: OCCLUSION_MASK_FORMAT,
+      depth: null,
+      scale: OCCLUSION_MASK_DOWNSCALE,
+      layers: DOME_FACE_COUNT,
+      clearValue: OCCLUSION_MASK_CLEAR,
+      allocateWhen: (state) => state.viewRig === 'dome',
+    },
+    {
+      id: 'dome-occlusion',
+      format: OCCLUSION_MASK_FORMAT,
+      depth: null,
+      scale: OCCLUSION_MASK_DOWNSCALE,
+      clearValue: OCCLUSION_MASK_CLEAR,
       allocateWhen: (state) => state.viewRig === 'dome',
     },
     {

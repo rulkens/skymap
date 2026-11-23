@@ -1,13 +1,13 @@
 /**
  * textLayoutOf — memoised glyph layout + ink bbox per label text.
  *
- * Layout depends only on (font, alignment, text), but packing and declutter ask
- * for it every frame, so the answer is cached. The cache hangs off the metrics
+ * Layout depends only on (font, alignment, text), but the encoder asks for it on
+ * every re-encode, so the answer is cached. The cache hangs off the metrics
  * record: it dies with the atlases, and the same inputs always give the same
  * output, so callers need no handle.
  */
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
-import type { Label2D } from '../../../@types/rendering/Label2D';
+import type { TextLayoutRequest } from '../../../@types/rendering/TextLayoutRequest';
 import type { LaidOutText } from '../../../@types/rendering/LaidOutText';
 import { layoutLabel } from './labelLayout';
 import { measureLabel } from './measureLabel';
@@ -17,15 +17,14 @@ const memoByMetrics = new WeakMap<LoadedFontAtlases['metricsByFont'], Map<string
 
 export function textLayoutOf(
   metricsByFont: LoadedFontAtlases['metricsByFont'],
-  label: Pick<Label2D, 'text' | 'font' | 'alignX' | 'alignY'>,
+  label: TextLayoutRequest,
 ): LaidOutText {
   let memo = memoByMetrics.get(metricsByFont);
   if (memo === undefined) {
     memo = new Map();
     memoByMetrics.set(metricsByFont, memo);
   }
-  const alignX = label.alignX ?? 'left';
-  const alignY = label.alignY ?? 'baseline';
+  const { alignX, alignY } = label;
   const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
   let laidOut = memo.get(key);
   if (laidOut === undefined) {

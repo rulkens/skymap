@@ -313,49 +313,97 @@ export const POST: FrameSection = {
 // the whole row back into `hdr` for `POST`.
 export const SCENE_TO_DOME_CUBE: FrameSection = {
   scope: 'perView',
-  steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }],
+  steps: [
+    ...SCENE.steps,
+    { kind: 'copy', source: 'hdr' },
+    // What this face's foreground puts in front of an overlay, into the face's own
+    // layer (`ViewSpec.layer`). After the whole foreground chain, whose last row's depth
+    // it samples. The overlays read the resampled mask, never `foreground:0`: by the
+    // time they draw it holds the last face alone.
+    {
+      kind: 'render',
+      target: 'dome-cube-occlusion',
+      slab: NEAR0,
+      depth: { sample: 'foreground:0' },
+      passes: ['occlusion-mask'],
+    },
+  ],
 };
 
 export const DOME_RESAMPLE: FrameSection = {
   scope: 'once',
-  steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
-};
-
-export const OVERLAYS: FrameSection = {
-  scope: 'once',
   steps: [
-    // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
-    // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
-    // which goes incoherent across the per-layer timing pass boundaries (additive rows
-    // never read it). The Sun/Earth still occlude cosmological labels, via the
-    // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
-    // leads so lines and labels composite over its stroke.
-    //
-    // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
-    // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
-    // joint, so every pipeline binding it must fill its depth entries.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: COSMO,
-      depth: { sample: 'foreground:0' },
-      passes: ['selection-ring', 'marker-lines', 'labels-cosmo'],
-    },
-    // Near-field overlays, last, so scene-body captions land on top of the bodies.
-    // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
-    // would clip a picked survey star); each ring lands only in the slab whose frustum
-    // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
-    // painted last by intent.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: NEAR0,
-      depth: { sample: 'foreground:0' },
-      passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
-    },
-    // The film look's bars, after every overlay so they mask captions the way a real
-    // matte would. Its own line: it binds no depth, and the line above must fill the
-    // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
-    { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
+    { kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] },
+    // The masks follow the image through the same face choice, so a label hides
+    // exactly where the resampled body covers it.
+    { kind: 'render', target: 'dome-occlusion', slab: COSMO, passes: ['dome-occlusion-resample'] },
   ],
 };
+
+// The overlays, with the selection rings and the clip-path inspector or without them
+// (a rig with no single cursor, the dome); one builder so both keep one pass per slab
+// and one draw order. `occlusion` is what the two overlay lines are hidden by: the
+// `foreground:0` joint where the output IS the image the bodies drew in, or the mask
+// carried to the output where it is not (the dome, whose `foreground:0` holds the last
+// face only by the time these lines run).
+function overlays({
+  selectionRings,
+  occlusion,
+}: {
+  readonly selectionRings: boolean;
+  readonly occlusion: 'sampled-depth' | 'mask';
+}): FrameSection {
+  const occludedBy =
+    occlusion === 'mask'
+      ? { mask: { sample: 'dome-occlusion' } }
+      : { depth: { sample: 'foreground:0' } };
+  return {
+    scope: 'once',
+    steps: [
+      // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
+      // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
+      // which goes incoherent across the per-layer timing pass boundaries (additive rows
+      // never read it). The Sun/Earth still occlude cosmological labels, via the
+      // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
+      // leads so leaders and labels composite over its stroke.
+      //
+      // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
+      // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
+      // joint, so every pipeline binding it must fill its depth entries.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: COSMO,
+        ...occludedBy,
+        passes: selectionRings ? ['selection-ring', 'labels-cosmo'] : ['labels-cosmo'],
+      },
+      // Near-field overlays, last, so scene-body captions land on top of the bodies.
+      // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
+      // would clip a picked survey star); each ring lands only in the slab whose frustum
+      // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
+      // painted last by intent.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: NEAR0,
+        ...occludedBy,
+        passes: selectionRings
+          ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
+          : ['labels-near'],
+      },
+      // The film look's bars, after every overlay so they mask captions the way a real
+      // matte would. Its own line: it binds no depth, and the line above must fill the
+      // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+      { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
+    ],
+  };
+}
+
+export const OVERLAYS: FrameSection = overlays({
+  selectionRings: true,
+  occlusion: 'sampled-depth',
+});
+
+// Labels and their leaders, once, on the fisheye image itself: upright toward the
+// zenith at the dome's own pixel scale, which no per-face draw could give.
+export const DOME_OVERLAYS: FrameSection = overlays({ selectionRings: false, occlusion: 'mask' });

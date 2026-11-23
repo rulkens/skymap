@@ -93,7 +93,7 @@ export function produceStructureMarkers(
     const fadeAlpha =
       distanceMpc <= 0
         ? 0
-        : structureApparentRadiusFade(style, (radiusMpc / distanceMpc) * pxPerRad);
+        : structureApparentRadiusFade(style, (radiusMpc / distanceMpc) * pxPerRad, ctx.dpr);
 
     // Significance weighting on top of the distance fade: lerp from
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors

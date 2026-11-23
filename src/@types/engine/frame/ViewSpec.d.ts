@@ -21,6 +21,8 @@ export type ViewSpec = {
   readonly eyeOffsetMpc: Vec3;
   readonly frustum: ViewFrustum;
   readonly sizePx: Size;
+  /** Device pixels per CSS pixel of the display this view lands on (`FrameView.dpr`). */
+  readonly dpr: number;
   /** View-slot uniform ring index — see `FrameView.viewSlot`. */
   readonly slot: number;
   /** What the view renders — a capture face says so here rather than being
@@ -28,6 +30,8 @@ export type ViewSpec = {
   readonly kind: ViewKind;
   /** Where this view's `swap` resolves; absent = the canvas. */
   readonly output?: GPUTextureView;
+  /** The array layer this view owns in any layered target its program names. */
+  readonly layer?: number;
   /** WebGPU rasterizes top-left; a capture face's basis table is the GL
    *  bottom-left convention, which no rotation can absorb — only a capture
    *  sets this. `deriveView` applies it at every projection it builds (the

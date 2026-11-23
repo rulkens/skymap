@@ -25,9 +25,8 @@ import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptu
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createLabel2DDirector } from './subsystems/label2DDirector';
-import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
-import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
+import { createLabelDirectorState } from './labels/createLabelDirectorState';
+import { LABEL_DIRECTORS } from '../../data/labels/labelDirectors';
 import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -166,9 +165,7 @@ export function createEngine(
       fontAtlases: null,
       uiCtx: null,
       labelRendererCosmo: null,
-      markerLineRendererCosmo: null,
       labelRendererNear: null,
-      markerLineRendererNear: null,
       labelPickRendererCosmo: null,
       labelPickRendererNear: null,
       debugLineRenderer: null,
@@ -184,6 +181,7 @@ export function createEngine(
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
+      occlusionMaskRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
@@ -191,8 +189,7 @@ export function createEngine(
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
-      foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
 
       recedingFocus: createRecedingFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),
@@ -292,9 +289,8 @@ export function createEngine(
 
   // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
   // createLayers fills it once, in tuple order. `selection` reads it lazily (never
-  // rebuilds a list), so a deep link or the home ref seen before createLayers
-  // resolves nothing yet and waits on the engineStatusChanged pulse
-  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
+  // rebuilds a list). Before createLayers a focus id answers absent and its request
+  // retires; the home ref waits on the engineStatusChanged pulse (watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.off,
@@ -380,8 +376,6 @@ export function createEngine(
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 
-    state.subsystems.cosmoLabelDirector.destroy();
-    state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.recedingFocus.destroy();
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;

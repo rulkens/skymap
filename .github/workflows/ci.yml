@@ -28,6 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # typescript-native (TS 7) also declares a `tsc` bin; npm's link order is not a
+      # documented guarantee, so fail loudly if the gate ever lands on it.
+      - name: Gate compiler is TypeScript 6
+        run: npx tsc --version | grep -q '^Version 6\.'
+
       # tsc --noEmit on both src and tools tsconfigs.
       - name: Typecheck
         run: npm run typecheck

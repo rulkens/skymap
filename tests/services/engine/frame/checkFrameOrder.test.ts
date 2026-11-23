@@ -241,6 +241,27 @@ describe('checkFrameOrder', () => {
     ).toThrow(/'hdr'/);
   });
 
+  it('throws naming a sampled mask no earlier line of the program writes', () => {
+    const read: FrameStepSpec = {
+      kind: 'render',
+      target: 'swap',
+      slab: 0,
+      mask: { sample: 'hdr' },
+      passes: ['a'],
+    };
+    const write: FrameStepSpec = { kind: 'render', target: 'hdr', slab: 0, passes: ['b'] };
+    const check = (steps: FrameStepSpec[]) => () =>
+      checkFrameOrder(
+        [[section(steps)]],
+        [fakePass('a'), fakePass('b')],
+        NO_COMPUTES,
+        NO_PLANNERS,
+        TARGETS,
+      );
+    expect(check([read, write])).toThrow(/samples mask 'hdr'/);
+    expect(check([write, read])).not.toThrow();
+  });
+
   it('throws naming a contributed planner no plan line runs', () => {
     const steps: FrameStepSpec[] = [{ kind: 'plan', name: 'structure-markers' }];
     expect(() =>

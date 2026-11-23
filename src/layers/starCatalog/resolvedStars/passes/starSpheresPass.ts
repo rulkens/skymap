@@ -67,7 +67,7 @@ import { positionedSeededStars } from '../../seededStars/present/positionedSeede
 import { SEEDED_STAR_REFS } from '../../seededStars/present/seededStarRefs';
 import { seededStarsHandedZero } from '../../seededStars/present/seededStarsHandedZero';
 import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 
 export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
@@ -127,10 +127,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starC
 
       const spheres = positionedSeededStars(sceneBodyPresentation(ctx).resolved);
       for (const star of spheres) {
-        const packedId = packSelection(
-          runtime.pickCodes.pickCodeOf(star.source),
-          star.seedIndex + PICK_SENTINEL_OFFSET,
-        );
+        const packedId = packPickWord(runtime.pickCodes.pickCodeOf(star.source), star.seedIndex);
         // Floor the PICK radius to the shared min footprint (visual sphere
         // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
         // star near its `resolvePx` is only a few pixels across. A resolved star is

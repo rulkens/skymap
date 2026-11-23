@@ -35,6 +35,9 @@ export type FrameView = {
   bodyPose: BodyPoseProvider;
   /** THIS view's target size in backing-store pixels. */
   canvasSize: Size;
+  /** Device pixels per CSS pixel: the canvas's backing/CSS ratio (2 on a Retina display),
+   *  1 for a capture face. Authored px constants (label sizes, gaps) are CSS px times this. */
+  dpr: number;
   /** This view's eye: the camera's, plus the spec's rotated eye offset. */
   drawCamPos: Readonly<Vec3>;
   /** This view's projection as tangents of the half-angles from the view axis
@@ -54,4 +57,7 @@ export type FrameView = {
   /** Where a `swap`-targeted step resolves for THIS view; unset falls back
    *  to the acquired swap-chain view (the canvas view, every mono view). */
   output?: GPUTextureView;
+  /** The array layer a render step into a layered target attaches for THIS view
+   *  (`ViewSpec.layer`); unset on a view that owns none. */
+  layer?: number;
 };
