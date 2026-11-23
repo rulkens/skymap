@@ -3,10 +3,12 @@ name: refactor
 description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize files of any kind (TS, CSS, assets). Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg".
 ---
 
-# `/refactor`: ts-morph Refactoring CLI
+# `/refactor`: symbol refactoring CLI
 
-`npm run refactor -- <subcommand>` drives ts-morph over one `Project` spanning
-`src/ + tests/ + tools/` (no single tsconfig covers all three). Every import in
+`npm run refactor -- <subcommand>` finds references with the TypeScript 7 engine across
+the repo's four tsconfig projects. `refs`, `rename` and `delete` run on it (about 3 to 5 s
+on a symbol with 500 references); `extract` and `inline` still run on ts-morph over one
+`Project` spanning `src/ + tests/ + tools/ + packages/` (about 8 s). Every import in
 skymap is deep + relative with no barrels, so a mechanical rename or move re-derives
 every `../../foo` per importer, a job for the AST rather than a hand-edit.
 
@@ -19,11 +21,14 @@ npm run refactor -- refs    <file>#<symbol>
 npm run move-files -- <from> <to>   # the only move command
 ```
 
-Global flags on every subcommand: `--dry` (report the blast radius, save nothing) and
-`--manifest <ops.json>` (batch: validate every entry against the one Project, then a
-single save; a throw on any entry aborts the whole batch before disk is touched).
-`--json` (machine-readable) applies to the symbol subcommands
+Global flags on every subcommand: `--dry` (report the blast radius, write nothing) and
+`--manifest <ops.json>` (batch: each entry sees the earlier entries' edits, moved files
+included, and everything is written once after the last; a refusal on any entry writes
+nothing). `--json` (machine-readable) applies to the symbol subcommands
 (`rename`/`extract`/`inline`/`delete`/`refs`).
+
+Exit 1 after a write means findings: the write happened, and each `file:line  message`
+lists what it left broken. Exit 1 with a refusal means nothing was written.
 
 ## When to reach for each subcommand
 
@@ -53,11 +58,13 @@ single save; a throw on any entry aborts the whole batch before disk is touched)
   ANY reference exists; see below.
 
 - **`refs`**: "who uses this symbol, and how?" Read-only. Prints every reference
-  classified as `import` / `call` / `type-position` / `re-export` / `test`, each with
-  its nearest named enclosing declaration, plus summary counts (total refs, distinct
-  files, tests). This is the worklist for the manual paths the CLI deliberately does
-  not automate (change-signature, non-passthrough inlining). `--json` emits
-  `{ target, summary: { refs, files, tests }, refs: [...] }`.
+  classified as `import` / `call` / `type-position` / `re-export` / `value` (any other
+  use: an alias, an argument, a shorthand property), each with its nearest named
+  enclosing declaration, plus summary counts (total refs, distinct files, tests). A
+  reference under `tests/` keeps its kind and sets `inTest`. This is the worklist for
+  the manual paths the CLI deliberately does not automate (change-signature,
+  non-passthrough inlining). `--json` emits
+  `{ target, summary: { refs, files, tests }, refs: [{ filePath, line, column, kind, inTest, enclosing }] }`.
 
 - **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
   `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
@@ -117,7 +124,10 @@ catch those by hand.
 
 ### Per-subcommand gaps
 
-- **`rename`**: its file move skips CSS.
+- **`rename`** leaves an aliased import's local name alone (`import { foo as bar }`
+  becomes `import { newName as bar }`) and turns an object shorthand `{ foo }` into
+  `{ foo: newName }` so the key survives. It drags a companion stylesheet when
+  `move-files.config.json` has a rule for it.
 - **`extract`** needs an exported symbol, can write `../../node_modules/<pkg>/index`
   specifiers (rewrite them to the bare package name), and re-quotes to double
   quotes, so run `npx prettier --write` on the touched files.

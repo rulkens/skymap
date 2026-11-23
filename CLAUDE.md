@@ -90,7 +90,7 @@ npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier, only files this branch touches (format:all = whole repo)
 npm run move-files  # move/rename files, TS+CSS references rewritten; exit 1 = findings (packages/move-files/README.md)
-npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
+npm run refactor    # refactoring CLI (rename/delete/refs on TS 7; extract/inline on ts-morph) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run perf:cpu    # main-thread ms per frame row at the perf poses → tools/perf/README.md

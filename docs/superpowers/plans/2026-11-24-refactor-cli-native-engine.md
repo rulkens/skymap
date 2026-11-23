@@ -399,20 +399,20 @@ Tests:
 `.claude/skills/refactor/SKILL.md`, `CLAUDE.md`, `docs/BACKLOG.md`,
 `docs/backlog/2026-07-21-refactor-cli-followups.md` (modify)
 
-- [ ] Delete the two files and the test once nothing imports them. `resolveSymbol.ts`,
+- [x] Delete the two files and the test once nothing imports them. `resolveSymbol.ts`,
       `removeFileWithMirror.ts` and `hasMeaningfulStatements.ts` stay if `extract` or `inline`
       still import them; delete any that nothing imports.
-- [ ] `SKILL.md`: the header and intro say which subcommands run on TypeScript 7 (about 1 s) and
+- [x] `SKILL.md`: the header and intro say which subcommands run on TypeScript 7 (about 1 s) and
       which on ts-morph (about 8 s); document `inTest` and the `'value'` kind in the `--json`
       shape; say that exit 1 after a write means findings.
-- [ ] `CLAUDE.md` commands block: `npm run refactor    # refactoring CLI (rename/delete/refs on TS 7; extract/inline on ts-morph) → .claude/skills/refactor/SKILL.md`.
-- [ ] Backlog: remove the dispatch-table and double-printed-refusal items from the follow-ups
+- [x] `CLAUDE.md` commands block: `npm run refactor    # refactoring CLI (rename/delete/refs on TS 7; extract/inline on ts-morph) → .claude/skills/refactor/SKILL.md`.
+- [x] Backlog: remove the dispatch-table and double-printed-refusal items from the follow-ups
       detail file and reword its index line in `docs/BACKLOG.md` to what remains; in the
       header-trim line drop `collectRefs`, `planDelete` and `refactor.ts` if their headers are now
       within budget (module header ≤ 10 lines).
-- [ ] Every file this plan created or rewrote keeps the comment budget: header ≤ 10 lines,
+- [x] Every file this plan created or rewrote keeps the comment budget: header ≤ 10 lines,
       comment lines ≤ half the code lines.
-- [ ] Commit.
+- [x] Commit.
 
 ## Definition of Done
 
