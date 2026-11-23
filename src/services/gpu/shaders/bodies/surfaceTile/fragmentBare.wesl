@@ -6,19 +6,16 @@
 import package::bodies::surfaceTile::io::VSOut;
 import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
-import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
-@group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let geometricNormal = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let baseAlbedo = tileAlbedo(
     surfaceTexture,
     atlasSampler,
@@ -29,7 +26,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     in.fallbackUvScale,
     in.fadeWeight,
   );
-  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, geometricNormal, in.tangent, uniforms.radiusM);
+  let shadingNormal = normalize(in.shadingNormal);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let viewDir = normalize(in.viewDirLocal);
   let sunDir = uniforms.sunDirLocal;

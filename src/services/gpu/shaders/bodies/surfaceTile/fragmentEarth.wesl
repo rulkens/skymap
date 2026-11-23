@@ -2,12 +2,11 @@
 // cloudShadows variant; mirrors earth/fragment.wesl's shading ('pbrDirect',
 // roughness split, cloud shadow, night lights), see that header for the
 // derivation. Skips the whole-globe NORMAL map: patches shade from the height
-// field alone (spec section 7.2).
+// field alone (spec section 7.2), through the vertex stage's 'shadingNormal'.
 
 import package::bodies::surfaceTile::io::VSOut;
 import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
-import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
@@ -18,9 +17,6 @@ import package::lib::math::PI;
 import package::lib::math::TAU;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
-// The same Terrain-RGB height atlas the vertex stage displaces from, read the
-// same way: 'textureLoad' at an integer post, never a sampler (spec section 5.5).
-@group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(3) var baseSampler: sampler;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
@@ -56,7 +52,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   );
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
-  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, geometricNormal, in.tangent, uniforms.radiusM);
+  let shadingNormal = normalize(in.shadingNormal);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let viewDir = normalize(in.viewDirLocal);
   let sunDir = uniforms.sunDirLocal;
