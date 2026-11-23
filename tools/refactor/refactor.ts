@@ -30,6 +30,7 @@ import { writePlan } from '../utils/refactor/writePlan';
 import type { DiskView } from '../@types/refactor/DiskView';
 import type { Finding } from '../@types/refactor/Finding';
 import type { Overlay } from '../@types/refactor/Overlay';
+import type { OverlayChanges } from '../@types/refactor/OverlayChanges';
 import type { Plan } from '../@types/refactor/Plan';
 import type { RefReport } from '../@types/refactor/RefReport';
 import type { SymbolRefKind } from '../@types/refactor/SymbolRefKind';
@@ -199,17 +200,27 @@ async function main(): Promise<void> {
     const exists = (file: string): boolean =>
       !engine.removed.has(file) && (engine.overlay.has(file) || existsSync(file));
     const findings: Finding[] = [];
+    // Folding and the engine resync cost seconds on a file move, so each happens only
+    // when something reads its result: the resync before a next entry, the fold before
+    // that or before the write.
+    let last = false;
+    let unsynced: OverlayChanges | undefined;
     const context = {
       project,
       findings,
-      apply: (plan: Plan) => syncOverlay(engine, foldPlan(plan, overlay, disk)),
+      apply: (plan: Plan) => {
+        if (!(last && flags['--dry'])) unsynced = foldPlan(plan, overlay, disk);
+      },
     };
     const manifest = readManifest(argv);
     const ops =
       manifest === null
         ? [argv.slice(1).filter((arg) => !arg.startsWith('--'))]
         : manifest.map(entryToPositionals);
-    for (const positionals of ops) {
+    for (const [index, positionals] of ops.entries()) {
+      last = index === ops.length - 1;
+      if (unsynced) syncOverlay(engine, unsynced);
+      unsynced = undefined;
       const run = { engine, read, exists, positionals, flags };
       if (!(await runOp(row, run, context))) return;
     }
