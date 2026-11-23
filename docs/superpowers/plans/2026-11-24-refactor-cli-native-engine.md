@@ -115,10 +115,10 @@ export function foldEdits(
 ): ReadonlyMap<string, string>;
 ```
 
-- [ ] Test `foldEdits applies several edits to one file without shifting later offsets`.
-- [ ] Test `foldEdits drops an exact duplicate edit` (the same reference reported twice).
-- [ ] Test `foldEdits throws when two different edits overlap`, naming the file.
-- [ ] Implement, commit.
+- [x] Test `foldEdits applies several edits to one file without shifting later offsets`.
+- [x] Test `foldEdits drops an exact duplicate edit` (the same reference reported twice).
+- [x] Test `foldEdits throws when two different edits overlap`, naming the file.
+- [x] Implement, commit.
 
 ### Task 4: the engine adapter
 
