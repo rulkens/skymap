@@ -123,14 +123,15 @@ describe('createAerialPerspectiveRenderer — the froxel volumes', () => {
 });
 
 describe('createAerialPerspectiveRenderer — bake and apply share one uniform write', () => {
-  it('bake writes the body shell uniform record once and dispatches FROXEL_DIMS / 8 workgroups', () => {
+  it('writeUniforms writes the shell uniform record once; bake dispatches FROXEL_DIMS / 8 workgroups and writes nothing', () => {
     // z is `bake.wesl`'s own slice loop, so the grid covers (x, y) only —
     // dispatching the depth too would re-march every column 64 times.
     const { renderer, writeBuffer, bodies } = build();
     const pass = mockComputePass();
     const uniforms = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
 
-    renderer.bake(pass, 'earth', uniforms);
+    renderer.writeUniforms('earth', uniforms);
+    renderer.bake(pass, 'earth');
 
     expect(writeBuffer).toHaveBeenCalledTimes(1);
     expect(writeBuffer).toHaveBeenCalledWith(bodies.get('earth')!.shellUniformBuffer, 0, uniforms);
