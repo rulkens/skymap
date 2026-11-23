@@ -1,8 +1,8 @@
 import type { RefEntry } from './RefEntry';
 
-export type RefReport = {
+export type RefReport<Kind> = {
   readonly target: string; // the '<file>#<symbol>' address
-  readonly refs: readonly RefEntry[]; // every reference except the declaration itself
+  readonly refs: readonly RefEntry<Kind>[]; // every reference except the declaration itself
   readonly fileCount: number; // distinct files in refs
-  readonly testCount: number; // refs whose filePath is under tests/
+  readonly testCount: number; // refs with inTest
 };

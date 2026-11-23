@@ -11,17 +11,19 @@
  */
 
 import { parseFlags } from '../utils/cli/args';
+import { readFileSync } from 'node:fs';
+import type { Project } from 'ts-morph';
 import { collectRefs } from '../utils/refactor/collectRefs';
-import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
+import { closeEngine } from '../utils/refactor/engine/closeEngine';
+import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
+import { openEngine } from '../utils/refactor/engine/openEngine';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
-import { planDelete } from '../utils/refactor/planDelete';
-import { planExtract } from '../utils/refactor/planExtract';
-import { planInline } from '../utils/refactor/planInline';
-import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
-import type { LegacyInput } from './@types/LegacyInput';
+import type { RefReport } from '../@types/refactor/RefReport';
+import type { SymbolRefKind } from '../@types/refactor/SymbolRefKind';
+import type { RunInput } from './@types/RunInput';
 import type { Subcommand } from './@types/Subcommand';
 
 const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
@@ -38,7 +40,8 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'legacy',
     name: 'rename',
     usage: 'refactor rename  <file>#<symbol> <newName>   [--no-file-rename]',
-    run: ({ project, positionals, flags }) => {
+    run: async ({ project, positionals, flags }) => {
+      const { planRename } = await import('../utils/refactor/planRename');
       const newName = needArg(
         'rename',
         'a <file>#<symbol> address and a <newName>',
@@ -52,7 +55,8 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'legacy',
     name: 'extract',
     usage: 'refactor extract <file>#<symbol> <dest.ts>',
-    run: ({ project, positionals }) => {
+    run: async ({ project, positionals }) => {
+      const { planExtract } = await import('../utils/refactor/planExtract');
       const dest = needArg('extract', 'a <file>#<symbol> address and a <dest.ts>', positionals[1]);
       planExtract(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!)), dest);
     },
@@ -61,17 +65,26 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'legacy',
     name: 'inline',
     usage: 'refactor inline  <file>#<symbol>',
-    run: ({ project, positionals }) =>
-      planInline(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!))),
+    run: async ({ project, positionals, report }) => {
+      const { planInline } = await import('../utils/refactor/planInline');
+      planInline(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!)), report);
+    },
   },
   {
     kind: 'legacy',
     name: 'delete',
     usage: 'refactor delete  <file>#<symbol>',
-    run: ({ project, positionals }) =>
-      planDelete(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!))),
+    run: async ({ project, positionals, report }) => {
+      const { planDelete } = await import('../utils/refactor/planDelete');
+      planDelete(project, resolveSymbol(project, parseSymbolAddress(positionals[0]!)), report);
+    },
   },
-  { kind: 'legacy', name: 'refs', usage: 'refactor refs    <file>#<symbol>', run: () => {} },
+  {
+    kind: 'report',
+    name: 'refs',
+    usage: 'refactor refs    <file>#<symbol>',
+    report: (run) => renderRefReport(referencesOf(run, run.positionals[0]), run.flags['--json']),
+  },
 ];
 
 const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
@@ -80,15 +93,36 @@ ${SUBCOMMANDS.map((row) => `  ${row.usage}`).join('\n')}
 
 Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
 
-// The preview prints the references as they stand BEFORE the row mutates; for a
-// refused delete it shows what blocks it. A malformed address fails here, before
+function referencesOf(run: RunInput, address: string | undefined): RefReport<SymbolRefKind> {
+  const found = collectRefs({
+    address: parseSymbolAddress(needArg('refs', 'a <file>#<symbol> address', address)),
+    engine: run.engine,
+    read: run.read,
+  });
+  if (!found.ok) throw new Error(found.refusal);
+  return found.report;
+}
+
+// A legacy row's preview prints the references as they stand BEFORE it mutates; for
+// a refused delete it shows what blocks it. A malformed address fails here, before
 // any mutation, so a batch aborts before the single save.
-function runOp(row: Subcommand, input: LegacyInput): void {
-  const address = needArg(row.name, 'a <file>#<symbol> address', input.positionals[0]);
-  const resolved = resolveSymbol(input.project, parseSymbolAddress(address));
-  const report = collectRefs(input.project, resolved);
-  process.stdout.write(`${renderRefReport(report, input.flags['--json'])}\n`);
-  row.run(input);
+async function runOp(
+  row: Subcommand,
+  run: RunInput,
+  project: () => Promise<Project>,
+): Promise<void> {
+  if (row.kind === 'report') {
+    process.stdout.write(`${row.report(run)}\n`);
+    return;
+  }
+  const report = referencesOf(run, run.positionals[0]);
+  process.stdout.write(`${renderRefReport(report, run.flags['--json'])}\n`);
+  await row.run({
+    project: await project(),
+    positionals: run.positionals,
+    flags: run.flags,
+    report,
+  });
 }
 
 function entryToPositionals(entry: unknown): readonly string[] {
@@ -113,19 +147,26 @@ async function main(): Promise<void> {
   }
 
   const flags = parseFlags(argv, FLAG_SCHEMA);
-  const project = loadRefactorProject();
-
-  const manifest = readManifest(argv);
-  if (manifest === null) {
-    const positionals = argv.slice(1).filter((arg) => !arg.startsWith('--'));
-    runOp(row, { project, positionals, flags });
-  } else {
-    for (const entry of manifest) {
-      runOp(row, { project, positionals: entryToPositionals(entry), flags });
-    }
+  const engine = openEngine({ root: process.cwd(), projects: ENGINE_PROJECTS });
+  try {
+    // ts-morph costs ~0.6 s to import and more to load the repo, so only a legacy row
+    // pays: its planners and the project load are imported on demand.
+    let loaded: Project | undefined;
+    const project = async (): Promise<Project> => {
+      const { loadRefactorProject } = await import('../utils/refactor/loadRefactorProject');
+      return (loaded ??= loadRefactorProject());
+    };
+    const read = (file: string): string => engine.overlay.get(file) ?? readFileSync(file, 'utf8');
+    const manifest = readManifest(argv);
+    const ops =
+      manifest === null
+        ? [argv.slice(1).filter((arg) => !arg.startsWith('--'))]
+        : manifest.map(entryToPositionals);
+    for (const positionals of ops) await runOp(row, { engine, read, positionals, flags }, project);
+    if (!flags['--dry'] && loaded) await loaded.save();
+  } finally {
+    closeEngine(engine);
   }
-
-  if (!flags['--dry']) await project.save();
 }
 
 main().catch((err) => {

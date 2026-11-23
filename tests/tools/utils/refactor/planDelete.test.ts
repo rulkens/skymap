@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
 import { planDelete } from '../../../../tools/utils/refactor/planDelete';
+import type { RefReport } from '../../../../tools/@types/refactor/RefReport';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
 // In-memory Projects mirror the applyMoves/collectRefs/planRename fixtures: seed
@@ -17,6 +18,20 @@ function projectWith(files: Record<string, string>): Project {
   return project;
 }
 
+// The planner takes the report the CLI driver computed; building it by hand keeps
+// these tests about what planDelete does with a report, not about finding references.
+function reportOf(...files: string[]): RefReport<string> {
+  const refs = files.map((filePath) => ({
+    filePath,
+    line: 1,
+    column: 1,
+    kind: 'import',
+    inTest: false,
+    enclosing: '<module>',
+  }));
+  return { target: 'src/utils/x/foo.ts#foo', refs, fileCount: files.length, testCount: 0 };
+}
+
 describe('planDelete', () => {
   it('refuses to delete a referenced symbol and lists the references', () => {
     const project = projectWith({
@@ -27,7 +42,7 @@ describe('planDelete', () => {
 
     // The referrer survives the refused delete, and the message names its file so
     // the operator knows what to unpick before re-running.
-    expect(() => planDelete(project, resolved)).toThrow(/\/src\/app\.ts/);
+    expect(() => planDelete(project, resolved, reportOf('/src/app.ts'))).toThrow(/\/src\/app\.ts/);
     expect(project.getSourceFile('/src/utils/x/foo.ts')).toBeDefined();
   });
 
@@ -40,7 +55,9 @@ describe('planDelete', () => {
 
     // A re-export is a reference like any other — no repair branch quietly rewrites
     // it, so the delete refuses and the barrel is left intact for the operator.
-    expect(() => planDelete(project, resolved)).toThrow(/\/src\/barrel\.ts/);
+    expect(() => planDelete(project, resolved, reportOf('/src/barrel.ts'))).toThrow(
+      /\/src\/barrel\.ts/,
+    );
     expect(project.getSourceFile('/src/barrel.ts')).toBeDefined();
   });
 
@@ -50,7 +67,7 @@ describe('planDelete', () => {
     });
     const resolved = resolveSymbol(project, { file: '/src/utils/x/foo.ts', symbol: 'foo' });
 
-    planDelete(project, resolved);
+    planDelete(project, resolved, reportOf());
 
     // The declaration was the file's only export, so the whole file is dropped
     // from the project, not left as an empty husk.
@@ -66,7 +83,7 @@ describe('planDelete', () => {
     });
     const resolved = resolveSymbol(project, { file: '/src/utils/x/foo.ts', symbol: 'foo' });
 
-    planDelete(project, resolved);
+    planDelete(project, resolved, reportOf());
 
     expect(project.getSourceFile('/src/utils/x/foo.ts')).toBeUndefined();
     expect(project.getSourceFile('/tests/utils/x/foo.test.ts')).toBeUndefined();
@@ -78,7 +95,7 @@ describe('planDelete', () => {
     });
     const resolved = resolveSymbol(project, { file: '/src/utils/x/pair.ts', symbol: 'foo' });
 
-    planDelete(project, resolved);
+    planDelete(project, resolved, reportOf());
 
     // The file has another export, so it stays; only foo is gone.
     const remaining = project.getSourceFileOrThrow('/src/utils/x/pair.ts').getText();

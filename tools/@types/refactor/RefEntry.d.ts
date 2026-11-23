@@ -1,9 +1,8 @@
-import type { RefKind } from './RefKind';
-
-export type RefEntry = {
-  readonly filePath: string;
+export type RefEntry<Kind> = {
+  readonly filePath: string; // root-relative
   readonly line: number;
   readonly column: number;
-  readonly kind: RefKind;
+  readonly kind: Kind;
+  readonly inTest: boolean; // under tests/ or packages/*/tests/; the kind stays real
   readonly enclosing: string; // e.g. 'function frameTick' or '<module>'
 };

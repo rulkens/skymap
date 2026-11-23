@@ -4,7 +4,7 @@ import { openEngine } from '../../../tools/utils/refactor/engine/openEngine';
 
 const TSCONFIG = JSON.stringify({
   compilerOptions: { strict: true, noEmit: true, module: 'ESNext', moduleResolution: 'bundler' },
-  include: ['*.ts'],
+  include: ['**/*.ts'],
 });
 
 /** An engine over a small in-memory project: `files` maps a root-relative path to its text. */

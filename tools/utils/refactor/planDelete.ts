@@ -48,17 +48,19 @@
 
 import { Node } from 'ts-morph';
 import type { Project } from 'ts-morph';
-import { collectRefs } from './collectRefs';
 import type { RefReport } from '../../@types/refactor/RefReport';
 import { hasMeaningfulStatements } from './hasMeaningfulStatements';
 import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
 import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
-export function planDelete(project: Project, resolved: ResolvedSymbol): void {
+export function planDelete(
+  project: Project,
+  resolved: ResolvedSymbol,
+  report: RefReport<string>,
+): void {
   // Validate first: any reference of any kind blocks the delete, and the throw
   // carries the classified list so the operator knows what to remove.
-  const report = collectRefs(project, resolved);
   if (report.refs.length > 0) {
     throw new Error(refusalMessage(report));
   }
@@ -81,7 +83,7 @@ export function planDelete(project: Project, resolved: ResolvedSymbol): void {
 // The reference list, refusal header, and re-run hint. `renderRefReport(_, false)`
 // is the human table the `refs` subcommand prints; its rows name every
 // referencing file:line:col, which is what makes the refusal actionable.
-function refusalMessage(report: RefReport): string {
+function refusalMessage(report: RefReport<string>): string {
   return [
     `Cannot delete '${report.target}': ${report.refs.length} reference(s) still point to it. ` +
       `Remove them first, then re-run:`,

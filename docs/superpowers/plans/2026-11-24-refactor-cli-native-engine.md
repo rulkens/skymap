@@ -253,18 +253,18 @@ Driver:
 
 Tests:
 
-- [ ] `classifySymbolRef` — one test per kind, one fixture line each: `import`, `call`, `new`
+- [x] `classifySymbolRef` — one test per kind, one fixture line each: `import`, `call`, `new`
       as call, `type-position`, `re-export`, `value` for an alias, `value` for a shorthand property.
-- [ ] `locateExport` — finds a function, a const, a type alias; refuses a non-exported name;
+- [x] `locateExport` — finds a function, a const, a type alias; refuses a non-exported name;
       refuses an ambiguous name (function overloads count as one).
-- [ ] `collectRefs` — `a call inside tests/ is kind 'call' with inTest true`;
+- [x] `collectRefs` — `a call inside tests/ is kind 'call' with inTest true`;
       `the declaration is not counted`; `fileCount and testCount match the entries`.
-- [ ] Delete the ts-morph `collectRefs` tests these replace.
-- [ ] `npm run refactor -- refs src/@types/engine/EngineState.ts#EngineState` reports 573
+- [x] Delete the ts-morph `collectRefs` tests these replace.
+- [x] `npm run refactor -- refs src/@types/engine/EngineState.ts#EngineState` reports 573
       references in 203 files and finishes in under 1.5 s wall time. Put the real numbers in
       your reply (the counts may have moved since 2026-11-22; a different count is fine if the
       old CLI on `main` agrees).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: `rename` on the engine, and the write path
 

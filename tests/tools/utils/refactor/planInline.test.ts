@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
 import { planInline } from '../../../../tools/utils/refactor/planInline';
+import type { RefReport } from '../../../../tools/@types/refactor/RefReport';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
 // In-memory Projects mirror the planDelete/planRename fixtures: seed a tiny module
@@ -15,6 +16,29 @@ function projectWith(files: Record<string, string>): Project {
   return project;
 }
 
+// planInline only reads the report to word its refusal, so a hand-built one is enough.
+const NO_REFS: RefReport<string> = {
+  target: 'src/wrapper.ts#foo',
+  refs: [],
+  fileCount: 0,
+  testCount: 0,
+};
+const ONE_REF: RefReport<string> = {
+  target: 'src/wrapper.ts#foo',
+  refs: [
+    {
+      filePath: 'src/app.ts',
+      line: 1,
+      column: 1,
+      kind: 'import',
+      inTest: false,
+      enclosing: '<module>',
+    },
+  ],
+  fileCount: 1,
+  testCount: 0,
+};
+
 describe('planInline', () => {
   it('repoints call sites at the underlying symbol and deletes the wrapper file', () => {
     const project = projectWith({
@@ -25,7 +49,7 @@ describe('planInline', () => {
     });
     const resolved = resolveSymbol(project, { file: '/src/wrapper.ts', symbol: 'foo' });
 
-    planInline(project, resolved);
+    planInline(project, resolved, NO_REFS);
 
     // The caller now calls `bar` directly, imported from bar's own file, and the
     // one-symbol wrapper file is gone.
@@ -43,7 +67,7 @@ describe('planInline', () => {
     });
     const resolved = resolveSymbol(project, { file: '/src/wrapper.ts', symbol: 'foo' });
 
-    planInline(project, resolved);
+    planInline(project, resolved, NO_REFS);
 
     // The importer now names `bar` from bar's own file, and the one-symbol
     // re-export husk is gone.
@@ -63,7 +87,7 @@ describe('planInline', () => {
 
     // The body carries real logic, so inline refuses and names the referring file
     // for the operator to hand-edit.
-    expect(() => planInline(project, resolved)).toThrow(/app\.ts/);
+    expect(() => planInline(project, resolved, ONE_REF)).toThrow(/app\.ts/);
     expect(project.getSourceFile('/src/wrapper.ts')).toBeDefined();
   });
 });
