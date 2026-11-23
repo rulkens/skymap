@@ -19,6 +19,8 @@ import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import { NODE_FADE_MS } from '../../data/octree/octreeNodeFade';
 import { STAR_PLAN_INTERVAL_FRAMES } from './octreeCut/data/starPlanIntervalFrames';
+import { viewBehindABody } from '../../services/engine/frame/viewBehindABody';
+import { NEAR0 } from '../../services/engine/frame/slabs';
 import { starCutInputs } from './octreeCut/render/starCutInputs';
 import { sameOctreeCut } from '../../utils/octree/sameOctreeCut';
 import { resizeStarPools } from './survey/load/resizeStarPools';
@@ -120,7 +122,9 @@ export function starCatalogPlanner(
         anchor = inputs.cut;
         changedAtMs = nowMs;
       }
-      const recut = !(moving && recutLast);
+      // No view shows a star (`starCatalogVisible`): the passes skip, so keep the last lists.
+      const hidden = views.every((view) => viewBehindABody(state, view, NEAR0));
+      const recut = !hidden && !(moving && recutLast);
       recutLast = recut;
       runtime.renderer.setFrameCut(inputs, recut);
       const awake = inputs !== null && (nowMs - changedAtMs < NODE_FADE_MS || inFlight > 0);

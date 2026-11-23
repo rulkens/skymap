@@ -17,7 +17,7 @@ export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass<'starC
     name: 'star-catalog',
     fade: 'starCatalog',
 
-    enabled: (_state, _ctx, _view, fade) => starCatalogVisible(runtime, fade),
+    enabled: (state, ctx, _view, fade) => starCatalogVisible(runtime, fade, state, ctx),
 
     draw(pass, view, ctx) {
       drawStarCut(runtime.renderer, pass, view, ctx, 'leaf');

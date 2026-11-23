@@ -18,6 +18,8 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/layers/starCatalog/octreeCut/data/starPlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
 import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';
@@ -32,6 +34,7 @@ vi.mock('../../../src/utils/octree/planOctreeChunks', async (original) => {
 });
 
 const MID_BAND_PC = 1_000; // inside Gaia's crossfade band
+const BODY_STATES = deriveBodyStates(CONST_J2000);
 
 function camAtPc(x: number): Vec3 {
   return [x * SCALE_UNITS.PC_TO_MPC, 0, 0];
@@ -39,7 +42,7 @@ function camAtPc(x: number): Vec3 {
 
 function makeView(camPos: Vec3, nowMs: number): FrameView {
   return {
-    snapshot: { nowMs, focus: ZERO_FOCUS },
+    snapshot: { nowMs, focus: ZERO_FOCUS, bodyStates: BODY_STATES, sceneBodies: [] },
     drawCamPos: camPos,
     drawPxPerRad: 600,
     viewSlot: 0,
