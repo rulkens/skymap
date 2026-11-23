@@ -1,141 +1,68 @@
-import { describe, it, expect, vi } from 'vitest';
-import { Project } from 'ts-morph';
+import { afterAll, describe, expect, it } from 'vitest';
 import { planRename } from '../../../../tools/utils/refactor/planRename';
-import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
+import type { PlanResult } from '../../../../tools/@types/refactor/PlanResult';
+import { engineFixture } from '../../../helpers/refactor/engineFixture';
 
-// In-memory Projects mirror the applyMoves/collectRefs fixtures: seed a tiny
-// module graph, resolve the target the way the CLI does, run the planner, then
-// read back the resulting text / file set. The planner mutates the project in
-// place and never saves, so every assertion reads from the live Project.
-// `skipLoadingLibFiles` drops the lib.d.ts parse (~150 ms per Project, the bulk
-// of this file's cost); nothing here resolves a global type.
-function projectWith(files: Record<string, string>): Project {
-  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
-  for (const [path, content] of Object.entries(files)) {
-    project.createSourceFile(path, content);
-  }
-  return project;
+const FILES: Record<string, string> = {
+  'src/utils/x/foo.ts': 'export const foo = 1;',
+  'src/utils/x/pair.ts': 'export const one = 1;\nexport const foo2 = 2;',
+  'src/app.ts': "import { foo } from './utils/x/foo';\nexport const o = { foo };",
+  'src/alias.ts': "import { foo as local } from './utils/x/foo';\nexport const u = local;",
+  'tests/utils/x/foo.test.ts':
+    "import { foo } from '../../../src/utils/x/foo';\nexport const t = foo;",
+};
+
+const fixture = engineFixture(FILES);
+afterAll(fixture.dispose);
+
+function rename(file: string, symbol: string, newName: string, renameFile = true): PlanResult {
+  const absolute = (f: string) => f.slice(fixture.root.length + 1);
+  return planRename({
+    address: { file, symbol },
+    newName,
+    renameFile,
+    engine: fixture.engine,
+    read: (f) => FILES[absolute(f)] ?? '',
+    exists: (f) => absolute(f) in FILES,
+  });
+}
+
+function planOf(result: PlanResult) {
+  if (!result.ok) throw new Error(result.refusals.join('; '));
+  return result.plan;
 }
 
 describe('planRename', () => {
-  it('renames the identifier across importers', () => {
-    const project = projectWith({
-      '/src/utils/x/foo.ts': 'export const foo = 1;',
-      '/src/app.ts': "import { foo } from './utils/x/foo';\nexport const usesFoo = foo + 1;",
-    });
-    const resolved = resolveSymbol(project, { file: '/src/utils/x/foo.ts', symbol: 'foo' });
-
-    planRename(project, resolved, 'bar', false);
-
-    expect(project.getSourceFileOrThrow('/src/utils/x/foo.ts').getText()).toContain(
-      'export const bar = 1;',
-    );
-    const importer = project.getSourceFileOrThrow('/src/app.ts').getText();
-    expect(importer).toContain("import { bar } from './utils/x/foo'");
-    expect(importer).toContain('bar + 1');
-    // The imported binding is renamed; the module path keeps 'foo' because the
-    // file was not renamed (renameFile: false).
-    expect(importer).not.toContain('foo + 1');
+  it('renames the declaration and a use in another file, and not an alias', () => {
+    const edits = planOf(rename('src/utils/x/foo.ts', 'foo', 'bar', false)).edits;
+    const byFile = (suffix: string) => edits.filter((e) => e.file.endsWith(suffix));
+    expect(byFile('x/foo.ts')).toHaveLength(1);
+    expect(byFile('src/app.ts').map((e) => e.text)).toEqual(['bar', 'foo: bar']);
+    // Only the imported name of `foo as local`; `local` and its use keep their name.
+    expect(byFile('src/alias.ts').map((e) => e.text)).toEqual(['bar']);
   });
 
-  it('renames the file and its test mirror when filename tracks the symbol', () => {
-    const project = projectWith({
-      '/src/utils/x/foo.ts': 'export const foo = 1;',
-      '/tests/utils/x/foo.test.ts':
-        "import { foo } from '../../../src/utils/x/foo';\nexport const t = foo;",
-    });
-    const resolved = resolveSymbol(project, { file: '/src/utils/x/foo.ts', symbol: 'foo' });
-
-    planRename(project, resolved, 'bar', true);
-
-    expect(project.getSourceFile('/src/utils/x/foo.ts')).toBeUndefined();
-    expect(project.getSourceFile('/src/utils/x/bar.ts')).toBeDefined();
-    expect(project.getSourceFile('/tests/utils/x/foo.test.ts')).toBeUndefined();
-    expect(project.getSourceFile('/tests/utils/x/bar.test.ts')).toBeDefined();
-    // The dragged mirror still imports the renamed symbol from the renamed file.
-    expect(project.getSourceFileOrThrow('/tests/utils/x/bar.test.ts').getText()).toContain(
-      "import { bar } from '../../../src/utils/x/bar'",
-    );
+  it('carries the file move and its test mirror when the basename is the symbol', () => {
+    const { moves } = planOf(rename('src/utils/x/foo.ts', 'foo', 'bar'));
+    expect(moves.map((m) => [m.from, m.to])).toEqual([
+      ['/fixture/src/utils/x/foo.ts', '/fixture/src/utils/x/bar.ts'],
+      ['/fixture/tests/utils/x/foo.test.ts', '/fixture/tests/utils/x/bar.test.ts'],
+    ]);
   });
 
-  it('renames a .d.ts declaration file, whose basename hides behind a two-part extension', () => {
-    const project = projectWith({
-      '/src/@types/rendering/Foo.d.ts': 'export type Foo = { a: number };',
-      '/src/app.ts':
-        "import type { Foo } from './@types/rendering/Foo';\nexport const f: Foo = { a: 1 };",
-    });
-    const resolved = resolveSymbol(project, {
-      file: '/src/@types/rendering/Foo.d.ts',
-      symbol: 'Foo',
-    });
-
-    planRename(project, resolved, 'Bar', true);
-
-    expect(project.getSourceFile('/src/@types/rendering/Foo.d.ts')).toBeUndefined();
-    expect(project.getSourceFile('/src/@types/rendering/Bar.d.ts')).toBeDefined();
-    expect(project.getSourceFileOrThrow('/src/app.ts').getText()).toContain(
-      "from './@types/rendering/Bar'",
-    );
+  it('carries no move when the basename differs', () => {
+    expect(planOf(rename('src/utils/x/pair.ts', 'one', 'uno')).moves).toEqual([]);
   });
 
-  it.each([
-    ['/home/me/tools/skymap', 'src/foo.ts', 'tests/foo.test.ts', 'src/bar.ts', 'tests/bar.test.ts'],
-    [
-      '/home/me/src/skymap',
-      'tools/foo.ts',
-      'tests/tools/foo.test.ts',
-      'tools/bar.ts',
-      'tests/tools/bar.test.ts',
-    ],
-  ])(
-    'finds the mirror from the Project root in a checkout at %s',
-    (root, src, test, newSrc, newTest) => {
-      const project = projectWith({
-        [`${root}/${src}`]: 'export const foo = 1;',
-        [`${root}/${test}`]: 'export const t = 1;',
-      });
-      vi.spyOn(project.getFileSystem(), 'getCurrentDirectory').mockReturnValue(root);
-      const resolved = resolveSymbol(project, { file: `${root}/${src}`, symbol: 'foo' });
-
-      planRename(project, resolved, 'bar', true);
-
-      expect(project.getSourceFile(`${root}/${newSrc}`)).toBeDefined();
-      expect(project.getSourceFile(`${root}/${newTest}`)).toBeDefined();
-      expect(project.getSourceFile(`${root}/${test}`)).toBeUndefined();
-    },
-  );
-
-  it('renames a file under no companion rule too', () => {
-    const project = projectWith({ '/packages/site/src/foo.ts': 'export const foo = 1;' });
-    const resolved = resolveSymbol(project, { file: '/packages/site/src/foo.ts', symbol: 'foo' });
-
-    planRename(project, resolved, 'bar', true);
-
-    expect(project.getSourceFile('/packages/site/src/bar.ts')).toBeDefined();
-    expect(project.getSourceFile('/packages/site/src/foo.ts')).toBeUndefined();
+  it('carries no move under renameFile false', () => {
+    expect(planOf(rename('src/utils/x/foo.ts', 'foo', 'bar', false)).moves).toEqual([]);
   });
 
-  it('renames a file at the Project root', () => {
-    const project = projectWith({ '/foo.ts': 'export const foo = 1;' });
-    planRename(project, resolveSymbol(project, { file: '/foo.ts', symbol: 'foo' }), 'bar', true);
-    expect(project.getSourceFile('/bar.ts')).toBeDefined();
+  it('refuses an invalid identifier', () => {
+    expect(rename('src/utils/x/foo.ts', 'foo', 'not valid')).toMatchObject({ ok: false });
   });
 
-  it('leaves the file name when renameFile is false', () => {
-    const project = projectWith({
-      '/src/utils/x/foo.ts': 'export const foo = 1;',
-      '/tests/utils/x/foo.test.ts':
-        "import { foo } from '../../../src/utils/x/foo';\nexport const t = foo;",
-    });
-    const resolved = resolveSymbol(project, { file: '/src/utils/x/foo.ts', symbol: 'foo' });
-
-    planRename(project, resolved, 'bar', false);
-
-    // Identifier renamed in place, but the file keeps its old path.
-    expect(project.getSourceFile('/src/utils/x/foo.ts')).toBeDefined();
-    expect(project.getSourceFile('/src/utils/x/bar.ts')).toBeUndefined();
-    expect(project.getSourceFileOrThrow('/src/utils/x/foo.ts').getText()).toContain(
-      'export const bar = 1;',
-    );
+  it('refuses a symbol that is not exported', () => {
+    expect(rename('src/utils/x/foo.ts', 'missing', 'bar')).toMatchObject({ ok: false });
   });
 });

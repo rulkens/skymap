@@ -333,23 +333,23 @@ Driver, for `kind: 'plan'` rows:
 
 Tests:
 
-- [ ] `renameEdit` — one test per rule above (5).
-- [ ] `planRename` — `renames the declaration and a use in another file`;
+- [x] `renameEdit` — one test per rule above (5).
+- [x] `planRename` — `renames the declaration and a use in another file`;
       `carries the file move and its test mirror when the basename is the symbol`;
       `carries no move when the basename differs`; `carries no move under renameFile false`;
       `refuses an invalid identifier`; `refuses a symbol that is not exported`.
-- [ ] `foldPlan` — `rewrites an importer's specifier when a file moves`;
+- [x] `foldPlan` — `rewrites an importer's specifier when a file moves`;
       `throws when a destination exists`;
       `a second plan sees the first plan's text` (two folds, the second edit lands on the first's result).
-- [ ] `writePlan` — against a `mkdtemp` directory: `writes edited texts, moves files, removes deleted files`.
-- [ ] **Parity, before the old code goes:** with the old ts-morph `planRename` still reachable
+- [x] `writePlan` — against a `mkdtemp` directory: `writes edited texts, moves files, removes deleted files`.
+- [x] **Parity, before the old code goes:** with the old ts-morph `planRename` still reachable
       (keep it as `planRenameLegacy.ts` for this step), write a throwaway script outside the repo
       tree that renames ten exported symbols of different kinds (type, function, const, enum,
       class; at least two whose file is renamed) on both paths in memory and compares the
       resulting texts file by file. Report the result per symbol in your reply. Any difference is
       a stop: report it, do not paper over it.
-- [ ] Delete `planRenameLegacy.ts`; `rename` becomes `kind: 'plan'`.
-- [ ] Commit.
+- [x] Delete `planRenameLegacy.ts`; `rename` becomes `kind: 'plan'`.
+- [x] Commit.
 
 ### Task 7: `delete` on the engine
 
