@@ -156,20 +156,20 @@ then start, with duplicates across projects removed.
 tsconfig that exists only there; otherwise it writes them to a `mkdtemp` directory and `dispose`
 removes it. Try in-memory first and say in your reply which one it is.
 
-- [ ] Contract test `findReferences returns the declaration and every use, as exact token spans`:
+- [x] Contract test `findReferences returns the declaration and every use, as exact token spans`:
       a two-file fixture, assert `text.slice(start, end)` is the name for every result.
-- [ ] Contract test `findReferences reports a file in two projects once`.
-- [ ] Contract test `spans index a JavaScript string after a non-ASCII character` (an emoji in a
+- [x] Contract test `findReferences reports a file in two projects once`.
+- [x] Contract test `spans index a JavaScript string after a non-ASCII character` (an emoji in a
       comment before the reference).
-- [ ] Contract test `syncOverlay makes the engine see changed text`: add a reference through
+- [x] Contract test `syncOverlay makes the engine see changed text`: add a reference through
       `engine.overlay`, sync, the count rises by one.
-- [ ] Coverage test `every refactor-glob file sits in one of the engine's projects`: glob
+- [x] Coverage test `every refactor-glob file sits in one of the engine's projects`: glob
       `src/**`, `tests/**`, `tools/**`, `packages/*/{src,tests,scripts}/**` (`.ts`, `.tsx`, and
       `.cts` under `packages/*/src`) and compare, lowercased, against `getSourceFileNames()` of
       the four projects. This test opens the real repo; give it a 30 s timeout.
-- [ ] `package.json` keeps `typescript-native` pinned to exactly `npm:typescript@7.0.2`; add the
+- [x] `package.json` keeps `typescript-native` pinned to exactly `npm:typescript@7.0.2`; add the
       test `typescript-native is pinned to an exact version` beside the contract tests.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: `refs` on the engine
 
