@@ -9,6 +9,8 @@ import { describe, it, expect } from 'vitest';
 import { APP_COMPOSITION } from '../../src/compositions/app';
 import { APP_BODY_REGISTRY } from '../../src/compositions/appBodies';
 import type { LayerBody } from '../../src/@types/engine/layer/LayerBody';
+import { MESH_ASSETS } from '../../src/data/bodies/meshAssets.generated';
+import { isMeshBody } from '../../src/utils/meshBodies/isMeshBody';
 
 describe('APP_BODY_REGISTRY covers every composed Layer', () => {
   it("APP_BODY_REGISTRY covers every composed Layer's bodies, by identity", () => {
@@ -26,6 +28,24 @@ describe('APP_BODY_REGISTRY orbit rows', () => {
     for (const row of APP_BODY_REGISTRY) {
       if (row.position.kind !== 'orbit') continue;
       expect(row.position.elements.id, row.body.id).toBe(row.body.id);
+    }
+  });
+});
+
+describe('APP_BODY_REGISTRY shape models', () => {
+  // The slot's fetch 404s on a key with no baked mesh, and nothing fails until a camera nears it.
+  it("every shape-model row's key has a MESH_ASSETS entry", () => {
+    const shaped = APP_BODY_REGISTRY.filter((row) => row.shapeModel !== undefined);
+    expect(shaped.length).toBeGreaterThan(0);
+    for (const row of shaped) {
+      expect(MESH_ASSETS[row.shapeModel!.meshKey], row.body.id).toBeDefined();
+    }
+  });
+
+  // A mesh body would be presented twice, minting two slots for one id.
+  it('no mesh-body row sets shapeModel', () => {
+    for (const row of APP_BODY_REGISTRY) {
+      if (isMeshBody(row.body)) expect(row.shapeModel, row.body.id).toBeUndefined();
     }
   });
 });

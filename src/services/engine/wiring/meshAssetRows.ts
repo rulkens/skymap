@@ -13,9 +13,6 @@ import type { MeshReq } from '../../../@types/loading/MeshReq';
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { meshFetcher } from '../../loading/fetchers/meshFetcher';
 import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
-import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { clampTier } from '../../../utils/math/clampTier';
 import { closeMeshAssetBitmaps } from '../../../utils/meshBodies/closeMeshAssetBitmaps';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
@@ -23,9 +20,7 @@ import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 
 /** One row per mesh body: loads when it is `resolvePx` across (where its glint hands over), releases below half that. */
 function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): AssetWiringRow {
-  const { resolvePx } = findByIdOrThrow(SCENE_BODIES, body.id, 'meshBodyRow');
-  // A generated mesh has no baked tiers to clamp to.
-  const ceiling = MESH_ASSETS[body.meshKey]?.tierCeiling;
+  const { resolvePx, tierCeiling: ceiling } = body;
   return {
     key: meshBodySlotKey(body.id),
     // `commit`/`onRelease` re-read `state.gpu.meshBodyRenderer` at call time, so the
@@ -41,6 +36,7 @@ function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): A
       dispose: closeMeshAssetBitmaps,
       onRelease: () => state.gpu.meshBodyRenderer?.clearMesh(body.id),
     }),
+    // A generated mesh has no baked tiers to clamp to.
     req: (tier) => ({
       meshKey: body.meshKey,
       tier: ceiling === undefined ? tier : clampTier(tier, ceiling),

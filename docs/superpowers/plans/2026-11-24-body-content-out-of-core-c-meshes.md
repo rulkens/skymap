@@ -92,14 +92,14 @@ export function meshPresentationsOf(rows: readonly LayerBody[]): readonly MeshPr
 - `MESH_PRESENTATIONS` must hold the same ids in the same order as before. If the order changes,
   stop and report.
 
-- [ ] Test `meshPresentationsOf lists mesh bodies, then shape-model bodies, and skips plain rows`.
-- [ ] Test `every shape-model row's key has a MESH_ASSETS entry` and
+- [x] Test `meshPresentationsOf lists mesh bodies, then shape-model bodies, and skips plain rows`.
+- [x] Test `every shape-model row's key has a MESH_ASSETS entry` and
       `no mesh-body row sets shapeModel` (over `APP_BODY_REGISTRY`).
-- [ ] Before implementing, print `MESH_PRESENTATIONS` ids and each row's `req('large')` and demand
+- [x] Before implementing, print `MESH_PRESENTATIONS` ids and each row's `req('large')` and demand
       to a scratch file; after, diff. Zero diff.
-- [ ] Implement. `npm run typecheck:fast`;
+- [x] Implement. `npm run typecheck:fast`;
       `npm test -- meshPresentations meshAssetRows meshBody bodyBodyRows appBodies` pass.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2: Core hands Layers the mesh renderer; Layers return their mesh rows
 
