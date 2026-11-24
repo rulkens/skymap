@@ -18,7 +18,6 @@ import { tessellateTrack } from '../utils/tessellateTrack';
 import { trackKmToMpc } from '../utils/trackKmToMpc';
 
 export function nearTrailPiece(
-  id: string,
   track: SampledTrack,
   stay: TrailStay,
   positionAt: (id: string, simDays: number) => Readonly<Vec3>,
@@ -45,8 +44,8 @@ export function nearTrailPiece(
   });
 
   const tess = tessellateTrack(
-    { id, tDays: Float64Array.from(times), posKm, velKmS },
+    { id: track.id, tDays: Float64Array.from(times), posKm, velKmS },
     MISSION_TRAIL_MAX_SAG_KM,
   );
-  return { id, centreId, tDays: tess.tDays, relMpc: trackKmToMpc(tess.posKm) };
+  return { centreId, tDays: tess.tDays, relMpc: trackKmToMpc(tess.posKm) };
 }

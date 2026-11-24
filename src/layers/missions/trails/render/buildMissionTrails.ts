@@ -26,9 +26,9 @@ export function buildMissionTrails(): CraftTrail[] {
     const track = trajectoryRegistry.get(id);
     if (track === undefined) continue;
     const { tDays, posKm } = tessellateTrack(track, MISSION_TRAIL_MAX_SAG_KM);
-    const whole = { id, centreId: TRACK_CENTRE_ID, tDays, relMpc: trackKmToMpc(posKm) };
+    const whole = { centreId: TRACK_CENTRE_ID, tDays, relMpc: trackKmToMpc(posKm) };
     const near = trailStaysOf(track, TRAIL_CENTRES, bodyPositionMpcAt).map((stay) =>
-      nearTrailPiece(id, track, stay, bodyPositionMpcAt),
+      nearTrailPiece(track, stay, bodyPositionMpcAt),
     );
     out.push({ id, whole, near });
   }

@@ -7,5 +7,5 @@ export function formatScientific(n: number, decimals = 1): string {
   const power = [...String(Number(exponent))]
     .map((c) => (c === '-' ? '⁻' : SUPERSCRIPT_DIGITS[Number(c)]))
     .join('');
-  return `${mantissa.replace(/\.?0+$/, '')} × 10${power}`;
+  return `${mantissa.replace(/\.0+$|(\.\d*?)0+$/, '$1')} × 10${power}`;
 }

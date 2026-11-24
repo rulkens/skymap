@@ -40,9 +40,7 @@ export function validatePlanetFactsEntry(raw: unknown, index: number): PlanetFac
   if (typeof e.wikiTitle !== 'string' || e.wikiTitle.length === 0) {
     throw new Error(`planet facts seed: ${e.id} has missing/empty wikiTitle`);
   }
-  // Every other field is an OPTIONAL display string.  Present ⇒ must be a
-  // string; absent ⇒ the card drops that row.  `id`/`wikiTitle` are already
-  // checked above; validate any remaining property is string-typed.
+  // Every other field is optional: absent ⇒ the card drops that row.
   for (const [key, value] of Object.entries(e)) {
     if (key === 'id' || key === 'wikiTitle') continue;
     if (key === 'massKg') {

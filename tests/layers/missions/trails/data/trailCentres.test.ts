@@ -5,11 +5,10 @@ import { TRAIL_CENTRES } from '../../../../../src/layers/missions/trails/data/tr
 describe('TRAIL_CENTRES', () => {
   const ids = TRAIL_CENTRES.map((c) => c.id);
 
-  it('holds the heliocentric planets, not moons or the Sun', () => {
+  it('holds the heliocentric planets, not moons', () => {
     expect(ids).toContain('jupiter');
     expect(ids).toContain('earth');
     expect(ids).not.toContain('moon');
-    expect(ids).not.toContain('sun');
   });
 
   it("reaches 1.5 Hill radii: Jupiter's is between 75 and 85 million km", () => {

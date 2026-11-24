@@ -1,28 +1,12 @@
 /**
- * BodyFacts — the curated "fact sheet" row set for a Solar-System body (a planet, the Moon, another
- * moon, or Earth) or a mesh body (whale, petunias), shown in BodyDetailCard.
+ * BodyFacts — the curated fact sheet of a Solar-System body or a mesh body (whale, petunias),
+ * shown in BodyDetailCard and compiled into the bundle: a tiny fixed set needs no fetch.
  *
- * Every field but `massKg` is a pre-formatted display *string*, not a raw number: the values
- * are static curated constants (a planet's mass never changes between builds),
- * so baking the unit + friendly rounding into the datum keeps the card a dumb
- * renderer and lets each body pick the unit that reads best — Earth masses for
- * planets, kilograms for a moon a billion times lighter, "243 Earth days
- * (retrograde)" where a bare number would mislead. This is the deliberate
- * contrast with the famous-star `FamousStarMetaEntry` sidecar, which is fetched
- * async and carries raw numeric fields the card formats: the bodies here are a
- * tiny fixed set, so they compile straight into the bundle with no fetch.
- *
- * Optional fields drop their row entirely when absent (the card family's
- * absent-row pattern) — a moon carries no `moons` count, a rocky world names no
- * gas mix. `parent` is the discriminant: present ⇒ this body is a moon, and the
- * distance / orbital-period rows relabel to speak of its planet rather than the
- * Sun.
- *
- * `wikiTitle` is an EXPLICIT Wikipedia article title per body rather than one
- * derived from the label, because the mapping is genuinely irregular: Mercury's
- * article is `Mercury_(planet)` (the plain slug is the element/god), while
- * Venus's is just `Venus`. Deriving it would need a table of exceptions anyway,
- * so the honest form is to state the title outright at each seed.
+ * Every field but `massKg` is a pre-formatted display string, so each body states the unit that
+ * reads best ("243 Earth days (retrograde)"). Mass is a number because the app calculates with it.
+ * An absent field drops its card row. `parent` present ⇒ the body is a moon, and the distance and
+ * period rows speak of its planet. `wikiTitle` is explicit because the article mapping is irregular
+ * (`Mercury_(planet)` but `Venus`).
  */
 
 export type BodyFacts = {

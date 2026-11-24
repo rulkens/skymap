@@ -40,7 +40,7 @@ function craft(): SampledTrack {
 describe('nearTrailPiece', () => {
   it('holds a craft at a fixed offset from its centre at the offset, ends on the stay', () => {
     const stay = { centreId: asSceneBodyId('earth'), t0Days: T0 + 11.3, t1Days: T0 + 27.9 };
-    const piece = nearTrailPiece('c', craft(), stay, positionAt);
+    const piece = nearTrailPiece(craft(), stay, positionAt);
     expect(piece.centreId).toBe('earth');
     expect(piece.tDays[0]).toBe(stay.t0Days);
     expect(piece.tDays[piece.tDays.length - 1]).toBe(stay.t1Days);

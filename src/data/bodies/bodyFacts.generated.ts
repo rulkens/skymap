@@ -131,7 +131,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'Counted as the ninth planet until 2006, Pluto is the largest known world in the Kuiper Belt, the field of icy debris beyond Neptune. Its bright heart, Tombaugh Regio, is a plain of frozen nitrogen named for the astronomer who spotted it in 1930.',
   },
   vesta: {
-    massKg: 259000000000000000000,
+    massKg: 2.59e20,
     gravity: '0.026 g',
     dayLength: '5.3 hours',
     yearLength: '3.6 Earth years',
@@ -141,7 +141,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "A battered rocky world in the asteroid belt, Vesta was mapped from orbit by NASA's Dawn spacecraft. Its south pole is one giant impact basin, Rheasilvia, about 500 km across, nearly as wide as Vesta itself. The mound at its centre rises 20 to 25 km, one of the tallest peaks in the Solar System.",
   },
   ceres: {
-    massKg: 938000000000000000000,
+    massKg: 9.38e20,
     gravity: '0.029 g',
     dayLength: '9.1 hours',
     yearLength: '4.6 Earth years',
@@ -151,7 +151,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "Ceres is the dwarf planet of the asteroid belt, mapped from orbit by NASA's Dawn spacecraft. Its isolated mountain Ahuna Mons is an ice volcano about 4 km high and 17 km wide, the youngest of its kind on Ceres.",
   },
   bennu: {
-    massKg: 73300000000,
+    massKg: 7.33e10,
     gravity: '0.0000085 g',
     dayLength: '4.3 hours (retrograde)',
     yearLength: '1.2 Earth years',
@@ -175,7 +175,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "Earth's constant companion, the Moon always keeps the same face turned toward us as it orbits. Its pull raises the ocean tides, and its cratered surface preserves a record of impacts going back billions of years.",
   },
   phobos: {
-    massKg: 10600000000000000,
+    massKg: 1.06e16,
     gravity: '0.0006 g',
     dayLength: 'Tidally locked',
     yearLength: '7.7 hours',
@@ -187,7 +187,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "Phobos is the larger and closer of Mars's two small moons, orbiting so low that it races across the Martian sky several times a day. Its orbit is slowly shrinking, and in the far future it will break apart or strike the planet.",
   },
   deimos: {
-    massKg: 1480000000000000,
+    massKg: 1.48e15,
     gravity: '0.0003 g',
     dayLength: 'Tidally locked',
     yearLength: '30.3 hours',
@@ -251,7 +251,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "Callisto is the outermost of Jupiter's four big moons and one of the most cratered worlds ever seen, its ancient face almost unchanged for billions of years. It orbits far enough out to escape the harshest of Jupiter's radiation.",
   },
   mimas: {
-    massKg: 37500000000000000000,
+    massKg: 3.75e19,
     gravity: '0.006 g',
     dayLength: 'Tidally locked',
     yearLength: '22.6 hours',
@@ -264,7 +264,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'Mimas is a small icy moon of Saturn marked by one giant crater that gives it an uncanny resemblance to the Death Star. The impact that carved it came close to shattering the whole moon.',
   },
   enceladus: {
-    massKg: 108000000000000000000,
+    massKg: 1.08e20,
     gravity: '0.011 g',
     dayLength: 'Tidally locked',
     yearLength: '1.4 Earth days',
@@ -277,7 +277,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       "Enceladus is a brilliant white moon of Saturn that jets water vapour and ice into space through cracks near its south pole. Those plumes rise from a hidden ocean and feed one of Saturn's faint rings.",
   },
   tethys: {
-    massKg: 617000000000000000000,
+    massKg: 6.17e20,
     gravity: '0.015 g',
     dayLength: 'Tidally locked',
     yearLength: '1.9 Earth days',
@@ -342,7 +342,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'One side of Iapetus is dark as coal while the other gleams like fresh snow, a split so sharp it can be seen from Earth through a small telescope. A ridge of mountains runs along its equator, giving this moon of Saturn the outline of a walnut.',
   },
   miranda: {
-    massKg: 65900000000000000000,
+    massKg: 6.59e19,
     gravity: '0.008 g',
     dayLength: 'Tidally locked',
     yearLength: '1.4 Earth days',
@@ -407,7 +407,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'Oberon is the outermost of the large moons of Uranus and the second largest. Its ancient surface is covered in craters, many with dark floors, and one mountain on its limb rises about 11 kilometres.',
   },
   puck: {
-    massKg: 2900000000000000000,
+    massKg: 2.9e18,
     gravity: '0.003 g',
     dayLength: 'Tidally locked',
     yearLength: '0.8 Earth days',
@@ -431,7 +431,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'William Lassell found Triton on 10 October 1846, seventeen days after Neptune itself was discovered. It is the only large moon that circles its planet backwards, which suggests Neptune captured it from the Kuiper belt. With a surface near 38 kelvin it is one of the coldest places Voyager 2 visited, and in 1989 the probe saw dark plumes rising from its bright southern ice cap.',
   },
   proteus: {
-    massKg: 50000000000000000000,
+    massKg: 5e19,
     gravity: '0.008 g',
     dayLength: 'Tidally locked',
     yearLength: '1.1 Earth days',
@@ -443,7 +443,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
       'Proteus is the second-largest moon of Neptune, about 420 kilometres across, and was first seen in Voyager 2 images in 1989. It is one of the darkest bodies in the Solar System, reflecting only about ten percent of the light that falls on it, and it is about as large as an irregular lump of rock and ice can be before its own gravity would pull it round.',
   },
   nereid: {
-    massKg: 30000000000000000000,
+    massKg: 3e19,
     gravity: '0.007 g',
     dayLength: 'About 11.6 hours',
     yearLength: '360 Earth days',

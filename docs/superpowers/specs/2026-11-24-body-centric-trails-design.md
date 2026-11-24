@@ -36,6 +36,7 @@ A craft's trail is its whole track about the Sun plus one piece per stay near a 
 ```ts
 // src/layers/missions/trails/@types/CraftTrail.d.ts
 export type CraftTrail = {
+  readonly id: string; // the craft
   readonly whole: MissionTrailGeometry; // the full track, centre 'sun'
   readonly near: readonly MissionTrailGeometry[]; // one per stay; tDays[0] and the last are entry and exit
 };
@@ -125,6 +126,9 @@ renderer's (§3), which the prep could not make without the list existing.
 
 ## 8. Out of scope
 
+- **Faster craft.** `trailStaysOf` steps on a 100 km/s closing-speed bound (the Voyagers peak at
+  68 km/s, against Mercury). A craft that can exceed it, such as Parker Solar Probe, needs the bound
+  raised or derived from the track before its row is added.
 - **2026 QQ8.** Next PR: optional launch fields on `SampledBody`, `buildSpacecraftTracks` opened
   beyond Voyager, a marker for a body too small to draw.
 - **Backlog.** "Craft around other planets and at Lagrange points" stays; the QQ8 PR narrows it to

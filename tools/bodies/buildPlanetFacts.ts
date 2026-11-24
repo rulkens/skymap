@@ -64,7 +64,10 @@ export function serializeGeneratedTable(entries: readonly PlanetFactsEntry[]): s
   const rowsText = entries
     .map(({ id, ...facts }) => {
       const fields = Object.entries(facts)
-        .map(([key, value]) => `    ${key}: ${typeof value === 'number' ? value : quote(value)},`)
+        .map(
+          ([key, value]) =>
+            `    ${key}: ${typeof value === 'number' ? value.toExponential() : quote(value)},`,
+        )
         .join('\n');
       return `  ${quote(id)}: {\n${fields}\n  },`;
     })

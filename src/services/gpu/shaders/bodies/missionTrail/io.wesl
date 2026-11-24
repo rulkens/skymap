@@ -13,7 +13,7 @@ struct TrailSegment {
 };
 
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2, one
-// dynamic-offset slot per craft. The hi/lo camera pair is the eye relative to the trail's centre, from f64.
+// dynamic-offset slot per draw. The hi/lo camera pair is the eye relative to the trail's centre, from f64.
 struct TrailUniforms {
   cam: CameraUniforms,
   camHi: vec3<f32>,
