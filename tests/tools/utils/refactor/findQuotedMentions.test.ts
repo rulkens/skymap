@@ -30,15 +30,25 @@ describe('findQuotedMentions', () => {
   });
 
   it('skips a file that never mentions the type', () => {
-    expect(mentions({ '/r/other.ts': "const k = 'radius';" })).toEqual([]);
+    expect(mentions({ '/r/other.ts': "type K = Pick<Other, 'radius'>;" })).toEqual([]);
   });
 
   it('does not take a longer type name for the type', () => {
-    expect(mentions({ '/r/other.ts': "type ShapeX = 1; const k = 'radius';" })).toEqual([]);
+    expect(mentions({ '/r/other.ts': "type K = Pick<ShapeX, 'radius'>;" })).toEqual([]);
   });
 
-  it('finds double-quoted and template-quoted forms', () => {
-    const text = 'type S = Shape;\nconst a = "radius";\nconst b = `radius`;\nconst c = "radiuses";';
-    expect(mentions({ '/r/q.ts': text }).map((f) => f.line)).toEqual([2, 3]);
+  it('finds a double-quoted string type and not a longer string', () => {
+    const text = 'type A = Pick<Shape, "radius">;\ntype B = Pick<Shape, "radiuses">;';
+    expect(mentions({ '/r/q.ts': text }).map((f) => f.line)).toEqual([1]);
+  });
+
+  it('ignores a plain string expression in a file without keyof', () => {
+    const text = "type S = Shape;\nconst k = 'radius';\nconst t = `radius`;";
+    expect(mentions({ '/r/p.ts': text })).toEqual([]);
+  });
+
+  it('reports a string expression in a file that uses keyof Shape', () => {
+    const text = "type K = keyof Shape;\nconst k: K = 'radius';\nconst t = `radius`;";
+    expect(mentions({ '/r/k.ts': text }).map((f) => f.line)).toEqual([2]);
   });
 });

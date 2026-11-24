@@ -36,6 +36,12 @@ describe('propRenameEdit', () => {
     expect(renamed('const x = a["radius"];')).toBe('const x = a["size"];');
   });
 
+  it('collapses key: value to shorthand when the names become equal', () => {
+    expect(renamed('const o = { radius: size };')).toBe('const o = { size };');
+    expect(renamed('const { radius: size } = a;')).toBe('const { size } = a;');
+    expect(renamed('const { radius: size = 1 } = a;')).toBe('const { size = 1 } = a;');
+  });
+
   it('renames only the key of a renamed destructure', () => {
     expect(renamed('const { radius: r } = a;')).toBe('const { size: r } = a;');
   });

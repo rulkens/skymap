@@ -1,11 +1,14 @@
+import ts from 'typescript';
 import type { Finding } from '../../@types/refactor/Finding';
 import type { NodeLocation } from '../../@types/refactor/NodeLocation';
+import { parseTs } from './parseTs';
 
 /**
- * Quoted occurrences of `prop` in files that mention `typeName`, minus known references.
- * `Pick<Shape, 'radius'>` and `key === 'radius'` name the property without the engine
- * seeing it, so they are surfaced for a human; files that never name the type are skipped
- * because a bare string is otherwise far too common to be worth a line.
+ * Quoted occurrences of `prop` that name the property without the engine seeing it, minus
+ * known references. Only two shapes count, because a bare string equal to a property name
+ * is far too common to list: a string-literal type (`Pick<Shape, 'radius'>`, a union of
+ * keys) in a file that names the type, and a string expression in a file that writes
+ * `keyof Shape`, where the string is presumably compared with or indexed by such a key.
  */
 export function findQuotedMentions(input: {
   typeName: string;
@@ -14,25 +17,29 @@ export function findQuotedMentions(input: {
   known: readonly NodeLocation[];
 }): readonly Finding[] {
   const { typeName, prop, texts, known } = input;
-  const mentionsType = new RegExp(`(?<![\\w$])${escape(typeName)}(?![\\w$])`);
-  const quoted = new RegExp(`(['"\`])${escape(prop)}\\1`, 'g');
+  const word = `(?<![\\w$])${typeName.replace(/[$]/g, '\\$&')}(?![\\w$])`;
+  const mentionsType = new RegExp(word);
+  const usesKeyof = new RegExp(`keyof\\s+${word}`);
   const found: Finding[] = [];
   for (const [file, text] of texts) {
-    if (!mentionsType.test(text)) continue;
-    for (const match of text.matchAll(quoted)) {
-      const start = match.index + 1;
-      if (known.some((ref) => ref.file === file && ref.start === start)) continue;
-      const line = text.slice(0, start).split('\n').length;
-      found.push({
-        file,
-        line,
-        message: `'${prop}' as a string: not a tracked reference, check by hand`,
-      });
-    }
+    if (!text.includes(prop) || !mentionsType.test(text)) continue;
+    const keyof = usesKeyof.test(text);
+    const source = parseTs(file, text);
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteral(node) && node.text === prop) {
+        const start = node.getStart(source) + 1;
+        const counts = ts.isLiteralTypeNode(node.parent) || keyof;
+        if (counts && !known.some((ref) => ref.file === file && ref.start === start)) {
+          found.push({
+            file,
+            line: source.getLineAndCharacterOfPosition(start).line + 1,
+            message: `'${prop}' as a string: not a tracked reference, check by hand`,
+          });
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
   }
   return found;
-}
-
-function escape(word: string): string {
-  return word.replace(/[$]/g, '\\$&');
 }
