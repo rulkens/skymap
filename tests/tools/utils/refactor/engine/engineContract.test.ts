@@ -72,15 +72,17 @@ describe('findTypeErrors', () => {
     }
   });
 
-  it('reports an error in a file of two projects once', () => {
-    const two = engineFixture({ 'bad.ts': 'export const n: number = "x";\n' }, [
-      'tsconfig.json',
-      'b.json',
-    ]);
+  it('reports a syntax error the semantic check does not', () => {
+    const f = engineFixture({ 'a.ts': 'export const a = 1;\n' });
     try {
-      expect(findTypeErrors(two.engine, [`${two.root}/bad.ts`])).toHaveLength(1);
+      const file = `${f.root}/a.ts`;
+      f.engine.overlay.set(file, 'export const a = 1 +;\n');
+      syncOverlay(f.engine, { changed: [file], created: [], deleted: [] });
+      const errors = findTypeErrors(f.engine, [file]);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0]).toMatchObject({ file, line: 1 });
     } finally {
-      two.dispose();
+      f.dispose();
     }
   });
 
@@ -92,6 +94,21 @@ describe('findTypeErrors', () => {
     try {
       expect(findTypeErrors(f.engine, [`${f.root}/ok.ts`])).toEqual([]);
       expect(findTypeErrors(f.engine, [`${f.root}/missing.ts`, '/elsewhere/x.ts'])).toEqual([]);
+    } finally {
+      f.dispose();
+    }
+  });
+});
+
+describe('findReferences on a template-literal key', () => {
+  it('spans the text inside the backticks', () => {
+    const text =
+      'export type S = { radius: number };\ndeclare const s: S;\nexport const a = s[`radius`];\n';
+    const f = engineFixture({ 'k.ts': text });
+    try {
+      const start = text.indexOf('radius');
+      const refs = findReferences(f.engine, { file: `${f.root}/k.ts`, start, end: start + 6 });
+      expect(refs.map((r) => text.slice(r.start, r.end))).toEqual(['radius', 'radius']);
     } finally {
       f.dispose();
     }

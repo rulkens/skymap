@@ -31,7 +31,11 @@ export function findReferences(engine: Engine, at: NodeLocation): readonly NodeL
         const file = node.getSourceFile().fileName;
         if (file.includes('/node_modules/')) continue;
         const text = 'text' in node ? String(node.text) : '';
-        const quoted = node.kind === SyntaxKind.StringLiteral ? 1 : 0;
+        const quoted =
+          node.kind === SyntaxKind.StringLiteral ||
+          node.kind === SyntaxKind.NoSubstitutionTemplateLiteral
+            ? 1
+            : 0;
         const end = node.end - quoted;
         seen.set(`${file}:${end}`, { file, start: end - text.length, end });
       }

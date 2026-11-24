@@ -1,5 +1,5 @@
 /** One semantic error the engine's projects report. */
-export type TypeError = {
+export type TypeErrorSite = {
   readonly file: string; // absolute, real case
   readonly line: number; // 1-based
   readonly column: number;
