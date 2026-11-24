@@ -10,7 +10,8 @@ import { expandCompanionRows } from '../../../../src/utils/loading/expandCompani
 import { evaluateAssetDemand } from '../../../../src/services/engine/wiring/evaluateAssetDemand';
 import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
 import { assertAssetDemands } from '../../../../src/services/engine/wiring/assertAssetDemands';
-import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
+import { meshAssetRow } from '../../../../src/services/engine/wiring/meshAssetRow';
+import { MESH_PRESENTATIONS } from '../../../../src/data/bodies/meshPresentations';
 import { bodyAssetRows } from '../../../../src/layers/body/textures/load/bodyAssetRows';
 import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/layers/body/textures/data/bodyTextureKeys';
@@ -97,7 +98,9 @@ const bodyRows = bodyAssetRows({
   ),
   atlasSlot: slot('atlas'),
 } as unknown as BodyRuntime);
-const meshRows = meshAssetRows({ gpu: { meshBodyRenderer: null } } as never);
+const meshRows = MESH_PRESENTATIONS.map((p) =>
+  meshAssetRow({ setMesh: () => {}, clearMesh: () => {} }, p),
+);
 // The real selection rows with no catalog loaded: what claims a deep link's id at boot.
 const SELECTION_KIND_ROWS = [
   galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs: new Map() })),

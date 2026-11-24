@@ -158,9 +158,9 @@ export type EngineGpuHandles = {
   pickDebugOverlay: PickDebugOverlay | null;
   /**
    * The shared lit triangle-mesh renderer for every mesh body: per-mesh
-   * buffers/textures/uniform in a `Map` keyed by mesh id. The mesh slot family's commit
-   * routes a `MeshAsset` to `setMesh` and onRelease to `clearMesh`. Same `foreground:0`
-   * format invariant as the sphere bodies (`renderTargetFormats.ts`).
+   * buffers/textures/uniform in a `Map` keyed by mesh id. Each Layer's mesh slots reach it
+   * through `LayerCoreDeps.meshBodies`: commit to `setMesh`, onRelease to `clearMesh`. Same
+   * `foreground:0` format invariant as the sphere bodies (`renderTargetFormats.ts`).
    */
   meshBodyRenderer: MeshBodyRenderer | null;
   /**

@@ -120,16 +120,16 @@ export type LayerBody = {
 export type ShapeModel = {
   readonly meshKey: string;
   readonly boundingRadiusM: number;
-  readonly tierCeiling?: number;
+  readonly tierCeiling?: Tier;
 };
 ```
 
 `MESH_PRESENTATIONS` keeps its two sources (`src/data/bodies/meshPresentations.ts:22-30`), both now
 registry folds: the mesh-body rows, projected as today, and the rows with a `shapeModel`. The body
-Layer's five shape models (Phobos, Deimos, Vesta, Ceres, Bennu) declare it on their rows, replacing
+Layer's five shape models (Phobos, Deimos, Vesta, Ceres, Bennu) get it joined onto their rows by the body Layer from its own id list, replacing
 core's `SHAPE_MODEL_BODY_IDS` (`meshPresentations.ts:14`). A `MeshBody` row never sets it: its body
 record already carries `meshKey`, and a second copy on the row would be the same fact twice.
-`MeshBody` and `MeshPresentation` gain `tierCeiling?: number`, joined from `MESH_ASSETS` by the
+`MeshBody` and `MeshPresentation` gain `tierCeiling?: Tier`, joined from `MESH_ASSETS` by the
 maker like `boundingRadiusM`, so core never reads the facts table.
 
 ### 4.3 `LayerCoreDeps` (`src/@types/engine/layer/LayerCoreDeps.d.ts`)
@@ -143,14 +143,14 @@ readonly meshBodies: {
 ```
 
 A shared helper `meshAssetRow(meshBodies, presentation)` (today's `meshBodyRow`,
-`src/services/engine/wiring/meshAssetRows.ts:25`) builds one row. Each of the four mesh Layers
+`src/services/engine/wiring/meshAssetRows.ts:25`) builds one row; a presentation carries `resolvePx`. Each of the four mesh Layers
 (body, missions, earthScenes, probeSpheres) keeps `deps.meshBodies` on its Runtime and returns its
 own mesh rows from `assets`. Core's `meshAssetRows` and its line in `createLayers.ts:170` are
 deleted.
 
 Asset order: the queue breaks equal ranks by array order (`createLayers.ts:163-166`). Mesh rows
-keep `priority: 10`; the plan states the resulting order and a test pins body textures ahead of
-craft meshes.
+take rank 11, one below body textures, because the missions Layer is composed before the body
+Layer; a test pins body textures ahead of craft meshes.
 
 ### 4.4 `flyToLonLat` payload (`src/state/camera/flyToLonLatActions.ts:14`)
 

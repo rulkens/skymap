@@ -29,7 +29,8 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
+import { meshAssetRow } from '../../../../src/services/engine/wiring/meshAssetRow';
+import { MESH_PRESENTATIONS } from '../../../../src/data/bodies/meshPresentations';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
@@ -191,11 +192,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
-  // The composed lists `createLayers` would have written: core's mesh rows plus
-  // the Layers', folded once, with every row's slot indexed by its key. The mesh
+  // The composed lists `createLayers` would have written: the mesh Layers' mesh rows plus
+  // the catalog Layers', folded once, with every row's slot indexed by its key. The mesh
   // rows mint real slots; the far resting pose keeps them undemanded.
   state.assetRows = expandCompanionRows([
-    ...meshAssetRows(state),
+    ...MESH_PRESENTATIONS.map((p) => meshAssetRow({ setMesh: () => {}, clearMesh: () => {} }, p)),
     ...galaxyCatalogAssetRows(galaxyRuntime),
     ...cosmicWebDensityAssetRows(densityRuntime),
     ...structureAssetRows(structureRuntime),

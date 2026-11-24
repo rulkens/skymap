@@ -74,14 +74,14 @@ export type EngineState = {
   layerSagaTasks: readonly Task[];
   /**
    * Composed once by `createLayers` (core's constants, then each Layer's). Runtime readers
-   * walk these, not `CONTENT_PASSES` / `CORE_COMPUTES` / `meshAssetRows` (core's halves only).
+   * walk these, not `CONTENT_PASSES` / `CORE_COMPUTES` (core's halves only).
    */
   passes: readonly ContentPass[];
   /** `executeFrame` resolves a `'compute'` step's name here; an absent name drops rather than throws. */
   computes: readonly ContentCompute[];
   /** `runPlanSteps` resolves a `'plan'` step's name here; unlike `computes`, a `plan` line naming nothing throws. */
   planners: readonly FrameContentPlanner<unknown>[];
-  /** Companion-expanded fold over core's and every Layer's asset rows. */
+  /** Companion-expanded fold over every Layer's asset rows. */
   assetRows: readonly AssetWiringRow[];
   /** `deriveFrameContext` folds the band-open ones in beside core's own hostless-mesh-body rows. */
   slabRows: readonly SlabRow[];
