@@ -428,23 +428,23 @@ Driver rules:
 
 Tests:
 
-- [ ] Contract test `findTypeErrors is empty on a clean fixture and reports an error introduced through the overlay`,
+- [x] Contract test `findTypeErrors is empty on a clean fixture and reports an error introduced through the overlay`,
       asserting file, line and that the message carries a `TS` code.
-- [ ] Contract test `findTypeErrors reports an error in a file of two projects once`.
-- [ ] `renderTypeErrors` — `prints the count and root-relative file:line:col rows`.
-- [ ] The twin case, at the fold level (`tests/tools/utils/refactor/typeCheckAfterRename.test.ts`):
+- [x] Contract test `findTypeErrors reports an error in a file of two projects once`.
+- [x] `renderTypeErrors` — `prints the count and root-relative file:line:col rows`.
+- [x] The twin case, at the fold level (`tests/tools/utils/refactor/typeCheckAfterRename.test.ts`):
       a fixture with `type A = { yaw: number }`, `type B = { yaw: number }` and
       `const b: B = a` for an `a: A`. `renaming A.yaw alone leaves a type error at the assignment`;
       `renaming A.yaw and B.yaw in one batch leaves none`.
-- [ ] Smoke: `npm run refactor -- rename-prop src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw heading --dry`
+- [x] Smoke: `npm run refactor -- rename-prop src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw heading --dry`
       lists type errors, exits 1, tree untouched; report the count and wall time. Then the same
       for a property that renames cleanly (`CameraTweenDescriptor.frame` → `framing`, `--dry`):
       no type errors; report the wall time. Time `rename` (unchecked) on any symbol to confirm it
       did not get slower.
-- [ ] Skill: document the check, `--no-check`, and replace the twin-property blind-spot bullet
+- [x] Skill: document the check, `--no-check`, and replace the twin-property blind-spot bullet
       with what the check now does (it names the twin's sites; the fix is still yours).
       Spec: rewrite D7 to the ruling above and drop "A built-in typecheck" from §11.
-- [ ] Commit.
+- [x] Commit.
 
 ## Definition of Done
 

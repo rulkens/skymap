@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { findReferences } from '../../../../../tools/utils/refactor/engine/findReferences';
+import { findTypeErrors } from '../../../../../tools/utils/refactor/engine/findTypeErrors';
 import { syncOverlay } from '../../../../../tools/utils/refactor/engine/syncOverlay';
 import { engineFixture } from '../../../../helpers/refactor/engineFixture';
 
@@ -50,6 +51,36 @@ describe('syncOverlay', () => {
     engine.overlay.set(file, `${USE}export const b = area(3);\n`);
     syncOverlay(engine, { changed: [file], created: [], deleted: [] });
     expect(findReferences(engine, at).length).toBe(before + 1);
+  });
+});
+
+describe('findTypeErrors', () => {
+  it('is empty on a clean fixture and reports an error introduced through the overlay', () => {
+    const clean = engineFixture({ 'shape.ts': SHAPE, 'use.ts': USE });
+    try {
+      expect(findTypeErrors(clean.engine)).toEqual([]);
+      const file = `${clean.root}/use.ts`;
+      clean.engine.overlay.set(file, `${USE}export const s: string = area(1);\n`);
+      syncOverlay(clean.engine, { changed: [file], created: [], deleted: [] });
+      const errors = findTypeErrors(clean.engine);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatchObject({ file, line: 4, column: 14 });
+      expect(errors[0]?.message).toMatch(/^TS\d+: /);
+    } finally {
+      clean.dispose();
+    }
+  });
+
+  it('reports an error in a file of two projects once', () => {
+    const two = engineFixture({ 'bad.ts': 'export const n: number = "x";\n' }, [
+      'tsconfig.json',
+      'b.json',
+    ]);
+    try {
+      expect(findTypeErrors(two.engine)).toHaveLength(1);
+    } finally {
+      two.dispose();
+    }
   });
 });
 

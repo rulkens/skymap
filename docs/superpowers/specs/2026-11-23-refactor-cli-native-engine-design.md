@@ -72,8 +72,12 @@ which needs an editing layer TypeScript 7 does not have.
 - **D6. A batch plans against memory.** Each manifest entry is planned against the current texts,
   its edits are folded in, and the changed files are handed to the engine as an overlay (3 ms to
   resync in the probe). Disk is written once, at the end, or not at all on a refusal.
-- **D7. The tool does not typecheck its own output.** `npm run typecheck:fast` after a run is the
-  check, as it is after `move-files`. A built-in check would double every run's time.
+- **D7. The contract-changing rows typecheck their own output** (owner ruling, 2026-11-24).
+  Renaming `CameraPose.yaw` left 38 errors because `OrbitCamera` declares its own `yaw` and the
+  two are used interchangeably, and the tool is the one that knows it just changed a contract.
+  `rename-prop`, `remove-prop` and `params-to-object` run the engine's semantic check on the
+  folded result of the whole batch (also under `--dry`) and write nothing when it finds errors;
+  `--no-check` skips it. The other rows keep the fast path.
 
 ## 4. Contracts
 
@@ -364,5 +368,4 @@ PR B:
   times and its shape is known.
 - **`extract` and `inline` on TS 7**, and their open bugs (the two `extract` backlog items).
 - **Class methods and interface members** in `params-to-object`.
-- **A built-in typecheck** after a run (D7).
 - **`move-files` on TS 7.** It is already 1.5 s on the TypeScript 6 API.

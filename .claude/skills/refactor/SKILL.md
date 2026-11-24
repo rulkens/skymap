@@ -95,6 +95,13 @@ lists what it left broken. Exit 1 with a refusal means nothing was written.
   that is a property access, has type arguments, is optional (`?.`), is a `new`, spreads, has
   a comment between arguments, or contains another call of the same function.
 
+- **The type check** (`rename-prop`, `remove-prop`, `params-to-object`): after the last
+  entry is folded (also under `--dry`) the tool type checks the engine's projects once, a
+  batch as a whole, so a manifest that renames both twins passes. Errors print as
+  `file:line:col  TSxxxx: message` on stderr, nothing is written, exit 1. It reports every
+  error in the projects, so one that was there before the run shows too (no baseline is
+  computed). It adds several seconds; `--no-check` skips it.
+
 - **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
   `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
 
@@ -146,9 +153,8 @@ list, below; it does handle `import()`, `vi.mock()` and `?worker` specifiers.
 - **A twin property**: `rename-prop` and `remove-prop` follow one declared property. A
   second type that declares the same property name and is used interchangeably (structural
   typing, e.g. `OrbitCamera.yaw` beside `CameraPose.yaw`), or an intersection that
-  re-declares it (`T & { motion: M }`), is a separate property: after the run,
-  `npm run typecheck:fast` lists those sites; rename the twin too, in the same `--manifest`
-  when you know it up front.
+  re-declares it, is a separate property. The type check above names its sites; the fix is
+  yours: add the twin to the same `--manifest` and re-run.
 - **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
   hold paths as strings and are not updated.
 - **Ad-hoc ts-morph importer rewrites**: never repoint importers with a one-off

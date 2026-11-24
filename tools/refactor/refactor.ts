@@ -18,6 +18,7 @@ import { listProjectFiles } from '../../packages/move-files/src/listProjectFiles
 import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
 import { collectPropRefs } from '../utils/refactor/collectPropRefs';
 import { collectRefs } from '../utils/refactor/collectRefs';
+import { findTypeErrors } from '../utils/refactor/engine/findTypeErrors';
 import { closeEngine } from '../utils/refactor/engine/closeEngine';
 import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
 import { openEngine } from '../utils/refactor/engine/openEngine';
@@ -33,6 +34,7 @@ import { planRenameProp } from '../utils/refactor/planRenameProp';
 import { overlaidTexts } from '../utils/refactor/overlaidTexts';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
+import { renderTypeErrors } from '../utils/refactor/renderTypeErrors';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
 import { writePlan } from '../utils/refactor/writePlan';
 import type { DiskView } from '../@types/refactor/DiskView';
@@ -50,7 +52,12 @@ import type { Target } from '../@types/refactor/Target';
 import type { RunBase } from './@types/RunBase';
 import type { Subcommand } from './@types/Subcommand';
 
-const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
+const FLAG_SCHEMA = {
+  '--dry': 'bool',
+  '--json': 'bool',
+  '--no-file-rename': 'bool',
+  '--no-check': 'bool',
+} as const;
 
 // A `legacy` row mutates the ts-morph project after the driver printed its preview; a
 // `plan` row only describes what to change. `arity` is how many positionals the row needs.
@@ -60,6 +67,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'plan',
     name: 'rename',
     arity: 2,
+    checks: false,
     usage: 'refactor rename  <file>#<symbol> <newName>   [--no-file-rename]',
     plan: ({ engine, address, found, read, exists, positionals, flags }) =>
       planRename({
@@ -77,6 +85,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'legacy',
     name: 'extract',
     arity: 2,
+    checks: false,
     usage: 'refactor extract <file>#<symbol> <dest.ts>',
     run: async ({ project, address, positionals }) => {
       const { planExtract } = await import('../utils/refactor/planExtract');
@@ -88,6 +97,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'legacy',
     name: 'inline',
     arity: 1,
+    checks: false,
     usage: 'refactor inline  <file>#<symbol>',
     run: async ({ project, address, report }) => {
       const { planInline } = await import('../utils/refactor/planInline');
@@ -99,6 +109,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'plan',
     name: 'delete',
     arity: 1,
+    checks: false,
     usage: 'refactor delete  <file>#<symbol>',
     plan: ({ engine, address, found, read, exists }) =>
       planDelete({ found, root: engine.root, read, exists }),
@@ -108,6 +119,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'report',
     name: 'refs',
     arity: 1,
+    checks: false,
     usage: 'refactor refs    <file>#<symbol>',
     report: ({ found, flags }) => renderRefReport(found.report, flags['--json']),
   },
@@ -116,6 +128,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'report',
     name: 'prop-refs',
     arity: 1,
+    checks: false,
     usage: 'refactor prop-refs <file>#<Type>.<prop>',
     report: ({ found, address, flags }) =>
       renderRefReport(found.report, flags['--json'], {
@@ -128,6 +141,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'plan',
     name: 'rename-prop',
     arity: 2,
+    checks: true,
     usage: 'refactor rename-prop <file>#<Type>.<prop> <newName>',
     plan: ({ address, found, read, positionals }) =>
       planRenameProp({ address, found, newName: positionals[1] ?? '', read }),
@@ -137,6 +151,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'plan',
     name: 'remove-prop',
     arity: 1,
+    checks: true,
     usage: 'refactor remove-prop <file>#<Type>.<prop>',
     plan: ({ address, found, read }) => planRemoveProp({ address, found, read }),
   },
@@ -145,6 +160,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     kind: 'plan',
     name: 'params-to-object',
     arity: 1,
+    checks: true,
     usage: 'refactor params-to-object <file>#<function>',
     plan: ({ address, found, read }) => planParamsToObject({ address, found, read }),
   },
@@ -323,6 +339,8 @@ async function main(): Promise<void> {
     // Folding and the engine resync cost seconds on a file move, so each happens only
     // when something reads its result: the resync before a next entry, the fold before
     // that or before the write.
+    // A checking row needs the last fold and a sync too, even under --dry.
+    const check = row.checks && !flags['--no-check'];
     let last = false;
     let unsynced: OverlayChanges | undefined;
     const manifest = readManifest(argv);
@@ -332,7 +350,7 @@ async function main(): Promise<void> {
       batch: manifest !== null,
       texts: () => overlaidTexts(disk.snapshot().texts, engine),
       apply: (plan: Plan) => {
-        if (!(last && flags['--dry'])) unsynced = foldPlan(plan, overlay, disk);
+        if (!(last && flags['--dry'] && !check)) unsynced = foldPlan(plan, overlay, disk);
       },
     };
     const ops =
@@ -344,6 +362,18 @@ async function main(): Promise<void> {
       if (unsynced) syncOverlay(engine, unsynced);
       unsynced = undefined;
       if (!(await runOp(row, { engine, read, exists, positionals, flags }, context))) return;
+    }
+    if (check) {
+      if (unsynced) syncOverlay(engine, unsynced);
+      const errors = findTypeErrors(engine);
+      if (errors.length > 0) {
+        process.stderr.write(`${renderTypeErrors(errors, root)}\n`);
+        process.stderr.write(
+          'Nothing written. Fix the sites above, add the twin to a --manifest, or pass --no-check.\n',
+        );
+        process.exitCode = 1;
+        return;
+      }
     }
     if (flags['--dry']) return;
     if (loaded) await loaded.save();

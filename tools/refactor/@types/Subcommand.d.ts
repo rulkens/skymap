@@ -7,6 +7,7 @@ type Common = {
   readonly name: string;
   readonly usage: string;
   readonly arity: number; // positionals the row needs
+  readonly checks: boolean; // type check the folded result before writing
 };
 
 /** `accepts` is the address kind the row takes; the driver refuses the other before any query. */
