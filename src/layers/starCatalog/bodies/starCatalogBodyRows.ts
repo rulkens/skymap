@@ -10,15 +10,15 @@
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
-import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
+import type { FamousStarRow } from '../@types/FamousStarRow';
 import type { StarBody } from '../../../@types/scene/StarBody';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { FAMOUS_STARS_GENERATED } from '../../../data/bodies/famousStars.generated';
-import { SUN_GENERATED } from '../../../data/bodies/sun.generated';
-import { SCENE_STARS } from '../../../data/bodies/sceneStars';
-import { SCENE_SUN } from '../../../data/bodies/sceneSun';
-import { SCENE_S_STARS } from '../../../data/bodies/sceneSStars';
-import { S_STAR_ORBITAL_ELEMENTS } from '../../../data/bodies/sStarOrbitalElements';
+import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
+import { SUN_GENERATED } from './sun.generated';
+import { SCENE_STARS } from './sceneStars';
+import { SCENE_SUN } from './sceneSun';
+import { SCENE_S_STARS } from './sceneSStars';
+import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
 import { raDecDistToCartesian } from '../../../utils/math/raDecDistToCartesian';
 
 // Each table is derived row for row from the same seed array, so index i pairs them.

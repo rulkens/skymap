@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { STAR_CATALOG_BODY_ROWS } from '../../../../src/layers/starCatalog/bodies/starCatalogBodyRows';
-import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { isPlanetBody } from '../../../../src/utils/scene/isPlanetBody';
 
 describe('STAR_CATALOG_BODY_ROWS', () => {

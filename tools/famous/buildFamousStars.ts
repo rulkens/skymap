@@ -19,7 +19,7 @@ import {
   selectHipEntries,
   type FamousStarEntry,
 } from '../parsers/famousStarsSeed';
-import type { FamousStarRow } from '../../src/@types/data/FamousStarRow';
+import type { FamousStarRow } from '../../src/layers/starCatalog/@types/FamousStarRow';
 import type { FamousStarMetaEntry } from '../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
@@ -33,12 +33,12 @@ import type { StarSeedArtefact } from './@types/StarSeedArtefact';
 export const STAR_SEEDS: readonly StarSeedArtefact[] = [
   {
     seedKey: 'famous-stars.seed',
-    generatedPath: 'src/data/bodies/famousStars.generated.ts',
+    generatedPath: 'src/layers/starCatalog/bodies/famousStars.generated.ts',
     exportName: 'FAMOUS_STARS_GENERATED',
   },
   {
     seedKey: 'sun.seed',
-    generatedPath: 'src/data/bodies/sun.generated.ts',
+    generatedPath: 'src/layers/starCatalog/bodies/sun.generated.ts',
     exportName: 'SUN_GENERATED',
   },
 ];
@@ -127,7 +127,7 @@ export function serializeGeneratedTable(
     .join('\n');
   return (
     generatedBanner(seed) +
-    "import type { FamousStarRow } from '../../@types/data/FamousStarRow';\n\n" +
+    "import type { FamousStarRow } from '../@types/FamousStarRow';\n\n" +
     `export const ${seed.exportName}: readonly FamousStarRow[] = [\n${rowsText}\n];\n`
   );
 }

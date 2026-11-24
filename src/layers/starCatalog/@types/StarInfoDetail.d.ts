@@ -6,7 +6,7 @@
  * real for a seeded star whose sidecar has not landed or omits it.
  */
 
-import type { StarOrbitInfo } from '../../../@types/engine/StarOrbitInfo';
+import type { StarOrbitInfo } from './StarOrbitInfo';
 
 export type StarInfoDetail =
   | {

@@ -2,7 +2,7 @@ import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
 import { MILKY_WAY_NAMES } from '../../../../src/layers/milkyWay/card/data/milkyWayNames';
 import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
-import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
+import { BODY_SEARCH_NAMES } from '../../../../src/layers/starCatalog/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';

@@ -100,7 +100,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
     id: 'scene-s-stars',
     about: 'app',
     text: 'Forty stars move around Sagittarius A* on orbits published from years of tracking them.',
-    source: `${REPO_BLOB}/src/data/bodies/sStarElements.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/bodies/sStarElements.ts`,
     sourceLabel: `the orbits of those stars, ${IN_REPO}`,
     checked: CHECKED,
   },

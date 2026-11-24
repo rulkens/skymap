@@ -238,11 +238,11 @@ Then one `move-files` manifest:
   primary's row.
 
 - [x] Hand fixes 1–2, with `npm test -- CompactBodyCard sStarOrbitInfo starDetail` green. Commit.
-- [ ] `--dry`, then the move with fix 3; resolve every finding.
-- [ ] `grep -rn "data/bodies/\(famousStars\|sun\.generated\|sStar\|sceneStars\|sceneSun\|sceneSStars\|seededStarCatalogs\|starResolvePx\|bodySearchNames\|famousStarsIndex\)" src tools tests packages .claude/skills docs/DATA.md docs/science.md`
+- [x] `--dry`, then the move with fix 3; resolve every finding.
+- [x] `grep -rn "data/bodies/\(famousStars\|sun\.generated\|sStar\|sceneStars\|sceneSun\|sceneSStars\|seededStarCatalogs\|starResolvePx\|bodySearchNames\|famousStarsIndex\)" src tools tests packages .claude/skills docs/DATA.md docs/science.md`
       is empty.
-- [ ] `npm test` (whole suite), `npm run typecheck`, `npm run format` pass.
-- [ ] Commit the move; commit docs and backlog separately.
+- [x] `npm test` (whole suite), `npm run typecheck`, `npm run format` pass.
+- [x] Commit the move; commit docs and backlog separately.
 
 ### Task 5: Verify the app is unchanged
 

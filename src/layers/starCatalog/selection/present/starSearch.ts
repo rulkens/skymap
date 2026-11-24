@@ -6,7 +6,7 @@
  */
 
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
-import { BODY_SEARCH_NAMES } from '../../../../data/bodies/bodySearchNames';
+import { BODY_SEARCH_NAMES } from '../../bodies/bodySearchNames';
 import { encodeStarFocusId } from '../utils/encodeStarFocusId';
 import { seededStarChip } from '../utils/seededStarChip';
 import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';

@@ -4,7 +4,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
 import { EARTH } from '../../../../src/layers/body/bodies/planets/earth';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../../src/layers/starCatalog/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';

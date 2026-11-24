@@ -28,7 +28,7 @@ import { starCatalogSelectionKinds } from './selection/kinds';
 import { starSearch } from './selection/present/starSearch';
 import { starLabelSource } from './captions/present/starLabelSource';
 import { STAR_AGGREGATES_TARGET } from './survey/render/starAggregatesTarget';
-import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
+import { S_STAR_ORBITAL_ELEMENTS } from './bodies/sStarOrbitalElements';
 import StarsSectionContainer from './controls/ui/StarsSectionContainer';
 import StarCatalogTuningSectionContainer from './controls/ui/StarCatalogTuningSectionContainer';
 import StarDetailCardContainer from './card/ui/StarDetailCardContainer';
