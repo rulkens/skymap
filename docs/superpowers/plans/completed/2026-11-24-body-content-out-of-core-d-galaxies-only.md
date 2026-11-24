@@ -7,7 +7,7 @@
 edge has a fallback, a test fails the day core names a body at load again, and the docs and an
 ADR record the rule.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/completed/2026-11-24-body-content-out-of-core-design.md)
 §7, §10. Last of the PRs; A (#1155), B (#1157), C (#1162) and the clip prep (#1164) have landed.
 
 **Why it is safe to land alone:** the app's registries are unchanged, so every app value is the
@@ -126,9 +126,9 @@ Runs after the controller's measurements; the numbers come in the dispatch.
 
 ## Definition of Done
 
-- [ ] Payoff build with an empty body registry and no stubs: loads, settles, and its
+- [x] Payoff build with an empty body registry and no stubs: loads, settles, and its
       `#pose=a,0,0,0,0.5,0.3,300,0` shot matches the `PAYOFF_OFF=1` baseline (owner's check).
-- [ ] Its gzip size is reported against the spike's 279 kB and today's baseline.
-- [ ] The app is unchanged in before/after shots of the Earth home, a planet and a mission focus.
-- [ ] `npm run perf` and `npm run perf:cpu` before and after: no regression.
-- [ ] `npm run typecheck`, `npm test`, `npm run build` green (without the local frame patch).
+- [x] Its gzip size is reported against the spike's 279 kB and today's baseline.
+- [x] The app is unchanged in before/after shots of the Earth home, a planet and a mission focus.
+- [x] `npm run perf` and `npm run perf:cpu` before and after: no regression.
+- [x] `npm run typecheck`, `npm test`, `npm run build` green (without the local frame patch).

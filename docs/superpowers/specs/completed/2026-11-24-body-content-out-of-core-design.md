@@ -280,11 +280,11 @@ Outcomes measured 2026-11-24 on PR D.
   survey faded out everywhere at that pose.
 - **Met.** With no Sun state the `solarSystem` sky capture never bakes: its anchor distance is
   infinite, so it is skipped and never allocated.
-- **Pending, the owner's check.** The full app is unchanged in before/after shots of a planet, the
+- **Met (owner's check, 2026-11-24).** The full app is unchanged in before/after shots of a planet, the
   Earth home and a mission focus, per prep PR.
 - **Met.** `npm run perf`, merged ms before → after PR D: earth-surface 14.8 → 14.3, full-survey
   17.9 → 17.8. Solar-system read 10.4 → 13.2, but every pass scaled by the same factor, including
   bloom and the final blit, which this diff cannot touch, and the "after" median equals the
   "before" p90: a machine clock state seen on earlier PRs too, not a code effect. No per-frame code
   changed. `npm run perf:cpu` rows unchanged within noise.
-- **Pending, CI is the gate.** The suite is green.
+- **Met.** The suite is green.

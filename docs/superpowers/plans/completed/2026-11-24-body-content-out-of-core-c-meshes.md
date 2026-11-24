@@ -6,7 +6,7 @@
 **Goal:** the four Layers that draw meshes return their own mesh asset rows; core mints none and
 no longer lists which bodies have a shape model. No behaviour change in the app.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/completed/2026-11-24-body-content-out-of-core-design.md)
 §4.2, §4.3, §5 prep 6. Third of four PRs (§6); A (#1155) and B (#1157) have landed.
 
 **Why it is safe to land alone:** the app composes all four mesh Layers, so the same rows exist

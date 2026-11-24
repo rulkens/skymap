@@ -6,7 +6,7 @@
 - **Supersedes:** —
 - **Superseded by:** —
 - **Related:** [ADR 0013](0013-registries-built-from-layer-contributions.md) ·
-  [body content out of core spec](../superpowers/specs/2026-11-24-body-content-out-of-core-design.md) ·
+  [body content out of core spec](../superpowers/specs/completed/2026-11-24-body-content-out-of-core-design.md) ·
   the registry ledger, `src/compositions/README.md` ·
   guard test `tests/compositions/emptyBodyRegistry.test.ts`
 

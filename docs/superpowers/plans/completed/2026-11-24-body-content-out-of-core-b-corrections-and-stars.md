@@ -7,7 +7,7 @@
 table or any star table by value. They are values on the body Layer's and the star Layer's body
 rows. No behaviour change in the app.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/completed/2026-11-24-body-content-out-of-core-design.md)
 §4.1, §5 prep 4–5. Second of four PRs (§6). Closes leftovers J1 and J3.
 
 **Why it is safe to land alone:** the app composition holds every row it held before, so each fold
