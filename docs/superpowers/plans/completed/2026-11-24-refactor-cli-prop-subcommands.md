@@ -1,8 +1,8 @@
 # Refactor CLI on TypeScript 7, PR B: property and parameter subcommands
 
-> **Spec.** [`2026-11-23-refactor-cli-native-engine-design.md`](../specs/2026-11-23-refactor-cli-native-engine-design.md),
+> **Spec.** [`2026-11-23-refactor-cli-native-engine-design.md`](../../specs/completed/2026-11-23-refactor-cli-native-engine-design.md),
 > §4.5 and §5.2 to §5.5. PR A (#1154) is the base; this branch is stacked on it.
-> **Execution.** Subagent-driven, lean protocol ([`sdd-execution.md`](../conventions/sdd-execution.md)).
+> **Execution.** Subagent-driven, lean protocol ([`sdd-execution.md`](../../conventions/sdd-execution.md)).
 > One PR; no perf gate.
 
 ## Strategy

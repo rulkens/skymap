@@ -6,7 +6,7 @@
 > **Written against** main at 7a2cd51fb (#1150: `typescript-native` = `typescript@7.0.2` installed
 > beside TypeScript 6).
 > **Inputs.** Spike timings and API probes from 2026-11-22 (numbers in §2 and §8), the refactor CLI
-> survey, and [`docs/backlog/2026-07-21-refactor-cli-followups.md`](../../backlog/2026-07-21-refactor-cli-followups.md).
+> survey, and [`docs/backlog/2026-07-21-refactor-cli-followups.md`](../../../backlog/2026-07-21-refactor-cli-followups.md).
 
 ## 1. Why
 
