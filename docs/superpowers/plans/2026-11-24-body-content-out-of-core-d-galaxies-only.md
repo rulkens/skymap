@@ -88,19 +88,19 @@ export const FOREGROUND_FALLBACK_DISTANCE_MPC = 0.23;
 
 **Files:** `tests/compositions/emptyBodyRegistry.test.ts` (create).
 
-- [ ] The test mocks `src/compositions/appBodies` to no rows and gives the other registries that
+- [x] The test mocks `src/compositions/appBodies` to no rows and gives the other registries that
       state body content at load a no-content stand-in (`appHome` → `{ focus: null,
       seedSelection: false }`; `appVisibility`, `appTours`, `appClips`, and any other `app*.ts`
       that throws once bodies are empty: find them by running the test, and mock only those).
       Then it imports core's entry modules (`src/services/engine` entry, `src/store/rootSaga`,
       `src/store/rootReducer`) and asserts: nothing throws, and `deriveBodyStates` at J2000
       returns only core places (`galactic-centre`).
-- [ ] Prove it can fail: temporarily make one always-loaded core module read `SCENE_EARTH` at
+- [x] Prove it can fail: temporarily make one always-loaded core module read `SCENE_EARTH` at
       module scope, see the test go red, revert. Say in the report which module you used.
-- [ ] If a core module (outside `src/compositions/` and `src/layers/`) still throws with the
+- [x] If a core module (outside `src/compositions/` and `src/layers/`) still throws with the
       mocks above, **stop and report it** with the import chain: that is a finding for the
       controller, not something to mock away or patch.
-- [ ] The header says what bug the test catches, in two or three lines. Commit.
+- [x] The header says what bug the test catches, in two or three lines. Commit.
 
 ### Task 4: Docs, ADR 0016, spec corrections
 
