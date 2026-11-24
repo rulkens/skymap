@@ -118,7 +118,8 @@ renderer's (§3), which the prep could not make without the list existing.
 - `#focus=body-voyager1&t=1985-01-01T00:00:00Z&layers=missionTrails`: cruise, one continuous Sun trail.
 - `#focus=body-earth&t=1977-09-07T00:00:00Z&layers=missionTrails`: the departure from Earth.
 - `#exhibit=voyager-missions`: play through the Jupiter flyby and its exit.
-- `npm run perf` before and after: no change at the standard poses.
+- No perf gate (owner ruling 2026-11-24): the standard poses draw no mission trails. The trail
+  build has its own 50 ms budget, measured in the plan's Task 4.
 
 ## 8. Out of scope
 
