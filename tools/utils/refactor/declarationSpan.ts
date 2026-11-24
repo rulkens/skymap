@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import type { NodeLocation } from '../../@types/refactor/NodeLocation';
 import { attachedStart } from './attachedStart';
+import { cutListItem } from './cutListItem';
 import { findNameNode } from './findNameNode';
 import { parseTs } from './parseTs';
 
@@ -41,21 +42,6 @@ export function declarationSpan(text: string, at: NodeLocation): { start: number
   // Cutting between two blank lines would leave two in a row.
   if (/(^|\n\n)$/.test(text.slice(0, start)) && text[end] === '\n') end++;
   return { start, end };
-}
-
-// One item of a comma list, with its own leading comments and the comma that follows it
-// (or, for the last item, the comma before it).
-function cutListItem(
-  text: string,
-  source: ts.SourceFile,
-  list: readonly ts.Node[],
-  node: ts.Node,
-): { start: number; end: number } {
-  const i = list.indexOf(node);
-  const next = list[i + 1];
-  return next
-    ? { start: attachedStart(text, node, source), end: attachedStart(text, next, source) }
-    : { start: list[i - 1]!.getEnd(), end: node.getEnd() };
 }
 
 // The last statement of a function's overload run, or the node itself.

@@ -89,4 +89,22 @@ describe('memberSpan', () => {
   it('cuts a string-keyed member', () => {
     expect(cut("type T = { a: number; 'radius': number };")).toBe('type T = { a: number; };');
   });
+
+  it('keeps the comment that belongs to the next member', () => {
+    expect(cut('const o = { a: 2, /* r */ radius: 1, /* about z */ z: 3 };')).toBe(
+      'const o = { a: 2, /* r */ /* about z */ z: 3 };',
+    );
+  });
+
+  it('cuts a method-style or accessor member of a type', () => {
+    expect(cut('type T = { a: number; radius?(): number; b: number };')).toBe(
+      'type T = { a: number; b: number };',
+    );
+    expect(cut('type T = { a: number; get radius(): number; b: number };')).toBe(
+      'type T = { a: number; b: number };',
+    );
+    expect(cut('interface T {\n  radius?(): number;\n  b: number;\n}')).toBe(
+      'interface T {\n  b: number;\n}',
+    );
+  });
 });

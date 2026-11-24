@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import type { NodeLocation } from '../../@types/refactor/NodeLocation';
 import { attachedStart } from './attachedStart';
+import { cutListItem } from './cutListItem';
 import { findNameNode } from './findNameNode';
 import { parseTs } from './parseTs';
 
@@ -27,8 +28,11 @@ export function memberSpan(text: string, at: NodeLocation): { start: number; end
   if (ts.isObjectLiteralExpression(member.parent)) {
     end += /^[ \t]*,/.exec(text.slice(end))?.[0].length ?? 0;
   }
+  // A comment is the member's own only when the line ends after it; `radius: 1, /* z */ z: 3`
+  // leaves the comment to the member that follows.
   const trailing = ts.getTrailingCommentRanges(text, end) ?? [];
-  if (trailing.length > 0) end = trailing[trailing.length - 1]!.end;
+  const lastComment = trailing[trailing.length - 1];
+  if (lastComment && /^[ \t]*(\r?\n|$)/.test(text.slice(lastComment.end))) end = lastComment.end;
 
   const lineStart = start === 0 ? 0 : text.lastIndexOf('\n', start - 1) + 1;
   const rest = /^[ \t]*(\r?\n|$)/.exec(text.slice(end));
@@ -44,15 +48,12 @@ export function memberSpan(text: string, at: NodeLocation): { start: number; end
     if (text[own] === ' ') return { start, end: own + 1 };
     return { start: text[start - 1] === ' ' ? start - 1 : start, end: own };
   }
-  const i = list.indexOf(member);
-  const next = list[i + 1];
-  if (next) return { start, end: next.getStart(source) };
-  return { start: list[i - 1]!.getEnd(), end: own };
+  return cutListItem(text, source, list, member);
 }
 
 function isMember(node: ts.Node): boolean {
   return (
-    ts.isPropertySignature(node) ||
+    ts.isTypeElement(node) ||
     ts.isPropertyAssignment(node) ||
     ts.isShorthandPropertyAssignment(node) ||
     ts.isJsxAttribute(node) ||
@@ -63,7 +64,7 @@ function isMember(node: ts.Node): boolean {
 function siblings(member: ts.Node): ts.NodeArray<ts.Node> | undefined {
   const parent = member.parent;
   if (
-    ts.isPropertySignature(member) &&
+    ts.isTypeElement(member) &&
     (ts.isTypeLiteralNode(parent) || ts.isInterfaceDeclaration(parent))
   ) {
     return parent.members;

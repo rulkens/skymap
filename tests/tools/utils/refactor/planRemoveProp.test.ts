@@ -1,12 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { collectPropRefs } from '../../../../tools/utils/refactor/collectPropRefs';
-import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
-import { foldPlan } from '../../../../tools/utils/refactor/foldPlan';
 import { locateProp } from '../../../../tools/utils/refactor/locateProp';
 import { planRemoveProp } from '../../../../tools/utils/refactor/planRemoveProp';
-import type { DiskView } from '../../../../tools/@types/refactor/DiskView';
 import type { PlanResult } from '../../../../tools/@types/refactor/PlanResult';
-import { engineFixture } from '../../../helpers/refactor/engineFixture';
+import { planFixture } from '../../../helpers/refactor/planFixture';
 
 const FILES: Record<string, string> = {
   'src/shape.ts': `export type Shape = {
@@ -35,41 +32,16 @@ export function f(s: Shape) {
 `,
 };
 
-const fixture = engineFixture(FILES);
+const fixture = planFixture(FILES);
 afterAll(fixture.dispose);
 
-const { engine, root } = fixture;
-const abs = (name: string) => `${root}/${name}`;
-const disk: DiskView = {
-  read: (file) => FILES[file.slice(root.length + 1)] ?? '',
-  snapshot: () => ({
-    texts: new Map(Object.entries(FILES).map(([name, text]) => [abs(name), text])),
-    fileExists: () => true,
-  }),
-};
-const read = (file: string) => engine.overlay.get(file) ?? disk.read(file);
+const { engine, abs, read, texts, applied } = fixture;
 const address = (prop: string, typeName = 'Shape') => ({ file: 'src/shape.ts', typeName, prop });
 
 function remove(prop: string, typeName = 'Shape'): PlanResult {
-  const found = collectPropRefs({
-    address: address(prop, typeName),
-    engine,
-    read,
-    texts: () => disk.snapshot().texts,
-  });
+  const found = collectPropRefs({ address: address(prop, typeName), engine, read, texts });
   if (!found.ok) throw new Error(found.refusal);
   return planRemoveProp({ address: address(prop, typeName), found: found.found, read });
-}
-
-function applied(result: PlanResult): Record<string, string> {
-  if (!result.ok) throw new Error(result.refusals.join('; '));
-  const out: Record<string, string> = {};
-  for (const edit of [...result.plan.edits].sort((x, y) => y.start - x.start)) {
-    const name = edit.file.slice(root.length + 1);
-    const text = out[name] ?? FILES[name]!;
-    out[name] = text.slice(0, edit.start) + edit.text + text.slice(edit.end);
-  }
-  return out;
 }
 
 describe('planRemoveProp', () => {
@@ -134,14 +106,92 @@ describe('planRemoveProp', () => {
   });
 
   it('the folded result has no reference left', () => {
-    const overlay = { texts: engine.overlay, moves: [], deletes: engine.removed };
     const result = remove('radius');
     if (!result.ok) throw new Error(result.refusals.join('; '));
-    syncOverlay(engine, foldPlan(result.plan, overlay, disk));
+    fixture.fold(result.plan);
     const located = locateProp(read(abs('src/shape.ts')), address('radius'));
     expect(located.ok).toBe(false);
     for (const name of ['src/make.ts', 'src/use.ts']) {
       expect(read(abs(name))).not.toContain('radius');
     }
+  });
+});
+
+describe('planRemoveProp: the forms that review found', () => {
+  const FILES2: Record<string, string> = {
+    'src/shape.ts': `export type Shape = { a: number; radius?: number; sw?: number; tag?: number; doc?: number };
+export type Fn = { a: number; radius?(): number };
+`,
+    'src/use.ts': `import type { Fn, Shape } from './shape';
+declare const s: Shape;
+declare function get(): Shape;
+declare const list: Shape[];
+let i = 0;
+get().radius = 3;
+list[i++].radius = 4;
+switch (s.a) {
+  case 1:
+    s.sw = 9;
+    break;
+  default:
+    s.sw = 8;
+}
+export const n = i;
+export const f: Fn = { a: 1 };
+`,
+    'src/clean.ts': `import type { Shape } from './shape';
+/** See {@link Shape.doc}. */
+export function mk(a: number) {
+  const tag = a * 2;
+  const s: Shape = { a, tag, doc: 1 };
+  return s;
+}
+`,
+  };
+  const fx = planFixture(FILES2);
+  afterAll(fx.dispose);
+  const run = (typeName: string, prop: string) => {
+    const addr = { file: 'src/shape.ts', typeName, prop };
+    const found = collectPropRefs({
+      address: addr,
+      engine: fx.engine,
+      read: fx.read,
+      texts: fx.texts,
+    });
+    if (!found.ok) throw new Error(found.refusal);
+    return planRemoveProp({ address: addr, found: found.found, read: fx.read });
+  };
+
+  it('refuses a write whose target does work', () => {
+    const result = run('Shape', 'radius');
+    const lines = !result.ok ? result.refusals.join('\n') : '';
+    expect(lines).toContain('src/use.ts:6:');
+    expect(lines).toContain('src/use.ts:7:');
+    expect(lines).toContain('side effect');
+  });
+
+  it('removes a method-style member', () => {
+    expect(fx.applied(run('Fn', 'radius'))['src/shape.ts']).toContain(
+      'export type Fn = { a: number; };',
+    );
+  });
+
+  it('cuts a write that sits directly in a case or default clause', () => {
+    const out = fx.applied(run('Shape', 'sw'));
+    expect(out['src/use.ts']).not.toContain('s.sw');
+  });
+
+  it('a shorthand cut leaves its local, so it says so', () => {
+    const result = run('Shape', 'tag');
+    expect(result.ok && result.plan.findings).toEqual([
+      { file: 'src/clean.ts', line: 5, message: "local 'tag' may now be unused" },
+    ]);
+  });
+
+  it('a doc link does not block, and is reported', () => {
+    const result = run('Shape', 'doc');
+    expect(result.ok && result.plan.findings).toEqual([
+      { file: 'src/clean.ts', line: 2, message: 'still mentioned in a doc comment' },
+    ]);
   });
 });
