@@ -149,17 +149,17 @@ export function meshAssetRow(meshBodies: MeshBodiesSink, presentation: MeshPrese
 - The full set of `state.assetRows` keys must be the same set as before, and the fetch order by
   `(priority, array index)` must keep every body texture row ahead of every mesh row.
 
-- [ ] Before implementing, dump `state.assetRows.map((r) => [r.key, r.priority])` from the
+- [x] Before implementing, dump `state.assetRows.map((r) => [r.key, r.priority])` from the
       composition test's harness (or a scratch script over the app composition's Layers) to a
       scratch file; after, compare: same key set, mesh rows at 11, nothing else changed.
-- [ ] Extend `createLayers.composition.test.ts:179-195`: compose the missions Layer with the body
+- [x] Extend `createLayers.composition.test.ts:179-195`: compose the missions Layer with the body
       Layer and assert `body textures rank ahead of craft meshes`.
-- [ ] Test `a mesh row's commit and release call the sink with its body id` (`meshAssetRow.test.ts`).
-- [ ] Test `each mesh Layer returns one mesh row per mesh body it declares` (one test per Layer,
+- [x] Test `a mesh row's commit and release call the sink with its body id` (`meshAssetRow.test.ts`).
+- [x] Test `each mesh Layer returns one mesh row per mesh body it declares` (one test per Layer,
       beside the Layer's existing tests, or one table-driven test over the four).
-- [ ] Implement. `npm run typecheck:fast`; `npm test -- wiring phases layers/body layers/missions
+- [x] Implement. `npm run typecheck:fast`; `npm test -- wiring phases layers/body layers/missions
       layers/earthScenes layers/probeSpheres conventions` pass.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3: Docs and backlog say one asset path
 

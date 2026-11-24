@@ -8,6 +8,8 @@
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { PROBE_SPHERES_BODY_ROWS } from './bodies/probeSpheresBodyRows';
+import { meshPresentationsOf } from '../../utils/meshBodies/meshPresentationsOf';
+import { meshAssetRow } from '../../services/engine/wiring/meshAssetRow';
 import { probeSpheresLayerSettings } from './state/slices';
 import { probeSpheresVisibility } from './visibility';
 import { create } from './create';
@@ -28,6 +30,8 @@ export const probeSpheresLayer = defineLayer({
   visibility: probeSpheresVisibility,
   create,
   destroy,
+  assets: (runtime) =>
+    meshPresentationsOf(PROBE_SPHERES_BODY_ROWS).map((p) => meshAssetRow(runtime.meshBodies, p)),
   passes: (runtime) => [
     probeSphereMeshesPass,
     glintsPassOver('probe-sphere-glints', PROBE_SPHERE_ROSTER, runtime.glintRenderer),

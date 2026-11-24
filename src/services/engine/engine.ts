@@ -177,7 +177,7 @@ export function createEngine(
       bloomPyramid: null,
       pickDebugOverlay: null,
       // Lit triangle-mesh bodies attached to a host body's slab;
-      // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
+      // the Layers' mesh slots reach it through `LayerCoreDeps.meshBodies`.
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,

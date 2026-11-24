@@ -13,6 +13,7 @@ import type { SagaIterator, Task } from 'redux-saga';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
+import type { MeshBodiesSink } from '../../../@types/engine/layer/MeshBodiesSink';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceId } from '../../../@types/data/SourceId';
 
@@ -43,7 +44,6 @@ import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
-import { meshAssetRows } from '../wiring/meshAssetRows';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -67,6 +67,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   const pickCodes = createPickCodeAllocator();
   state.pickCodes = pickCodes;
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
+  // Re-read at call time, so a Layer's mesh slots can be minted before that renderer exists.
+  const meshBodies: MeshBodiesSink = {
+    setMesh: (id, asset) => state.gpu.meshBodyRenderer?.setMesh(id, asset),
+    clearMesh: (id) => state.gpu.meshBodyRenderer?.clearMesh(id),
+  };
   // Core's "a source's catalog landed" pulse. The running total equals
   // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
   // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
@@ -104,6 +109,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       tier: () => deps.cb.store.getState().tier,
       requestRender,
       pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
+      meshBodies,
     };
     // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
     // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.
@@ -161,14 +167,14 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   ).map((planner) => gatePlannerByFade(planner, state));
   // A duplicate key would leave two slots behind one key, and every key-addressed
   // read would answer with only one of them. One fold over the whole list: a
-  // companion's parent may sit in the other half, and `expandCompanionRows` is
-  // only correct over a list holding both. Layer rows lead: the queue breaks equal
-  // ranks by array order, so body textures load ahead of craft meshes.
+  // companion's parent may sit in another Layer's rows, and `expandCompanionRows` is
+  // only correct over a list holding both.
   state.assetRows = expandCompanionRows(
-    concatUniqueRows('createLayers: asset keys', (row) => row.key, [
-      ...instances.map((instance) => instance.assets),
-      meshAssetRows(state),
-    ]),
+    concatUniqueRows(
+      'createLayers: asset keys',
+      (row) => row.key,
+      instances.map((instance) => instance.assets),
+    ),
   );
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
   // Static, read off the composition. The ceiling sizes the GPU query set before any
