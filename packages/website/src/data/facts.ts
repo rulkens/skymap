@@ -436,7 +436,7 @@ export const FACTS: readonly Fact[] = [
     text: '“The Long Way Out” has 18 captioned steps, from a park in Copenhagen to the edge of the observable universe and back to Earth.',
     short:
       '“The Long Way Out” is a tour in 18 captioned steps, from a park in Copenhagen out to the edge of the observable universe and back.',
-    source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
+    source: `${REPO_BLOB}/src/compositions/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the Skymap repository',
     checked: '2026-11-06',
   },

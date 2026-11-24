@@ -8,6 +8,9 @@
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
+import { EPHEMERIS_CORRECTIONS } from './ephemerisCorrections.generated';
+import { SHAPE_MODEL_BODY_IDS } from './shapeModelBodyIds';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { EARTH } from './planets/earth';
 import { MERCURY } from './planets/mercury';
 import { VENUS } from './planets/venus';
@@ -45,7 +48,7 @@ import { VESTA } from './smallBodies/vesta';
 import { CERES } from './smallBodies/ceres';
 import { BENNU } from './smallBodies/bennu';
 
-export const BODY_BODY_ROWS: readonly LayerBody[] = [
+const AUTHORED_ROWS: readonly LayerBody[] = [
   EARTH,
   MERCURY,
   VENUS,
@@ -83,3 +86,32 @@ export const BODY_BODY_ROWS: readonly LayerBody[] = [
   CERES,
   BENNU,
 ];
+
+function withCorrection(row: LayerBody): LayerBody {
+  if (row.position.kind !== 'orbit') return row;
+  const correction = EPHEMERIS_CORRECTIONS[row.position.elements.id];
+  if (correction === undefined) return row;
+  return { ...row, position: { ...row.position, correction } };
+}
+
+function withShapeModel(row: LayerBody): LayerBody {
+  const meshKey = row.body.id;
+  if (!SHAPE_MODEL_BODY_IDS.includes(meshKey)) return row;
+  const asset = MESH_ASSETS[meshKey];
+  if (!asset) throw new Error(`bodyBodyRows: no MESH_ASSETS entry for '${meshKey}'`);
+  const { boundingRadiusM, tierCeiling } = asset;
+  return { ...row, shapeModel: { meshKey, boundingRadiusM, tierCeiling } };
+}
+
+for (const id of SHAPE_MODEL_BODY_IDS) {
+  if (!AUTHORED_ROWS.some((row) => row.body.id === id)) {
+    throw new Error(`bodyBodyRows: shape-model id '${id}' matches no authored body row`);
+  }
+}
+
+// Joined here rather than pasted into each row: the generated files stay the one statement of
+// which bodies are corrected and what each shape model measures, and regenerating them touches
+// no authored row.
+export const BODY_BODY_ROWS: readonly LayerBody[] = AUTHORED_ROWS.map((row) =>
+  withShapeModel(withCorrection(row)),
+);

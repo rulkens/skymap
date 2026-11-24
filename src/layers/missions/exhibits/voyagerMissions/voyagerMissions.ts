@@ -29,7 +29,7 @@ import {
   TIMELINE_HEADING,
 } from './voyagerMissions.copy';
 
-export const voyagerMissions: Exhibit = {
+export const voyagerMissions: Exhibit<'voyager-missions'> = {
   id: 'voyager-missions',
   label: LABEL,
   settings: {

@@ -1,7 +1,7 @@
 # JPL Horizons vectors
 
 Input to `npm run build-ephemeris-corrections`, which fits each body's `Horizons − Kepler`
-residual into `src/data/bodies/ephemerisCorrections.generated.ts`. The CSVs are gitignored;
+residual into `src/layers/body/bodies/ephemerisCorrections.generated.ts`. The CSVs are gitignored;
 regenerate with `npm run fetch-horizons`.
 
 - **Upstream:** JPL Horizons API, `https://ssd.jpl.nasa.gov/api/horizons.api` (JPL DE ephemeris; no licence is stated for the service's output, and JPL asks that its Solar System Dynamics site be cited).

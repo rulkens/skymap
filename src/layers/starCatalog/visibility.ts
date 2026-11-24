@@ -4,7 +4,7 @@ import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry'
 import { FOREGROUND_RECEDE } from '../../data/bands/foregroundRecede';
 import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../data/bands/solarSystemCaptionRecede';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
-import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from './seededStars/data/seededStarCatalogs';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 import { STAR_BACKDROP_DISSOLVE } from './seededStars/data/starBackdropDissolve';

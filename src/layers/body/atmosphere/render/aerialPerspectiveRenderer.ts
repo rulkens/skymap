@@ -183,7 +183,7 @@ export function createAerialPerspectiveRenderer(
     applyEntries: readonly GPUBindGroupEntry[];
     /** Last built apply group, keyed on the depth view it was built over. */
     applyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
-    /** The probe faces' own uniform record, so `bake`'s write stays the main view's alone. */
+    /** The probe faces' own uniform record, so `writeUniforms`' write stays the main view's alone. */
     readonly probeSkyUniformBuffer: GPUBuffer;
     probeSkyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
   };
@@ -263,11 +263,13 @@ export function createAerialPerspectiveRenderer(
     binding.probeSkyGroup = null;
   }
 
-  function bake(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void {
-    const binding = bindingFor(bodyId);
-    device.queue.writeBuffer(binding.shellUniformBuffer, 0, uniforms);
+  function writeUniforms(bodyId: string, uniforms: Float32Array): void {
+    device.queue.writeBuffer(bindingFor(bodyId).shellUniformBuffer, 0, uniforms);
+  }
+
+  function bake(pass: GPUComputePassEncoder, bodyId: string): void {
     pass.setPipeline(bakePipeline);
-    pass.setBindGroup(0, binding.bakeGroup);
+    pass.setBindGroup(0, bindingFor(bodyId).bakeGroup);
     pass.dispatchWorkgroups(bakeDispatchX, bakeDispatchY, 1);
   }
 
@@ -333,5 +335,13 @@ export function createAerialPerspectiveRenderer(
     froxelTransmittanceTex.destroy();
   }
 
-  return { label: 'aerialPerspectiveRenderer', bake, draw, drawSky, rebind, destroy };
+  return {
+    label: 'aerialPerspectiveRenderer',
+    writeUniforms,
+    bake,
+    draw,
+    drawSky,
+    rebind,
+    destroy,
+  };
 }

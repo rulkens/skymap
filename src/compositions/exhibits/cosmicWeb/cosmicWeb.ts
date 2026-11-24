@@ -24,7 +24,7 @@ import {
   WHAT_YOURE_SEEING,
 } from './cosmicWeb.copy';
 
-export const cosmicWeb: Exhibit = {
+export const cosmicWeb: Exhibit<'cosmicWeb'> = {
   id: 'cosmicWeb',
   label: LABEL,
   settings: { galaxyCatalogs: SURVEYS_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },

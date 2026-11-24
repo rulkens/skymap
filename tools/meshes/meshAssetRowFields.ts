@@ -25,7 +25,7 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
   {
     name: 'tierCeiling',
     tsType: 'Tier',
-    doc: ['The highest tier this body ships; `meshBodyRow.req` clamps to it.'],
+    doc: ['The highest tier this body ships; the request `meshAssetRow` builds clamps to it.'],
     emit: (row) => quote(row.tierCeiling),
   },
   { name: 'boundingRadiusM', tsType: 'number', emit: (row) => String(row.boundingRadiusM) },

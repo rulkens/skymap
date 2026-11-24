@@ -7,6 +7,7 @@
 import type { Vec3 } from '../math/Vec3';
 import type { MeshAsset } from '../data/mesh/MeshAsset';
 import type { SceneBodyId } from './SceneBodyId';
+import type { Tier } from '../data/Tier';
 
 export type MeshBody = {
   readonly id: SceneBodyId;
@@ -16,6 +17,8 @@ export type MeshBody = {
   readonly boundingRadiusM: number;
   readonly albedo: Vec3;
   readonly meshKey: string;
+  /** The highest tier the baked mesh ships; absent for a generated one. */
+  readonly tierCeiling?: Tier;
   /** Generates the mesh in the browser for a body with no baked asset; absent: `meshKey`'s baked files. */
   readonly buildMesh?: () => Promise<MeshAsset>;
   /** Camera standoff floor, in body radii, replacing `clampDistance`'s

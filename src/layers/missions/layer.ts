@@ -2,8 +2,8 @@
  * The missions Layer: the craft's trails, captions and their "Spacecraft" label item, the
  * `missions` and `missionTrails` settings clusters, the track load, and the Voyager exhibit with
  * its mission timeline kind. It owns the nine craft body rows, their registry row and the `craft`
- * selection kind with its pick code, and draws them: meshes through core's one mesh handle (the
- * slots stay core's), the rovers' contact shadows, and glints through its own glint renderer.
+ * selection kind with its pick code, and draws them: meshes (rows and slots its own) through core's
+ * one mesh handle, the rovers' contact shadows, and glints through its own glint renderer.
  * A craft's InfoCard is the body card.
  */
 
@@ -24,6 +24,8 @@ import { missionsSelectionKinds } from './selection/kinds';
 import { craftSearch } from './craft/present/craftSearch';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 import { MISSIONS_BODY_ROWS } from './bodies/missionsBodyRows';
+import { meshPresentationsOf } from '../../utils/meshBodies/meshPresentationsOf';
+import { meshAssetRow } from '../../services/engine/wiring/meshAssetRow';
 import { MISSIONS_SOURCE_ROWS } from './sources/missionsSourceRows';
 import BodyDetailCardContainer from '../body/card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
@@ -38,6 +40,8 @@ export const missionsLayer = defineLayer({
   exhibits: missionsLayerExhibits,
   create,
   destroy,
+  assets: (runtime) =>
+    meshPresentationsOf(MISSIONS_BODY_ROWS).map((p) => meshAssetRow(runtime.meshBodies, p)),
   passes: (runtime) => [
     missionTrailsPass(runtime),
     missionMeshesPass(runtime),

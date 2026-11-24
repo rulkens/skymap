@@ -30,7 +30,7 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelecti
 import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../src/layers/starCatalog/bodies/sceneStars';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';

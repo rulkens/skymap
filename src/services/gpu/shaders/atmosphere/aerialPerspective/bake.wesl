@@ -33,9 +33,9 @@ struct SkyViewParams {
 
 const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 
-// The only quality knob: sub-steps per slice, so one slice is four quadrature
-// samples wide rather than one.
-const SUB_STEPS: u32 = 4u;
+// The only quality knob: quadrature samples per slice. 2 and 1 measured within
+// 1/255 of 4 on bright low poses, and the march is the phone's largest pass there.
+const SUB_STEPS: u32 = 2u;
 
 // The running totals along one ray.
 struct March {

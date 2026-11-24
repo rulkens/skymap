@@ -330,7 +330,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sim-ephemeris-span',
     text: 'The clock runs outside 1900 to 2100, but there the planets keep the correction from the nearest end of that span and the 18 fitted moons fall back to mean orbits. The Moon, Pluto and the smaller moons use mean orbital elements at every date.',
-    source: `${REPO_BLOB}/src/data/bodies/ephemerisCorrections.generated.ts`,
+    source: `${REPO_BLOB}/src/layers/body/bodies/ephemerisCorrections.generated.ts`,
     sourceLabel: `the fitted corrections, ${IN_REPO}`,
     checked: CHECKED,
   },

@@ -14,16 +14,15 @@ import type { SurfaceTileOverlayKey } from '../@types/SurfaceTileOverlayKey';
 import { SURFACE_TILE_OVERLAY_ROWS } from '../data/surfaceTileOverlayRows';
 import { FLY_TO_PRESETS } from './flyToPresets';
 import { parseLonLatInput } from '../../../../../utils/geo/parseLonLatInput';
+import { SCENE_EARTH } from '../../../../../data/bodies/sceneEarth';
 import DebugOverlayToggles from '../../../../../components/DebugPanel/DebugOverlayToggles';
 import DebugSection from '../../../../../components/DebugPanel/DebugSection';
 import styles from './SurfaceTileAtlasSection.module.css';
 
 export type SurfaceTileAtlasSectionProps = {
   readonly surfaceTileDebug: SurfaceTileDebugSnapshot;
-  /** Fly-to-coordinates debug instrument, the `camera/flyToLonLat` request.
-   *  `body` omitted keeps `flyToLonLatActions`'s own
-   *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
-  flyToLonLat: (lonDeg: number, latDeg: number, body?: string, altKm?: number) => void;
+  /** Fly-to-coordinates debug instrument, the `camera/flyToLonLat` request. */
+  flyToLonLat: (lonDeg: number, latDeg: number, body: string, altKm?: number) => void;
   readonly overlays: Record<SurfaceTileOverlayKey, boolean>;
   readonly onToggle: (key: SurfaceTileOverlayKey, enabled: boolean) => void;
 };
@@ -46,7 +45,8 @@ function SurfaceTileAtlasSection({
     e.preventDefault();
     const point = parseLonLatInput(flyToText);
     if (point === null) return;
-    flyToLonLat(point.lonDeg, point.latDeg, snap.bodyId ?? undefined);
+    // Not yet engaged on a body, the box flies to Earth.
+    flyToLonLat(point.lonDeg, point.latDeg, snap.bodyId ?? SCENE_EARTH.id);
   }
 
   // A landmark is a place, so it carries its own body — Everest's degrees on

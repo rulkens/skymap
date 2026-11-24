@@ -19,7 +19,7 @@ import { packPickWord } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { STAR_RESOLVE_PX } from '../../../../data/bodies/starResolvePx';
+import { STAR_RESOLVE_PX } from '../../bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../utils/nearestResolvableStar';

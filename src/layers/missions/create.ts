@@ -15,5 +15,6 @@ export function create(deps: LayerCoreDeps): MissionsRuntime {
     trailRenderer: createMissionTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
     glintRenderer: createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
     pickCode: deps.pickCode(CRAFT_ENTRY.id),
+    meshBodies: deps.meshBodies,
   };
 }

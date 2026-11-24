@@ -714,12 +714,12 @@ export function createAtmosphereShellRenderer(
     drawShellPair(pass, bundle.probeBindGroup, probeShellMultiplyPipeline, probeShellAddPipeline);
   }
 
-  function bakeAerialPerspective(
-    pass: GPUComputePassEncoder,
-    bodyId: string,
-    uniforms: Float32Array,
-  ): void {
-    aerial.bake(pass, bodyId, uniforms);
+  function writeAerialPerspectiveUniforms(bodyId: string, uniforms: Float32Array): void {
+    aerial.writeUniforms(bodyId, uniforms);
+  }
+
+  function bakeAerialPerspective(pass: GPUComputePassEncoder, bodyId: string): void {
+    aerial.bake(pass, bodyId);
   }
 
   function drawAerialPerspective(
@@ -764,6 +764,7 @@ export function createAtmosphereShellRenderer(
     dispatchSkyView,
     setRingTexture,
     draw,
+    writeAerialPerspectiveUniforms,
     bakeAerialPerspective,
     drawAerialPerspective,
     drawProbeSky,

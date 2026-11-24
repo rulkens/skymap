@@ -17,7 +17,7 @@ export type LayerInstance = {
   readonly passes: readonly ContentPass[];
   readonly computes: readonly ContentCompute[];
   readonly planners: readonly FrameContentPlanner<unknown>[];
-  /** Authored rows: core folds companions once, over core's rows and every Layer's. */
+  /** Authored rows: core folds companions once, over every Layer's rows. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly screenLabels: readonly LabelSource<unknown>[];
   readonly worldLabels: readonly LayerWorldLabel[];

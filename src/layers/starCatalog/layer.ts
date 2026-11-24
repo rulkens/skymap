@@ -10,6 +10,7 @@ import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { starCatalogLayerSettings } from './state/slices';
 import { starCatalogVisibility } from './visibility';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
+import { STAR_CATALOG_BODY_ROWS } from './bodies/starCatalogBodyRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { starCatalogPlanner } from './frame';
@@ -27,7 +28,7 @@ import { starCatalogSelectionKinds } from './selection/kinds';
 import { starSearch } from './selection/present/starSearch';
 import { starLabelSource } from './captions/present/starLabelSource';
 import { STAR_AGGREGATES_TARGET } from './survey/render/starAggregatesTarget';
-import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
+import { S_STAR_ORBITAL_ELEMENTS } from './bodies/sStarOrbitalElements';
 import StarsSectionContainer from './controls/ui/StarsSectionContainer';
 import StarCatalogTuningSectionContainer from './controls/ui/StarCatalogTuningSectionContainer';
 import StarDetailCardContainer from './card/ui/StarDetailCardContainer';
@@ -39,6 +40,7 @@ export const starCatalogLayer = defineLayer({
   settings: starCatalogLayerSettings,
   visibility: starCatalogVisibility,
   sources: STAR_CATALOG_SOURCE_ROWS,
+  bodies: STAR_CATALOG_BODY_ROWS,
   facts: { famousStarsMeta: [], chunkSlotsError: null } as StarCatalogFacts,
   targets: [STAR_AGGREGATES_TARGET],
   create,

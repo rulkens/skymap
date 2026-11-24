@@ -333,7 +333,7 @@ the hi-res tile.
 
 Named stars use none of the galaxy steps above. Their seed is
 `data/seeds/famous_stars.seed.json`; `npm run build-famous-stars` regenerates
-`src/data/bodies/famousStars.generated.ts` and
+`src/layers/starCatalog/bodies/famousStars.generated.ts` and
 `tools/stars-rs/src/famous_ids.generated.rs`. Never hand-edit either generated
 file; commit seed and generated files together. Curation traps:
 

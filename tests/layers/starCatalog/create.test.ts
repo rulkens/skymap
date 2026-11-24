@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../../src/data/bodies/seededStarCatalogs', () => ({
+vi.mock('../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs', () => ({
   SEEDED_STAR_CATALOGS: {
     famousStar: [{ id: '12', label: 'Twelve' }],
     sun: [],
