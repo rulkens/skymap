@@ -361,7 +361,7 @@ Rules:
 **Files:** `.claude/skills/refactor/SKILL.md`, `CLAUDE.md`,
 `docs/superpowers/specs/2026-11-23-refactor-cli-native-engine-design.md` (modify)
 
-- [ ] `SKILL.md`: the four subcommands in the command list, with one line each on what refuses;
+- [x] `SKILL.md`: the four subcommands in the command list, with one line each on what refuses;
       the `Type.prop` address; the `PropUseKind` values; that exit 1 after `rename-prop` or
       `remove-prop` means quoted mentions to check by hand. In "Blind spots", replace the
       "Type properties and loose fixtures" bullet: properties are now handled, and what remains is
@@ -369,10 +369,10 @@ Rules:
       through `as unknown as`). Update the skill's `description` front matter with triggers such
       as "rename this property everywhere", "remove this field from the type", "turn these
       arguments into an object".
-- [ ] `CLAUDE.md` commands block: the `npm run refactor` line names the new subcommands briefly.
-- [ ] Spec §4.3 and §5.5: `findSignatureUsage` was not needed; say that `params-to-object`
+- [x] `CLAUDE.md` commands block: the `npm run refactor` line names the new subcommands briefly.
+- [x] Spec §4.3 and §5.5: `findSignatureUsage` was not needed; say that `params-to-object`
       classifies the references the driver already has.
-- [ ] Commit.
+- [x] Commit.
 
 ## Definition of Done
 

@@ -164,7 +164,6 @@ the refactor skill's text is updated in the same PR.
 ```ts
 export function openEngine(input: { root: string; fs?: EngineFs }): Engine;
 export function findReferences(engine: Engine, at: NodeLocation): readonly RawReference[];
-export function findSignatureUsage(engine: Engine, at: NodeLocation): readonly SignatureUsage[];
 export function syncOverlay(engine: Engine, changed: readonly string[]): void;
 export function closeEngine(engine: Engine): void;
 ```
@@ -173,7 +172,8 @@ export function closeEngine(engine: Engine): void;
 only the cross-file question. Everything syntactic (where an export is declared, what kind of use
 a reference is, the span of a statement to remove) is read by parsing the one file with the
 TypeScript 6 parser, the stable API `move-files` already uses, so no engine node leaves the
-adapter. `findSignatureUsage` lands with PR B. The adapter owns three facts the probes found:
+adapter. `findSignatureUsage` was not needed: `params-to-object` classifies the references the
+driver already has (§5.5). The adapter owns three facts the probes found:
 
 - The engine opens four projects (`tsconfig.json`, `tsconfig.tools.json`,
   `packages/desktop/tsconfig.json`, `packages/website/tsconfig.json`). A file in two projects is
@@ -264,6 +264,8 @@ exits 1.
 - Each call site becomes an object literal in parameter order, shorthand where the argument is an
   identifier with the parameter's name. Omitted trailing arguments are omitted keys.
 - Works on an exported function declaration and on an exported `const` arrow function.
+- It uses no engine signature call: a reference the driver already classified as a `call` is
+  rewritten, an import or re-export needs nothing, and every other kind refuses.
 - Refuses, with the list, when: any usage is not a direct call (an alias, `.bind`, the function
   passed as a callback); a call spreads its arguments; the function has a rest parameter or
   overloads; the `const` carries a type annotation, so its shape is another type's contract.

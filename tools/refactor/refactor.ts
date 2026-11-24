@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * refactor: the symbol-level refactoring CLI. `refs`, `rename` and `delete` run on the
+ * refactor: the symbol-level refactoring CLI. `refs`, `rename`, `delete`, the property
+ * rows (`prop-refs`, `rename-prop`, `remove-prop`) and `params-to-object` run on the
  * TypeScript 7 engine; `extract` and `inline` still run on ts-morph, imported only for
  * their rows. Moving files is `npm run move-files`, not a subcommand here.
  *
