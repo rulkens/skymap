@@ -48,3 +48,24 @@ describe('locateExport', () => {
     });
   });
 });
+
+// The name token `symbol` resolves to, with the text before it, so the position is checked too.
+function locate(text: string, symbol: string): string | null {
+  const found = locateExport(text, { file: 'x.ts', symbol });
+  return found.ok
+    ? `${text.slice(0, found.at.start)}[${text.slice(found.at.start, found.at.end)}]`
+    : null;
+}
+
+describe('locateExport through an export list', () => {
+  it("finds the specifier's exported name in a re-export", () => {
+    expect(locate("export { bar as foo } from './bar';\n", 'foo')).toBe('export { bar as [foo]');
+  });
+
+  it('finds the local declaration of `export { bar as foo }`, exported itself or not', () => {
+    expect(locate('export function bar() {}\nexport { bar as foo };\n', 'foo')).toBe(
+      'export function [bar]',
+    );
+    expect(locate('const bar = 1;\nexport { bar as foo };\n', 'foo')).toBe('const [bar]');
+  });
+});

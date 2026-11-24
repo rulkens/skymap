@@ -35,7 +35,9 @@ export function locateExport(
   };
 }
 
-// Exported by modifier, or by a local `export { x }` / `export { x as symbol }` list.
+// Exported by modifier, by a local `export { x }` / `export { x as symbol }` list (whatever
+// the declaration's own modifier), or by a re-export `export { y as symbol } from './m'`,
+// whose specifier is the declaration.
 function declarationsNamed(
   source: ts.SourceFile,
   symbol: string,
@@ -43,14 +45,23 @@ function declarationsNamed(
   const localName = listedLocalName(source, symbol);
   const out: { name: ts.Identifier; node: ts.Node }[] = [];
   for (const statement of source.statements) {
+    if (ts.isExportDeclaration(statement) && statement.moduleSpecifier) {
+      const named = statement.exportClause;
+      for (const element of named && ts.isNamedExports(named) ? named.elements : []) {
+        if (ts.isIdentifier(element.name) && element.name.text === symbol) {
+          out.push({ name: element.name, node: element });
+        }
+      }
+      continue;
+    }
     const exported =
       ts.canHaveModifiers(statement) &&
       (ts.getModifiers(statement) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-    const wanted = exported ? symbol : localName;
-    if (wanted === undefined) continue;
+    const wanted = [exported ? symbol : undefined, localName];
+    if (!wanted.some((name) => name !== undefined)) continue;
     if (ts.isVariableStatement(statement)) {
       for (const decl of statement.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name) && decl.name.text === wanted) {
+        if (ts.isIdentifier(decl.name) && wanted.includes(decl.name.text)) {
           out.push({ name: decl.name, node: decl });
         }
       }
@@ -63,7 +74,7 @@ function declarationsNamed(
         ts.isModuleDeclaration(statement)) &&
       statement.name &&
       ts.isIdentifier(statement.name) &&
-      statement.name.text === wanted
+      wanted.includes(statement.name.text)
     ) {
       // Overload signatures and their implementation are one declaration.
       const isOverload =
