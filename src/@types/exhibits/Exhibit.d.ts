@@ -8,11 +8,11 @@
 import type { Effect } from '../animation/Effect';
 import type { CameraPose } from '../camera/pose/CameraPose';
 import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
-import type { ExhibitId } from './ExhibitId';
 import type { ExhibitSection } from './ExhibitSection';
 
-export type Exhibit = {
-  id: ExhibitId;
+export type Exhibit<Id extends string = string> = {
+  /** A row states its own id (`Exhibit<'cosmicWeb'>`); `ExhibitId` is derived from the rows. */
+  id: Id;
   label: string;
   /** Applied through `mergeSnapshot`; the takeover bracket restores it on exit. */
   settings: Partial<SettingsSnapshot>;

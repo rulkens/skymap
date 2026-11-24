@@ -20,7 +20,7 @@ import {
   WHAT_YOURE_SEEING,
 } from './solarSystem.copy';
 
-export const solarSystem: Exhibit = {
+export const solarSystem: Exhibit<'solarSystem'> = {
   id: 'solarSystem',
   label: LABEL,
   // Trails forced on (`withSceneSnapshotSaga` restores the viewer's choice on exit). `starCatalog`
