@@ -1,7 +1,7 @@
 # Body content out of core: design spec
 
-> **Status.** Draft, 2026-11-24. Owner: Alexander Rulkens. The owner ruled the design the same day
-> in two dash sets (§2); nothing is coded.
+> **Status.** Shipped 2026-11-24 in PRs #1155, #1157, #1162, #1164 and the PR that files this spec.
+> Owner: Alexander Rulkens. Decision recorded in ADR 0016 (`docs/adrs/0016-body-content-rides-layer-rows.md`).
 > **Written against** main at b22840624.
 > **Inputs.** The galaxies-only spike of 2026-11-23/24 (uncommitted, worktree
 > `galaxies-only-reference-engine`; its tools are copied into this worktree's
@@ -194,8 +194,8 @@ Prep commits, in order, each its own commit:
    `bodyPickRows.ts:17`, `meshBodySlabHostId.ts:16` and `sceneOccluderBodies.ts:40` fold the
    registry's `EarthBody` rows (zero or one). `sampledCraftPositionMpc.ts:54` reads
    `EARTH_DATUM_RADIUS_M`. `SCENE_EARTH` stays for its 13 Layer readers, which only load when a
-   Layer that needs Earth is composed. `EARTH_REF` and `EARTH_HOME` are then reached only from the
-   app composition and Layers.
+   Layer that needs Earth is composed. `EARTH_REF` is then reached only from the app composition
+   and Layers. `EARTH_HOME` was folded into `APP_HOME` in PR D (owner, 2026-11-24).
 4. **Orbit rows carry their correction and pair** (§4.1). `ephemerisCorrections.generated.ts` moves
    into the body Layer; `tools/bodies/buildEphemerisCorrections.ts` writes there. All 29 corrected
    ids are body-Layer rows. `barycentricPairs.ts` is deleted. This is leftovers J3.
@@ -224,14 +224,18 @@ in C), so they run one after the other unless the owner rules otherwise; D waits
 ## 7. The feature (PR D)
 
 - **Fade edge fallback.** `foregroundMaxDistance.ts` uses a named 0.23 Mpc constant when no region
-  has an extent. The full app's value is unchanged; a test pins both.
-- **Empty-registry import test.** A Vitest file mocks `compositions/appBodies` to no rows, imports
+  has an extent. `BODY_REGIONS` always has its three rows, so with no bodies the maximum extent is
+  0, not `-Infinity`, and the fallback triggers on a zero maximum. The full app's value is
+  unchanged; a test pins both.
+- **Empty-registry import test.** A Vitest file mocks `compositions/appBodies` to no rows (and gives
+  the other registries that state body content a no-content stand-in), imports
   core's entry modules (`services/engine`, `store/rootSaga`, `store/rootReducer`) and asserts
   nothing throws and `deriveBodyStates` returns only core places. It fails the day someone
   re-couples always-loaded core to a body row.
-- **Zero-extent solar-system bands.** With no rows `regionById('solar-system').extentMpc` is 0, and
-  core's `CORE_CUBEMAP_CAPTURES.solarSystem` reads a band built from it. The plan's first task
-  measures what that capture does with no bodies (the `probe.mts` capture count); it must not bake.
+- **The sky capture needs no change.** Core's `CORE_CUBEMAP_CAPTURES.solarSystem` band is a fixed
+  500/1000 au (`SCALE_FADE_BANDS.solarSystemSky`), not built from an extent. With no Sun state its
+  anchor distance is infinite, so it never bakes and never allocates. The band that does read a
+  zero extent is `bodyGlintBackdrop`, which draws nothing without bodies.
 - **Measuring kit.** The payoff stand-in `appBodies` returns no rows and the spike composition's
   home becomes `{ focus: null, seedSelection: false }`. Both stay uncommitted, like the rest of
   `tools/reference-engine/` and the two frame-order patches. Committing `galaxiesOnly.ts` is the
@@ -244,7 +248,9 @@ in C), so they run one after the other unless the owner rules otherwise; D waits
 
 - Registry injection (`compositions/app*.ts` passed in from the composition).
 - An arm registry; moving the mesh, orbit-trail or body-pick renderers; any shader move.
-- Clips leaving core (leftovers J4).
+- Clips leaving core (leftovers J4). Overtaken: on the owner's ruling the clip table moved to the
+  composition first, as #1164 (`src/compositions/appClips.ts`, `ClipId` derived), so the
+  empty-registry test covers `rootSaga`.
 - The per-frame cost of the arms and the solver on an empty list beyond "no regression".
 
 ## 9. Risks
@@ -261,10 +267,24 @@ in C), so they run one after the other unless the owner rules otherwise; D waits
 
 ## 10. Done when
 
-- The payoff build with an empty body registry no longer contains the five sources of §1, and its
-  gzip size is reported against 279 kB.
-- Its `#pose=a,0,0,0,0.5,0.3,300,0` shot matches the `PAYOFF_OFF=1` baseline.
-- The full app is unchanged in before/after shots of a planet, the Earth home and a mission focus,
-  per prep PR.
-- `npm run perf` and `npm run perf:cpu` before and after each prep PR show no regression.
-- The suite is green.
+Outcomes measured 2026-11-24 on PR D.
+
+- **Met.** The payoff build with an empty body registry no longer contains the five sources of §1
+  (`ephemerisCorrections.generated.ts`, `meshoptimizer`, `famousStars.generated.ts`,
+  `sStarElements.ts`, `meshAssets.generated.ts`), and its gzip size is reported against 279 kB:
+  **211 kB**, with every `compositions/app*.ts` swapped for a no-content stand-in and no stubs of
+  core modules. The same build shape with the app's registries is 305 kB. The spike's 279 kB
+  (against 315 kB then) needed stubs and did not draw the survey at 300 Mpc.
+- **Met.** Its `#pose=a,0,0,0,0.5,0.3,300,0` shot matches the `PAYOFF_OFF=1` baseline: 804,476
+  galaxies loaded in both, the two shots visually identical. Before the fade-edge fallback the
+  survey faded out everywhere at that pose.
+- **Met.** With no Sun state the `solarSystem` sky capture never bakes: its anchor distance is
+  infinite, so it is skipped and never allocated.
+- **Met (owner's check, 2026-11-24).** The full app is unchanged in before/after shots of a planet, the
+  Earth home and a mission focus, per prep PR.
+- **Met.** `npm run perf`, merged ms before → after PR D: earth-surface 14.8 → 14.3, full-survey
+  17.9 → 17.8. Solar-system read 10.4 → 13.2, but every pass scaled by the same factor, including
+  bloom and the final blit, which this diff cannot touch, and the "after" median equals the
+  "before" p90: a machine clock state seen on earlier PRs too, not a code effect. No per-frame code
+  changed. `npm run perf:cpu` rows unchanged within noise.
+- **Met.** The suite is green.

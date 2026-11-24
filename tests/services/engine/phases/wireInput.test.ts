@@ -13,7 +13,7 @@ import { rootReducer } from '../../../../src/store/rootReducer';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
-import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../../src/compositions/appHome';
 
 const homePoseSpy = vi.fn(() => ({
   frame: 'absolute' as const,
@@ -68,7 +68,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 },
     cb: { store: configureStore({ reducer: rootReducer }) },
-    composition: { layers: [], home: EARTH_HOME },
+    composition: { layers: [], home: APP_HOME },
     selection: { resolvePick: () => null },
     phaseLocals: { device: {} },
   } as unknown as BootstrapDeps;
@@ -141,7 +141,7 @@ describe('wireInput', () => {
     const state = makeState();
     const deps = {
       ...makeDeps(),
-      composition: { layers: [], home: { ...EARTH_HOME, focus: null } },
+      composition: { layers: [], home: { ...APP_HOME, focus: null } },
     };
 
     await wireInput(state, deps);

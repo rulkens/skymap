@@ -21,7 +21,7 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelecti
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
-import { EARTH_HOME } from '../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../src/compositions/appHome';
 import { homePose } from '../../../src/services/engine/camera/framing/homePose';
 import {
   updateSelectionFocus,
@@ -61,7 +61,7 @@ describe('watchGoHomeSaga', () => {
   // Every planted tween, in order: the reducer keeps only the last.
   let tweens: CameraTweenDescriptor[];
 
-  function build(home: EngineHomeConfig = EARTH_HOME) {
+  function build(home: EngineHomeConfig = APP_HOME) {
     const mw = createSagaMiddleware();
     const recordTweens: Middleware = () => (next) => (action) => {
       if (startCameraTween.match(action)) tweens.push(action.payload);

@@ -18,7 +18,7 @@ import * as bodyHomePoseModule from '../../../../../src/services/engine/camera/f
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
-import { EARTH_HOME } from '../../../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../../../src/compositions/appHome';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
@@ -27,7 +27,7 @@ describe('homePose', () => {
   const FOV = (Math.PI / 180) * 60;
 
   it('frames the Earth home pose at the given sim instant', () => {
-    const cam = worldArmOf(homePose(EARTH_HOME, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic));
+    const cam = worldArmOf(homePose(APP_HOME, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic));
     const home = bodyHomePose(
       asSceneBodyId('earth'),
       CONST_J2000,
@@ -43,7 +43,7 @@ describe('homePose', () => {
 
   it('frames the neutral Local-Group pose for a home-less composition', () => {
     const cam = worldArmOf(
-      homePose({ ...EARTH_HOME, focus: null }, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic),
+      homePose({ ...APP_HOME, focus: null }, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic),
     );
     const { yaw, pitch } = orbitAnglesLookingAlong(
       GALACTIC_DISC_FORWARD,
@@ -62,7 +62,7 @@ describe('homePose', () => {
       .spyOn(bodyHomePoseModule, 'bodyHomePose')
       .mockReturnValue({ target: sharedTarget, yaw: 0, pitch: 0, distance: 5 });
 
-    const cam = worldArmOf(homePose(EARTH_HOME, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic));
+    const cam = worldArmOf(homePose(APP_HOME, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic));
     cam.target[0] = 99;
 
     expect(sharedTarget[0]).toBe(1);

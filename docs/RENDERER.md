@@ -4,16 +4,17 @@ Read this before touching `src/services/gpu/`, `engine`, shaders, or debugging a
 
 ## Renderer quick map
 
-- **Layer vs core.** A self-contained family (galaxies today; stars/structures/
-  bodies/volumes follow) lives colocated under `src/layers/<name>/`
-  (`layer.ts`'s `Layer` object is the only import surface — `sources/`,
-  `settings/`, `load/`, `render/`, `passes/`, `sagas/`, `ui/`, `types/`), and contributes
-  its passes, asset rows, fades, labels and settings section into the
-  composition (`src/compositions/app.ts`); everything not yet a Layer —
-  Milky Way, stars, structures, bodies, volumes, constellations, atmosphere,
-  the frame executor, camera/input, targets/post, the pick program — stays
-  core, under `src/services/engine/` and `src/services/gpu/`. A Layer's pass
-  that no `FRAME_ORDER` line names never draws, and that's a boot-time
+- **Layer vs core.** A self-contained family (galaxies, stars, the Milky Way,
+  structures, bodies, volumes, …) lives colocated under `src/layers/<name>/`
+  (`layer.ts`'s `Layer` object is the only import surface; folders per
+  `src/layers/README.md`), and contributes its passes, asset rows, body rows,
+  fades, labels and settings section into the composition
+  (`src/compositions/app.ts`). Core keeps the mechanisms, under
+  `src/services/engine/` and `src/services/gpu/`: the frame executor,
+  camera/input, targets/post, the pick program, and the body mechanisms (the
+  body-state solve and the mesh, orbit-trail and body-pick renderers), which
+  run on an empty body list and may not name a body at load (ADR 0016). A
+  Layer's pass that no `FRAME_ORDER` line names never draws, and that's a boot-time
   failure, not a runtime one: `checkFrameOrder` cross-checks the composed
   pass set against the list once, from `startLoop`, and throws before the
   first frame renders (see the `frameOrder.ts` bullet below).

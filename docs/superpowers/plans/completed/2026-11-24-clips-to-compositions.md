@@ -14,7 +14,7 @@ ADR and the precedent fix the shape, and the owner chose "as prep PR" on 2026-11
 
 **Why now:** three clip files read `SCENE_EARTH` at module scope and the registry runs every
 factory at import, so core's sagas throw at load in a composition with no Earth row
-([body-content spec](../specs/2026-11-24-body-content-out-of-core-design.md) §7). Once the
+([body-content spec](../../specs/completed/2026-11-24-body-content-out-of-core-design.md) §7). Once the
 registry is an `app*.ts` file, such a composition swaps it like `appTours` and `appHome`.
 
 **Not in this PR:** a `clips?` Layer member (ruled out by the ADR), any change to a clip's
