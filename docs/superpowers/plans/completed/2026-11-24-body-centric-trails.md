@@ -70,7 +70,7 @@ within 1%.
 ```ts
 export type TrailCentre = { readonly id: SceneBodyId; readonly reachKm: number };
 export const TRAIL_CENTRES: readonly TrailCentre[];
-export const TRAIL_REACH_HILL_RADII = 1.5; // in missionTrailStyle.ts
+const TRAIL_REACH_HILL_RADII = 1.5; // module-level in trailCentres.ts
 ```
 
 `TRAIL_CENTRES` is derived, never listed by hand: every `ORBITAL_ELEMENTS` row whose `focusId` is

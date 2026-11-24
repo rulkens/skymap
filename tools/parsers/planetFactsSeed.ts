@@ -1,34 +1,18 @@
 /**
- * planetFactsSeed — parse + validate the hand-authored `planet_facts.seed.json`.
+ * planetFactsSeed — parse + validate the hand-authored `planet_facts.seed.json`,
+ * the source `buildPlanetFacts.ts` turns into the generated `BODY_FACTS` table.
  *
- * The seed is the single source of truth for every Solar-System body's fact
- * sheet.  One build tool reads it (`buildPlanetFacts.ts`) to emit the committed
- * generated `BODY_FACTS` table the InfoCard renders.  Centralising parsing +
- * validation here means a single typo in the JSON surfaces as one clear error.
- *
- * The schema is small and all-string but for `massKg`, so we hand-roll fail-loud validation
- * rather than pull in zod/ajv — a throw naming the offending index/id reads
- * clearer than nested validator output.  Duplicate ids are a HARD error: the id
- * keys the generated `BODY_FACTS` record, so a duplicate would silently
- * overwrite an entry's row.
+ * Validation contract: `id` and `wikiTitle` are required non-empty strings,
+ * `massKg` a positive finite number, every other field a string; each failure
+ * throws naming the entry. A duplicate id is a hard error: the id keys the
+ * generated record, so a duplicate would silently overwrite a row.
  */
 
 import type { BodyFacts } from '../../src/@types/scene/BodyFacts';
 
-/**
- * One authored entry — the body's `BodyFacts` plus the `id` that becomes its
- * key in the generated record.  Co-located here as the tool-local authoring
- * contract; the runtime table (`Record<string, BodyFacts>`) is emitted by the
- * build tool with `id` stripped back into the key.
- */
+/** One authored entry: `BodyFacts` plus the `id` that becomes its key in the generated record. */
 export type PlanetFactsEntry = { readonly id: string } & BodyFacts;
 
-/**
- * Validate a single raw entry at position `index`.  Throws on any malformed
- * field with a message naming the offending index/id.  `massKg`, when present,
- * must be a positive number and every other optional `BodyFacts` field a string;
- * `id` and `wikiTitle` are required non-empty strings.  Returns the value typed as `PlanetFactsEntry`.
- */
 export function validatePlanetFactsEntry(raw: unknown, index: number): PlanetFactsEntry {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new Error(`planet facts seed: entry ${index} is not an object`);
@@ -56,10 +40,6 @@ export function validatePlanetFactsEntry(raw: unknown, index: number): PlanetFac
   return e as PlanetFactsEntry;
 }
 
-/**
- * Parse and validate the entire seed.  Throws if the root is not an array, on
- * any per-entry problem, and on a duplicate `id` (naming the duplicate).
- */
 export function parsePlanetFactsSeed(raw: unknown): PlanetFactsEntry[] {
   if (!Array.isArray(raw)) {
     throw new Error('planet facts seed: root must be an array');

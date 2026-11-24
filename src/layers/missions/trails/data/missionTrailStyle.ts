@@ -7,12 +7,6 @@
 export const MISSION_TRAIL_WIDTH_PX = 5;
 export const MISSION_TRAIL_MAX_SAG_KM = 10;
 
-/**
- * How many Hill radii around a planet a trail is drawn in that planet's frame. Not 1: asteroid
- * 2026 QQ8 stays bound to Earth out to 1.58 million km, past Earth's 1.5 million km Hill radius.
- */
-export const TRAIL_REACH_HILL_RADII = 1.5;
-
 /** Cross-fade length after entry and after exit, as a fraction of the stay. */
 export const TRAIL_STAY_FADE = 0.15;
 

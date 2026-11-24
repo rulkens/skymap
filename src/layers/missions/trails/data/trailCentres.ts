@@ -9,7 +9,12 @@ import { BODY_FACTS } from '../../../../data/bodies/bodyFacts.generated';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { hillRadiusKm } from '../../../../utils/orbit/hillRadiusKm';
 import type { TrailCentre } from '../@types/TrailCentre';
-import { TRAIL_REACH_HILL_RADII } from './missionTrailStyle';
+
+/**
+ * How many Hill radii around a planet a trail is drawn in that planet's frame. Not 1: asteroid
+ * 2026 QQ8 stays bound to Earth out to 1.58 million km, past Earth's 1.5 million km Hill radius.
+ */
+const TRAIL_REACH_HILL_RADII = 1.5;
 
 export const TRAIL_CENTRES: readonly TrailCentre[] = ORBITAL_ELEMENTS.flatMap((row) => {
   const massKg = BODY_FACTS[row.id]?.massKg;
