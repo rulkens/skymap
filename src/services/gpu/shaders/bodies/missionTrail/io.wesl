@@ -21,6 +21,9 @@ struct TrailUniforms {
   camLo: vec3<f32>,
   widthPx: f32,
   color: vec3<f32>,
+  // The stroke fades to nothing toward `fadeRelKm` (eye-relative km); 0 = no fade.
+  fadeInvKm: f32,
+  fadeRelKm: vec3<f32>,
 };
 
 struct VSOut {

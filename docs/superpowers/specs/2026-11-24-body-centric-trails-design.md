@@ -25,8 +25,12 @@ along with it.
    million km, past Earth's 1.5 million km Hill radius. The Hill radius is calculated from the
    planet's mass, so **the fact sheet's mass becomes a number**.
 3. **While inside, only the planet-frame path is drawn for that stretch.** The older Sun trail ends
-   at the entry instant, where the planet was then.
+   at the entry instant, where the planet was then. The planet has moved on since, so the two ends
+   do not meet: both fade to nothing toward the cut (owner, 2026-11-24, after the eye check).
 4. **After leaving, the stretch turns back into Sun trail.** Nothing stays behind at the planet.
+   The planet picture fades out while the whole Sun trail fades in, over 15% of the stay's length.
+5. **The trail starts on the launch pad** (owner, 2026-11-24): the craft's invented climb is put in
+   front of the track when the trail is built. The data file does not change.
 
 ## 3. Shape
 
@@ -38,7 +42,7 @@ A craft's trail is its whole track about the Sun plus one piece per stay near a 
 export type CraftTrail = {
   readonly id: string; // the craft
   readonly whole: MissionTrailGeometry; // the full track, centre 'sun'
-  readonly near: readonly MissionTrailGeometry[]; // one per stay; tDays[0] and the last are entry and exit
+  readonly near: readonly NearTrail[]; // one per stay: { piece, leaveDays }; the piece runs past the exit for the fade
 };
 
 // src/layers/missions/trails/@types/TrailDraw.d.ts — one drawTrail call, decided without a GPU
@@ -46,6 +50,9 @@ export type TrailDraw = {
   readonly piece: MissionTrailGeometry;
   readonly segmentCount: number;
   readonly head: boolean; // end on the craft's live position
+  readonly weight: number; // opacity factor: the stay and cruise pictures cross-fade on leaving
+  readonly fadeVertex: number; // the line fades to nothing toward this vertex; -1 = none
+  readonly fadeMaxMpc: number;
 };
 
 // src/layers/missions/trails/utils/trailDrawsAt.ts

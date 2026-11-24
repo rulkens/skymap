@@ -3,13 +3,14 @@
  * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missionTrails` show entry.
  * The renderer builds and uploads vertices once per `trajectoryRegistry.version()`;
  * per frame `trailDrawsAt` picks each craft's pieces (the Sun trail, or it plus a
- * planet stay) and the head ends on the snapshot position so it welds to the mesh.
+ * planet stay, faded where they part) and the head ends on the snapshot position.
  * The vp is rebased about the eye in f64 (as `near0SelectionRingPass` does) and the
  * shader subtracts the eye's hi/lo pair from each hi/lo vertex, keeping 160 AU in
  * 1 km. Vertices and eye are both relative to the piece's centre body, so it rides
  * that body: a stay curves around its planet while the planet moves.
  */
 
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MissionsRuntime } from '../../@types/MissionsRuntime';
 import { SAMPLED_BODIES } from '../../../../data/bodies/sampledBodies';
@@ -25,6 +26,7 @@ import { emphasisDim } from '../utils/emphasisDim';
 import { trailDrawsAt } from '../utils/trailDrawsAt';
 
 export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {
+  const fadeMpc: Vec3 = [0, 0, 0];
   return {
     name: 'mission-trails',
     fade: 'missionTrails',
@@ -53,10 +55,32 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         const trail = tracks.get(id);
         if (trail === undefined) continue;
         const opacity = fade * emphasisDim(state.settings.missions.craft, id);
-        for (const { piece, segmentCount, head } of trailDrawsAt(trail, ctx.snapshot.simDays)) {
+        const craft = states.get(id)!.positionMpc;
+        for (const draw of trailDrawsAt(trail, ctx.snapshot.simDays)) {
+          const { piece, segmentCount, fadeVertex } = draw;
           const centre = states.get(piece.centreId)!.positionMpc;
-          const headMpc = head ? states.get(id)!.positionMpc : null;
-          renderer.drawTrail(pass, piece, trailColor, opacity, segmentCount, centre, headMpc);
+          // The fade grows with the craft's distance from the cut, so entering shows no jump.
+          let fadeRadius = 0;
+          if (fadeVertex >= 0) {
+            for (let k = 0; k < 3; k++) fadeMpc[k] = centre[k]! + piece.relMpc[3 * fadeVertex + k]!;
+            const away = Math.hypot(
+              craft[0] - fadeMpc[0],
+              craft[1] - fadeMpc[1],
+              craft[2] - fadeMpc[2],
+            );
+            fadeRadius = Math.min(draw.fadeMaxMpc, away);
+          }
+          renderer.drawTrail(
+            pass,
+            piece,
+            trailColor,
+            opacity * draw.weight,
+            segmentCount,
+            centre,
+            draw.head ? craft : null,
+            fadeMpc,
+            fadeRadius,
+          );
         }
       }
     },

@@ -10,11 +10,11 @@ const piece = (centre: string, times: number[]): MissionTrailGeometry => ({
   relMpc: new Float64Array(3 * times.length),
 });
 
-// Sun trail at days 0..10; a stay at days 4..7 with its own vertices.
+// Sun trail at days 0..10; a stay entered at day 4 and left at day 6, its piece running to day 7.
 const trail: CraftTrail = {
   id: 'c',
   whole: piece('sun', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-  near: [piece('earth', [4, 5, 6, 7])],
+  near: [{ piece: piece('earth', [4, 5, 6, 7]), leaveDays: 6 }],
 };
 
 describe('trailDrawsAt', () => {
@@ -32,13 +32,20 @@ describe('trailDrawsAt', () => {
   it('inside a stay: the Sun trail cut at the entry without a head, then the near piece with one', () => {
     const draws = trailDrawsAt(trail, 5.5);
     expect(draws).toHaveLength(2);
-    expect(draws[0]).toMatchObject({ segmentCount: 4, head: false });
+    expect(draws[0]).toMatchObject({ segmentCount: 4, head: false, weight: 1, fadeVertex: 4 });
     expect(draws[0]!.piece).toBe(trail.whole);
-    expect(draws[1]).toMatchObject({ segmentCount: 1, head: true });
-    expect(draws[1]!.piece).toBe(trail.near[0]);
+    expect(draws[1]).toMatchObject({ segmentCount: 1, head: true, weight: 1, fadeVertex: 0 });
+    expect(draws[1]!.piece).toBe(trail.near[0]!.piece);
   });
 
-  it("at the stay's exit instant it is one Sun draw again", () => {
+  it('after leaving, the stay picture fades out as the whole Sun trail fades in', () => {
+    const draws = trailDrawsAt(trail, 6.5);
+    expect(draws.map((d) => d.piece)).toEqual([trail.whole, trail.near[0]!.piece, trail.whole]);
+    expect(draws.map((d) => d.weight)).toEqual([0.5, 0.5, 0.5]);
+    expect(draws[2]).toMatchObject({ segmentCount: 6, head: true, fadeVertex: -1 });
+  });
+
+  it("at the piece's end it is one Sun draw again", () => {
     const draws = trailDrawsAt(trail, 7);
     expect(draws).toHaveLength(1);
     expect(draws[0]!.piece).toBe(trail.whole);
@@ -48,11 +55,12 @@ describe('trailDrawsAt', () => {
     const departing: CraftTrail = {
       id: 'c',
       whole: piece('sun', [0, 1, 2, 3]),
-      near: [piece('earth', [0, 1, 2])],
+      near: [{ piece: piece('earth', [0, 1, 2]), leaveDays: 2 }],
     };
     const draws = trailDrawsAt(departing, 0.5);
     expect(draws).toHaveLength(1);
-    expect(draws[0]!.piece).toBe(departing.near[0]);
+    expect(draws[0]!.piece).toBe(departing.near[0]!.piece);
+    expect(draws[0]!.fadeVertex).toBe(-1);
   });
 
   it("past the track's end the single draw has no head", () => {

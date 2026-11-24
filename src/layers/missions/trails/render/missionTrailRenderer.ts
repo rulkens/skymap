@@ -22,6 +22,7 @@ import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCom
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { buildMissionTrails } from './buildMissionTrails';
 import { MISSION_TRAIL_WIDTH_PX } from '../data/missionTrailStyle';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
 import {
   OCCLUDER_UNIFORM_BYTES,
@@ -50,13 +51,16 @@ export const TRAIL_UNIFORM_OFFSETS = {
   camLo: 96,
   widthPx: 108,
   color: 112,
+  fadeInvKm: 124,
+  fadeRelKm: 128,
 } as const;
-export const TRAIL_UNIFORM_BYTES = 128;
+export const TRAIL_UNIFORM_BYTES = 144;
 
 // Dynamic offsets must be multiples of minUniformBufferOffsetAlignment (256 max).
 const SLOT_STRIDE = 256;
 const MAX_TRAILS = 8;
 const HEAD_BYTES = 2 * TRAIL_VERTEX_STRIDE;
+const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 
 export function createMissionTrailRenderer(
   device: GPUDevice,
@@ -145,7 +149,7 @@ export function createMissionTrailRenderer(
     firstVertex.clear();
     const built = buildMissionTrails();
     tracks = new Map(built.map((t) => [t.id, t]));
-    const pieces = built.flatMap((t) => [t.whole, ...t.near]);
+    const pieces = built.flatMap((t) => [t.whole, ...t.near.map((n) => n.piece)]);
     const total = pieces.reduce((sum, p) => sum + p.relMpc.length / 3, 0);
     if (total === 0) return tracks;
     const data = new Float32Array(total * 6);
@@ -205,6 +209,8 @@ export function createMissionTrailRenderer(
     segmentCount: number,
     centreMpc: Readonly<Vec3>,
     headMpc: Readonly<Vec3> | null,
+    fadeMpc: Readonly<Vec3>,
+    fadeRadiusMpc: number,
   ): void {
     const first = firstVertex.get(piece);
     if (vertexBuffer === null || bindGroup === null || first === undefined || slot >= MAX_TRAILS) {
@@ -222,6 +228,11 @@ export function createMissionTrailRenderer(
     uniformScratch[o.color / 4] = color[0];
     uniformScratch[o.color / 4 + 1] = color[1];
     uniformScratch[o.color / 4 + 2] = color[2];
+    // Eye-relative km in plain f32: a fade tens of millions of km wide needs no hi/lo pair.
+    uniformScratch[o.fadeInvKm / 4] = fadeRadiusMpc > 0 ? KM_TO_MPC / fadeRadiusMpc : 0;
+    for (let k = 0; k < 3; k++) {
+      uniformScratch[o.fadeRelKm / 4 + k] = (fadeMpc[k]! - eyeMpc[k]!) / KM_TO_MPC;
+    }
     device.queue.writeBuffer(trailBuffer, slot * SLOT_STRIDE, uniformScratch);
     pass.setBindGroup(0, bindGroup.group, [slot * SLOT_STRIDE]);
 

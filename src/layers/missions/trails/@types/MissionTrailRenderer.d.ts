@@ -15,7 +15,10 @@ export type MissionTrailRenderer = Renderer & {
   /** The uploaded tracks, rebuilt only when `version` differs. */
   ensureTracks(version: number): ReadonlyMap<string, CraftTrail>;
   beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
-  /** `centreMpc` is the piece's centre body now; the head runs from vertex `segmentCount` to `headMpc`. */
+  /**
+   * `centreMpc` is the piece's centre body now; the head runs from vertex `segmentCount` to
+   * `headMpc`. The line fades to nothing within `fadeRadiusMpc` of `fadeMpc` (0: no fade).
+   */
   drawTrail(
     pass: GPURenderPassEncoder,
     piece: MissionTrailGeometry,
@@ -24,5 +27,7 @@ export type MissionTrailRenderer = Renderer & {
     segmentCount: number,
     centreMpc: Readonly<Vec3>,
     headMpc: Readonly<Vec3> | null,
+    fadeMpc: Readonly<Vec3>,
+    fadeRadiusMpc: number,
   ): void;
 };

@@ -13,5 +13,12 @@ export const MISSION_TRAIL_MAX_SAG_KM = 10;
  */
 export const TRAIL_REACH_HILL_RADII = 1.5;
 
+/**
+ * After a craft leaves a planet's reach its planet-frame trail fades out over this fraction of
+ * the stay's length, and the two loose ends at the entry fade over this fraction of the reach.
+ */
+export const TRAIL_LEAVE_FADE = 0.15;
+export const TRAIL_CUT_FADE_REACH = 0.5;
+
 /** Opacity factor for a sampled craft's trail and caption while the other one is emphasised. */
 export const MISSION_EMPHASIS_DIM = 0.25;
