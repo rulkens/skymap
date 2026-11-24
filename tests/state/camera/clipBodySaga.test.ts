@@ -23,7 +23,7 @@ import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/t
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../src/compositions/appClips';
 import {
   selectionResolverOver,
   type StructureRowFixture,
@@ -45,7 +45,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 // A real registered clip — the saga resolves the id to this clip's ClipData
 // before handing it to the seam.
 const CLIP_ID = 'flyout' as const;
-const EXPECTED = clipRegistry[CLIP_ID].data;
+const EXPECTED = APP_CLIP_REGISTRY[CLIP_ID].data;
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 

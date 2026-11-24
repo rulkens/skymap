@@ -2,7 +2,7 @@
  * Clip — a named, user-facing animation clip: the authored `ClipData` plus the
  * identity and label the registry and UI key off.
  *
- * `id` is the durable handle `startClip(id)` resolves against `clipRegistry`;
+ * `id` is the durable handle `startClip(id)` resolves against `APP_CLIP_FACTORIES`;
  * `label` is the human-readable name a launcher button shows. `data` is the
  * serializable clip the player compiles and runs. Carrying `id` on the object
  * (redundant with the registry key) lets a whole `Clip` be passed around and

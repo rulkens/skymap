@@ -1,47 +1,12 @@
 /**
- * ClipId — the stable string id of a clip in the clip registry.
+ * ClipId — the stable string id of a clip, derived from the keys of `APP_CLIP_FACTORIES`.
  *
- * A closed string-literal union rather than a bare `string`: every authored
- * clip is named here, and `clipRegistry` is typed `Record<ClipId, Clip>`, so
- * the union and the registry check against each other in both directions.
- * Adding a clip means adding its id here AND a registry entry — TypeScript fails
- * the build if either is missing — and `startClip(id)` only accepts a real id.
+ * Adding a clip is one row in that table; the id follows and `startClip(id)` accepts it.
  *
- * Mirrors `TourId`; see that file for the append-only rationale.
+ * An id may be referenced from a shared link or a recorder command, so renaming one silently
+ * breaks those. Add new rows; retire old ones deliberately.
  */
-export type ClipId =
-  | 'cosmicFlows'
-  | 'flyout'
-  | 'earthFlyout'
-  | 'sondermarkenFlyout'
-  | 'perseveranceToSondermarken'
-  | 'earthUniverseLoop'
-  | 'earthCosmicWebLoop'
-  | 'flowOrbit'
-  | 'flyPathDemo'
-  | 'famousFlythrough'
-  | 'tourYouAreHere'
-  | 'tourYouAreHereDwell'
-  | 'tourApproachM31'
-  | 'tourNeighbourhood'
-  | 'tourApproachVirgo'
-  | 'tourLaniakea'
-  | 'tourCosmicWeb'
-  | 'tourCosmicWebDwell'
-  | 'tourCosmicFlows'
-  | 'tourEmptiness'
-  | 'tourDeepField'
-  | 'tourTheEdge'
-  | 'tourHomeAgain'
-  | 'tourLocalGroup'
-  | 'tourNeighbourhoodReveal'
-  | 'tourParkOpening'
-  | 'tourParkOpeningDwell'
-  | 'tourYouAreHereEarth'
-  | 'tourYouAreHereEarthDwell'
-  | 'tourEarthAndMoon'
-  | 'tourEarthAndMoonDwell'
-  | 'tourSolarSystem'
-  | 'tourSolarSystemDwell'
-  | 'tourStellarNeighbourhood'
-  | 'tourStellarNeighbourhoodDwell';
+
+import type { APP_CLIP_FACTORIES } from '../../compositions/appClips';
+
+export type ClipId = keyof typeof APP_CLIP_FACTORIES;

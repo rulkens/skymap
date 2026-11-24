@@ -88,17 +88,17 @@ import type { APP_CLIP_FACTORIES } from '../../compositions/appClips';
 export type ClipId = keyof typeof APP_CLIP_FACTORIES;
 ```
 
-- [ ] Move the file with `move-files`, rename the two exports with `refactor rename`
+- [x] Move the file with `move-files`, rename the two exports with `refactor rename`
       (`clipFactories` → `APP_CLIP_FACTORIES`, `clipRegistry` → `APP_CLIP_REGISTRY`).
-- [ ] Derive `ClipId`; delete the hand-written union. The header keeps the "ids are in shared
+- [x] Derive `ClipId`; delete the hand-written union. The header keeps the "ids are in shared
       links, add rows, retire deliberately" note, as `TourId.d.ts` has it.
-- [ ] `Clip.id` is typed `ClipId`, so the type now refers back to the table. If `tsc` reports a
+- [x] `Clip.id` is typed `ClipId`, so the type now refers back to the table. If `tsc` reports a
       circular reference, **stop and report**: do not widen `Clip.id` or add a cast.
-- [ ] The moved test keeps both cases (id equals key; label and timeline present). Its header
+- [x] The moved test keeps both cases (id equals key; label and timeline present). Its header
       loses the sentence about the `Record<ClipId, Clip>` typing.
-- [ ] Repoint `packages/website/src/data/docsReferenceFacts.ts:328` and
+- [x] Repoint `packages/website/src/data/docsReferenceFacts.ts:328` and
       `tools/record/README.md:173`.
-- [ ] `npm run typecheck` (the `tsc` 6 gate, not only `:fast`), `npm test`, `npm run build`.
+- [x] `npm run typecheck` (the `tsc` 6 gate, not only `:fast`), `npm test`, `npm run build`.
       Commit.
 
 ### Task 3: Ledger and backlog say what is true

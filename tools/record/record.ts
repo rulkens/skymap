@@ -87,7 +87,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { APP_TOUR_REGISTRY } from '../../src/compositions/appTours';
-import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../src/compositions/appClips';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
 import type { TourId } from '../../src/@types/animation/tour/TourId';
@@ -859,10 +859,10 @@ async function main(): Promise<void> {
     // instead of polling the never-resolving clip-end status.
     let loopNote: string | undefined;
     if (options.clipId !== undefined) {
-      const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
+      const clip = (APP_CLIP_REGISTRY as Record<string, Clip>)[options.clipId];
       if (clip === undefined) {
         throw new Error(
-          `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
+          `unknown clip '${options.clipId}' — known: ${Object.keys(APP_CLIP_REGISTRY).join(', ')}`,
         );
       }
       // The J2000 snapshot is the right source for the cap: only a clip's START
