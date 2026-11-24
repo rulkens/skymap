@@ -1,3 +1,4 @@
+import type { Plan } from '../../@types/refactor/Plan';
 import type { PlanResult } from '../../@types/refactor/PlanResult';
 import type { LegacyInput } from './LegacyInput';
 import type { PropRun } from './PropRun';
@@ -20,6 +21,11 @@ export type Subcommand = Common &
       ))
     | ({ readonly accepts: 'prop' } & (
         | { readonly kind: 'report'; readonly report: (run: PropRun) => string }
-        | { readonly kind: 'plan'; readonly plan: (run: PropRun) => PlanResult }
+        | {
+            readonly kind: 'plan';
+            readonly plan: (run: PropRun) => PlanResult;
+            /** Refusal lines after the plan is folded and the engine synced; none when it holds. */
+            readonly after?: (run: PropRun, plan: Plan) => readonly string[];
+          }
       ))
   );

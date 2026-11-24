@@ -82,4 +82,13 @@ describe('classifyPropUse', () => {
   it('a shorthand object nested in a value is still a write, not a destructure', () => {
     expect(kindOf('const o = { inner: { radius } };')).toBe('shorthand-write');
   });
+
+  it('a {@link Shape.radius} in a doc comment is a doc-link, not a read', () => {
+    expect(kindOf('/** See {@link Shape.radius}. */\nexport const a = 1;')).toBe('doc-link');
+    expect(kindOf('class C {\n  /** {@link Shape.radius} */\n  m() {}\n}')).toBe('doc-link');
+  });
+
+  it('a template-literal key is a string-key', () => {
+    expect(kindOf('const x = a[`radius`];')).toBe('string-key');
+  });
 });

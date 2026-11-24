@@ -4,4 +4,5 @@ export type PropUseKind =
   | 'shorthand-write'
   | 'destructure'
   | 'shorthand-destructure'
-  | 'string-key';
+  | 'string-key'
+  | 'doc-link'; // a `{@link Type.prop}` in a comment

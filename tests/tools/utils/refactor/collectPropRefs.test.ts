@@ -116,3 +116,71 @@ describe('collectPropRefs', () => {
     expect(files).toEqual(['src/stringly.ts:2', 'src/use.ts:3']);
   });
 });
+
+describe('collectPropRefs when another type declares the same member', () => {
+  const LINKED: Record<string, string> = {
+    'src/types.ts': `export interface Base { radius: number }
+export interface Sub extends Base { radius: number; tag: string }
+export interface Mine extends Array<number> { length: number }
+export type Shape = { radius: number };
+`,
+  };
+  const CLEAN: Record<string, string> = {
+    'src/types.ts': `export type Shape = { radius: number };
+export interface Plain extends Shape { extra: number }
+export type Wide = Shape & { size: number };
+export class Disc implements Shape { radius = 1; }
+`,
+    'src/use.ts': `import type { Plain, Wide, Disc, Shape } from './types';
+declare const p: Plain; declare const w: Wide; declare const d: Disc; declare const s: Shape;
+export const all = [p.radius, w.radius, d.radius, s.radius];
+`,
+  };
+  const linked = engineFixture(LINKED);
+  const clean = engineFixture(CLEAN);
+  afterAll(() => {
+    linked.dispose();
+    clean.dispose();
+  });
+
+  function collectIn(
+    fx: ReturnType<typeof engineFixture>,
+    files: Record<string, string>,
+    typeName: string,
+    prop: string,
+  ) {
+    return collectPropRefs({
+      address: { file: 'src/types.ts', typeName, prop },
+      engine: fx.engine,
+      read: (f) => files[f.slice(fx.root.length + 1)] ?? '',
+      texts: () => new Map(),
+    });
+  }
+
+  it('refuses an interface member that re-declares one of its base, from either side', () => {
+    expect(collectIn(linked, LINKED, 'Sub', 'radius')).toEqual({
+      ok: false,
+      refusal: expect.stringMatching(
+        /'Sub\.radius': it is linked to 'Base\.radius' \(src\/types\.ts:1\)/,
+      ),
+    });
+    expect(collectIn(linked, LINKED, 'Base', 'radius')).toEqual({
+      ok: false,
+      refusal: expect.stringMatching(/'Base\.radius': it is linked to 'Sub\.radius'/),
+    });
+  });
+
+  it('refuses a member that re-declares one of a library base', () => {
+    expect(collectIn(linked, LINKED, 'Mine', 'length')).toEqual({
+      ok: false,
+      refusal: expect.stringMatching(/'Mine\.length': it is linked to 'Array\.length'/),
+    });
+  });
+
+  it('accepts a type that is extended, intersected or implemented without re-declaring', () => {
+    const result = collectIn(clean, CLEAN, 'Shape', 'radius');
+    expect(result.ok).toBe(true);
+    const lines = result.ok ? result.found.report.refs.map((r) => r.filePath) : [];
+    expect(lines.filter((f) => f === 'src/use.ts').length).toBeGreaterThanOrEqual(3);
+  });
+});

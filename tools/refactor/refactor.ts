@@ -34,6 +34,7 @@ import { planRemoveProp } from '../utils/refactor/planRemoveProp';
 import { planRenameProp } from '../utils/refactor/planRenameProp';
 import { overlaidTexts } from '../utils/refactor/overlaidTexts';
 import { readManifest } from '../utils/refactor/readManifest';
+import { renameMergeRefusal } from '../utils/refactor/renameMergeRefusal';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { renderTypeErrors } from '../utils/refactor/renderTypeErrors';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
@@ -146,6 +147,15 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     usage: 'refactor rename-prop <file>#<Type>.<prop> <newName>',
     plan: ({ address, found, read, positionals }) =>
       planRenameProp({ address, found, newName: positionals[1] ?? '', read }),
+    after: ({ engine, read, address, found, positionals }, plan) =>
+      renameMergeRefusal({
+        engine,
+        read,
+        address,
+        newName: positionals[1] ?? '',
+        before: found,
+        plan,
+      }),
   },
   {
     accepts: 'prop',
@@ -259,7 +269,14 @@ async function runPropOp(
     process.stdout.write(`${row.report(run)}\n`);
     return true;
   }
-  return acceptPlan(row.plan(run), found.found.report, base, context);
+  const { after } = row;
+  return acceptPlan(
+    row.plan(run),
+    found.found.report,
+    base,
+    context,
+    after && ((plan) => after(run, plan)),
+  );
 }
 
 // A plan row's preview follows its acceptance, and only when something references the
@@ -269,12 +286,18 @@ function acceptPlan(
   report: RefReport<string>,
   base: RunBase,
   context: OpContext,
+  after?: (plan: Plan) => readonly string[],
 ): boolean {
   if (!result.ok) return refuse(result.refusals.join('\n'));
   if (report.refs.length > 0) {
     process.stdout.write(`${renderRefReport(report, base.flags['--json'])}\n`);
   }
   context.apply(result.plan);
+  if (after) {
+    context.settle();
+    const refusals = after(result.plan);
+    if (refusals.length > 0) return refuse(refusals.join('\n'));
+  }
   context.findings.push(...result.plan.findings);
   return true;
 }
@@ -353,6 +376,7 @@ async function main(): Promise<void> {
     // that or before the write.
     // A checking row needs the last fold and a sync too, even under --dry.
     const check = row.checks && !flags['--no-check'];
+    const verifies = row.kind === 'plan' && row.accepts === 'prop' && row.after !== undefined;
     let last = false;
     let unsynced: OverlayChanges | undefined;
     const manifest = readManifest(argv);
@@ -362,7 +386,13 @@ async function main(): Promise<void> {
       batch: manifest !== null,
       texts: () => overlaidTexts(disk.snapshot().texts, engine),
       apply: (plan: Plan) => {
-        if (!(last && flags['--dry'] && !check)) unsynced = foldPlan(plan, overlay, disk);
+        if (!(last && flags['--dry'] && !check && !verifies)) {
+          unsynced = foldPlan(plan, overlay, disk);
+        }
+      },
+      settle: () => {
+        if (unsynced) syncOverlay(engine, unsynced);
+        unsynced = undefined;
       },
     };
     const ops =

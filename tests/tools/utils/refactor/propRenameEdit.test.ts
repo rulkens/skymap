@@ -45,4 +45,11 @@ describe('propRenameEdit', () => {
   it('renames only the key of a renamed destructure', () => {
     expect(renamed('const { radius: r } = a;')).toBe('const { size: r } = a;');
   });
+
+  it('renames the name in a doc link and in a template-literal key', () => {
+    expect(renamed('/** {@link Shape.radius} */\nexport const a = 1;')).toBe(
+      '/** {@link Shape.size} */\nexport const a = 1;',
+    );
+    expect(renamed('const x = a[`radius`];')).toBe('const x = a[`size`];');
+  });
 });

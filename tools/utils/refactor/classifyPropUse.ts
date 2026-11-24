@@ -26,8 +26,10 @@ const ASSIGNMENTS = new Set([
 /** `text` is the file's text; `at` one reference to the property inside it. */
 export function classifyPropUse(text: string, at: NodeLocation): PropUseKind {
   const node = findNameNode(parseTs(at.file, text), at);
-  const parent = node?.parent;
-  if (!node || !parent) return 'read';
+  // The parser does not descend into comments, so a reference the engine finds inside a
+  // `{@link Shape.radius}` lands on no name token.
+  if (!node || !(ts.isIdentifier(node) || ts.isStringLiteralLike(node))) return 'doc-link';
+  const parent = node.parent;
 
   if (ts.isStringLiteralLike(node)) {
     if (ts.isPropertyAssignment(parent) && parent.name === node) return keyKind(parent);
