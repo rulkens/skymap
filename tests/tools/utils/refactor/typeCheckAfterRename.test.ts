@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { checkCandidates } from '../../../../tools/utils/refactor/checkCandidates';
 import { collectPropRefs } from '../../../../tools/utils/refactor/collectPropRefs';
 import { findTypeErrors } from '../../../../tools/utils/refactor/engine/findTypeErrors';
 import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
@@ -12,6 +13,7 @@ const FILES: Record<string, string> = {
   'src/use.ts': `import type { A, B } from './types';
 declare const a: A;
 export const b: B = a;
+export const y = b.yaw;
 `,
 };
 
@@ -38,7 +40,12 @@ function checkAfterRenaming(typeNames: string[]) {
     if (!plan.ok) throw new Error(plan.refusals.join('; '));
     syncOverlay(engine, foldPlan(plan.plan, overlay, disk));
   }
-  return findTypeErrors(engine);
+  const files = checkCandidates({
+    texts: new Map(Object.entries(FILES).map(([name, text]) => [`${root}/${name}`, text])),
+    changed: [`${root}/src/types.ts`],
+    names: ['yaw', 'heading'],
+  });
+  return findTypeErrors(engine, files);
 }
 
 describe('type check after a property rename', () => {

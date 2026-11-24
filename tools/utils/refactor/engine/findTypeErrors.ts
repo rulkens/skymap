@@ -5,23 +5,25 @@ import type { TypeError } from '../../../@types/refactor/TypeError';
 import { engineHandle } from './engineHandle';
 
 /**
- * Every semantic error in the engine's projects as the overlay stands, each site once.
- * A file in two projects is checked twice, so sites are keyed by file, offset and code;
- * dependency files and diagnostics without a file are not the repo's to fix. A project
- * answers only for files under its own folder: the website project pulls in `src/` without
- * the WebGPU and `?static` ambient types and reports hundreds of errors there that its own
- * `src/` project does not have.
+ * The semantic errors of `files` as the overlay stands, each site once. Each file is asked
+ * of the first project that owns it: one whose program holds it and whose config folder
+ * contains it. The website project also pulls in `src/` without the WebGPU and `?static`
+ * ambient types and would report hundreds of errors there that `src/`'s own project does
+ * not have; a file owned by none is skipped, as are dependency files.
  */
-export function findTypeErrors(engine: Engine): readonly TypeError[] {
+export function findTypeErrors(engine: Engine, files: readonly string[]): readonly TypeError[] {
   const { snapshot } = engineHandle(engine);
+  const projects = snapshot.getProjects();
   const seen = new Map<string, TypeError>();
-  for (const project of snapshot.getProjects()) {
-    const home = `${dirname(project.configFileName)}/`;
-    for (const diagnostic of project.program.getSemanticDiagnostics()) {
-      if (diagnostic.category !== DiagnosticCategory.Error || !diagnostic.fileName) continue;
-      const source = project.program.getSourceFile(diagnostic.fileName);
-      if (!source || !source.fileName.startsWith(home)) continue;
-      if (source.fileName.includes('/node_modules/')) continue;
+  for (const file of files) {
+    if (file.includes('/node_modules/')) continue;
+    const owner = projects.find(
+      (p) => file.startsWith(`${dirname(p.configFileName)}/`) && p.program.getSourceFile(file),
+    );
+    const source = owner?.program.getSourceFile(file);
+    if (!owner || !source) continue;
+    for (const diagnostic of owner.program.getSemanticDiagnostics(file)) {
+      if (diagnostic.category !== DiagnosticCategory.Error) continue;
       const key = `${source.fileName}:${diagnostic.pos}:${diagnostic.code}`;
       if (seen.has(key)) continue;
       const { line, character } = source.getLineAndCharacterOfPosition(diagnostic.pos);

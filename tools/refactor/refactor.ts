@@ -19,6 +19,7 @@ import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
 import { collectPropRefs } from '../utils/refactor/collectPropRefs';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { findTypeErrors } from '../utils/refactor/engine/findTypeErrors';
+import { checkCandidates } from '../utils/refactor/checkCandidates';
 import { closeEngine } from '../utils/refactor/engine/closeEngine';
 import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
 import { openEngine } from '../utils/refactor/engine/openEngine';
@@ -294,6 +295,17 @@ async function runLegacy(
   });
 }
 
+// The generic names a run touches: each entry's property or symbol, and the new name.
+function runNames(row: Subcommand, ops: readonly (readonly string[])[]): readonly string[] {
+  const names = new Set<string>();
+  for (const [target = '', replacement] of ops) {
+    const parsed = parseTarget(target);
+    names.add(parsed.kind === 'prop' ? parsed.prop : parsed.symbol);
+    if (row.arity > 1 && replacement !== undefined) names.add(replacement);
+  }
+  return [...names];
+}
+
 function entryToPositionals(entry: unknown): readonly string[] {
   if (Array.isArray(entry) && entry.every((arg) => typeof arg === 'string')) {
     return entry as readonly string[];
@@ -365,7 +377,13 @@ async function main(): Promise<void> {
     }
     if (check) {
       if (unsynced) syncOverlay(engine, unsynced);
-      const errors = findTypeErrors(engine);
+      const names = runNames(row, ops);
+      const files = checkCandidates({
+        texts: context.texts(),
+        changed: engine.overlay.keys(),
+        names,
+      });
+      const errors = findTypeErrors(engine, files);
       if (errors.length > 0) {
         process.stderr.write(`${renderTypeErrors(errors, root)}\n`);
         process.stderr.write(
@@ -374,6 +392,9 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         return;
       }
+      process.stdout.write(
+        `Type check: 0 errors in ${files.length} files that were changed or mention ${names.join(', ')}.\n`,
+      );
     }
     if (flags['--dry']) return;
     if (loaded) await loaded.save();

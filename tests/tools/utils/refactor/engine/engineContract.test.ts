@@ -58,11 +58,12 @@ describe('findTypeErrors', () => {
   it('is empty on a clean fixture and reports an error introduced through the overlay', () => {
     const clean = engineFixture({ 'shape.ts': SHAPE, 'use.ts': USE });
     try {
-      expect(findTypeErrors(clean.engine)).toEqual([]);
       const file = `${clean.root}/use.ts`;
+      const files = [file, `${clean.root}/shape.ts`];
+      expect(findTypeErrors(clean.engine, files)).toEqual([]);
       clean.engine.overlay.set(file, `${USE}export const s: string = area(1);\n`);
       syncOverlay(clean.engine, { changed: [file], created: [], deleted: [] });
-      const errors = findTypeErrors(clean.engine);
+      const errors = findTypeErrors(clean.engine, files);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toMatchObject({ file, line: 4, column: 14 });
       expect(errors[0]?.message).toMatch(/^TS\d+: /);
@@ -77,9 +78,22 @@ describe('findTypeErrors', () => {
       'b.json',
     ]);
     try {
-      expect(findTypeErrors(two.engine)).toHaveLength(1);
+      expect(findTypeErrors(two.engine, [`${two.root}/bad.ts`])).toHaveLength(1);
     } finally {
       two.dispose();
+    }
+  });
+
+  it('asks only for the files given and skips a file no project owns', () => {
+    const f = engineFixture({
+      'bad.ts': 'export const n: number = "x";\n',
+      'ok.ts': 'export {};\n',
+    });
+    try {
+      expect(findTypeErrors(f.engine, [`${f.root}/ok.ts`])).toEqual([]);
+      expect(findTypeErrors(f.engine, [`${f.root}/missing.ts`, '/elsewhere/x.ts'])).toEqual([]);
+    } finally {
+      f.dispose();
     }
   });
 });

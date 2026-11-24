@@ -76,8 +76,11 @@ which needs an editing layer TypeScript 7 does not have.
   Renaming `CameraPose.yaw` left 38 errors because `OrbitCamera` declares its own `yaw` and the
   two are used interchangeably, and the tool is the one that knows it just changed a contract.
   `rename-prop`, `remove-prop` and `params-to-object` run the engine's semantic check on the
-  folded result of the whole batch (also under `--dry`) and write nothing when it finds errors;
-  `--no-check` skips it. The other rows keep the fast path.
+  folded result of the whole batch (also under `--dry`), over the files the run changed plus
+  every file that mentions the run's names as a whole word, and write nothing when it finds
+  errors; `--no-check` skips it. It is not the full check, which stays `npm run typecheck:fast`:
+  a whole-program check through the API costs 11 to 14 s (measured 2026-11-24), and a file that
+  gets the property only through an inferred type never names it. The other rows keep the fast path.
 
 ## 4. Contracts
 
