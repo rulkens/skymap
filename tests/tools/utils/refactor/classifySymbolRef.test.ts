@@ -33,6 +33,10 @@ describe('classifySymbolRef', () => {
     expect(kindOf("export { area } from './shape';")).toBe('re-export');
   });
 
+  it("classifies the left side of a qualified type as 'type-position'", () => {
+    expect(kindOf('let x: area.A;')).toBe('type-position');
+  });
+
   it("classifies an alias as 'value'", () => {
     expect(kindOf('const alias = area;')).toBe('value');
   });

@@ -13,11 +13,12 @@ export function classifySymbolRef(text: string, at: NodeLocation): SymbolRefKind
     // Covers `export { x }` and `export { x } from`; `export const y = x` is a value use.
     if (ts.isExportDeclaration(up)) return 're-export';
   }
-  // A qualified name or property access (`Ns.Foo`) is one reference, so step over it.
+  // A qualified name or property access (`Ns.Foo`) is one reference, so step over it; so is
+  // the left of a qualified type (`Kind.A`).
   let outer: ts.Node = node;
   while (
     outer.parent &&
-    ((ts.isQualifiedName(outer.parent) && outer.parent.right === outer) ||
+    (ts.isQualifiedName(outer.parent) ||
       (ts.isPropertyAccessExpression(outer.parent) && outer.parent.name === outer))
   ) {
     outer = outer.parent;

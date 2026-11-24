@@ -17,6 +17,12 @@ describe('renameEdit', () => {
     expect(apply('export const o = { foo };', '{')).toBe('export const o = { foo: bar };');
   });
 
+  it('turns a destructure shorthand into newName: local', () => {
+    expect(apply("const { foo } = await import('./a');\nfoo();", 'const')).toBe(
+      "const { bar: foo } = await import('./a');\nfoo();",
+    );
+  });
+
   it('replaces an import specifier', () => {
     expect(apply("import { foo } from './a';", 'import')).toBe("import { bar } from './a';");
   });
