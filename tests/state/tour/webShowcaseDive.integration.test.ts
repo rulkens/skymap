@@ -41,7 +41,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { webShowcase } from '../../../src/data/animation/tours/webShowcase';
+import { webShowcase } from '../../../src/compositions/tours/webShowcase';
 import { resolveClipFoci } from '../../../src/services/engine/animation/resolveClipFoci';
 import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';

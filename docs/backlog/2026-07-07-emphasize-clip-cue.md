@@ -100,4 +100,4 @@ timeline, not the channel.
   and `structureLabelSource.ts` — the recession composition the
   lerp slots into.
 - First consumer: staggered group highlights in
-  `src/data/animation/tours/grandTour/neighbourhoodReveal.ts` (beat 04).
+  `src/compositions/tours/grandTour/neighbourhoodReveal.ts` (beat 04).

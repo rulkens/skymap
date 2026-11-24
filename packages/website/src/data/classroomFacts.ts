@@ -16,7 +16,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     about: 'app',
     text: 'Left to play, “The Long Way Out” takes a little over 7 minutes.',
     short: 'Left to play it takes a little over 7 minutes.',
-    source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
+    source: `${REPO_BLOB}/src/compositions/tours/grandTour.ts`,
     sourceLabel: `the tour’s timings, ${IN_REPO}`,
     checked: '2026-11-06',
   },

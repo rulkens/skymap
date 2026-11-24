@@ -33,7 +33,7 @@ import { compileClip } from '../../../../../src/services/engine/animation/compil
 import { lerpInSpace } from '../../../../../src/services/engine/animation/channelSpace';
 import { wrapRad } from '../../../../../src/utils/math/wrapRad';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
-import { neighbourhoodFlythrough } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
+import { neighbourhoodFlythrough } from '../../../../../src/compositions/tours/grandTour/neighbourhoodFlythrough';
 import { relErr } from '../../../../support/relErr';
 import { dwellDrift } from '../../../../../src/state/tour/dwellDrift';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';

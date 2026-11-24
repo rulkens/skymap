@@ -30,8 +30,8 @@ Branch: `grand-tour`, draft PR #400. Full suite must stay green.
 
 | What                                                       | Where                                             |
 | ---------------------------------------------------------- | ------------------------------------------------- |
-| Storyboard (beat order, captions, dwellClips)              | `src/data/animation/tours/grandTour.ts`           |
-| One choreography per beat                                  | `src/data/animation/tours/grandTour/<beat>.ts`    |
+| Storyboard (beat order, captions, dwellClips)              | `src/compositions/tours/grandTour.ts`           |
+| One choreography per beat                                  | `src/compositions/tours/grandTour/<beat>.ts`    |
 | Debugger clip wrappers (ids `tour*`)                       | `src/data/animation/clips/grandTourBeats.ts`      |
 | Clip id union (append-only)                                | `src/@types/animation/ClipId.ts`                  |
 | Clip registry                                              | `src/data/animation/clips/clipRegistry.ts`        |
@@ -87,7 +87,7 @@ override (A/B live-tuning before it's baked as a default).
 1. Read the stage doc + the last few implementation-notes entries.
 2. **RED**: add the new `tour*` key to the expected-keys list in
    `clipRegistry.test.ts`, run that test, watch it fail.
-3. Author the choreography in a new `src/data/animation/tours/grandTour/<beat>.ts`
+3. Author the choreography in a new `src/compositions/tours/grandTour/<beat>.ts`
    (didactic module header explaining the beat's grammar and scene shifts).
 4. Wire four places: storyboard beat in `grandTour.ts` (caption from the
    stage doc's narration, dwellClip), `ClipId` union, wrapper in
