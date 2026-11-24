@@ -35,7 +35,10 @@ along with it.
    two pictures cross-fade over 15% of the stay's length at each end: the planet piece fades in
    after the entry while the whole Sun trail fades out, and the reverse after the exit.
 5. **The trail starts on the launch pad** (owner, 2026-11-24): the craft's invented climb is put in
-   front of the track when the trail is built. The data file does not change.
+   front of the track when the trail is built. The data file does not change. The invented climb
+   now rises to parking height (about 170 km) in its first ten minutes (owner, 2026-11-24), so the
+   trail from the pad shows instead of lying hidden on the ground; the craft itself moves that way
+   too.
 
 ## 3. Shape
 
