@@ -117,10 +117,10 @@ export type ClipId = keyof typeof APP_CLIP_FACTORIES;
 
 ## Definition of Done
 
-- [ ] `git grep -n "data/animation/clips"` finds only `makers/flyToPoseClip` paths.
-- [ ] No file under `src/` outside `src/compositions/` states a clip id list.
-- [ ] `npm run typecheck`, `npm test`, `npm run build` green.
-- [ ] `npm run perf` before and after at earth-surface, solar-system, full-survey: no regression
+- [x] `git grep -n "data/animation/clips"` finds only `makers/flyToPoseClip` paths.
+- [x] No file under `src/` outside `src/compositions/` states a clip id list.
+- [x] `npm run typecheck`, `npm test`, `npm run build` green.
+- [x] `npm run perf` before and after at earth-surface, solar-system, full-survey: no regression
       (no per-frame code is touched; this is the standing gate on every prep PR).
-- [ ] Smoke: [`#clip=earthFlyout`](http://localhost:5176/#clip=earthFlyout) and
+- [x] Smoke: [`#clip=earthFlyout`](http://localhost:5176/#clip=earthFlyout) and
       [`#tour=grandTour`](http://localhost:5176/#tour=grandTour) start without a console error.
