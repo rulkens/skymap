@@ -106,14 +106,14 @@ export type ClipId = keyof typeof APP_CLIP_FACTORIES;
 **Files:** `src/compositions/README.md`, `docs/backlog/2026-10-29-layer-migration-leftovers.md`,
 `docs/BACKLOG.md`.
 
-- [ ] README row `ClipId`, `clipRegistry` → `ClipId`, `APP_CLIP_REGISTRY`: built in
+- [x] README row `ClipId`, `clipRegistry` → `ClipId`, `APP_CLIP_REGISTRY`: built in
       `src/compositions/appClips.ts` and `ClipId.d.ts`, "static, by import; `ClipId` is `keyof`
       the registry", core readers recounted with the README's own `git grep -l` recipe, DONE.
       Tally line: 30 DONE, 3 TODO. Line 4 already names `clips/`.
-- [ ] Leftovers: delete the J4 table row and its section; fix the NEEDS-JOINT total (minus ~480).
-- [ ] `docs/BACKLOG.md:295` names `src/data/animation/clips/cosmicFlows.ts`, which no longer
+- [x] Leftovers: delete the J4 table row and its section; fix the NEEDS-JOINT total (minus ~480).
+- [x] `docs/BACKLOG.md:295` names `src/data/animation/clips/cosmicFlows.ts`, which no longer
       exists: point it at `src/compositions/clips/cosmicFlows.ts`.
-- [ ] Commit.
+- [x] Commit.
 
 ## Definition of Done
 

@@ -59,7 +59,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `deferred` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Remaining Layer seams** `needs-design` — J4–J12 (clips, body facts, …); J13 is the per-body slab item. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Remaining Layer seams** `needs-design` — J5–J12 (body facts, …); J13 is the per-body slab item. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Spacecraft tracks are a hidden input to `deriveBodyStates`** `needs-design` — a module-global store missions writes into core; trigger = a second engine on one page. → [details](backlog/2026-11-05-spacecraft-tracks-hidden-input.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
 - [ ] **The solar system hangs off the Sun; it could hang off a place** `deferred` — a `'solar-system'` `PlaceId` at the heliocentre would re-key the eleven `focusId: 'sun'` element rows and both Sun-anchored regions the way R15 did for the Galactic Centre; no reader needs it until a barycentric ephemeris, a moving render origin, or the seeded stars leaving the body tables. → [details](backlog/2026-09-23-solar-system-place.md)
@@ -292,7 +292,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **The dome doesn't know which phones steer it** `needs-design` — nothing shows a phone joining or dropping, any phone with the code steers, and a fourth is refused without being told. → [details](backlog/2026-11-03-remote-who-is-connected.md)
 - [ ] **A dome reload gives a new room code** `needs-design` — the dome keeps its code in memory only (`createLocalTransport.ts:75`), so a reloaded page hosts without `?last=` and the relay issues a fresh code; every phone pairs again.
 - [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
-- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/compositions/exhibits/cosmicFlows/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
+- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/compositions/exhibits/cosmicFlows/cosmicFlows.ts`, `src/compositions/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
 ## Desktop app
 
