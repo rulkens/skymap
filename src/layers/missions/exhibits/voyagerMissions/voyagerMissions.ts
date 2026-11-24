@@ -34,7 +34,7 @@ export const voyagerMissions: Exhibit = {
   label: LABEL,
   settings: {
     orbitTrails: { enabled: true },
-    missionTrails: { enabled: true },
+    missionTrails: { enabled: true, nearPlanets: true },
     missions: { ...missionsInitialState, craft: CRAFTS[0]!.bodyId },
     galaxyCatalogs: GALAXY_CATALOGS_OFF,
     structures: STRUCTURES_OFF,

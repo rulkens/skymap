@@ -1,29 +1,26 @@
 /**
- * trailDrawsAt — which pieces of a craft's trail to draw at `simDays`. In cruise it is the Sun
- * trail up to the craft. Inside a stay the Sun trail stops at the entry and the planet-centred
- * piece carries on to the craft; the two ends do not meet (the planet has moved on since the
- * entry), so both fade out toward the cut. Once the craft has left, the stay picture fades out
- * while the cruise picture fades in: the blend is additive, so the weights sum to one line.
+ * trailDrawsAt — which pieces of a craft's trail to draw at `simDays`. One trail shows at a
+ * time: the Sun trail up to the craft, or, where `nearPlanets` asks and the craft is inside a
+ * stay, that planet's piece up to the craft. The two are different pictures of the same
+ * stretch (the planet moves), so they swap by a short cross-fade after the entry and after the
+ * exit: the blend is additive, so the weights sum to one line. The planet's piece starts
+ * loose at the reach boundary, so it fades to nothing toward that start.
  */
 
 import { countAtOrBefore } from '../../../../utils/math/countAtOrBefore';
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import type { CraftTrail } from '../@types/CraftTrail';
 import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
+import type { NearTrail } from '../@types/NearTrail';
 import type { TrailDraw } from '../@types/TrailDraw';
-import { TRAIL_CUT_FADE_REACH } from '../data/missionTrailStyle';
+import { TRAIL_CUT_FADE_REACH, TRAIL_STAY_FADE } from '../data/missionTrailStyle';
 
 const NO_FADE = -1;
 
-function drawTo(
-  piece: MissionTrailGeometry,
-  t: number,
-  headAllowed: boolean,
-  weight: number,
-): TrailDraw {
+function drawTo(piece: MissionTrailGeometry, t: number, weight: number): TrailDraw {
   const k = countAtOrBefore(piece.tDays, t);
   // Past the last vertex the craft is held on it: no head segment to draw.
-  const head = headAllowed && k < piece.tDays.length;
+  const head = k < piece.tDays.length;
   return {
     piece,
     segmentCount: Math.max(k - 1, 0),
@@ -34,30 +31,41 @@ function drawTo(
   };
 }
 
-export function trailDrawsAt(trail: CraftTrail, simDays: number): TrailDraw[] {
+/** The planet piece's share of the line: 0 at the entry, 1 mid-stay, 0 at the piece's end. */
+function nearWeight({ piece, leaveDays }: NearTrail, opensTrack: boolean, t: number): number {
+  const enterDays = piece.tDays[0]!;
+  if (t > leaveDays) return 1 - smoothstep(leaveDays, piece.tDays[piece.tDays.length - 1]!, t);
+  if (opensTrack) return 1;
+  return smoothstep(enterDays, enterDays + TRAIL_STAY_FADE * (leaveDays - enterDays), t);
+}
+
+export function trailDrawsAt(
+  trail: CraftTrail,
+  simDays: number,
+  nearPlanets: boolean,
+): TrailDraw[] {
   const { whole, near } = trail;
   if (simDays < whole.tDays[0]!) return [];
-  const stay = near.find(
-    ({ piece }) => piece.tDays[0]! <= simDays && simDays < piece.tDays[piece.tDays.length - 1]!,
+  const stay = nearPlanets
+    ? near.find(
+        ({ piece }) => piece.tDays[0]! <= simDays && simDays < piece.tDays[piece.tDays.length - 1]!,
+      )
+    : undefined;
+  if (stay === undefined) return [drawTo(whole, simDays, 1)];
+
+  const { piece } = stay;
+  // A stay that opens the track (the launch) has no Sun trail before it: no rise, no loose start.
+  const opensTrack = piece.tDays[0]! <= whole.tDays[0]!;
+  const w = nearWeight(stay, opensTrack, simDays);
+  const planet: TrailDraw = opensTrack
+    ? drawTo(piece, simDays, w)
+    : {
+        ...drawTo(piece, simDays, w),
+        fadeVertex: 0,
+        fadeMaxMpc:
+          TRAIL_CUT_FADE_REACH * Math.hypot(piece.relMpc[0]!, piece.relMpc[1]!, piece.relMpc[2]!),
+      };
+  return [drawTo(whole, simDays, 1 - w), planet].filter(
+    (d) => d.weight > 0 && (d.segmentCount > 0 || d.head),
   );
-  const draws: TrailDraw[] = [];
-  if (stay === undefined) {
-    draws.push(drawTo(whole, simDays, true, 1));
-  } else {
-    const { piece, leaveDays } = stay;
-    const enterDays = piece.tDays[0]!;
-    const cruise = smoothstep(leaveDays, piece.tDays[piece.tDays.length - 1]!, simDays);
-    // A stay that opens the track (the launch) has no Sun trail before it, so nothing to fade.
-    const cut = enterDays > whole.tDays[0]!;
-    const fadeMaxMpc = cut
-      ? TRAIL_CUT_FADE_REACH * Math.hypot(piece.relMpc[0]!, piece.relMpc[1]!, piece.relMpc[2]!)
-      : 0;
-    const before = drawTo(whole, enterDays, false, 1 - cruise);
-    draws.push(
-      { ...before, fadeVertex: before.segmentCount, fadeMaxMpc },
-      { ...drawTo(piece, simDays, true, 1 - cruise), fadeVertex: cut ? 0 : NO_FADE, fadeMaxMpc },
-      drawTo(whole, simDays, true, cruise),
-    );
-  }
-  return draws.filter((d) => d.weight > 0 && (d.segmentCount > 0 || d.head));
 }

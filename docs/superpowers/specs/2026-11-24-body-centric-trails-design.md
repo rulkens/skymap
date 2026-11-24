@@ -24,11 +24,16 @@ along with it.
    reach, 1.5 × its Hill radius. The factor is there because 2026 QQ8 stays bound out to 1.58
    million km, past Earth's 1.5 million km Hill radius. The Hill radius is calculated from the
    planet's mass, so **the fact sheet's mass becomes a number**.
-3. **While inside, only the planet-frame path is drawn for that stretch.** The older Sun trail ends
-   at the entry instant, where the planet was then. The planet has moved on since, so the two ends
-   do not meet: both fade to nothing toward the cut (owner, 2026-11-24, after the eye check).
-4. **After leaving, the stretch turns back into Sun trail.** Nothing stays behind at the planet.
-   The planet picture fades out while the whole Sun trail fades in, over 15% of the stay's length.
+3. **One trail shows at a time, and the planet frame is the Voyager exhibit's alone** (owner,
+   2026-11-24, after the eye check; replaces "the Sun trail ends at the entry instant"). A setting,
+   `missionTrails.nearPlanets`, off by default, asks for it and only the Voyager exhibit sets it:
+   with trails on in normal mode a craft's trail is its Sun-centred orbit and nothing else. With
+   the setting on, a craft inside a planet's reach is drawn by that planet's piece alone, and the
+   Sun trail is not drawn. The piece fades to nothing toward where the craft entered, as its
+   start hangs loose at the reach boundary.
+4. **After leaving, the trail is the Sun trail again.** Nothing stays behind at the planet. The
+   two pictures cross-fade over 15% of the stay's length at each end: the planet piece fades in
+   after the entry while the whole Sun trail fades out, and the reverse after the exit.
 5. **The trail starts on the launch pad** (owner, 2026-11-24): the craft's invented climb is put in
    front of the track when the trail is built. The data file does not change.
 
@@ -50,13 +55,19 @@ export type TrailDraw = {
   readonly piece: MissionTrailGeometry;
   readonly segmentCount: number;
   readonly head: boolean; // end on the craft's live position
-  readonly weight: number; // opacity factor: the stay and cruise pictures cross-fade on leaving
-  readonly fadeVertex: number; // the line fades to nothing toward this vertex; -1 = none
+  readonly weight: number; // opacity factor: the Sun trail and a planet's piece cross-fade where they swap
+  readonly fadeVertex: number; // a planet's piece fades to nothing toward its first vertex; -1 = none
   readonly fadeMaxMpc: number;
 };
 
-// src/layers/missions/trails/utils/trailDrawsAt.ts
-export function trailDrawsAt(trail: CraftTrail, simDays: number): TrailDraw[];
+// src/layers/missions/@types/MissionTrailsSettings.d.ts
+export type MissionTrailsSettings = {
+  enabled: boolean;
+  nearPlanets: boolean; // draw a stretch near a planet about that planet; the Voyager exhibit only
+};
+
+// src/layers/missions/trails/utils/trailDrawsAt.ts — at most two draws, two only during a cross-fade
+export function trailDrawsAt(trail: CraftTrail, simDays: number, nearPlanets: boolean): TrailDraw[];
 
 // src/layers/missions/trails/utils/trailStaysOf.ts — entry and exit instants per planet
 export function trailStaysOf(
@@ -69,9 +80,9 @@ export function trailStaysOf(
 export function hillRadiusKm(semiMajorKm: number, massKg: number): number; // a · ∛(m / 3M☉)
 ```
 
-- **`trailDrawsAt`** is the whole per-frame rule. Outside every stay: `whole` up to now, with a head.
-  Inside a stay: `whole` cut at the entry instant without a head, then that `near` piece up to now
-  with a head.
+- **`trailDrawsAt`** is the whole per-frame rule. With `nearPlanets` off, or outside every stay:
+  `whole` up to now, with a head. Inside a stay: that `near` piece up to now with a head, and
+  during the cross-fade at either end `whole` up to now as well, the two weights summing to 1.
 - **Centres** are every body that orbits the Sun and has a fact-sheet mass (the planets, Pluto,
   Ceres, Vesta, Bennu): a derived list, not a hand-written one. Moons are not centres, so Voyager 1's Titan pass sits inside Saturn's piece.
 - **A `near` piece is tessellated in the planet's frame.** The track's samples over the stay, minus
@@ -91,8 +102,9 @@ export function hillRadiusKm(semiMajorKm: number, massKg: number): number; // a 
 
 ## 4. Tests
 
-- `trailDrawsAt`: outside a stay gives one draw with a head; inside gives the cut `whole` without a
-  head and the `near` piece with one; at the exit instant it is back to one draw.
+- `trailDrawsAt`: with `nearPlanets` off, one Sun draw even inside a stay; on, outside a stay one
+  Sun draw, mid-stay the `near` piece alone, during the entry rise and the exit fall both with
+  weights summing to 1; a stay that opens the track is the `near` piece alone from the start.
 - `trailStaysOf`: a straight synthetic track past a fixed body gives one stay whose entry and exit
   sit on the reach; a track that stays outside gives none; two bodies give two stays in time order.
 - `hillRadiusKm`: Jupiter and Earth against published values (53.1 and 1.50 million km) within 1%.
@@ -110,24 +122,23 @@ renderer's (§3), which the prep could not make without the list existing.
 
 ## 6. Risks
 
-- **The exit pop.** At the exit instant the planet piece disappears and the same stretch appears in
-  the Sun's frame. The craft is then 1.5 Hill radii out, so at flyby zoom it is off screen, but the
-  Voyager exhibit's playback may show it. If the eye check fails, the fix is a fade across the
-  switch, as a follow-up ruling, not a silent addition.
-- **The gap while inside.** Up to about 50 million km at Jupiter between the Sun trail's end and the
-  planet piece's start. Ruled acceptable (§2.3).
+- **The swap.** The Sun trail and the planet piece are different pictures of the same stretch, up
+  to about 50 million km apart at Jupiter. The eye check failed a hard switch, so they cross-fade
+  at the entry and at the exit (§2.3, §2.4); during a cross-fade both lines show, dimmed.
 - **Planet positions.** The planet-frame shape is the track minus skymap's own planet position. The
   Voyager tracks are already blended onto DE441 near each encounter for that reason; the closest
   approach distances in `MISSION_EVENTS` are the check.
 
 ## 7. Smoke list (DoD)
 
-- `#focus=body-jupiter&t=1979-03-05T18:00:00Z&layers=missionTrails`: Voyager 1's trail curves around Jupiter.
+- `#exhibit=voyager-missions&t=1979-03-05T18:00:00Z`: Voyager 1's trail is the piece around
+  Jupiter alone, fading toward where it entered; no Sun trail for it.
+- `#exhibit=voyager-missions&t=1989-08-25T06:00:00Z`, Voyager 2 tab: it swings over Neptune's pole.
+- `#exhibit=voyager-missions`: the departure from Earth, then play through the Jupiter flyby and
+  both cross-fades.
+- `#focus=body-jupiter&t=1979-03-05T18:00:00Z&layers=missionTrails`: normal mode, Sun trails only.
 - `#focus=body-voyager1&t=1979-03-05T06:00:00Z&layers=missionTrails`: the trail still ends on the craft.
-- `#focus=body-neptune&t=1989-08-25T06:00:00Z&layers=missionTrails`: Voyager 2 swings over Neptune's pole.
 - `#focus=body-voyager1&t=1985-01-01T00:00:00Z&layers=missionTrails`: cruise, one continuous Sun trail.
-- `#focus=body-earth&t=1977-09-07T00:00:00Z&layers=missionTrails`: the departure from Earth.
-- `#exhibit=voyager-missions`: play through the Jupiter flyby and its exit.
 - No perf gate (owner ruling 2026-11-24): the standard poses draw no mission trails. The trail
   build has its own 50 ms budget, measured in the plan's Task 4.
 

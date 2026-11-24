@@ -7,7 +7,7 @@
 
 import type { CraftTrail } from '../@types/CraftTrail';
 import { SAMPLED_BODIES } from '../../../../data/bodies/sampledBodies';
-import { MISSION_TRAIL_MAX_SAG_KM, TRAIL_LEAVE_FADE } from '../data/missionTrailStyle';
+import { MISSION_TRAIL_MAX_SAG_KM, TRAIL_STAY_FADE } from '../data/missionTrailStyle';
 import { TRAIL_CENTRES } from '../data/trailCentres';
 import { tessellateTrack } from '../utils/tessellateTrack';
 import { trackKmToMpc } from '../utils/trackKmToMpc';
@@ -33,7 +33,7 @@ export function buildMissionTrails(): CraftTrail[] {
     const whole = { centreId: TRACK_CENTRE_ID, tDays, relMpc: trackKmToMpc(posKm) };
     const near = trailStaysOf(track, TRAIL_CENTRES, bodyPositionMpcAt).map((stay) => {
       const { t0Days, t1Days } = stay;
-      const fadedDays = Math.min(t1Days + TRAIL_LEAVE_FADE * (t1Days - t0Days), endDays);
+      const fadedDays = Math.min(t1Days + TRAIL_STAY_FADE * (t1Days - t0Days), endDays);
       const piece = nearTrailPiece(track, { ...stay, t1Days: fadedDays }, bodyPositionMpcAt);
       return { piece, leaveDays: t1Days };
     });

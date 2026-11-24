@@ -6,4 +6,6 @@
 
 export type MissionTrailsSettings = {
   enabled: boolean;
+  /** Draw a stretch near a planet about that planet, in place of the Sun trail there. */
+  nearPlanets: boolean;
 };

@@ -2,8 +2,8 @@
  * missionTrailsPass — Voyager-style sampled-craft trails, additive into HDR
  * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missionTrails` show entry.
  * The renderer builds and uploads vertices once per `trajectoryRegistry.version()`;
- * per frame `trailDrawsAt` picks each craft's pieces (the Sun trail, or it plus a
- * planet stay, faded where they part) and the head ends on the snapshot position.
+ * per frame `trailDrawsAt` picks each craft's one trail (the Sun trail, or a planet
+ * stay where the `nearPlanets` setting asks) and the head ends on the snapshot position.
  * The vp is rebased about the eye in f64 (as `near0SelectionRingPass` does) and the
  * shader subtracts the eye's hi/lo pair from each hi/lo vertex, keeping 160 AU in
  * 1 km. Vertices and eye are both relative to the piece's centre body, so it rides
@@ -51,12 +51,13 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         occluders: sceneOccluderSpheres(state, ctx),
         depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
       });
+      const { nearPlanets } = state.settings.missionTrails;
       for (const { id, trailColor } of SAMPLED_BODIES) {
         const trail = tracks.get(id);
         if (trail === undefined) continue;
         const opacity = fade * emphasisDim(state.settings.missions.craft, id);
         const craft = states.get(id)!.positionMpc;
-        for (const draw of trailDrawsAt(trail, ctx.snapshot.simDays)) {
+        for (const draw of trailDrawsAt(trail, ctx.snapshot.simDays, nearPlanets)) {
           const { piece, segmentCount, fadeVertex } = draw;
           const centre = states.get(piece.centreId)!.positionMpc;
           // The fade grows with the craft's distance from the cut, so entering shows no jump.

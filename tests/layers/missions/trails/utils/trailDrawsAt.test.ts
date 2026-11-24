@@ -1,71 +1,113 @@
 import { describe, expect, it } from 'vitest';
 import type { CraftTrail } from '../../../../../src/layers/missions/trails/@types/CraftTrail';
 import type { MissionTrailGeometry } from '../../../../../src/layers/missions/trails/@types/MissionTrailGeometry';
+import {
+  TRAIL_CUT_FADE_REACH,
+  TRAIL_STAY_FADE,
+} from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
 import { trailDrawsAt } from '../../../../../src/layers/missions/trails/utils/trailDrawsAt';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
-const piece = (centre: string, times: number[]): MissionTrailGeometry => ({
+// Every vertex sits `startMpc` along x from its centre: only the first one's distance is read.
+const piece = (centre: string, times: number[], startMpc = 0): MissionTrailGeometry => ({
   centreId: asSceneBodyId(centre),
   tDays: Float64Array.from(times),
-  relMpc: new Float64Array(3 * times.length),
+  relMpc: Float64Array.from(times.flatMap(() => [startMpc, 0, 0])),
 });
+const SUN = { fadeVertex: -1, fadeMaxMpc: 0 };
 
-// Sun trail at days 0..10; a stay entered at day 4 and left at day 6, its piece running to day 7.
-const trail: CraftTrail = {
-  id: 'c',
-  whole: piece('sun', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-  near: [{ piece: piece('earth', [4, 5, 6, 7]), leaveDays: 6 }],
-};
+// Sun trail at days 0..30; a stay entered at day 10 and left at day 20, so each cross-fade
+// lasts FADE days: the rise 10 → 10 + FADE, the fall 20 → 20 + FADE (the piece's last time).
+const FADE = TRAIL_STAY_FADE * 10;
+const whole = piece(
+  'sun',
+  Array.from({ length: 31 }, (_, i) => i),
+);
+const stay = piece('jupiter', [10, 12, 14, 16, 18, 20, 20 + FADE], 4);
+const trail: CraftTrail = { id: 'c', whole, near: [{ piece: stay, leaveDays: 20 }] };
 
 describe('trailDrawsAt', () => {
   it('draws nothing before the track', () => {
-    expect(trailDrawsAt(trail, -1)).toEqual([]);
+    expect(trailDrawsAt(trail, -1, true)).toEqual([]);
   });
 
-  it('cruise: one Sun draw with a head', () => {
-    const draws = trailDrawsAt(trail, 2.5);
-    expect(draws).toHaveLength(1);
-    expect(draws[0]).toMatchObject({ segmentCount: 2, head: true });
-    expect(draws[0]!.piece).toBe(trail.whole);
+  it('planet frames off: one Sun draw, even inside a stay', () => {
+    const draws = trailDrawsAt(trail, 15.5, false);
+    expect(draws).toEqual([{ piece: whole, segmentCount: 15, head: true, weight: 1, ...SUN }]);
   });
 
-  it('inside a stay: the Sun trail cut at the entry without a head, then the near piece with one', () => {
-    const draws = trailDrawsAt(trail, 5.5);
-    expect(draws).toHaveLength(2);
-    expect(draws[0]).toMatchObject({ segmentCount: 4, head: false, weight: 1, fadeVertex: 4 });
-    expect(draws[0]!.piece).toBe(trail.whole);
-    expect(draws[1]).toMatchObject({ segmentCount: 1, head: true, weight: 1, fadeVertex: 0 });
-    expect(draws[1]!.piece).toBe(trail.near[0]!.piece);
+  it('outside every stay: one Sun draw with a head', () => {
+    const draws = trailDrawsAt(trail, 2.5, true);
+    expect(draws).toEqual([{ piece: whole, segmentCount: 2, head: true, weight: 1, ...SUN }]);
   });
 
-  it('after leaving, the stay picture fades out as the whole Sun trail fades in', () => {
-    const draws = trailDrawsAt(trail, 6.5);
-    expect(draws.map((d) => d.piece)).toEqual([trail.whole, trail.near[0]!.piece, trail.whole]);
-    expect(draws.map((d) => d.weight)).toEqual([0.5, 0.5, 0.5]);
-    expect(draws[2]).toMatchObject({ segmentCount: 6, head: true, fadeVertex: -1 });
+  it('mid-stay: only the planet piece, up to the craft, fading toward where it entered', () => {
+    const draws = trailDrawsAt(trail, 15, true);
+    expect(draws).toEqual([
+      {
+        piece: stay,
+        segmentCount: 2,
+        head: true,
+        weight: 1,
+        fadeVertex: 0,
+        fadeMaxMpc: TRAIL_CUT_FADE_REACH * 4,
+      },
+    ]);
+  });
+
+  it('at the entry instant it is still the Sun trail alone', () => {
+    const draws = trailDrawsAt(trail, 10, true);
+    expect(draws.map((d) => d.piece)).toEqual([whole]);
+    expect(draws[0]!.weight).toBe(1);
+  });
+
+  it('during the entry rise both draw up to the craft, weights summing to 1', () => {
+    const early = trailDrawsAt(trail, 10 + FADE / 4, true);
+    const half = trailDrawsAt(trail, 10 + FADE / 2, true);
+    expect(half.map((d) => d.piece)).toEqual([whole, stay]);
+    expect(half.map((d) => d.head)).toEqual([true, true]);
+    // The Sun trail runs whole to the craft: only the planet piece has a loose end to fade.
+    expect(half.map((d) => d.fadeVertex)).toEqual([-1, 0]);
+    expect(half[0]!.segmentCount).toBe(10);
+    expect(half[0]!.weight).toBeCloseTo(0.5, 12);
+    expect(half[1]!.weight).toBeCloseTo(0.5, 12);
+    // The planet piece comes in, the Sun trail goes out.
+    expect(early[1]!.weight).toBeLessThan(0.5);
+    expect(early[0]!.weight + early[1]!.weight).toBeCloseTo(1, 12);
+  });
+
+  it('during the exit fall both draw, the planet piece going out', () => {
+    const half = trailDrawsAt(trail, 20 + FADE / 2, true);
+    const late = trailDrawsAt(trail, 20 + (3 * FADE) / 4, true);
+    expect(half.map((d) => d.piece)).toEqual([whole, stay]);
+    expect(half[0]).toMatchObject({ segmentCount: 20, head: true });
+    expect(half[0]!.weight).toBeCloseTo(0.5, 12);
+    expect(half[1]!.weight).toBeCloseTo(0.5, 12);
+    expect(late[1]!.weight).toBeLessThan(0.5);
+    expect(late[0]!.weight + late[1]!.weight).toBeCloseTo(1, 12);
   });
 
   it("at the piece's end it is one Sun draw again", () => {
-    const draws = trailDrawsAt(trail, 7);
-    expect(draws).toHaveLength(1);
-    expect(draws[0]!.piece).toBe(trail.whole);
+    const draws = trailDrawsAt(trail, 20 + FADE, true);
+    expect(draws.map((d) => d.piece)).toEqual([whole]);
+    expect(draws[0]!.weight).toBe(1);
   });
 
-  it('a stay that opens on the first sample draws only its near piece', () => {
+  it('a stay that opens the track is the planet piece alone from the first instant', () => {
+    const launch = piece('earth', [0, 1, 2, 2.3], 4);
     const departing: CraftTrail = {
       id: 'c',
       whole: piece('sun', [0, 1, 2, 3]),
-      near: [{ piece: piece('earth', [0, 1, 2]), leaveDays: 2 }],
+      near: [{ piece: launch, leaveDays: 2 }],
     };
-    const draws = trailDrawsAt(departing, 0.5);
-    expect(draws).toHaveLength(1);
-    expect(draws[0]!.piece).toBe(departing.near[0]!.piece);
-    expect(draws[0]!.fadeVertex).toBe(-1);
+    expect(trailDrawsAt(departing, 0, true)).toEqual([
+      { piece: launch, segmentCount: 0, head: true, weight: 1, ...SUN },
+    ]);
+    expect(trailDrawsAt(departing, 0.05, true).map((d) => d.piece)).toEqual([launch]);
   });
 
   it("past the track's end the single draw has no head", () => {
-    const draws = trailDrawsAt(trail, 12);
-    expect(draws).toHaveLength(1);
-    expect(draws[0]).toMatchObject({ segmentCount: 10, head: false });
+    const draws = trailDrawsAt(trail, 32, true);
+    expect(draws).toEqual([{ piece: whole, segmentCount: 30, head: false, weight: 1, ...SUN }]);
   });
 });

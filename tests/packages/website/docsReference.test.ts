@@ -89,6 +89,7 @@ describe('Settings page', () => {
     /^debug\./,
     /^(surfaceTileDebug|terrainPickMarker)\./,
     /^missions\.(craft|speed)$/,
+    /^missionTrails\.nearPlanets$/,
     /^(constellations|lightTime|zoneOfAvoidance|stellarStreams)\.labelEnabled$/,
     /^stellarStreams\.(streak|haze)\.\w+$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
