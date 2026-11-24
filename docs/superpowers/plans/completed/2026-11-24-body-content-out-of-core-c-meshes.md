@@ -1,12 +1,12 @@
 # Body content out of core, PR C: Layers declare their mesh rows
 
 > **For agentic workers:** execute with `superpowers:subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax.
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** the four Layers that draw meshes return their own mesh asset rows; core mints none and
 no longer lists which bodies have a shape model. No behaviour change in the app.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/2026-11-24-body-content-out-of-core-design.md)
 §4.2, §4.3, §5 prep 6. Third of four PRs (§6); A (#1155) and B (#1157) have landed.
 
 **Why it is safe to land alone:** the app composes all four mesh Layers, so the same rows exist
@@ -178,13 +178,13 @@ it describes where mesh rows come from), `docs/backlog/2026-10-29-layer-migratio
 
 **Files:** none
 
-- [ ] Before Task 1 and after Task 3, shoot on this worktree's dev server at
+- [x] Before Task 1 and after Task 3, shoot on this worktree's dev server at
       `t=2026-01-01T12:00:00Z`: `focus=body-phobos`, `body-bennu`, `body-curiosity`,
       `body-voyager1`, `body-soendermarken`, `body-hubble`, and
       `layers=probeSpheres&focus=body-probe-sphere-orbit`. Pairs go to the owner as dash checks.
-- [ ] `npm run perf` (`earth-surface`, `solar-system`, `full-survey` as control) and
+- [x] `npm run perf` (`earth-surface`, `solar-system`, `full-survey` as control) and
       `npm run perf:cpu`, before and after, `--url` this worktree's server.
-- [ ] Payoff build with an empty body registry (`tools/reference-engine/vite.payoff.config.ts`,
+- [x] Payoff build with an empty body registry (`tools/reference-engine/vite.payoff.config.ts`,
       untracked kit): `attribute.mts` no longer lists `npm:meshoptimizer`. Informative.
 
 ---
