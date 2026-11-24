@@ -76,7 +76,7 @@ while the exhibit runs, handed the section's data) and a `cameraDriver`
 exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
 drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
 read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
-exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
+exhibit states its id in its type (`Exhibit<'solarSystem'>`); `ExhibitId` follows from the rows.
 
 **`subsystems/` vs `render/`.** Both stay, inside a module. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A module with no per-frame decision state has no `subsystems/` folder.
 

@@ -3,4 +3,4 @@
 import { solarSystem } from './solarSystem/solarSystem';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 
-export const bodyLayerExhibits: readonly Exhibit[] = [solarSystem];
+export const bodyLayerExhibits = [solarSystem] as const satisfies readonly Exhibit[];
