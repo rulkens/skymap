@@ -334,6 +334,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Space-Track's full satellite catalog** `blocked` — ~30k objects with rocket bodies and all debris; needs an account and written approval to redistribute (satellites spec §9).
 - [ ] **Craft around other planets and at Lagrange points** `needs-design` — `/add-mission` rows, plus `buildSpacecraftTracks` generalised beyond Voyager for halo orbits (satellites spec §9).
+- [ ] **BepiColombo around Mercury** `blocked` — captured 2026-11-21, but Horizons still carries the pre-burn orbit and no textured model exists; revisit after the re-fit. → [details](backlog/2026-11-24-bepicolombo-mercury-orbit.md)
 - [ ] **DESI DR1 as a data source** `blocked` — ~10× points (~9.75M) exceeds the interactive ceiling; revisit after the octree lifts it to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`). Three scoped patches ([deep cone](superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md), wedge, Sloan Great Wall) ship via `desiPatches.ts`.
 - [ ] **DESI BGS real galaxy shapes** `needs-verification` — DR1 LSS clustering catalogs carry no shape columns; every DESI row renders at the default size + hashed fallback orientation. → [details](backlog/2026-07-09-desi-bgs-real-shapes.md)
 - [ ] **Second DESI deep cone** `awaiting-decision` — Coma is DR2-blocked (zero LRG/ELG/QSO rows in DR1); Stripe 82 is a ready-now alternative target. → [details](backlog/2026-07-09-second-desi-deep-cone.md)
