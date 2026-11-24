@@ -23,7 +23,7 @@ along with it.
 2. **A stretch switches to a planet's frame by distance**: while the craft is within the planet's
    reach, 1.5 × its Hill radius. The factor is there because 2026 QQ8 stays bound out to 1.58
    million km, past Earth's 1.5 million km Hill radius. The Hill radius is calculated from the
-   planet's mass, so **numeric planet masses join the body data**.
+   planet's mass, so **the fact sheet's mass becomes a number**.
 3. **While inside, only the planet-frame path is drawn for that stretch.** The older Sun trail ends
    at the entry instant, where the planet was then.
 4. **After leaving, the stretch turns back into Sun trail.** Nothing stays behind at the planet.
@@ -64,16 +64,18 @@ export function hillRadiusKm(semiMajorKm: number, massKg: number): number; // a 
 - **`trailDrawsAt`** is the whole per-frame rule. Outside every stay: `whole` up to now, with a head.
   Inside a stay: `whole` cut at the entry instant without a head, then that `near` piece up to now
   with a head.
-- **Centres** are every body that orbits the Sun and has a mass: a derived list, not a hand-written
-  one. Moons are not centres, so Voyager 1's Titan pass sits inside Saturn's piece.
+- **Centres** are every body that orbits the Sun and has a fact-sheet mass (the planets, Pluto,
+  Ceres, Vesta, Bennu): a derived list, not a hand-written one. Moons are not centres, so Voyager 1's Titan pass sits inside Saturn's piece.
 - **A `near` piece is tessellated in the planet's frame.** The track's samples over the stay, minus
   the planet's position and velocity (`bodyVelocityKmS`) at each sample time, form a relative
   `SampledTrack` that goes through the existing `tessellateTrack`. Tessellating in the Sun's frame
   and subtracting afterwards would leave the planet's own orbital curvature (hundreds of km of sag
   per step) in the line.
-- **Masses.** `src/data/bodies/planetMassKg.ts` holds a numeric mass for the eight planets and
-  `sunMassKg.ts` the Sun's (source: NASA planetary fact sheets, cited in the file). They do not go
-  through `BodyFacts`: that type is display strings by design, so its `mass` text stays as authored.
+- **Masses** (owner ruling 2026-11-24). The fact sheet holds the number: `planet_facts.seed.json`
+  carries `massKg` where it carried a `mass` display string, through `build-planet-facts` into
+  `BodyFacts.massKg`. The card's text is derived by `formatBodyMass` (Earth masses for a
+  Sun-orbiting body from Pluto's size up, kilograms for moons and small bodies), so the reach and
+  the card read one value. The Sun's mass is one constant, `SUN_MASS_KG`.
 - **Renderer.** `ensureTracks` returns `ReadonlyMap<string, CraftTrail>` and `drawTrail` takes the
   piece instead of the craft id. Two crafts draw at most four pieces a frame; `MAX_TRAILS` is 8.
 - **Launch.** Earth is a centre too, so a Voyager's first two days after its first sample are an

@@ -2,7 +2,7 @@
  * BodyFacts — the curated "fact sheet" row set for a Solar-System body (a planet, the Moon, another
  * moon, or Earth) or a mesh body (whale, petunias), shown in BodyDetailCard.
  *
- * Every field is a pre-formatted display *string*, not a raw number: the values
+ * Every field but `massKg` is a pre-formatted display *string*, not a raw number: the values
  * are static curated constants (a planet's mass never changes between builds),
  * so baking the unit + friendly rounding into the datum keeps the card a dumb
  * renderer and lets each body pick the unit that reads best — Earth masses for
@@ -26,8 +26,8 @@
  */
 
 export type BodyFacts = {
-  /** Mass — Earth masses (M⊕) for planets, kilograms for moons. */
-  readonly mass?: string;
+  /** Mass in kg, a number because it is calculated with (Hill radius); `formatBodyMass` picks the card's unit. */
+  readonly massKg?: number;
   /** Surface gravity relative to Earth (g). */
   readonly gravity?: string;
   /** Sidereal rotation, friendly units; 'Tidally locked' for synchronous moons. */

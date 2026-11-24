@@ -1,7 +1,7 @@
 [
   {
     "id": "mercury",
-    "mass": "0.055 M⊕",
+    "massKg": 3.301e+23,
     "gravity": "0.38 g",
     "dayLength": "58.6 Earth days",
     "yearLength": "88 Earth days",
@@ -15,7 +15,7 @@
   },
   {
     "id": "venus",
-    "mass": "0.815 M⊕",
+    "massKg": 4.8673e+24,
     "gravity": "0.90 g",
     "dayLength": "243 Earth days (retrograde)",
     "yearLength": "225 Earth days",
@@ -29,7 +29,7 @@
   },
   {
     "id": "earth",
-    "mass": "1.0 M⊕",
+    "massKg": 5.9722e+24,
     "gravity": "1.0 g",
     "dayLength": "23.9 hours",
     "yearLength": "365.25 days",
@@ -43,7 +43,7 @@
   },
   {
     "id": "mars",
-    "mass": "0.107 M⊕",
+    "massKg": 6.4169e+23,
     "gravity": "0.38 g",
     "dayLength": "24.6 hours",
     "yearLength": "687 Earth days",
@@ -57,7 +57,7 @@
   },
   {
     "id": "jupiter",
-    "mass": "317.8 M⊕",
+    "massKg": 1.89813e+27,
     "gravity": "2.53 g",
     "dayLength": "9.9 hours",
     "yearLength": "11.9 Earth years",
@@ -71,7 +71,7 @@
   },
   {
     "id": "saturn",
-    "mass": "95.2 M⊕",
+    "massKg": 5.6832e+26,
     "gravity": "1.07 g",
     "dayLength": "10.7 hours",
     "yearLength": "29.4 Earth years",
@@ -85,7 +85,7 @@
   },
   {
     "id": "uranus",
-    "mass": "14.5 M⊕",
+    "massKg": 8.6811e+25,
     "gravity": "0.89 g",
     "dayLength": "17.2 hours (retrograde)",
     "yearLength": "83.7 Earth years",
@@ -99,7 +99,7 @@
   },
   {
     "id": "neptune",
-    "mass": "17.1 M⊕",
+    "massKg": 1.02409e+26,
     "gravity": "1.14 g",
     "dayLength": "16.1 hours",
     "yearLength": "163.7 Earth years",
@@ -113,7 +113,7 @@
   },
   {
     "id": "pluto",
-    "mass": "0.0022 M⊕",
+    "massKg": 1.303e+22,
     "gravity": "0.063 g",
     "dayLength": "6.4 Earth days (retrograde)",
     "yearLength": "247.9 Earth years",
@@ -126,7 +126,7 @@
   },
   {
     "id": "vesta",
-    "mass": "2.59 × 10²⁰ kg",
+    "massKg": 2.59e+20,
     "gravity": "0.026 g",
     "dayLength": "5.3 hours",
     "yearLength": "3.6 Earth years",
@@ -136,7 +136,7 @@
   },
   {
     "id": "ceres",
-    "mass": "9.38 × 10²⁰ kg",
+    "massKg": 9.38e+20,
     "gravity": "0.029 g",
     "dayLength": "9.1 hours",
     "yearLength": "4.6 Earth years",
@@ -146,7 +146,7 @@
   },
   {
     "id": "bennu",
-    "mass": "7.33 × 10¹⁰ kg",
+    "massKg": 73300000000.0,
     "gravity": "0.0000085 g",
     "dayLength": "4.3 hours (retrograde)",
     "yearLength": "1.2 Earth years",
@@ -156,7 +156,7 @@
   },
   {
     "id": "moon",
-    "mass": "7.35 × 10²² kg",
+    "massKg": 7.35e+22,
     "gravity": "0.17 g",
     "dayLength": "Tidally locked",
     "yearLength": "27.3 Earth days",
@@ -170,7 +170,7 @@
   },
   {
     "id": "phobos",
-    "mass": "1.06 × 10¹⁶ kg",
+    "massKg": 1.06e+16,
     "gravity": "0.0006 g",
     "dayLength": "Tidally locked",
     "yearLength": "7.7 hours",
@@ -182,7 +182,7 @@
   },
   {
     "id": "deimos",
-    "mass": "1.48 × 10¹⁵ kg",
+    "massKg": 1480000000000000.0,
     "gravity": "0.0003 g",
     "dayLength": "Tidally locked",
     "yearLength": "30.3 hours",
@@ -194,7 +194,7 @@
   },
   {
     "id": "io",
-    "mass": "8.93 × 10²² kg",
+    "massKg": 8.93e+22,
     "gravity": "0.18 g",
     "dayLength": "Tidally locked",
     "yearLength": "1.8 Earth days",
@@ -207,7 +207,7 @@
   },
   {
     "id": "europa",
-    "mass": "4.80 × 10²² kg",
+    "massKg": 4.8e+22,
     "gravity": "0.13 g",
     "dayLength": "Tidally locked",
     "yearLength": "3.6 Earth days",
@@ -220,7 +220,7 @@
   },
   {
     "id": "ganymede",
-    "mass": "1.48 × 10²³ kg",
+    "massKg": 1.48e+23,
     "gravity": "0.15 g",
     "dayLength": "Tidally locked",
     "yearLength": "7.2 Earth days",
@@ -233,7 +233,7 @@
   },
   {
     "id": "callisto",
-    "mass": "1.08 × 10²³ kg",
+    "massKg": 1.08e+23,
     "gravity": "0.13 g",
     "dayLength": "Tidally locked",
     "yearLength": "16.7 Earth days",
@@ -246,7 +246,7 @@
   },
   {
     "id": "mimas",
-    "mass": "3.75 × 10¹⁹ kg",
+    "massKg": 3.75e+19,
     "gravity": "0.006 g",
     "dayLength": "Tidally locked",
     "yearLength": "22.6 hours",
@@ -259,7 +259,7 @@
   },
   {
     "id": "enceladus",
-    "mass": "1.08 × 10²⁰ kg",
+    "massKg": 1.08e+20,
     "gravity": "0.011 g",
     "dayLength": "Tidally locked",
     "yearLength": "1.4 Earth days",
@@ -272,7 +272,7 @@
   },
   {
     "id": "tethys",
-    "mass": "6.17 × 10²⁰ kg",
+    "massKg": 6.17e+20,
     "gravity": "0.015 g",
     "dayLength": "Tidally locked",
     "yearLength": "1.9 Earth days",
@@ -285,7 +285,7 @@
   },
   {
     "id": "dione",
-    "mass": "1.10 × 10²¹ kg",
+    "massKg": 1.1e+21,
     "gravity": "0.023 g",
     "dayLength": "Tidally locked",
     "yearLength": "2.7 Earth days",
@@ -298,7 +298,7 @@
   },
   {
     "id": "rhea",
-    "mass": "2.31 × 10²¹ kg",
+    "massKg": 2.31e+21,
     "gravity": "0.026 g",
     "dayLength": "Tidally locked",
     "yearLength": "4.5 Earth days",
@@ -311,7 +311,7 @@
   },
   {
     "id": "titan",
-    "mass": "1.35 × 10²³ kg",
+    "massKg": 1.35e+23,
     "gravity": "0.14 g",
     "dayLength": "Tidally locked",
     "yearLength": "15.9 Earth days",
@@ -324,7 +324,7 @@
   },
   {
     "id": "iapetus",
-    "mass": "1.81 × 10²¹ kg",
+    "massKg": 1.81e+21,
     "gravity": "0.022 g",
     "dayLength": "Tidally locked",
     "yearLength": "79.3 Earth days",
@@ -337,7 +337,7 @@
   },
   {
     "id": "miranda",
-    "mass": "6.59 × 10¹⁹ kg",
+    "massKg": 6.59e+19,
     "gravity": "0.008 g",
     "dayLength": "Tidally locked",
     "yearLength": "1.4 Earth days",
@@ -350,7 +350,7 @@
   },
   {
     "id": "ariel",
-    "mass": "1.25 × 10²¹ kg",
+    "massKg": 1.25e+21,
     "gravity": "0.027 g",
     "dayLength": "Tidally locked",
     "yearLength": "2.5 Earth days",
@@ -363,7 +363,7 @@
   },
   {
     "id": "umbriel",
-    "mass": "1.28 × 10²¹ kg",
+    "massKg": 1.28e+21,
     "gravity": "0.020 g",
     "dayLength": "Tidally locked",
     "yearLength": "4.1 Earth days",
@@ -376,7 +376,7 @@
   },
   {
     "id": "titania",
-    "mass": "3.40 × 10²¹ kg",
+    "massKg": 3.4e+21,
     "gravity": "0.038 g",
     "dayLength": "Tidally locked",
     "yearLength": "8.7 Earth days",
@@ -389,7 +389,7 @@
   },
   {
     "id": "oberon",
-    "mass": "3.08 × 10²¹ kg",
+    "massKg": 3.08e+21,
     "gravity": "0.035 g",
     "dayLength": "Tidally locked",
     "yearLength": "13.5 Earth days",
@@ -402,7 +402,7 @@
   },
   {
     "id": "puck",
-    "mass": "2.9 × 10¹⁸ kg",
+    "massKg": 2.9e+18,
     "gravity": "0.003 g",
     "dayLength": "Tidally locked",
     "yearLength": "0.8 Earth days",
@@ -414,7 +414,7 @@
   },
   {
     "id": "triton",
-    "mass": "2.14 × 10²² kg",
+    "massKg": 2.14e+22,
     "gravity": "0.08 g",
     "dayLength": "Tidally locked",
     "yearLength": "5.9 Earth days (retrograde)",
@@ -426,7 +426,7 @@
   },
   {
     "id": "proteus",
-    "mass": "5.0 × 10¹⁹ kg",
+    "massKg": 5e+19,
     "gravity": "0.008 g",
     "dayLength": "Tidally locked",
     "yearLength": "1.1 Earth days",
@@ -438,7 +438,7 @@
   },
   {
     "id": "nereid",
-    "mass": "3.0 × 10¹⁹ kg",
+    "massKg": 3e+19,
     "gravity": "0.007 g",
     "dayLength": "About 11.6 hours",
     "yearLength": "360 Earth days",
@@ -450,7 +450,7 @@
   },
   {
     "id": "charon",
-    "mass": "1.59 × 10²¹ kg",
+    "massKg": 1.59e+21,
     "gravity": "0.029 g",
     "dayLength": "Tidally locked (mutual)",
     "yearLength": "6.4 Earth days",
@@ -517,7 +517,6 @@
   },
   {
     "id": "sgr-a-star",
-    "mass": "4.3 million M☉",
     "wikiTitle": "Sagittarius_A*",
     "description": "The supermassive black hole at the centre of the Milky Way, about 26,700 light-years from the Sun, with the mass of about four million Suns inside a region smaller than Mercury's orbit. Its mass comes from tracking the S-stars in orbit around it. S2 passes within 120 AU at more than 7,000 km/s, and that work shared the 2020 Nobel Prize in Physics. The radius shown is the event horizon."
   }

@@ -6,7 +6,7 @@
  * generated `BODY_FACTS` table the InfoCard renders.  Centralising parsing +
  * validation here means a single typo in the JSON surfaces as one clear error.
  *
- * The schema is small and all-string, so we hand-roll fail-loud validation
+ * The schema is small and all-string but for `massKg`, so we hand-roll fail-loud validation
  * rather than pull in zod/ajv — a throw naming the offending index/id reads
  * clearer than nested validator output.  Duplicate ids are a HARD error: the id
  * keys the generated `BODY_FACTS` record, so a duplicate would silently
@@ -25,9 +25,9 @@ export type PlanetFactsEntry = { readonly id: string } & BodyFacts;
 
 /**
  * Validate a single raw entry at position `index`.  Throws on any malformed
- * field with a message naming the offending index/id.  Every optional
- * `BodyFacts` field, when present, must be a string; `id` and `wikiTitle` are
- * required non-empty strings.  Returns the value typed as `PlanetFactsEntry`.
+ * field with a message naming the offending index/id.  `massKg`, when present,
+ * must be a positive number and every other optional `BodyFacts` field a string;
+ * `id` and `wikiTitle` are required non-empty strings.  Returns the value typed as `PlanetFactsEntry`.
  */
 export function validatePlanetFactsEntry(raw: unknown, index: number): PlanetFactsEntry {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -45,6 +45,12 @@ export function validatePlanetFactsEntry(raw: unknown, index: number): PlanetFac
   // checked above; validate any remaining property is string-typed.
   for (const [key, value] of Object.entries(e)) {
     if (key === 'id' || key === 'wikiTitle') continue;
+    if (key === 'massKg') {
+      if (typeof value !== 'number' || !(value > 0) || !Number.isFinite(value)) {
+        throw new Error(`planet facts seed: ${e.id} massKg must be a positive number`);
+      }
+      continue;
+    }
     if (typeof value !== 'string') {
       throw new Error(`planet facts seed: ${e.id} field ${key} must be a string`);
     }

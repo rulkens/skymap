@@ -20,19 +20,29 @@ planet and rides along with it. Outside every planet's reach the trail is the Su
 - Conventions: one function per `utils/` file, one type per `@types/` file, filename = symbol,
   `type` aliases only, comments explain why and stay within budget (`docs/superpowers/conventions/comments.md`).
 
-## Task 1: planet and Sun masses
+## Task 1: the fact sheet's mass is a number
 
-**Files:** `src/data/bodies/planetMassKg.ts` (new), `src/data/bodies/sunMassKg.ts` (new)
+**Files:** `data/seeds/planet_facts.seed.json`, `tools/parsers/planetFactsSeed.ts`,
+`tools/bodies/buildPlanetFacts.ts`, `src/@types/scene/BodyFacts.d.ts`,
+`src/data/bodies/bodyFacts.generated.ts`, `src/data/bodies/sunMassKg.ts` (new),
+`src/utils/format/formatBodyMass.ts` (new), `src/utils/format/formatScientific.ts`,
+`src/layers/body/card/ui/BodyDetailCard/BodyDetailCard.tsx`, their tests
 
 ```ts
-export const PLANET_MASS_KG: Readonly<Record<string, number>>; // keyed by scene body id
+// BodyFacts: `mass?: string` becomes
+readonly massKg?: number;
+export function formatBodyMass(massKg: number, isMoon: boolean): string;
 export const SUN_MASS_KG = 1.9885e30;
 ```
 
-Values, NASA planetary fact sheets (cite the URL `https://nssdc.gsfc.nasa.gov/planetary/factsheet/`
-in the file), in kg: mercury 3.3010e23, venus 4.8673e24, earth 5.9722e24, mars 6.4169e23,
-jupiter 1.89813e27, saturn 5.6832e26, uranus 8.6811e25, neptune 1.02409e26. The keys must be the
-ids these planets carry in `ORBITAL_ELEMENTS`. No test: constants.
+Owner ruling 2026-11-24: one numeric mass in the fact sheet, the card's text derived from it.
+Planet values from the NASA planetary fact sheets; the other bodies keep the value their display
+string stated. `formatBodyMass`: a moon, or a body under 1e22 kg, reads in kilograms
+(`formatScientific`, two decimals, trailing zeros dropped); anything else in Earth masses to three
+significant figures. Sgr A*'s seed mass is dropped: its card reads `massSolar` from its own row.
+
+Test: `formatBodyMass` for Jupiter (`318 M⊕`), Titan as a moon (kilograms although it outweighs
+Pluto), Ceres and Puck (kilograms, no padding zeros); the seed parser rejects a non-numeric `massKg`.
 
 ## Task 2: `hillRadiusKm`
 
@@ -59,7 +69,7 @@ export const TRAIL_REACH_HILL_RADII = 1.5; // in missionTrailStyle.ts
 ```
 
 `TRAIL_CENTRES` is derived, never listed by hand: every `ORBITAL_ELEMENTS` row whose `focusId` is
-`'sun'` and whose id has a `PLANET_MASS_KG` entry, with
+`'sun'` and whose id has a `massKg` in `BODY_FACTS`, with
 `reachKm = TRAIL_REACH_HILL_RADII × hillRadiusKm(semiMajorMpc / SCALE_UNITS.KM_TO_MPC, mass)`.
 The comment on the factor says why it is not 1: asteroid 2026 QQ8 stays bound to Earth out to 1.58
 million km, past the 1.5 million km Hill radius.
@@ -204,7 +214,7 @@ centre, and a stay near a planet draws in that planet's frame.
 
 ## Definition of Done
 
-- New symbols exist: `PLANET_MASS_KG`, `SUN_MASS_KG`, `hillRadiusKm`, `TRAIL_CENTRES`,
+- New symbols exist: `BodyFacts.massKg`, `formatBodyMass`, `SUN_MASS_KG`, `hillRadiusKm`, `TRAIL_CENTRES`,
   `trailStaysOf`, `nearTrailPiece`, `CraftTrail`, `TrailDraw`, `trailDrawsAt`.
 - `#focus=body-jupiter&t=1979-03-05T18:00:00Z&layers=missionTrails`: Voyager 1's trail curves around Jupiter.
 - `#focus=body-voyager1&t=1979-03-05T06:00:00Z&layers=missionTrails`: the trail ends on the craft.

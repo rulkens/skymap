@@ -9,9 +9,9 @@
  * Writes:
  *   - `src/data/bodies/bodyFacts.generated.ts`  (committed generated code)
  *
- * Why store the values as pre-formatted display *strings* rather than raw
- * numbers?  Each body picks the unit that reads best — Earth masses for
- * planets, kilograms for a moon a billion times lighter, '243 Earth days
+ * Why store the values (all but `massKg`, which the app calculates with) as
+ * pre-formatted display *strings* rather than raw numbers?  Each body picks the unit that reads best — AU from the
+ * Sun for a planet, km from its planet for a moon, '243 Earth days
  * (retrograde)' where a bare number would mislead — so baking the unit +
  * friendly rounding into the datum keeps the card a dumb renderer.
  *
@@ -64,7 +64,7 @@ export function serializeGeneratedTable(entries: readonly PlanetFactsEntry[]): s
   const rowsText = entries
     .map(({ id, ...facts }) => {
       const fields = Object.entries(facts)
-        .map(([key, value]) => `    ${key}: ${quote(value as string)},`)
+        .map(([key, value]) => `    ${key}: ${typeof value === 'number' ? value : quote(value)},`)
         .join('\n');
       return `  ${quote(id)}: {\n${fields}\n  },`;
     })
