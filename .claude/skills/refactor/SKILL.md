@@ -107,6 +107,9 @@ list, below; it does handle `import()`, `vi.mock()` and `?worker` specifiers.
   stale path passes tsc AND `vite build` and breaks only at runtime.
 - **`.mts` files**: outside the ts-morph project (only `.ts`/`.tsx` are globbed);
   `npm run typecheck` (the `tsconfig.tools.json` pass) catches their stale imports.
+- **An import alias spelled like the renamed symbol**: `import { bar as foo }`, where
+  `bar` is a re-export of the `foo` being renamed, has its later uses of `foo` renamed
+  while the alias stays. It needs a barrel, so it is rare here; `typecheck:fast` catches it.
 - **Type properties and loose fixtures**: `rename` handles exported declarations
   only, not type properties, and fixtures full of `as unknown as` / `Partial<…>`
   accept a stale key silently. Grep them separately.

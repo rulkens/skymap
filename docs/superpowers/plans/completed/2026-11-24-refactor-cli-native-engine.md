@@ -1,9 +1,9 @@
 # Refactor CLI on TypeScript 7, PR A: engine, `refs`, `rename`, `delete`
 
-> **Spec.** [`2026-11-23-refactor-cli-native-engine-design.md`](../specs/2026-11-23-refactor-cli-native-engine-design.md).
+> **Spec.** [`2026-11-23-refactor-cli-native-engine-design.md`](../../specs/2026-11-23-refactor-cli-native-engine-design.md).
 > This plan covers PR A (§2). PR B (the four new subcommands) gets its own plan once A's contracts
 > are in the tree.
-> **Execution.** Subagent-driven, lean protocol ([`sdd-execution.md`](../conventions/sdd-execution.md)).
+> **Execution.** Subagent-driven, lean protocol ([`sdd-execution.md`](../../conventions/sdd-execution.md)).
 > One PR at a time; no perf gate (no renderer code).
 
 ## Strategy
