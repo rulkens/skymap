@@ -18,8 +18,7 @@ import { listProjectFiles } from '../../packages/move-files/src/listProjectFiles
 import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
 import { collectPropRefs } from '../utils/refactor/collectPropRefs';
 import { collectRefs } from '../utils/refactor/collectRefs';
-import { findTypeErrors } from '../utils/refactor/engine/findTypeErrors';
-import { checkCandidates } from '../utils/refactor/checkCandidates';
+import { checkRun } from '../utils/refactor/checkRun';
 import { closeEngine } from '../utils/refactor/engine/closeEngine';
 import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
 import { openEngine } from '../utils/refactor/engine/openEngine';
@@ -275,6 +274,7 @@ async function runPropOp(
     found.found.report,
     base,
     context,
+    { prop: normal.address.prop, findings: found.found.unreported },
     after && ((plan) => after(run, plan)),
   );
 }
@@ -286,11 +286,12 @@ function acceptPlan(
   report: RefReport<string>,
   base: RunBase,
   context: OpContext,
+  untracked?: { prop: string; findings: readonly Finding[] },
   after?: (plan: Plan) => readonly string[],
 ): boolean {
   if (!result.ok) return refuse(result.refusals.join('\n'));
   if (report.refs.length > 0) {
-    process.stdout.write(`${renderRefReport(report, base.flags['--json'])}\n`);
+    process.stdout.write(`${renderRefReport(report, base.flags['--json'], untracked)}\n`);
   }
   context.apply(result.plan);
   if (after) {
@@ -405,35 +406,30 @@ async function main(): Promise<void> {
       unsynced = undefined;
       if (!(await runOp(row, { engine, read, exists, positionals, flags }, context))) return;
     }
-    if (check) {
-      if (unsynced) syncOverlay(engine, unsynced);
-      const names = runNames(row, ops);
-      const files = checkCandidates({
-        texts: context.texts(),
-        changed: engine.overlay.keys(),
-        names,
-      });
-      const errors = findTypeErrors(engine, files);
-      if (errors.length > 0) {
-        process.stderr.write(`${renderTypeErrors(errors, root)}\n`);
-        process.stderr.write(
-          'Nothing written. Fix the sites above, add the twin to a --manifest, or pass --no-check.\n',
-        );
-        process.exitCode = 1;
-        return;
-      }
-      process.stdout.write(
-        `Type check: 0 errors in ${files.length} files that were changed or mention ${names.join(', ')}.\n`,
+    const names = runNames(row, ops);
+    const checked = checkRun({ enabled: check, engine, unsynced, texts: context.texts, names });
+    if (checked && checked.errors.length > 0) {
+      process.stderr.write(`${renderTypeErrors(checked.errors, root)}\n`);
+      process.stderr.write(
+        'Nothing written. Fix the sites above, add the twin to a --manifest, or pass --no-check.\n',
+      );
+      process.exitCode = 1;
+      return;
+    }
+    // stderr, so `--json` stays parseable on stdout
+    if (checked) {
+      process.stderr.write(
+        `Type check: 0 errors in ${checked.files.length} files that were changed or mention ${names.join(', ')}.\n`,
       );
     }
+    for (const f of findings) process.stdout.write(`${f.file}:${f.line}  ${f.message}\n`);
+    if (findings.length > 0) process.exitCode = 1;
     if (flags['--dry']) return;
     if (loaded) await loaded.save();
     const written = writePlan(overlay, root);
     if (written.failed !== null) {
       throw new Error(`Writing stopped at ${written.failed}; ${written.completed.length} done.`);
     }
-    for (const f of findings) process.stdout.write(`${f.file}:${f.line}  ${f.message}\n`);
-    if (findings.length > 0) process.exitCode = 1;
   } finally {
     closeEngine(engine);
   }

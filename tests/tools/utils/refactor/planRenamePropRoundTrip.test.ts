@@ -1,10 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { collectPropRefs } from '../../../../tools/utils/refactor/collectPropRefs';
-import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
-import { foldPlan } from '../../../../tools/utils/refactor/foldPlan';
 import { planRenameProp } from '../../../../tools/utils/refactor/planRenameProp';
-import type { DiskView } from '../../../../tools/@types/refactor/DiskView';
-import { engineFixture } from '../../../helpers/refactor/engineFixture';
+import { planFixture } from '../../../helpers/refactor/planFixture';
 
 const FILES: Record<string, string> = {
   'src/shape.ts': 'export type Shape = { radius: number };',
@@ -17,14 +14,9 @@ export function area({ radius }: Shape, { radius: r = 1 }: Shape) {
 `,
 };
 
-const fixture = engineFixture(FILES);
+const fixture = planFixture(FILES);
 afterAll(fixture.dispose);
-const { engine, root } = fixture;
-const disk: DiskView = {
-  read: (file) => FILES[file.slice(root.length + 1)] ?? '',
-  snapshot: () => ({ texts: new Map(), fileExists: () => true }),
-};
-const read = (file: string) => engine.overlay.get(file) ?? disk.read(file);
+const { engine, root, read } = fixture;
 
 function rename(prop: string, newName: string): void {
   const address = { file: 'src/shape.ts', typeName: 'Shape', prop };
@@ -32,8 +24,7 @@ function rename(prop: string, newName: string): void {
   if (!found.ok) throw new Error(found.refusal);
   const result = planRenameProp({ address, found: found.found, newName, read });
   if (!result.ok) throw new Error(result.refusals.join('; '));
-  const overlay = { texts: engine.overlay, moves: [], deletes: engine.removed };
-  syncOverlay(engine, foldPlan(result.plan, overlay, disk));
+  fixture.fold(result.plan);
 }
 
 describe('planRenameProp round trip', () => {

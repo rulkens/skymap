@@ -1,3 +1,5 @@
+import { isTypeScriptFile } from './isTypeScriptFile';
+
 /**
  * The files worth type checking after a run: every file it changed or created, and every
  * other TypeScript file that mentions one of the run's names as a whole word. A contract
@@ -12,11 +14,10 @@ export function checkCandidates(input: {
   const { texts, names } = input;
   const found = new Set<string>();
   for (const file of input.changed) if (texts.has(file)) found.add(file);
-  if (names.length === 0) return [...found];
   const alternatives = names.map((name) => name.replace(/[$]/g, '\\$&')).join('|');
   const mentions = new RegExp(`(?<![\\w$])(?:${alternatives})(?![\\w$])`);
   for (const [file, text] of texts) {
-    if (/\.[cm]?tsx?$/.test(file) && mentions.test(text)) found.add(file);
+    if (isTypeScriptFile(file) && mentions.test(text)) found.add(file);
   }
   return [...found];
 }

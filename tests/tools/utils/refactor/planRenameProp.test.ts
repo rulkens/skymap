@@ -1,11 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { collectPropRefs } from '../../../../tools/utils/refactor/collectPropRefs';
-import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
-import { foldPlan } from '../../../../tools/utils/refactor/foldPlan';
 import { planRenameProp } from '../../../../tools/utils/refactor/planRenameProp';
-import type { DiskView } from '../../../../tools/@types/refactor/DiskView';
 import type { PlanResult } from '../../../../tools/@types/refactor/PlanResult';
-import { engineFixture } from '../../../helpers/refactor/engineFixture';
+import { planFixture } from '../../../helpers/refactor/planFixture';
 
 const FILES: Record<string, string> = {
   'src/shape.ts': "export type Shape = { radius: number; 'sides': number };",
@@ -26,20 +23,10 @@ export const t = a.radius;
 `,
 };
 
-const fixture = engineFixture(FILES);
+const fixture = planFixture(FILES);
 afterAll(fixture.dispose);
 
-const root = fixture.root;
-const abs = (name: string) => `${root}/${name}`;
-const disk: DiskView = {
-  read: (file) => FILES[file.slice(root.length + 1)] ?? '',
-  snapshot: () => ({
-    texts: new Map(Object.entries(FILES).map(([name, text]) => [abs(name), text])),
-    fileExists: () => true,
-  }),
-};
-const read = (file: string) => fixture.engine.overlay.get(file) ?? disk.read(file);
-const texts = () => disk.snapshot().texts;
+const { abs, read, texts } = fixture;
 const address = { file: 'src/shape.ts', typeName: 'Shape', prop: 'radius' };
 
 function found(prop = 'radius') {
@@ -65,7 +52,7 @@ function planOf(result: PlanResult) {
 describe('planRenameProp', () => {
   it('renames the declaration and uses in two files', () => {
     const { edits } = planOf(rename('size'));
-    const files = new Set(edits.map((e) => e.file.slice(root.length + 1)));
+    const files = new Set(edits.map((e) => e.file.slice(fixture.root.length + 1)));
     expect([...files].sort()).toEqual([
       'src/make.ts',
       'src/read.ts',
@@ -98,9 +85,7 @@ describe('planRenameProp', () => {
     const before = found().report.refs.filter(
       (r) => !(r.filePath === 'src/make.ts' && r.line === 5),
     );
-    const { engine } = fixture;
-    const overlay = { texts: engine.overlay, moves: [], deletes: engine.removed };
-    syncOverlay(engine, foldPlan(planOf(rename('size')), overlay, disk));
+    fixture.fold(planOf(rename('size')));
     const after = found('size');
     expect(after.report.refs.map((r) => [r.filePath, r.line])).toEqual(
       before.map((r) => [r.filePath, r.line]),

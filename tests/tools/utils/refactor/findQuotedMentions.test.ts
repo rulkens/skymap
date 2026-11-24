@@ -51,4 +51,8 @@ describe('findQuotedMentions', () => {
     const text = "type K = keyof Shape;\nconst k: K = 'radius';\nconst t = `radius`;";
     expect(mentions({ '/r/k.ts': text }).map((f) => f.line)).toEqual([2]);
   });
+
+  it('does not parse a file that is not TypeScript', () => {
+    expect(mentions({ '/r/notes.md': PICK, '/r/data.json': PICK })).toEqual([]);
+  });
 });

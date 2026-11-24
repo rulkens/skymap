@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import type { Finding } from '../../@types/refactor/Finding';
 import type { NodeLocation } from '../../@types/refactor/NodeLocation';
+import { isTypeScriptFile } from './isTypeScriptFile';
 import { parseTs } from './parseTs';
 
 /**
@@ -22,7 +23,7 @@ export function findQuotedMentions(input: {
   const usesKeyof = new RegExp(`keyof\\s+${word}`);
   const found: Finding[] = [];
   for (const [file, text] of texts) {
-    if (!text.includes(prop) || !mentionsType.test(text)) continue;
+    if (!isTypeScriptFile(file) || !text.includes(prop) || !mentionsType.test(text)) continue;
     const keyof = usesKeyof.test(text);
     const source = parseTs(file, text);
     const visit = (node: ts.Node): void => {
