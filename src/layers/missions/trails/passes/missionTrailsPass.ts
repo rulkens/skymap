@@ -49,7 +49,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
       });
       for (const { id, trailColor } of SAMPLED_BODIES) {
-        const track = tracks.get(id);
+        const track = tracks.get(id)?.whole;
         if (track === undefined) continue;
         const dim = emphasisDim(state.settings.missions.craft, id);
         const k = countAtOrBefore(track.tDays, ctx.snapshot.simDays);

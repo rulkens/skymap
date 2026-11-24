@@ -8,11 +8,11 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MissionTrailFrame } from './MissionTrailFrame';
-import type { MissionTrailGeometry } from './MissionTrailGeometry';
+import type { CraftTrail } from './CraftTrail';
 
 export type MissionTrailRenderer = Renderer & {
   /** The uploaded tracks, rebuilt only when `version` differs. */
-  ensureTracks(version: number): ReadonlyMap<string, MissionTrailGeometry>;
+  ensureTracks(version: number): ReadonlyMap<string, CraftTrail>;
   beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
   /**
    * Draw the first `segmentCount` segments of `id`'s trail about `centreMpc` (its
