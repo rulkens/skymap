@@ -23,10 +23,11 @@ describe('refactor CLI arguments', { timeout: 60000 }, () => {
     expect(run.stdout).toBe('');
   });
 
-  it('a symbol row refuses a property address and says what it is', () => {
+  it('a symbol row refuses a property address and names rename-prop', () => {
     const run = refactor('rename', 'src/shape.ts#Shape.radius', 'size');
     expect(run.code).toBe(1);
     expect(run.stderr).toContain("refactor rename: 'src/shape.ts#Shape.radius' is a property");
+    expect(run.stderr).toContain('rename-prop');
   });
 
   it('refuses a file that does not exist, once', () => {

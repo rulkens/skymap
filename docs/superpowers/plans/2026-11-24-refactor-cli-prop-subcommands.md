@@ -233,15 +233,15 @@ export function planRenameProp(input: {
 - `findings` are `found.unreported`, unchanged: the run writes and exits 1 when there are any.
 - No moves, no deletes.
 
-- [ ] `propRenameEdit` — one test per rule (6: read, JSX attribute, shorthand-write,
+- [x] `propRenameEdit` — one test per rule (6: read, JSX attribute, shorthand-write,
       shorthand-destructure, shorthand-destructure with default, string-key).
-- [ ] `planRenameProp` — `renames the declaration and uses in two files`;
+- [x] `planRenameProp` — `renames the declaration and uses in two files`;
       `refuses a name the type already has`; `carries the quoted mention in Pick<> as a finding`;
       `the folded result typechecks`: fold the plan into the fixture's overlay, `syncOverlay`, and
       assert `collectPropRefs` on the new name finds the same number of uses.
-- [ ] Smoke on a real `src` type with shorthand uses: `rename-prop … --dry`, then for real, then
+- [x] Smoke on a real `src` type with shorthand uses: `rename-prop … --dry`, then for real, then
       `npm run typecheck:fast`, then rename back; `git status` clean. Report the wall time.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: `remove-prop`
 

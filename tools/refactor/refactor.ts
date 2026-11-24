@@ -26,6 +26,7 @@ import { normaliseAddress } from '../utils/refactor/normaliseAddress';
 import { parseTarget } from '../utils/refactor/parseTarget';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
+import { planRenameProp } from '../utils/refactor/planRenameProp';
 import { overlaidTexts } from '../utils/refactor/overlaidTexts';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
@@ -118,6 +119,15 @@ const SUBCOMMANDS: readonly Subcommand[] = [
         prop: address.prop,
         findings: found.unreported,
       }),
+  },
+  {
+    accepts: 'prop',
+    kind: 'plan',
+    name: 'rename-prop',
+    arity: 2,
+    usage: 'refactor rename-prop <file>#<Type>.<prop> <newName>',
+    plan: ({ address, found, read, positionals }) =>
+      planRenameProp({ address, found, newName: positionals[1] ?? '', read }),
   },
 ];
 
