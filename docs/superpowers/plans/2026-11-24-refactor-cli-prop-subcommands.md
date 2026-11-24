@@ -374,6 +374,78 @@ Rules:
       classifies the references the driver already has.
 - [x] Commit.
 
+### Task 7: the type check after a contract change
+
+Owner ruling, 2026-11-24: a rename of `CameraPose.yaw` left 38 type errors because `OrbitCamera`
+declares its own `yaw` and the two are used interchangeably. The tool reports such sites itself.
+This reverses spec D7 for the three contract-changing rows.
+
+**Files:** `tools/@types/refactor/TypeError.d.ts` (create),
+`tools/utils/refactor/engine/findTypeErrors.ts` (create),
+`tools/utils/refactor/renderTypeErrors.ts` (create), `tools/refactor/@types/{Subcommand,Flags}.d.ts`
+(modify), `tools/refactor/refactor.ts` (modify), a test file per new util,
+`tests/tools/utils/refactor/engine/engineContract.test.ts` (modify),
+`.claude/skills/refactor/SKILL.md`, the spec (modify)
+
+```ts
+export type TypeError = {
+  readonly file: string; // absolute, real case
+  readonly line: number; // 1-based
+  readonly column: number;
+  readonly message: string; // first line of the diagnostic, with its TS code
+};
+
+/** Every semantic error in the engine's projects as the overlay stands, each site once. */
+export function findTypeErrors(engine: Engine): readonly TypeError[];
+
+/** `N type error(s) after this change:` then one `file:line:col  message` row each, root-relative. */
+export function renderTypeErrors(errors: readonly TypeError[], root: string): string;
+
+// Subcommand's Common grows:
+readonly checks: boolean; // run the type check on the folded result
+```
+
+`findTypeErrors` uses `project.program.getSemanticDiagnostics()` (no argument: all files) on each
+of the engine's projects, keeps category Error, drops files under `node_modules`, and removes the
+duplicates a file in two projects produces. It lives in the engine folder and exposes no
+`typescript-native` type. Read `node_modules/typescript-native/dist/api/sync/api.d.ts` for the
+`Diagnostic` shape (position to line and column, message chains).
+
+Driver rules:
+
+- `checks` is `true` for `rename-prop`, `remove-prop` and `params-to-object`, `false` for the rest.
+- New flag `--no-check`.
+- When the row checks and `--no-check` is absent: after the LAST entry's plan is folded (under
+  `--dry` too, so the last entry is folded and synced in that case as well), sync the overlay,
+  call `findTypeErrors` once. A batch is checked as a whole, never per entry: a manifest that
+  renames both twins must pass.
+- Errors: print `renderTypeErrors` to stderr, then one line
+  `Nothing written. Fix the sites above, add the twin to a --manifest, or pass --no-check.`;
+  exit code 1; no write.
+- No errors: continue as today (write, or stop under `--dry`). Findings keep their own exit 1.
+- The check reports every error in the projects, so an error that was there before the run shows
+  too. Say so in the skill text; do not compute a baseline.
+
+Tests:
+
+- [ ] Contract test `findTypeErrors is empty on a clean fixture and reports an error introduced through the overlay`,
+      asserting file, line and that the message carries a `TS` code.
+- [ ] Contract test `findTypeErrors reports an error in a file of two projects once`.
+- [ ] `renderTypeErrors` — `prints the count and root-relative file:line:col rows`.
+- [ ] The twin case, at the fold level (`tests/tools/utils/refactor/typeCheckAfterRename.test.ts`):
+      a fixture with `type A = { yaw: number }`, `type B = { yaw: number }` and
+      `const b: B = a` for an `a: A`. `renaming A.yaw alone leaves a type error at the assignment`;
+      `renaming A.yaw and B.yaw in one batch leaves none`.
+- [ ] Smoke: `npm run refactor -- rename-prop src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw heading --dry`
+      lists type errors, exits 1, tree untouched; report the count and wall time. Then the same
+      for a property that renames cleanly (`CameraTweenDescriptor.frame` → `framing`, `--dry`):
+      no type errors; report the wall time. Time `rename` (unchecked) on any symbol to confirm it
+      did not get slower.
+- [ ] Skill: document the check, `--no-check`, and replace the twin-property blind-spot bullet
+      with what the check now does (it names the twin's sites; the fix is still yours).
+      Spec: rewrite D7 to the ruling above and drop "A built-in typecheck" from §11.
+- [ ] Commit.
+
 ## Definition of Done
 
 **Deliverables**
@@ -390,6 +462,7 @@ Rules:
 - `remove-prop` on a property that is read: refusal with the list, exit 1, tree untouched.
 - `params-to-object` on a real util: typecheck and its tests pass.
 - `rename Shape.radius` is refused with a message naming `rename-prop`.
+- `rename-prop CameraPose.yaw heading --dry` lists the twin's type errors and writes nothing.
 
 **Deferred**
 
