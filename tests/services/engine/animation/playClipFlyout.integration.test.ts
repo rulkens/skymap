@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { commitCameraPose } from '../../../../src/state/camera/cameraIntentSlice';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
-import { flyout } from '../../../../src/data/animation/clips/flyout';
+import { flyout } from '../../../../src/compositions/clips/flyout';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { simulateCameraFrame } from '../../../helpers/camera/simulateCameraFrame';

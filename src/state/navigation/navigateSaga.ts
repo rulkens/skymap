@@ -41,7 +41,7 @@ import { selectionKindOf } from '../../services/engine/selection/selectionKindOf
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
-import { clipFactories } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../compositions/appClips';
 import { isKeyOf } from '../../utils/object/isKeyOf';
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -193,7 +193,7 @@ export function* navigateSaga(
       if (transition === 'cut') yield* call(homeSaga);
       return yield* call(firstClipSaga, startTour(view.id), transition);
     case 'clip':
-      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_CLIP_FACTORIES, view.id)) return UNKNOWN_ID;
       if (transition === 'cut') {
         yield* call(homeSaga);
         // A tour clears the seeded focus itself; a clip does not, so Earth's

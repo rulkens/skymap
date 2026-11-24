@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClipPathInspectSeam } from '../../../../src/services/engine/animation/computeClipPath';
 import { resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
-import { clipRegistry } from '../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../../src/compositions/appClips';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipPathSnapshot } from '../../../../src/@types/engine/debug/ClipPathSnapshot';
 
@@ -26,7 +26,7 @@ describe('createClipPathInspectSeam', () => {
     });
 
     // flyout is focus-free, so registry data is already a resolved ClipData.
-    seam.compute('flyout', clipRegistry['flyout'].data);
+    seam.compute('flyout', APP_CLIP_REGISTRY['flyout'].data);
 
     expect(inspector.setSnapshot).toHaveBeenCalledOnce();
     const snap = inspector.setSnapshot.mock.calls[0]![0]!;
@@ -47,13 +47,13 @@ describe('createClipPathInspectSeam', () => {
       sampleCount: 8,
     });
 
-    seam.compute('flyout', clipRegistry['flyout'].data);
-    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, POSE_A));
+    seam.compute('flyout', APP_CLIP_REGISTRY['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(APP_CLIP_REGISTRY['flyout'].data, POSE_A));
 
     // Camera moves to view the path; Re-calc must KEEP POSE_A as the start.
     live = POSE_B;
-    seam.recompute('flyout', clipRegistry['flyout'].data);
-    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, POSE_A));
+    seam.recompute('flyout', APP_CLIP_REGISTRY['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(APP_CLIP_REGISTRY['flyout'].data, POSE_A));
   });
 
   it('clear() clears the inspector', () => {
@@ -77,8 +77,8 @@ describe('createClipPathInspectSeam', () => {
     // The pinned clip is the replay source: foci already resolved + start pinned
     // to the live pose at compute time, so a later play flies the EXACT route.
     expect(seam.pinnedClip()).toBeNull();
-    seam.compute('flyout', clipRegistry['flyout'].data);
-    expect(seam.pinnedClip()).toEqual(resolveClipStart(clipRegistry['flyout'].data, LIVE_POSE));
+    seam.compute('flyout', APP_CLIP_REGISTRY['flyout'].data);
+    expect(seam.pinnedClip()).toEqual(resolveClipStart(APP_CLIP_REGISTRY['flyout'].data, LIVE_POSE));
     seam.clear();
     expect(seam.pinnedClip()).toBeNull();
   });

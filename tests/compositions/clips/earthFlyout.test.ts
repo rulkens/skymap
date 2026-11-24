@@ -6,11 +6,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { earthFlyout } from '../../../../src/data/animation/clips/earthFlyout';
-import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { earthFlyout } from '../../../src/compositions/clips/earthFlyout';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('earthFlyout', () => {
   it('targets the frozen-clock Earth (the instant it is built at)', () => {

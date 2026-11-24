@@ -40,7 +40,7 @@ the `?mock=` mount never ships. How a mock is written: `src/dev/mocks/README.md`
 
 - Fly there in the browser and press `l`: the console logs `[engine] share URL:` with its
   `pose=`. The Debug panel's camera section has a copy-URL button for the same link.
-- Or reuse a known one: `SONDERMARKEN_POSE` in `src/data/animation/clips/sondermarkenFlyout.ts`,
+- Or reuse a known one: `SONDERMARKEN_POSE` in `src/compositions/clips/sondermarkenFlyout.ts`,
   `focus=body-earth`, or a sky pose `pose=k,earth,<lonRad>,<latRad>,<azRad>,<altRad>&t=<ISO>`.
 - Don't hand-build a `b,` pose. A hand-built one faced into space on the first try. Its layout is
   `b,<body>,<anchor m ×3>,<eye − anchor m ×3>,<right ×3>,<up ×3>,<forward ×3>`: body-fixed axes,

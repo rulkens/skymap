@@ -10,8 +10,8 @@
  * radii, where no sightline can dip the eye under a surface.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Clip } from '../../@types/animation/Clip';
+import type { Vec3 } from '../../@types/math/Vec3';
 import {
   aimAt,
   all,
@@ -21,18 +21,18 @@ import {
   seq,
   tween,
   wait,
-} from '../../../services/engine/animation/effectHelpers';
-import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { linkedPoseToWorld } from '../../../services/engine/camera/arms/utils/linkedPoseToWorld';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
-import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
-import { eyeMpcOf } from '../../../utils/camera/orbitPose/eyeMpcOf';
-import { normalize3 } from '../../../utils/math/normalize3';
-import { northUpRoll } from '../../../utils/camera/orbitPose/northUpRoll';
-import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { SCALE_UNITS } from '../../scaleUnits';
+} from '../../services/engine/animation/effectHelpers';
+import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
+import { linkedPoseToWorld } from '../../services/engine/camera/arms/utils/linkedPoseToWorld';
+import { orbitAnglesLookingAlong } from '../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { frameUp } from '../../utils/camera/orbitPose/frameUp';
+import { eyeMpcOf } from '../../utils/camera/orbitPose/eyeMpcOf';
+import { normalize3 } from '../../utils/math/normalize3';
+import { northUpRoll } from '../../utils/camera/orbitPose/northUpRoll';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SONDERMARKEN_POSE } from './sondermarkenFlyout';
-import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 /** The opening view, as the app's `#pose=` link value: 8.6 m off the rover. */
 export const PERSEVERANCE_POSE =

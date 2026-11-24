@@ -7,7 +7,7 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../compositions/appClips';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { SKY_HOSTS } from '../../data/sky/skyHosts';
@@ -109,7 +109,7 @@ export const REMOTE_COMMANDS: {
   tourTogglePause: noPayloadRow(togglePause),
   clipStart: {
     parse: (raw) =>
-      isRecord(raw) && typeof raw.clipId === 'string' && isKeyOf(clipRegistry, raw.clipId)
+      isRecord(raw) && typeof raw.clipId === 'string' && isKeyOf(APP_CLIP_REGISTRY, raw.clipId)
         ? { clipId: raw.clipId }
         : undefined,
     toActions: ({ clipId }) => [startClip(clipId)],

@@ -35,8 +35,8 @@
  * `start.distance`.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import { dollyTo, spin, all } from '../../../services/engine/animation/effectHelpers';
+import type { Clip } from '../../@types/animation/Clip';
+import { dollyTo, spin, all } from '../../services/engine/animation/effectHelpers';
 
 export const flyout: Clip = {
   id: 'flyout',

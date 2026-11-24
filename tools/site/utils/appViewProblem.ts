@@ -1,5 +1,5 @@
 import { OBJECT_ROWS } from '../../../packages/website/src/data/objectCatalogue';
-import { clipFactories } from '../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../../src/compositions/appClips';
 import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
@@ -14,7 +14,7 @@ const FROM_DATA = /^(?:pgc-\d+|sdss-\d+|pos@.+|star-\d+|asteroid-\d+|[a-z]+-bulk
 const TAKEOVERS = {
   exhibit: APP_EXHIBIT_REGISTRY,
   tour: APP_TOUR_REGISTRY,
-  clip: clipFactories,
+  clip: APP_CLIP_FACTORIES,
 };
 
 /**

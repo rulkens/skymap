@@ -11,20 +11,20 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { flyPathDemo } from '../../../../src/data/animation/clips/flyPathDemo';
-import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
+import { flyPathDemo } from '../../../src/compositions/clips/flyPathDemo';
+import { resolveClipFoci } from '../../../src/services/engine/animation/resolveClipFoci';
 import {
   selectionResolverOver,
   type StructureRowFixture,
-} from '../../../support/selectionResolverOver';
-import { resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
-import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
-import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
-import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
-import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+} from '../../support/selectionResolverOver';
+import { resolveClipStart } from '../../../src/state/camera/cameraIntentSlice';
+import { compileClip } from '../../../src/services/engine/animation/compileClip';
+import { evaluateClip } from '../../../src/services/engine/camera/clips/evaluateClip';
+import { arrivalFraming } from '../../../src/services/engine/camera/framing/arrivalFraming';
+import { selectionKindOf } from '../../../src/services/engine/selection/selectionKindOf';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();
 
