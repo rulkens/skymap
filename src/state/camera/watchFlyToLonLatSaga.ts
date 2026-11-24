@@ -25,7 +25,6 @@ import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { BODY_FOCUS } from '../../data/selection/bodyFocus';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { SagaContext } from '../../store/types';
@@ -35,8 +34,7 @@ import type { BodyRef } from '../../@types/engine/selection/BodyRef';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
-    const { lonDeg, latDeg, altKm, headingRad } = action.payload;
-    const body = action.payload.body ?? SCENE_EARTH.id;
+    const { lonDeg, latDeg, body, altKm, headingRad } = action.payload;
     if (!isSceneBodyId(body)) return;
     const durationMs = action.payload.durationMs ?? FLY_TO_LON_LAT_TWEEN_MS;
 

@@ -61,7 +61,7 @@ function tweenOf(a: UnknownAction | undefined): CameraTweenDescriptor {
 
 describe('watchFlyToLonLatSaga', () => {
   it('over the focused body: tweens from the live pose to its centre, focus untouched', () => {
-    const puts = run({ lonDeg: 10, latDeg: 20, altKm: 900 });
+    const puts = run({ body: 'earth', lonDeg: 10, latDeg: 20, altKm: 900 });
     expect(puts).toHaveLength(1);
     const tween = tweenOf(puts[0]);
     expect(tween.from).toBe(FROM);
@@ -78,6 +78,6 @@ describe('watchFlyToLonLatSaga', () => {
   });
 
   it('does nothing before the camera exists', () => {
-    expect(run({ lonDeg: 10, latDeg: 20 }, null)).toEqual([]);
+    expect(run({ body: 'earth', lonDeg: 10, latDeg: 20 }, null)).toEqual([]);
   });
 });

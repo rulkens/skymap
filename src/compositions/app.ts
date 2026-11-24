@@ -8,7 +8,7 @@
 
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { asteroidsLayer } from '../layers/asteroids/layer';
-import { EARTH_HOME } from '../data/selection/earthHome';
+import { APP_HOME } from './appHome';
 import { blackHolesLayer } from '../layers/blackHoles/layer';
 import { bodyLayer } from '../layers/body/layer';
 import { constellationsLayer } from '../layers/constellations/layer';
@@ -52,7 +52,7 @@ export const APP_COMPOSITION = {
     earthScenesLayer,
     probeSpheresLayer,
   ] as const,
-  home: EARTH_HOME,
+  home: APP_HOME,
 } satisfies EngineComposition<
   readonly [
     typeof galaxyCatalogLayer,
