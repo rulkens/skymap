@@ -172,7 +172,7 @@ it describes where mesh rows come from), `docs/backlog/2026-10-29-layer-migratio
 - Grep `meshAssetRows` and "mesh slots" across `src docs tests packages .claude` once more; no hit
   may describe the old path.
 
-- [ ] Edit; commit.
+- [x] Edit; commit.
 
 ### Task 4: Verify the app is unchanged
 
