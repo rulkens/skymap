@@ -1,6 +1,6 @@
 /**
  * MESH_PRESENTATIONS — every scene body drawn as a mesh (baked or generated), keyed by body id.
- * The mesh path (slots, demand, partition, pass, probe) reads this table; the
+ * The mesh path (`meshPresentationOf`, `meshBodiesAttachedTo`, and each Layer's own mesh asset rows) reads this table; the
  * identity consumers (labels, trails, presence, captions, pick tables) keep
  * reading their own, so drawing a body as a mesh never changes what it IS.
  */

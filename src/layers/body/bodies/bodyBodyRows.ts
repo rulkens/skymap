@@ -103,6 +103,12 @@ function withShapeModel(row: LayerBody): LayerBody {
   return { ...row, shapeModel: { meshKey, boundingRadiusM, tierCeiling } };
 }
 
+for (const id of SHAPE_MODEL_BODY_IDS) {
+  if (!AUTHORED_ROWS.some((row) => row.body.id === id)) {
+    throw new Error(`bodyBodyRows: shape-model id '${id}' matches no authored body row`);
+  }
+}
+
 // Joined here rather than pasted into each row: the generated files stay the one statement of
 // which bodies are corrected and what each shape model measures, and regenerating them touches
 // no authored row.

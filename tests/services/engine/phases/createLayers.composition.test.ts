@@ -118,7 +118,7 @@ function orbitTrailLayer(
 }
 
 describe('createLayers composition', () => {
-  it("composes a Layer's passes and labels after core's and its assets before core's, in tuple order", async () => {
+  it("composes a Layer's passes and labels after core's, and its assets in tuple order", async () => {
     const { store } = createAppStore();
     const slotA = { name: 'slot-a' };
     const slotB = { name: 'slot-b' };
@@ -135,7 +135,7 @@ describe('createLayers composition', () => {
       'a-pass',
       'b-pass',
     ]);
-    expect(state.assetRows.map((row) => row.key).slice(0, 2)).toEqual(['a-asset', 'b-asset']);
+    expect(state.assetRows.map((row) => row.key)).toEqual(['a-asset', 'b-asset']);
     expect(state.slotsByKey.get('a-asset' as never)).toBe(slotA);
     expect(state.slotsByKey.get('b-asset' as never)).toBe(slotB);
     const cosmo = state.subsystems.labelDirectors.find((d) => d.row.slab === COSMO)!;

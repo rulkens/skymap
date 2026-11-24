@@ -196,7 +196,7 @@ it describes where mesh rows come from), `docs/backlog/2026-10-29-layer-migratio
 - `LayerBody.shapeModel?`, `ShapeModel`, `MeshBodiesSink`, `LayerCoreDeps.meshBodies`.
 - `meshAssetRow` and `meshPresentationsOf`; `meshAssetRows.ts` deleted.
 - No core file imports `meshAssets.generated`, `meshFetcher` or `meshAssetRow` by value except
-  `meshFetcher.ts` itself and the `meshBody` maker (check:
+  `meshFetcher.ts` itself, `meshAssetRow.ts` (it imports `meshFetcher`; only Layers import it) and the `meshBody` maker (check:
   `grep -rn "meshAssets.generated'\|fetchers/meshFetcher'\|wiring/meshAssetRow'" src --include='*.ts'`
   and read the hits outside `src/layers/`).
 - `createLayers.ts` builds asset rows from Layers alone.

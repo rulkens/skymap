@@ -89,7 +89,7 @@ See the refinement above. Backlogged as `2026-10-28-per-body-slab-declaration.md
 - **S5. Generic helpers with one user today: ~2,200.** `utils/math/{cubeSphereMesh,annulusMesh,mortonDecode3,…}`, `utils/camera/{composeBodyMvp,camPosLocal,frustumPlanesFromViewProj,…}`, `utils/worker/runDisposableWorker`, `rampLut`, `PaletteSelect`, `jsonFetcher`, `mulberry32`. They stay in `utils/` by convention.
 - **S6. WESL for Layer content: ~6,000.** The README rule keeps shaders in `src/services/gpu/shaders/<family>/`.
 - **S7. Shared and engine infrastructure.**
-  - Spec §4 body infrastructure: the position solver, the body tables and fold, `bodyPickRenderer`, `meshBodyRenderer` (the one renderer core hands every Layer; mesh asset rows are declared by the drawing Layers from `meshAssets.generated`), `orbitTrail*`, `bodyGlintRenderer` (4 Layers), `BodyDetailCard` (3 Layers), the `satellite`/`meshBody` makers (2 Layers each), `sceneEarth`, `utils/scene/*`.
+  - Spec §4 body infrastructure: the position solver, the body tables and fold, `bodyPickRenderer`, `meshBodyRenderer` (the one renderer core owns; each drawing Layer's mesh slots load into and clear from it through `deps.meshBodies`, and passes draw through it; mesh asset rows are declared by those Layers from `meshAssets.generated`), `orbitTrail*`, `bodyGlintRenderer` (4 Layers), `BodyDetailCard` (3 Layers), the `satellite`/`meshBody` makers (2 Layers each), `sceneEarth`, `utils/scene/*`.
   - Shared places and constants: the `galactic-centre` place, `sgrAStarMassSolar`, `galacticCenter`.
   - Labels, marker lines, selection ring, debug lines.
   - Tours, `featuredTabs`, the tier slice, and `SettingsAction`, which names flow and galaxyCatalog actions for tour beats: cross-Layer editorial composition.

@@ -85,6 +85,8 @@ keeps its tight render/pick + on-disk meaning; "Source" (identity) and "Asset"
 > Amended 2026-11-06: core no longer lists the keys. `AssetKey` is the base
 > (`string | number`) core handles generically; each Layer owns the keys its rows
 > author in its own `@types/` (`GalaxyCatalogAssetKey`, …), and core authors only `mesh:<id>`.
+>
+> Amended 2026-11-24: core authors no rows; the Layers that draw meshes author `mesh:<id>`.
 
 ### 3. Demand-driven loading
 
