@@ -3,8 +3,10 @@
  * depthless HDR accumulation, under the same occlusion as the orbit trails
  * (lib/trailOcclusion.wesl owns group 0 bindings 0-1; ours is binding 2).
  * One instance = one segment, read as two endpoint records from the SAME vertex
- * buffer bound twice, the second a vertex later. Per-craft uniforms live in
- * dynamic-offset slots so two crafts in one frame never share a pending write.
+ * buffer bound twice, the second a vertex later. Every piece of every craft (the
+ * Sun trail and each planet stay) shares that buffer, found by the piece object.
+ * Each draw takes its own dynamic-offset uniform slot and head slot, so two draws
+ * in one frame, even for one craft, never share a pending write.
  * @module
  */
 
@@ -13,6 +15,7 @@ import type { MissionTrailRenderer } from '../@types/MissionTrailRenderer';
 import type { MissionTrailFrame } from '../@types/MissionTrailFrame';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { CraftTrail } from '../@types/CraftTrail';
+import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
 import vsCode from '../../../../services/gpu/shaders/bodies/missionTrail/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/missionTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
@@ -125,7 +128,7 @@ export function createMissionTrailRenderer(
   let vertexBuffer: GPUBuffer | null = null;
   let uploadedVersion = -1;
   let tracks: ReadonlyMap<string, CraftTrail> = new Map();
-  const firstVertex = new Map<string, number>();
+  const firstVertex = new Map<MissionTrailGeometry, number>();
   const uniformScratch = new Float32Array(TRAIL_UNIFORM_BYTES / 4);
   const headScratch = new Float32Array(HEAD_BYTES / 4);
   const eyeScratch = new Float32Array(6);
@@ -142,16 +145,17 @@ export function createMissionTrailRenderer(
     firstVertex.clear();
     const built = buildMissionTrails();
     tracks = new Map(built.map((t) => [t.id, t]));
-    const total = built.reduce((sum, t) => sum + t.whole.relMpc.length / 3, 0);
+    const pieces = built.flatMap((t) => [t.whole, ...t.near]);
+    const total = pieces.reduce((sum, p) => sum + p.relMpc.length / 3, 0);
     if (total === 0) return tracks;
     const data = new Float32Array(total * 6);
     let at = 0;
-    for (const { id, whole } of built) {
-      firstVertex.set(id, at);
-      for (let i = 0; i < whole.relMpc.length / 3; i++) {
-        writeHiLoVertex(whole.relMpc, 3 * i, data, 6 * (at + i));
+    for (const piece of pieces) {
+      firstVertex.set(piece, at);
+      for (let i = 0; i < piece.relMpc.length / 3; i++) {
+        writeHiLoVertex(piece.relMpc, 3 * i, data, 6 * (at + i));
       }
-      at += whole.relMpc.length / 3;
+      at += piece.relMpc.length / 3;
     }
     vertexBuffer = device.createBuffer({
       label: 'mission-trail-vbo',
@@ -195,14 +199,14 @@ export function createMissionTrailRenderer(
 
   function drawTrail(
     pass: GPURenderPassEncoder,
-    id: string,
+    piece: MissionTrailGeometry,
     color: Readonly<Vec3>,
     opacity: number,
     segmentCount: number,
     centreMpc: Readonly<Vec3>,
     headMpc: Readonly<Vec3> | null,
   ): void {
-    const first = firstVertex.get(id);
+    const first = firstVertex.get(piece);
     if (vertexBuffer === null || bindGroup === null || first === undefined || slot >= MAX_TRAILS) {
       return;
     }
@@ -227,7 +231,7 @@ export function createMissionTrailRenderer(
       pass.draw(6, segmentCount);
     }
     if (headMpc !== null) {
-      writeHiLoVertex(tracks.get(id)!.whole.relMpc, 3 * segmentCount, headScratch, 0);
+      writeHiLoVertex(piece.relMpc, 3 * segmentCount, headScratch, 0);
       for (let k = 0; k < 3; k++) relScratch[k] = headMpc[k]! - centreMpc[k]!;
       writeHiLoVertex(relScratch, 0, headScratch, 6);
       device.queue.writeBuffer(headBuffer, slot * HEAD_BYTES, headScratch);
