@@ -1,5 +1,6 @@
 import ts from 'typescript';
 import type { NodeLocation } from '../../@types/refactor/NodeLocation';
+import { attachedStart } from './attachedStart';
 import { findNameNode } from './findNameNode';
 import { parseTs } from './parseTs';
 
@@ -67,16 +68,4 @@ function overloadsEnd(source: ts.SourceFile, node: ts.Node): ts.Node {
     last = statement;
   }
   return last;
-}
-
-// Comments that touch the node (no blank line between) belong to it, except the module
-// header: the first comment of the file, or the first after a shebang.
-function attachedStart(text: string, node: ts.Node, source: ts.SourceFile): number {
-  const headerStart = text.startsWith('#!') ? text.indexOf('\n') + 1 : 0;
-  let start = node.getStart(source);
-  for (const range of [...(ts.getLeadingCommentRanges(text, node.pos) ?? [])].reverse()) {
-    if (range.pos <= headerStart || text.slice(range.end, start).split('\n').length > 2) break;
-    start = range.pos;
-  }
-  return start;
 }

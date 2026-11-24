@@ -277,15 +277,15 @@ an expression statement (`a.radius = 3;` with its line). A sole property leaves 
 - All refusals are collected and returned together, not just the first.
 - The declaration is cut with `memberSpan`. `findings` are `found.unreported`.
 
-- [ ] `memberSpan` — `cuts a middle property with its comma`; `cuts the last property and the
+- [x] `memberSpan` — `cuts a middle property with its comma`; `cuts the last property and the
       comma before it`; `cuts a sole property to {}`; `takes the member's own JSDoc`;
       `cuts a JSX attribute with one space`; `cuts an assignment statement with its line`.
-- [ ] `planRemoveProp` — `removes the declaration and two literal writes`;
+- [x] `planRemoveProp` — `removes the declaration and two literal writes`;
       `refuses while a read exists and lists it`; `refuses a write whose value is a call`;
       `removes a shorthand write`; `refuses a compound assignment`;
       `returns every refusal, not only the first`;
       `the folded result has no reference left` (fold, sync, `locateProp` refuses the member).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: `params-to-object`
 
