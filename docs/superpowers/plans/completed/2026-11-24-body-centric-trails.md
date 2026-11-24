@@ -1,8 +1,13 @@
 # Body-centric trails: plan
 
-> **Spec.** [`2026-11-24-body-centric-trails-design.md`](../specs/2026-11-24-body-centric-trails-design.md).
+> **Spec.** [`2026-11-24-body-centric-trails-design.md`](../../specs/completed/2026-11-24-body-centric-trails-design.md).
 > **Branch.** `feat/body-centric-trails`; the prep commit f6e00887a is already in.
 > **Execution.** Lean SDD per `sdd-execution.md`. Ledger: `.superpowers/sdd/2026-11-24-body-centric-trails/progress.md`.
+> **Completed 2026-11-24.** All eight tasks landed. The owner's eye checks then changed the draw
+> rule: one trail at a time, the planet frame only where `missionTrails.nearPlanets` asks (the
+> Voyager exhibit), a cross-fade at entry and exit, the trail starting on the launch pad, and a
+> launch climb that reaches parking height early. Tasks 6 and 7 below describe the first rule; the
+> spec's §2 holds the final one.
 
 ## Goal
 
@@ -216,12 +221,12 @@ centre, and a stay near a planet draws in that planet's frame.
 
 - New symbols exist: `BodyFacts.massKg`, `formatBodyMass`, `SUN_MASS_KG`, `hillRadiusKm`, `TRAIL_CENTRES`,
   `trailStaysOf`, `nearTrailPiece`, `CraftTrail`, `TrailDraw`, `trailDrawsAt`.
-- `#focus=body-jupiter&t=1979-03-05T18:00:00Z&layers=missionTrails`: Voyager 1's trail curves around Jupiter.
-- `#focus=body-voyager1&t=1979-03-05T06:00:00Z&layers=missionTrails`: the trail ends on the craft.
-- `#focus=body-neptune&t=1989-08-25T06:00:00Z&layers=missionTrails`: Voyager 2 swings over Neptune's pole.
+- `#exhibit=voyager-missions&t=1979-03-05T18:00:00Z`: Voyager 1's trail is the piece around
+  Jupiter alone, fading toward where it entered; no Sun trail for it.
+- `#exhibit=voyager-missions&t=1989-08-25T06:00:00Z`, Voyager 2 tab: it swings over Neptune's pole.
+- `#exhibit=voyager-missions`: the departure from Earth, then play through the Jupiter flyby and
+  both cross-fades.
+- `#focus=body-jupiter&t=1979-03-05T18:00:00Z&layers=missionTrails`: normal mode, Sun trails only.
+- `#focus=body-voyager1&t=1979-03-05T06:00:00Z&layers=missionTrails`: the trail still ends on the craft.
 - `#focus=body-voyager1&t=1985-01-01T00:00:00Z&layers=missionTrails`: cruise, one continuous Sun trail.
-- `#focus=body-earth&t=1977-09-07T00:00:00Z&layers=missionTrails`: the departure from Earth.
-- `#exhibit=voyager-missions`: playing through the Jupiter flyby and its exit shows no trail jump
-  the owner objects to (the hard cut at exit is the spec's named risk).
-- Out of scope: asteroid 2026 QQ8, the track build beyond Voyager, a Sun-fixed view, a fade at the
-  exit switch.
+- Out of scope: asteroid 2026 QQ8, the track build beyond Voyager, a Sun-fixed view.
