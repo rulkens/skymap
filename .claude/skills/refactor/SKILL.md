@@ -3,207 +3,243 @@ name: refactor
 description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize files of any kind (TS, CSS, assets). Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg", "rename this property everywhere", "remove this field from the type", "turn these arguments into an object".
 ---
 
-# `/refactor`: symbol refactoring CLI
+# `/refactor`: mechanical refactors, one command each
 
-`npm run refactor -- <subcommand>` finds references with the TypeScript 7 engine across
-the repo's four tsconfig projects. `refs`, `rename`, `delete` and the property and parameter
-subcommands run on it (about 3 to 5 s on a symbol with 500 references); `extract` and `inline` still run on ts-morph over one
-`Project` spanning `src/ + tests/ + tools/ + packages/` (about 8 s). Every import in
-skymap is deep + relative with no barrels, so a mechanical rename or move re-derives
-every `../../foo` per importer, a job for the AST rather than a hand-edit.
+Every import in skymap is deep and relative with no barrels, so a rename or a move touches every
+importer. Never hand-edit those: pick the command from the table.
 
-```bash
-npm run refactor -- rename  <file>#<symbol> <newName> [--no-file-rename]
-npm run refactor -- extract <file>#<symbol> <dest.ts>
-npm run refactor -- inline  <file>#<symbol>
-npm run refactor -- delete  <file>#<symbol>
-npm run refactor -- refs    <file>#<symbol>
-npm run refactor -- prop-refs   <file>#<Type>.<prop>
-npm run refactor -- rename-prop <file>#<Type>.<prop> <newName>
-npm run refactor -- remove-prop <file>#<Type>.<prop>
-npm run refactor -- params-to-object <file>#<function>
-npm run move-files -- <from> <to>   # the only move command
+## Pick the command
+
+| I want to…                                        | Run                                                              | Time   |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------ |
+| see who uses a symbol                             | `npm run refactor -- refs <file>#<symbol>`                       | ~3 s   |
+| rename a function, type or const (and its file)   | `npm run refactor -- rename <file>#<symbol> <newName>`           | ~3 s   |
+| delete an unused symbol (and its file)            | `npm run refactor -- delete <file>#<symbol>`                     | ~3 s   |
+| see who reads and writes a property               | `npm run refactor -- prop-refs <file>#<Type>.<prop>`             | ~4 s   |
+| rename a property of a type                       | `npm run refactor -- rename-prop <file>#<Type>.<prop> <newName>` | ~6 s   |
+| remove a property of a type                       | `npm run refactor -- remove-prop <file>#<Type>.<prop>`           | ~6 s   |
+| turn positional arguments into one object         | `npm run refactor -- params-to-object <file>#<function>`         | ~5 s   |
+| move a symbol into its own file                   | `npm run refactor -- extract <file>#<symbol> <dest.ts>`          | ~8 s   |
+| remove a wrapper that only forwards               | `npm run refactor -- inline <file>#<symbol>`                     | ~8 s   |
+| move or rename files and folders                  | `npm run move-files -- <from> <to>`                              | ~1.5 s |
+
+The first seven run on the TypeScript 7 engine; `extract` and `inline` still run on ts-morph.
+
+Not covered: adding a property (the compiler lists every literal that lacks it), and splitting a
+type (do it as `rename-prop`, `extract` and `move-files` steps).
+
+## Flags and exit codes
+
+| Flag                    | Effect                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `--dry`                 | Print the references, findings and type errors; write nothing. Run this first, every time.   |
+| `--manifest <ops.json>` | Batch of one subcommand. All entries are written together at the end, or none.               |
+| `--json`                | The reference report as JSON on stdout.                                                      |
+| `--no-file-rename`      | `rename` only: keep the file name.                                                           |
+| `--no-check`            | Skip the type check and write anyway.                                                        |
+
+| Exit | Meaning                                                                                              |
+| ---- | ---------------------------------------------------------------------------------------------------- |
+| 0    | Done, nothing left to do by hand.                                                                    |
+| 1    | Read the output. A **refusal** or **type errors**: nothing was written. **Findings** (`file:line  message`): the change was written (unless `--dry`), and these places need a look by hand. |
+
+A manifest is a JSON array; each entry is the arguments of one run:
+
+```json
+[
+  ["src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw", "heading"],
+  ["src/@types/camera/orbitCamera/OrbitCameraInit.d.ts#OrbitCameraInit.yaw", "heading"]
+]
 ```
 
-Global flags on every subcommand: `--dry` (report the blast radius and any findings, exit 1 on findings, write nothing) and
-`--manifest <ops.json>` (batch: each entry sees the earlier entries' edits, moved files
-included, and everything is written once after the last; a refusal on any entry writes
-nothing). `--json` (machine-readable) applies to the symbol subcommands
-(`rename`/`extract`/`inline`/`delete`/`refs`).
+```bash
+npm run refactor -- rename-prop --manifest renames.json --dry
+```
 
-Exit 1 after a write means findings: the write happened, and each `file:line  message`
-lists what it left broken. Exit 1 with a refusal means nothing was written.
+Each entry sees the edits of the entries before it, moved files included.
 
-## When to reach for each subcommand
+## Symbols: `refs`, `rename`, `delete`
 
-- **`rename`**: the symbol's name is wrong, or a concept got renamed and its file
-  should track it. Renames every reference project-wide AND renames the file plus its
-  `tests/` mirror by default, because the house rule is filename = export name
-  (`utils/`, `@types/`). Pass `--no-file-rename` for the files that rule does not
-  cover: a multi-export `tools/` helper, or a PascalCase component whose basename is a
-  concept not the exact export. When the basename does not already track the old
-  symbol name, the file is left alone even without the flag.
+```bash
+npm run refactor -- refs   src/utils/math/addVec3.ts#addVec3
+npm run refactor -- rename src/utils/math/addVec3.ts#addVec3 sumVec3 --dry
+npm run refactor -- delete src/utils/math/addVec3.ts#addVec3
+```
 
-- **`extract`**: a file has grown a second exported symbol and you want it in its own
-  file (the one-symbol-per-file rule). Moves the target plus its exclusive file-local
-  helpers (deps reached only through the moving cohort) into `dest.ts` and repoints
-  every importer. See the shared-dep refusal below. Note: a plain `//` line comment
-  sitting directly above a dragged helper is dropped in the move (JSDoc `/** */`
-  blocks survive); re-check the moved file and restore any lost comment by hand.
-
-- **`inline`**: a passthrough wrapper earns its deletion, meaning an alias, a
-  same-signature single-call wrapper, or an aliased re-export that adds nothing.
-  Repoints every call site at the underlying symbol, imported from its real file, then
-  removes the wrapper (and its file plus mirror when it was the file's only export).
-  This is the delete-proxy-surfaces convention as one command. It refuses anything
-  with real logic; see below.
-
-- **`delete`**: remove a dead one-symbol file (and its `tests/` mirror). Refuses if
-  ANY reference exists; see below.
-
-- **`refs`**: "who uses this symbol, and how?" Read-only. Prints every reference
-  classified as `import` / `call` / `type-position` / `re-export` / `value` (any other
-  use: an alias, an argument, a shorthand property), each with its nearest named
-  enclosing declaration, plus summary counts (total refs, distinct files, tests). A
-  reference under `tests/` keeps its kind and sets `inTest`. This is the worklist for
-  the manual paths the CLI deliberately does not automate (change-signature,
-  non-passthrough inlining). `--json` emits
+- **`refs`** lists every reference with its kind: `import`, `call`, `type-position`, `re-export`,
+  or `value` (any other use: an alias, an argument, a shorthand property). A reference under
+  `tests/` keeps its kind and has `inTest: true`. `--json` gives
   `{ target, summary: { refs, files, tests }, refs: [{ filePath, line, column, kind, inTest, enclosing }] }`.
+- **`rename`** rewrites every reference. It also renames the file and its companions (the
+  `tests/` mirror, a `.tsx`'s `.module.css`) when the file is named after the symbol. Pass
+  `--no-file-rename` for a file with several exports.
+  - `{ foo }` becomes `{ foo: newName }`, so the key survives.
+  - `import { foo as bar }` becomes `import { newName as bar }`.
+- **`delete`** removes the symbol, and its file and test when it was the only export. It refuses
+  while any reference exists, tests included, and lists them.
 
-- **`prop-refs`**: `refs` for one property of an exported type (`<file>#Type.prop`, the type
-  an object `type`/`interface` with the property as a direct member). Each use is one of
-  `PropUseKind`: `read`, `write`, `shorthand-write`, `destructure`, `shorthand-destructure`,
-  `string-key`, `doc-link` (a `{@link Type.prop}` in a comment). A footer lists quoted mentions the engine cannot see: `'prop'` inside a
-  string-literal type (`Pick<T, 'prop'>`) in a file naming the type, or a string in a file
-  using `keyof T`.
+## Properties: `prop-refs`, `rename-prop`, `remove-prop`
 
-- **`rename-prop`**: renames the property and every use. A shorthand keeps its local
-  (`{ radius }` becomes `{ size: radius }`), and a `key: value` that becomes equal collapses
-  to the shorthand. Refuses an invalid name, the same name, or one the type already has,
-  a rename after which uses of another property named the same (a wider `Shape & { size }`)
-  would also answer to this one (nothing is written), and a property that an interface
-  re-declares from its base or a library type (`Sub.radius` beside `Base.radius`,
-  `Mine.length` beside `Array.length`): the engine treats them as one property, so change both
-  by hand. It rewrites `{@link}` mentions. Exit 1 after the write means quoted mentions to check by hand.
+The address is `<file>#<Type>.<prop>`. The type must be an exported object `type` or `interface`
+with the property as a direct member.
 
-- **`remove-prop`**: removes the declaration and every write that only builds it (object
-  literal, JSX attribute, shorthand, a whole `a.prop = v;` statement). Refuses, listing
-  every `file:line:col  kind`, while anything reads it (read, destructure, string key), and
-  for a write whose value, or whose assignment target (`get().radius = 3;`), does work (a
-  call, `new`, `await`, an assignment) or that is `+=`, `++` or `delete`. A `{@link}` does
-  not block. Findings, exit 1: quoted mentions, a local that a cut shorthand leaves behind,
-  and a remaining doc-comment mention.
+```bash
+npm run refactor -- prop-refs   src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw
+npm run refactor -- rename-prop src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw heading --dry
+npm run refactor -- remove-prop src/@types/camera/pose/CameraPose.d.ts#CameraPose.yaw --dry
+```
 
-- **`params-to-object`**: `area(w, h)` becomes `area({ w, h })`: signature and every call.
-  Refuses, listing the sites, for any use that is not a call, import or re-export (callback,
-  alias, `typeof`), overloads, an annotated `const`, a rest, `this` or destructured
-  parameter, a parameter without a type annotation, fewer than two parameters, a comment
-  before, between or after the parameters, a body that reads `arguments`, and a call that is
-  optional (`?.`), is a `new`, spreads, has a comment between arguments, or contains another
-  call of the same function. `ns.f(1, 2)` and `f<T>(a, b)` are rewritten. A finding (exit 1)
-  when the JSDoc has `@param` tags, which still describe the old parameters.
+`prop-refs` gives each use one kind:
 
-- **The type check** (`rename-prop`, `remove-prop`, `params-to-object`): after the last
-  entry is folded (also under `--dry`) the tool type checks the files the run changed plus
-  every TypeScript file that mentions, as a whole word, the run's names (the property or
-  function and the new name), a batch as a whole, so a manifest that renames both twins
-  passes. Errors print as `file:line:col  TSxxxx: message` on stderr, nothing is written,
-  exit 1; a pass prints `Type check: 0 errors in N files that were changed or mention ...`.
-  It is not the full check: a file that gets the property only through an inferred type
-  (`...orbitAnglesLookingAlong(...)` spread into a pose) never names it and is missed, so
-  `npm run typecheck:fast` stays the full check. A whole-program check through the API costs
-  11 to 14 s (measured 2026-11-24). It reports every error in the checked files, so one that
-  was there before the run shows too (no baseline is computed). Syntax errors count. The pass
-  line goes to stderr, so `--json` stays parseable. `--no-check` skips it.
+| Kind                    | Example                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `read`                  | `pose.yaw`                                           |
+| `write`                 | `{ yaw: 1 }`, `pose.yaw = 1`, `<Dial yaw={1} />`     |
+| `shorthand-write`       | `{ yaw }`                                            |
+| `destructure`           | `const { yaw: angle } = pose`                        |
+| `shorthand-destructure` | `const { yaw } = pose`                               |
+| `string-key`            | `pose['yaw']`, `CameraPose['yaw']`                   |
+| `doc-link`              | `{@link CameraPose.yaw}` in a comment                |
 
-- **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
-  `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
+**`rename-prop`** rewrites the declaration and every use, doc links included. A shorthand keeps its
+local: `{ yaw }` becomes `{ heading: yaw }`.
 
-## Refusals are the workflow, not errors to fight
+**`remove-prop`** removes the declaration and the places that only set it: a literal's property, a
+JSX attribute, a shorthand, a whole `pose.yaw = 1;` statement.
 
-Two subcommands stop and hand you a worklist instead of guessing. Hand-fix, then
-re-run.
+| Command       | Refuses when                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `rename-prop` | the new name is invalid, unchanged, or already a member of the type                              |
+|               | afterwards the new name would also catch another property (a wider `Shape & { size }`)           |
+|               | the member is linked to a base or library member (`Sub.radius` and `Base.radius`, `Array.length`) |
+| `remove-prop` | anything still reads it: a read, a destructure, a string key                                     |
+|               | a removed write does work: a call, `new`, `await`, `++`, an assignment, in its value or target   |
+|               | the write is `+=`, `++` or `delete`, or an assignment inside a larger expression                 |
 
-- **`extract` refuses on a shared file-local dep.** If the target reaches a local
-  helper that code left behind ALSO uses, extraction refuses and names each shared
-  helper, leaving the tree byte-for-byte unchanged. Moving that helper would orphan
-  the stayers; copying it would fork one definition into two that drift. The honest
-  fix: `extract` that helper into its own file first, then re-run so the closure is
-  all-exclusive. The refusal is a design signal telling you which helpers need their
-  own file.
-- **`extract` refuses an existing destination.** It only creates a new file, so it
-  can't place a second symbol in a file it has already made.
+| Command       | Findings (written, exit 1)                                                             |
+| ------------- | -------------------------------------------------------------------------------------- |
+| both          | a quoted mention the engine cannot follow: `Pick<T, 'yaw'>`, or a string in a file using `keyof T` |
+| `remove-prop` | a local that a removed shorthand leaves unused; a doc-comment mention that remains      |
 
-- **`inline` refuses on a non-passthrough.** Folding a body with real logic into each
-  call site is a per-site judgement. It throws with the classified reference list (the
-  same report `refs` prints) so you edit the interesting sites by hand.
+### When the type check lists errors
 
-- **`delete` refuses when any reference exists**, re-exports and tests included. A
-  delete has no safe partial form. It throws with the full reference list; remove the
-  references first, then re-run.
+The tool follows one declared property. TypeScript compares shapes, so the same property name
+often lives in other places that the rename does not reach. The error message tells you which:
 
-## Blind spots of the `refactor` subcommands
+| The error names…                                                        | What it is                                  | Fix                                             |
+| ----------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------- |
+| another type: `…missing in type 'OrbitCamera'`                          | a twin: a second type declaring the property | add its declaring type to the manifest           |
+| an inline shape: `…missing in type '{ target: Vec3; yaw: number; … }'`  | a literal built without a type annotation    | by hand at that site                             |
+| a key union: `'"distance" \| "yaw"' can't be used to index…`            | property names as strings                    | by hand at that site                             |
 
-Only TypeScript import/export specifiers and value references are AST-tracked. These
-are NOT rewritten by `rename`, `extract`, `inline` or `delete`. `move-files` has its own
-list, below; it does handle `import()`, `vi.mock()` and `?worker` specifiers.
+Address a twin by the type that **declares** the member: `OrbitCamera` is
+`OrbitCameraInit & { position }`, so the entry is `OrbitCameraInit.yaw`.
 
-- **`.wesl` shader imports** (`import package::...`): a separate module graph.
-- **String-literal paths**: `rawDataPath()` keys, shader/asset URLs, dynamic
-  `import()` strings, `vi.mock()` path literals, anything referenced as text rather
-  than as a symbol.
+1. Run with `--dry` and sort the errors by the table.
+2. Put every twin in one manifest (the example above) and `--dry` again.
+3. Errors left are the by-hand kinds. Run the manifest for real with `--no-check`, then fix the
+   sites `npm run typecheck:fast` lists until it is clean.
 
-- **`?worker` / `?url` / `?raw` import specifiers**: they are ambient-typed, so a
-  stale path passes tsc AND `vite build` and breaks only at runtime.
-- **`.mts` files**: outside the ts-morph project (only `.ts`/`.tsx` are globbed);
-  `npm run typecheck` (the `tsconfig.tools.json` pass) catches their stale imports.
-- **An import alias spelled like the renamed symbol**: `import { bar as foo }`, where
-  `bar` is a re-export of the `foo` being renamed, has its later uses of `foo` renamed
-  while the alias stays. It needs a barrel, so it is rare here; `typecheck:fast` catches it.
-- **Untracked property forms**: `rename-prop` and `remove-prop` handle declared
-  properties; what stays untracked is the `Pick<T, 'key'>` string, a `keyof` comparison,
-  and literals forced through `as unknown as`, which accept a stale key silently. The first
-  two are the quoted-mention findings (exit 1); grep the third.
-- **A twin property**: `rename-prop` and `remove-prop` follow one declared property. A
-  second type that declares the same property name and is used interchangeably (structural
-  typing, e.g. `OrbitCamera.yaw` beside `CameraPose.yaw`), or an intersection that
-  re-declares it, is a separate property. The type check above names the sites it covers; the fix is
-  yours: add the twin to the same `--manifest` and re-run.
-- **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
-  hold paths as strings and are not updated.
-- **Ad-hoc ts-morph importer rewrites**: never repoint importers with a one-off
-  ts-morph script. A module move is `npm run move-files -- <from> <to>` (it rewrites
-  every importer project-wide) and a symbol rename is `refactor rename`. In any
-  ts-morph code, `ImportDeclaration.remove()` on a file's first import drops the
-  module header comment and the blank line after it; use `removeImportKeepingTrivia`
-  (`tools/utils/refactor/`) instead.
+Expect this on a shape that is passed around a lot. `CameraPose.yaw` has 497 uses; with its twin in
+the manifest, 32 sites still need a hand edit, most of them untyped literals in tests. A property
+of a type that is always used by name (`CameraTweenDescriptor.frame`) renames in one clean run.
 
-After any rename/extract/inline/move, `grep` for the old name and old basename to
-catch those by hand.
+## Parameters: `params-to-object`
 
-### Per-subcommand gaps
+```bash
+npm run refactor -- params-to-object src/utils/camera/arms/focusInSubtree.ts#focusInSubtree --dry
+```
 
-- **`rename`** leaves an aliased import's local name alone (`import { foo as bar }`
-  becomes `import { newName as bar }`) and turns an object shorthand `{ foo }` into
-  `{ foo: newName }` so the key survives. It drags a companion stylesheet when
-  `move-files.config.json` has a rule for it.
-- **`extract`** needs an exported symbol, can write `../../node_modules/<pkg>/index`
-  specifiers (rewrite them to the bare package name), and re-quotes to double
-  quotes, so run `npx prettier --write` on the touched files.
+```ts
+// before
+export function area(width: number, height: number = 2): number
+area(w, 3);
+
+// after
+export function area({ width, height = 2 }: { width: number; height?: number }): number
+area({ width: w, height: 3 });
+```
+
+A call argument that is already named like its parameter becomes shorthand. Works on an exported
+`function` and an exported `const` arrow or function expression. `ns.area(1, 2)` and
+`area<T>(a, b)` are rewritten too.
+
+| Refuses when                                                                                     |
+| ------------------------------------------------------------------------------------------------ |
+| any use is not a direct call: a callback, an alias, `.bind`, `typeof`, `new`, an optional call `?.()` |
+| the function has overloads, or the `const` has a type annotation                                 |
+| a parameter is a rest, `this` or destructured parameter, or has no type annotation               |
+| there are fewer than two parameters                                                              |
+| the body reads `arguments`                                                                       |
+| a call spreads its arguments, or contains another call of the same function                      |
+| a comment sits between parameters or between arguments (it would be lost)                        |
+
+Finding (written, exit 1): the JSDoc has `@param` tags, which now describe the old parameters.
+
+## The type check
+
+`rename-prop`, `remove-prop` and `params-to-object` type check the result in memory before
+writing, also under `--dry`. A batch is checked as a whole.
+
+- **Errors**: printed as `file:line:col  TSxxxx: message`; nothing is written; exit 1.
+- **Clean**: `Type check: 0 errors in N files that were changed or mention <names>.`
+- **It is not the full check.** It covers the files the run changed plus every TypeScript file
+  that spells the old or new name. A file that gets the property through an inferred type
+  (`...orbitAnglesLookingAlong(…)` spread into a pose) never spells it and is missed. On
+  `CameraPose.yaw` it finds 36 of 38 errors. A whole-program check through the API costs 11 to
+  14 s (measured 2026-11-24), so it is not done.
+- It reports every error in the files it checks, so an error from before the run shows too.
+- `--no-check` skips it.
+
+Always run `npm run typecheck:fast` after a real run.
+
+## `extract` and `inline`
+
+- **`extract`** moves a symbol and the file-local helpers only it uses into `dest.ts`, and
+  repoints every importer.
+  - Refuses when a helper is also used by code that stays: `extract` that helper first.
+  - Refuses an existing destination.
+  - A `//` line comment directly above a dragged helper is dropped; JSDoc survives.
+  - It can write `../../node_modules/<pkg>/index` specifiers (make them the bare package name)
+    and re-quotes to double quotes: run `npx prettier --write` on the touched files.
+  - It has two open bugs with type-only imports (`docs/BACKLOG.md`); check that the result compiles.
+- **`inline`** repoints every call of a passthrough (an alias, a same-signature single-call
+  wrapper, an aliased re-export) at the real symbol and removes the wrapper. It refuses anything
+  with real logic and prints the references, so you edit those sites by hand.
+
+## What no subcommand sees
+
+Grep for the old name after every run.
+
+- **`.wesl` shader imports** (`import package::…`): a separate module graph.
+- **Paths and names as strings**: `rawDataPath()` keys, asset URLs, `vi.mock()` literals.
+- **`?worker` / `?url` / `?raw` specifiers**: ambient-typed, so a stale one passes `tsc` and
+  `vite build` and breaks at runtime.
+- **Literals forced through `as unknown as`**: they accept a stale property silently.
+- **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`): paths as strings.
+- **A file in none of the four tsconfig projects** (`tsconfig.json`, `tsconfig.tools.json`,
+  `packages/desktop`, `packages/website`): refused, never treated as unused.
+- **An import alias spelled like the renamed symbol** (`import { bar as foo }` through a barrel):
+  its later uses are renamed while the alias stays. Rare here; `typecheck:fast` catches it.
+
+Never repoint importers with a one-off ts-morph script. In any ts-morph code,
+`ImportDeclaration.remove()` on a file's first import drops the module header comment; use
+`removeImportKeepingTrivia` (`tools/utils/refactor/`).
 
 ## `move-files`
 
 Run it from the repo root. It rewrites JS, TS and CSS references project-wide: imports,
 `import()`, `require()`, `vi.mock()`/`jest.mock()` paths, `?worker` suffixes, aliases,
 `composes … from`, `@import` and `url()`. It drags the `tests/` mirror and a `.tsx`'s
-`.module.css`. Full reference: `packages/move-files/README.md`.
+`.module.css`. A batch is `--manifest <moves.json>` with `[{ "from": …, "to": … }, …]`.
+Full reference: `packages/move-files/README.md`.
 
-| Exit | What it means                                   | What to do                                                                                                    |
-| ---- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 0    | Clean                                           | Commit the move                                                                                               |
-| 1    | **The moves are written** (unless `--dry`), and `file:line` findings list what they newly broke | Fix each finding by hand. Don't re-run: the sources are gone, so it would be refused                          |
-| 2    | Refused, nothing written, every reason listed   | Fix the batch and re-run                                                                                      |
-| 3    | A write failed partway; stderr names the path and every file finished | Finish by hand. A moved file not yet home sits beside its destination as `<name>.move-files-tmp` |
+| Exit | What it means                                                                                   | What to do                                                                           |
+| ---- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 0    | Clean                                                                                           | Commit the move                                                                      |
+| 1    | **The moves are written** (unless `--dry`), and `file:line` findings list what they newly broke | Fix each finding by hand. Don't re-run: the sources are gone, so it would be refused |
+| 2    | Refused, nothing written, every reason listed                                                   | Fix the batch and re-run                                                             |
+| 3    | A write failed partway; stderr names the path and every file finished                           | Finish by hand. A moved file not yet home sits beside its destination as `<name>.move-files-tmp` |
 
 Reported as findings when they break, not rewritten: `.astro`, `.mdx`, `.vue` and `.svelte`
 imports, Sass and Less, and non-import path strings.
@@ -216,19 +252,14 @@ the emptied source directory behind.
 
 ## Always
 
-- **`--dry` first.** It prints the expanded operation set and the blast radius (the
-  classified references for symbol ops, the rewritten-file set for `move-files`) and saves
-  nothing. Read it before committing to the real run.
-- **`npm run build` after import-graph surgery.** ts-morph keeps the tree compiling
-  for the cases it tracks; the string-literal blind spots above surface only at build
-  or runtime. `npm run typecheck` catches the TS-level breakage.
-- **One mechanical op per commit, no content edits mixed in.** A pure rename/move
-  commit keeps git's rename detection working (old→new link, surviving `git blame`)
-  and keeps the diff reviewable. Content changes go in a follow-up commit.
+- **`--dry` first.** Read the references, findings and type errors before the real run.
+- **`npm run typecheck:fast` after.** Then `npm run build` after a move or an `extract`: the
+  string blind spots above surface only at build or runtime.
+- **One mechanical change per commit, no content edits mixed in.** Git's rename detection and
+  `git blame` survive, and the diff stays reviewable.
 
 ## For orchestrators
 
-Subagents do NOT see project skills. Any plan task or subagent dispatch that renames,
-extracts, inlines, deletes, moves, or reorganizes files MUST name the command in the
-dispatch prompt (`npm run move-files` for a move, the `npm run refactor` subcommand for
-the rest) so the implementer uses it instead of hand-editing import paths.
+Subagents do NOT see project skills. Any plan task or dispatch that renames, extracts, inlines,
+deletes, moves, or changes a property or a parameter list MUST name the exact command in the
+prompt, so the implementer uses it instead of hand-editing.
