@@ -22,19 +22,11 @@
  * as unresolvable. The thrown message enumerates each candidate by kind + line so
  * the operator can see WHAT collided and disambiguate at the source, instead of
  * getting a bare 'ambiguous' with no way to act on it.
- *
- * The `ResolvedSymbol` type is co-located with its resolver, not a separate
- * `@types` file — it's `tools/`-local and only meaningful as this function's output.
  */
 
-import type { ExportedDeclarations, Project, SourceFile } from 'ts-morph';
-import type { SymbolAddress } from './parseSymbolAddress';
-
-export type ResolvedSymbol = {
-  readonly sourceFile: SourceFile;
-  readonly declaration: ExportedDeclarations;
-  readonly name: string;
-};
+import type { Project } from 'ts-morph';
+import type { SymbolAddress } from '../../@types/refactor/SymbolAddress';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export function resolveSymbol(project: Project, address: SymbolAddress): ResolvedSymbol {
   const sourceFile = project.getSourceFile(address.file);

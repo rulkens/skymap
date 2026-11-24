@@ -20,16 +20,9 @@
  * only produce a nonsensical mutation downstream, so we reject it here with a
  * message that shows the offending input rather than handing back a half-empty
  * struct a caller might forget to check.
- *
- * The `SymbolAddress` type is co-located with its only parser, not spun into a
- * separate `@types`-style file — this is `tools/`, and the shape only means
- * anything paired with the parse.
  */
 
-export type SymbolAddress = {
-  readonly file: string; // path as given (relative or absolute)
-  readonly symbol: string; // exported identifier
-};
+import type { SymbolAddress } from '../../@types/refactor/SymbolAddress';
 
 export function parseSymbolAddress(address: string): SymbolAddress {
   const hashIndex = address.indexOf('#');

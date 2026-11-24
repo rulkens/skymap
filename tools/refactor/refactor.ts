@@ -1,157 +1,179 @@
 #!/usr/bin/env node
 /**
- * refactor — one ts-morph CLI whose subcommands map onto skymap's house
- * conventions (one symbol per file, filename = export name, deep relative
- * imports, no barrels): rename, extract, inline, delete, refs. Moving files is
- * `npm run move-files`, not a subcommand here.
+ * refactor: the symbol-level refactoring CLI. `refs`, `rename` and `delete` run on the
+ * TypeScript 7 engine; `extract` and `inline` still run on ts-morph, imported only for
+ * their rows. Moving files is `npm run move-files`, not a subcommand here.
  *
- * ## Why the entry stays thin
- *
- * This file does argv dispatch and nothing else — parse the leading subcommand,
- * resolve the bool flags, load the shared Project, run the requested op(s)
- * against it, and save once at the tail. All the real behaviour lives in
- * one-function planners under `tools/utils/refactor/`, each unit-tested against
- * an in-memory Project. Keeping the entry logic-free means argv plumbing needs
- * no test, and a fat entry would hide the testable seams inside an untestable one.
- *
- * ## Why the driver owns the single save (all-or-nothing)
- *
- * Every mutating subcommand is a planner that resolves + validates + mutates the
- * ONE in-memory Project and throws on any validation failure WITHOUT saving. The
- * driver runs each requested op (a single invocation, or one per `--manifest`
- * batch entry) against that project, then calls `project.save()` exactly once at
- * the tail. All-or-nothing falls out structurally: a throw mid-batch aborts
- * before the save, so disk is never partially written. `--dry` skips the save and prints the
- * structured blast-radius report instead.
- *
- * ## Usage
- *
- *   npm run refactor -- <subcommand> <args...> [--dry] [--json]
- *
- *     refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
- *     refactor extract <file>#<symbol> <dest.ts>
- *     refactor inline  <file>#<symbol>
- *     refactor delete  <file>#<symbol>
- *     refactor refs    <file>#<symbol>
- *
- *   Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>
+ * Each op asks the engine once; every row works from that answer. A `plan` row returns a
+ * plan and the driver folds each into an in-memory overlay, so a batch (`--manifest`) sees
+ * its earlier entries and writes once, after the last, or not at all on a refusal or
+ * under `--dry`. Behaviour lives in `tools/utils/refactor/`.
  */
 
-import type { Project } from 'ts-morph';
 import { parseFlags } from '../utils/cli/args';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import type { Project } from 'ts-morph';
+import { listProjectFiles } from '../../packages/move-files/src/listProjectFiles';
+import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
 import { collectRefs } from '../utils/refactor/collectRefs';
-import { loadRefactorProject } from '../utils/refactor/loadRefactorProject';
+import { closeEngine } from '../utils/refactor/engine/closeEngine';
+import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
+import { openEngine } from '../utils/refactor/engine/openEngine';
+import { syncOverlay } from '../utils/refactor/engine/syncOverlay';
+import { foldPlan } from '../utils/refactor/foldPlan';
+import { normaliseAddress } from '../utils/refactor/normaliseAddress';
 import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
 import { planDelete } from '../utils/refactor/planDelete';
-import { planExtract } from '../utils/refactor/planExtract';
-import { planInline } from '../utils/refactor/planInline';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
+import { writePlan } from '../utils/refactor/writePlan';
+import type { DiskView } from '../@types/refactor/DiskView';
+import type { Finding } from '../@types/refactor/Finding';
+import type { LegacyInput } from './@types/LegacyInput';
+import type { OpContext } from './@types/OpContext';
+import type { Overlay } from '../@types/refactor/Overlay';
+import type { OverlayChanges } from '../@types/refactor/OverlayChanges';
+import type { Plan } from '../@types/refactor/Plan';
+import type { RunInput } from './@types/RunInput';
+import type { Subcommand } from './@types/Subcommand';
 
-// Every subcommand names its target as `<file>#<symbol>`.
-const SUBCOMMANDS = ['rename', 'extract', 'inline', 'delete', 'refs'] as const;
-type Subcommand = (typeof SUBCOMMANDS)[number];
+const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
 
-function isSubcommand(value: string): value is Subcommand {
-  return (SUBCOMMANDS as readonly string[]).includes(value);
-}
+// A `legacy` row mutates the ts-morph project after the driver printed its preview; a
+// `plan` row only describes what to change. `arity` is how many positionals the row needs.
+const SUBCOMMANDS: readonly Subcommand[] = [
+  {
+    kind: 'plan',
+    name: 'rename',
+    arity: 2,
+    usage: 'refactor rename  <file>#<symbol> <newName>   [--no-file-rename]',
+    plan: ({ engine, address, found, read, exists, positionals, flags }) =>
+      planRename({
+        address,
+        found,
+        newName: positionals[1] ?? '',
+        renameFile: !flags['--no-file-rename'],
+        root: engine.root,
+        read,
+        exists,
+      }),
+  },
+  {
+    kind: 'legacy',
+    name: 'extract',
+    arity: 2,
+    usage: 'refactor extract <file>#<symbol> <dest.ts>',
+    run: async ({ project, address, positionals }) => {
+      const { planExtract } = await import('../utils/refactor/planExtract');
+      planExtract(project, resolveSymbol(project, address), positionals[1] ?? '');
+    },
+  },
+  {
+    kind: 'legacy',
+    name: 'inline',
+    arity: 1,
+    usage: 'refactor inline  <file>#<symbol>',
+    run: async ({ project, address, report }) => {
+      const { planInline } = await import('../utils/refactor/planInline');
+      planInline(project, resolveSymbol(project, address), report);
+    },
+  },
+  {
+    kind: 'plan',
+    name: 'delete',
+    arity: 1,
+    usage: 'refactor delete  <file>#<symbol>',
+    plan: ({ engine, address, found, read, exists }) =>
+      planDelete({ found, root: engine.root, read, exists }),
+  },
+  {
+    kind: 'report',
+    name: 'refs',
+    arity: 1,
+    usage: 'refactor refs    <file>#<symbol>',
+    report: ({ found, flags }) => renderRefReport(found.report, flags['--json']),
+  },
+];
 
 const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
 
-  refactor rename  <file>#<symbol> <newName>   [--no-file-rename]
-  refactor extract <file>#<symbol> <dest.ts>
-  refactor inline  <file>#<symbol>
-  refactor delete  <file>#<symbol>
-  refactor refs    <file>#<symbol>
+${SUBCOMMANDS.map((row) => `  ${row.usage}`).join('\n')}
 
 Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
 
-const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
-type Flags = Record<keyof typeof FLAG_SCHEMA, boolean>;
-
-// Run one op against the shared project. The `<file>#<symbol>` address is parsed
-// here so a malformed one fails loudly BEFORE any mutation (and, in a batch,
-// aborts the whole run before the single save).
-function runOp(
-  sub: Subcommand,
-  project: Project,
-  positionals: readonly string[],
-  flags: Flags,
-): void {
-  const address = positionals[0];
-  if (address === undefined) {
-    throw new Error(`refactor ${sub}: expected a <file>#<symbol> address.`);
-  }
-  const parsed = parseSymbolAddress(address);
-
-  if (sub === 'refs') {
-    // `refs` is read-only: it resolves the target, walks its references, and
-    // prints the classified report. It never mutates the project, so the
-    // driver's tail `project.save()` is a no-op regardless of `--dry` — no
-    // special-casing needed here.
-    const report = collectRefs(project, resolveSymbol(project, parsed));
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    return;
-  }
-
-  if (sub === 'rename') {
-    const newName = positionals[1];
-    if (newName === undefined) {
-      throw new Error('refactor rename: expected a <file>#<symbol> address and a <newName>.');
-    }
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius from the PRE-rename symbol, so the report reflects
-    // the references as they stand before the mutation. The shared reporter is
-    // every mutating subcommand's preview; --dry stops at this report.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    // File rename is the default; --no-file-rename opts out (see planRename).
-    planRename(project, resolved, newName, !flags['--no-file-rename']);
-    return;
-  }
-
-  if (sub === 'delete') {
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: when refs exist it shows what blocks the
-    // delete (planDelete then throws the refusal), and when clear it's an empty
-    // report. --dry stops at this preview; the driver's tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planDelete(project, resolved);
-    return;
-  }
-
-  if (sub === 'extract') {
-    const dest = positionals[1];
-    if (dest === undefined) {
-      throw new Error('refactor extract: expected a <file>#<symbol> address and a <dest.ts>.');
-    }
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: it previews the external importers the extract
-    // will repoint, or (on a shared-dep refusal) an empty report before
-    // planExtract throws. --dry stops at this preview; the tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planExtract(project, resolved, dest);
-    return;
-  }
-
-  if (sub === 'inline') {
-    const resolved = resolveSymbol(project, parsed);
-    // Print the blast radius first: it previews the call sites the inline will
-    // repoint, or (on a non-passthrough) the references planInline then refuses
-    // with. --dry stops at this preview; the driver's tail save is skipped.
-    const report = collectRefs(project, resolved);
-    process.stdout.write(`${renderRefReport(report, flags['--json'])}\n`);
-    planInline(project, resolved);
-    return;
-  }
+function refuse(message: string): false {
+  process.stderr.write(`${message}\n`);
+  process.exitCode = 1;
+  return false;
 }
 
-// Decode one batch entry (a JSON array of string arguments) into the positional
-// tuple runOp expects; arity and address well-formedness are runOp's to check.
+// Argument errors throw before anything runs, so a batch aborts before it writes. One
+// engine query serves the preview and the row. A legacy row's preview shows the references
+// as they stand BEFORE it mutates, and in a batch the disk may no longer hold what
+// ts-morph does, so there a preview that cannot be built is skipped. A plan row's preview
+// follows its acceptance, and only when something references the symbol, since a refusal
+// carries its own list.
+async function runOp(
+  row: Subcommand,
+  base: Omit<RunInput, 'address' | 'found'>,
+  context: OpContext,
+): Promise<boolean> {
+  const { engine, positionals } = base;
+  const [target] = positionals;
+  if (target === undefined || positionals.length < row.arity) {
+    throw new Error(`refactor ${row.name}: missing arguments.\n  ${row.usage}`);
+  }
+  const typed = parseSymbolAddress(target);
+  const normal = normaliseAddress(engine.root, typed);
+  const found = normal.ok
+    ? collectRefs({ address: normal.address, engine, read: base.read })
+    : normal;
+
+  if (!found.ok) {
+    if (row.kind !== 'legacy' || !context.batch) return refuse(found.refusal);
+    process.stdout.write(`preview unavailable: ${found.refusal}\n`);
+    const empty = { target, refs: [], fileCount: 0, testCount: 0 };
+    await runLegacy(row, base, context, typed, empty);
+    return true;
+  }
+
+  const address = normal.ok ? normal.address : typed;
+  const run = { ...base, address, found };
+  if (row.kind === 'report') {
+    process.stdout.write(`${row.report(run)}\n`);
+  } else if (row.kind === 'plan') {
+    const result = row.plan(run);
+    if (!result.ok) return refuse(result.refusals.join('\n'));
+    if (found.report.refs.length > 0) {
+      process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
+    }
+    context.apply(result.plan);
+    context.findings.push(...result.plan.findings);
+  } else {
+    process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
+    await runLegacy(row, base, context, typed, found.report);
+  }
+  return true;
+}
+
+async function runLegacy(
+  row: Subcommand & { kind: 'legacy' },
+  base: Omit<RunInput, 'address' | 'found'>,
+  context: OpContext,
+  address: RunInput['address'],
+  report: LegacyInput['report'],
+): Promise<void> {
+  await row.run({
+    project: await context.project(),
+    address,
+    positionals: base.positionals,
+    flags: base.flags,
+    report,
+  });
+}
+
 function entryToPositionals(entry: unknown): readonly string[] {
   if (Array.isArray(entry) && entry.every((arg) => typeof arg === 'string')) {
     return entry as readonly string[];
@@ -161,31 +183,74 @@ function entryToPositionals(entry: unknown): readonly string[] {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const sub = argv[0];
-  if (sub === undefined || !isSubcommand(sub)) {
+  const name = argv[0];
+  const row = SUBCOMMANDS.find((candidate) => candidate.name === name);
+  if (row === undefined) {
     const lead =
-      sub === undefined
+      name === undefined
         ? 'refactor: missing subcommand.'
-        : `refactor: unknown subcommand '${sub}'.`;
+        : `refactor: unknown subcommand '${name}'.`;
     process.stderr.write(`${lead}\n${USAGE}\n`);
     process.exitCode = 1;
     return;
   }
 
   const flags = parseFlags(argv, FLAG_SCHEMA);
-  const project = loadRefactorProject();
-
-  const manifest = readManifest(argv);
-  if (manifest === null) {
-    const positionals = argv.slice(1).filter((arg) => !arg.startsWith('--'));
-    runOp(sub, project, positionals, flags);
-  } else {
-    // Batch: every entry runs against the ONE project. A throw on any entry
-    // aborts before the single save below, so disk is never partially written.
-    for (const entry of manifest) runOp(sub, project, entryToPositionals(entry), flags);
+  const root = realpathSync.native(process.cwd());
+  const engine = openEngine({ root, projects: ENGINE_PROJECTS });
+  try {
+    // ts-morph costs ~0.6 s to import and more to load the repo, so only a legacy row
+    // pays: its planners and the project load are imported on demand.
+    let loaded: Project | undefined;
+    const project = async (): Promise<Project> => {
+      const { loadRefactorProject } = await import('../utils/refactor/loadRefactorProject');
+      return (loaded ??= loadRefactorProject());
+    };
+    const overlay: Overlay = { texts: engine.overlay, moves: [], deletes: engine.removed };
+    let snapshot: ReturnType<DiskView['snapshot']> | undefined;
+    const disk: DiskView = {
+      read: (file) => readFileSync(file, 'utf8'),
+      snapshot: () => (snapshot ??= readSnapshot(listProjectFiles(root))),
+    };
+    const read = (file: string): string => engine.overlay.get(file) ?? disk.read(file);
+    const exists = (file: string): boolean =>
+      !engine.removed.has(file) && (engine.overlay.has(file) || existsSync(file));
+    const findings: Finding[] = [];
+    // Folding and the engine resync cost seconds on a file move, so each happens only
+    // when something reads its result: the resync before a next entry, the fold before
+    // that or before the write.
+    let last = false;
+    let unsynced: OverlayChanges | undefined;
+    const manifest = readManifest(argv);
+    const context: OpContext = {
+      project,
+      findings,
+      batch: manifest !== null,
+      apply: (plan: Plan) => {
+        if (!(last && flags['--dry'])) unsynced = foldPlan(plan, overlay, disk);
+      },
+    };
+    const ops =
+      manifest === null
+        ? [argv.slice(1).filter((arg) => !arg.startsWith('--'))]
+        : manifest.map(entryToPositionals);
+    for (const [index, positionals] of ops.entries()) {
+      last = index === ops.length - 1;
+      if (unsynced) syncOverlay(engine, unsynced);
+      unsynced = undefined;
+      if (!(await runOp(row, { engine, read, exists, positionals, flags }, context))) return;
+    }
+    if (flags['--dry']) return;
+    if (loaded) await loaded.save();
+    const written = writePlan(overlay, root);
+    if (written.failed !== null) {
+      throw new Error(`Writing stopped at ${written.failed}; ${written.completed.length} done.`);
+    }
+    for (const f of findings) process.stdout.write(`${f.file}:${f.line}  ${f.message}\n`);
+    if (findings.length > 0) process.exitCode = 1;
+  } finally {
+    closeEngine(engine);
   }
-
-  if (!flags['--dry']) await project.save();
 }
 
 main().catch((err) => {
