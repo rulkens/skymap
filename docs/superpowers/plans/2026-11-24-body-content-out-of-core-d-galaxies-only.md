@@ -60,14 +60,14 @@ export const FOREGROUND_FALLBACK_DISTANCE_MPC = 0.23;
 // foregroundMaxDistance.ts: the max extent × MARGIN, or the fallback when that is 0.
 ```
 
-- [ ] Failing tests first, in the existing test file: (a) with the app's registry the value is
+- [x] Failing tests first, in the existing test file: (a) with the app's registry the value is
       the derived one (between 0.2 and 0.6 Mpc, the two edges the header names: above the
       neighbourhood, inside the Milky Way label's near edge); (b) with `compositions/appBodies`
       mocked to no rows (`vi.doMock` + `vi.resetModules`, dynamic import) the value is
       `FOREGROUND_FALLBACK_DISTANCE_MPC` and `SURVEY_DEEP_ZOOM`'s band is not inverted.
-- [ ] Implement. The header's last sentence ("Both edges are pinned by this file's test") becomes
+- [x] Implement. The header's last sentence ("Both edges are pinned by this file's test") becomes
       true; add one line on the fallback and why 0.23. Stay within the comment budget.
-- [ ] `npm run typecheck`, the touched tests. Commit.
+- [x] `npm run typecheck`, the touched tests. Commit.
 
 ### Task 2: The app's home is stated in the composition
 
