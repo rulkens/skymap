@@ -1,13 +1,13 @@
 # Body content out of core, PR B: corrections and stars ride body rows
 
 > **For agentic workers:** execute with `superpowers:subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax.
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** always-loaded core no longer imports the ephemeris corrections, the barycentric pair
 table or any star table by value. They are values on the body Layer's and the star Layer's body
 rows. No behaviour change in the app.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/2026-11-24-body-content-out-of-core-design.md)
 §4.1, §5 prep 4–5. Second of four PRs (§6). Closes leftovers J1 and J3.
 
 **Why it is safe to land alone:** the app composition holds every row it held before, so each fold
@@ -248,13 +248,13 @@ Then one `move-files` manifest:
 
 **Files:** none
 
-- [ ] Before Task 1 and after Task 4, shoot on this worktree's dev server: Earth home (bare link),
+- [x] Before Task 1 and after Task 4, shoot on this worktree's dev server: Earth home (bare link),
       `#focus=body-mars`, the Moon, a mission focus, a famous star, an S-star, the Sun, each with
       a fixed `t`. Pairs go to the owner as dash checks.
-- [ ] `npm run perf` (`earth-surface`, `solar-system`, `full-survey` as control) and
+- [x] `npm run perf` (`earth-surface`, `solar-system`, `full-survey` as control) and
       `npm run perf:cpu` before and after, `--url` this worktree's server. A difference beyond
       noise is settled by a paired A-B-A-B, not by one read.
-- [ ] Payoff build (`tools/reference-engine/vite.payoff.config.ts`): `attribute.mts` no longer
+- [x] Payoff build (`tools/reference-engine/vite.payoff.config.ts`): `attribute.mts` no longer
       lists `ephemerisCorrections.generated`, `famousStars.generated` or `sStarElements`. Report
       the gzip size beside 279 kB. Informative, not a gate: rendering is PR D's.
 
