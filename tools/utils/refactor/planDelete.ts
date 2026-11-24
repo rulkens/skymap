@@ -4,59 +4,78 @@
  *
  * Any reference of any kind refuses, tests and re-exports included: a delete has no safe
  * partial form, and a barrel-repair branch would exist for a case this repo forbids.
- * The file goes only if no non-import statement survives the cut; a stray helper or
- * side-effect statement is never deleted along with it.
+ * The declaration's own tokens (overload names, a recursive call, its own `export { x }`)
+ * do not count; the export specifier is cut with it. The file goes only if no non-import
+ * statement survives the cut; a stray helper or side-effect statement is never deleted.
  */
 
-import { relative, resolve } from 'node:path';
 import ts from 'typescript';
-import { expandCompanions } from '../../../packages/move-files/src/expandCompanions';
-import type { Engine } from '../../@types/refactor/Engine';
+import type { FoundRefs } from '../../@types/refactor/FoundRefs';
 import type { PlanResult } from '../../@types/refactor/PlanResult';
-import type { SymbolAddress } from '../../@types/refactor/SymbolAddress';
-import { collectRefs } from './collectRefs';
-import { companionRules } from './companionRules';
+import type { TextEdit } from '../../@types/refactor/TextEdit';
+import { companionPaths } from './companionPaths';
 import { declarationSpan } from './declarationSpan';
+import { isLocalExportSpecifier } from './isLocalExportSpecifier';
 import { renderRefReport } from './renderRefReport';
 
 export function planDelete(input: {
-  address: SymbolAddress;
-  engine: Engine;
+  found: FoundRefs;
+  root: string;
   read: (file: string) => string;
   exists: (file: string) => boolean;
 }): PlanResult {
-  const { engine, read } = input;
-  const found = collectRefs({ address: input.address, engine, read });
-  if (!found.ok) return { ok: false, refusals: [found.refusal] };
-  const { report, at } = found;
-  if (report.refs.length > 0) {
+  const { found, read } = input;
+  const { at } = found;
+  const text = read(at.file);
+  const span = declarationSpan(text, at);
+  const own = (ref: { file: string; start: number; end: number }): boolean =>
+    ref.file === at.file && ref.start >= span.start && ref.end <= span.end;
+  const specifiers = found.refs.filter(
+    (ref) => ref.file === at.file && !own(ref) && isLocalExportSpecifier(text, ref),
+  );
+
+  const blocking = found.report.refs.filter((_, i) => {
+    const ref = found.refs[i]!;
+    return !own(ref) && !specifiers.includes(ref);
+  });
+  if (blocking.length > 0) {
+    const { report } = found;
+    const files = new Set(blocking.map((e) => e.filePath));
     const header =
-      `Cannot delete '${report.target}': ${report.refs.length} reference(s) still point to it. ` +
+      `Cannot delete '${report.target}': ${blocking.length} reference(s) still point to it. ` +
       'Remove them first, then re-run:';
-    return { ok: false, refusals: [`${header}\n${renderRefReport(report, false)}`] };
+    const rest = {
+      ...report,
+      refs: blocking,
+      fileCount: files.size,
+      testCount: blocking.filter((e) => e.inTest).length,
+    };
+    return { ok: false, refusals: [`${header}\n${renderRefReport(rest, false)}`] };
   }
 
-  const text = read(at.file);
-  const { start, end } = declarationSpan(text, at);
-  const rest = text.slice(0, start) + text.slice(end);
+  const spans = [span, ...specifiers.map((ref) => declarationSpan(text, ref))].sort(
+    (a, b) => b.start - a.start,
+  );
+  let rest = text;
+  for (const { start, end } of spans) rest = rest.slice(0, start) + rest.slice(end);
   const hasMore = ts
     .createSourceFile(at.file, rest, ts.ScriptTarget.Latest)
     .statements.some((statement) => !ts.isImportDeclaration(statement));
-  const plan = { edits: [], moves: [], deletes: [], findings: [] };
+  const plan = { edits: [] as TextEdit[], moves: [], deletes: [] as string[], findings: [] };
   if (hasMore) {
-    return { ok: true, plan: { ...plan, edits: [{ file: at.file, start, end, text: '' }] } };
+    return {
+      ok: true,
+      plan: {
+        ...plan,
+        edits: spans.map(({ start, end }) => ({ file: at.file, start, end, text: '' })),
+      },
+    };
   }
-  return { ok: true, plan: { ...plan, deletes: fileWithMirror(input, at.file) } };
-}
-
-function fileWithMirror(
-  input: { engine: Engine; exists: (file: string) => boolean },
-  file: string,
-): string[] {
-  const { root } = input.engine;
-  const rel = relative(root, file);
-  const files = expandCompanions([{ from: rel, to: rel }], companionRules, (path) =>
-    input.exists(resolve(root, path)),
-  );
-  return files.map(({ from }) => resolve(root, from));
+  const files = companionPaths({
+    root: input.root,
+    from: at.file,
+    to: at.file,
+    exists: input.exists,
+  });
+  return { ok: true, plan: { ...plan, deletes: files.map((m) => m.from) } };
 }

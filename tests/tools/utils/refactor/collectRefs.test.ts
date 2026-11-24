@@ -58,3 +58,25 @@ describe('collectRefs', () => {
     expect(found.ok).toBe(false);
   });
 });
+
+describe('collectRefs outside every project', () => {
+  const OUTSIDE = {
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: { strict: true },
+      include: ['src/**/*.ts'],
+    }),
+    'src/in.ts': 'export const inside = 1;',
+    'outside/out.ts': 'export const outside = 1;',
+  };
+  const lonely = engineFixture(OUTSIDE);
+  afterAll(lonely.dispose);
+
+  it('refuses a file in none of the engine projects instead of reporting 0 references', () => {
+    const found = collectRefs({
+      address: { file: 'outside/out.ts', symbol: 'outside' },
+      engine: lonely.engine,
+      read: () => OUTSIDE['outside/out.ts'],
+    });
+    expect(found).toEqual({ ok: false, refusal: expect.stringContaining('none of the engine') });
+  });
+});

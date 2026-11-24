@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
 import { foldPlan } from '../../../../tools/utils/refactor/foldPlan';
+import { collectRefs } from '../../../../tools/utils/refactor/collectRefs';
 import { planRename } from '../../../../tools/utils/refactor/planRename';
 import type { DiskView } from '../../../../tools/@types/refactor/DiskView';
 import type { Overlay } from '../../../../tools/@types/refactor/Overlay';
@@ -82,11 +83,15 @@ describe('a batch over a moved file', () => {
     const exists = (file: string) =>
       !engine.removed.has(file) && (engine.overlay.has(file) || view.snapshot().fileExists(file));
     const run = (file: string, symbol: string, newName: string) => {
+      const address = { file, symbol };
+      const found = collectRefs({ address, engine, read });
+      if (!found.ok) throw new Error(found.refusal);
       const result = planRename({
-        address: { file, symbol },
+        address,
+        found,
         newName,
         renameFile: true,
-        engine,
+        root: engine.root,
         read,
         exists,
       });

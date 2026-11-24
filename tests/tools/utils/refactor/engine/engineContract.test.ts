@@ -48,7 +48,7 @@ describe('syncOverlay', () => {
     const before = findReferences(engine, at).length;
     const file = `${root}/use.ts`;
     engine.overlay.set(file, `${USE}export const b = area(3);\n`);
-    syncOverlay(engine, { changed: [file] });
+    syncOverlay(engine, { changed: [file], created: [], deleted: [] });
     expect(findReferences(engine, at).length).toBe(before + 1);
   });
 });

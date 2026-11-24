@@ -7,9 +7,9 @@
  * stays a call. The declaration itself is dropped from `refs` and returned as `at`.
  */
 
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { Engine } from '../../@types/refactor/Engine';
-import type { NodeLocation } from '../../@types/refactor/NodeLocation';
+import type { FoundRefs } from '../../@types/refactor/FoundRefs';
 import type { RefEntry } from '../../@types/refactor/RefEntry';
 import type { RefReport } from '../../@types/refactor/RefReport';
 import type { SymbolAddress } from '../../@types/refactor/SymbolAddress';
@@ -20,6 +20,7 @@ import { findReferences } from './engine/findReferences';
 import { findNameNode } from './findNameNode';
 import { locateExport } from './locateExport';
 import { parseTs } from './parseTs';
+import { rootRelative } from './rootRelative';
 
 const TEST_PATH = /^(packages\/[^/]+\/)?tests\//;
 
@@ -27,9 +28,7 @@ export function collectRefs(input: {
   address: SymbolAddress;
   engine: Engine;
   read: (file: string) => string;
-}):
-  | { ok: true; report: RefReport<SymbolRefKind>; at: NodeLocation; refs: readonly NodeLocation[] }
-  | { ok: false; refusal: string } {
+}): ({ ok: true } & FoundRefs) | { ok: false; refusal: string } {
   const { address, engine } = input;
   const texts = new Map<string, string>();
   const read = (f: string): string => {
@@ -42,7 +41,17 @@ export function collectRefs(input: {
   if (!located.ok) return located;
 
   const at = { ...located.at, file };
-  const refs = findReferences(engine, at).filter((r) => r.file !== at.file || r.start !== at.start);
+  const all = findReferences(engine, at);
+  const isDeclaration = (r: { file: string; start: number }) =>
+    r.file === at.file && r.start === at.start;
+  // A file outside every engine project, or in another case, yields nothing, not even itself.
+  if (!all.some(isDeclaration)) {
+    return {
+      ok: false,
+      refusal: `Cannot resolve '${address.file}#${address.symbol}': the file is in none of the engine's projects.`,
+    };
+  }
+  const refs = all.filter((r) => !isDeclaration(r));
   const entries = refs.map((ref): RefEntry<SymbolRefKind> => {
     const text = read(ref.file);
     const source = parseTs(ref.file, text);
@@ -66,10 +75,4 @@ export function collectRefs(input: {
     testCount: entries.filter((e) => e.inTest).length,
   };
   return { ok: true, report, at, refs };
-}
-
-// A path outside the root stays absolute rather than printing '../../'.
-function rootRelative(root: string, file: string): string {
-  const rel = relative(root, file);
-  return rel.startsWith('..') ? file : rel;
 }
