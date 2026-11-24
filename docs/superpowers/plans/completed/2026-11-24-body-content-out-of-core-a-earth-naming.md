@@ -1,12 +1,12 @@
 # Body content out of core, PR A: core stops naming Earth
 
 > **For agentic workers:** execute with `superpowers:subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [x]`) syntax.
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** always-loaded core code no longer imports `SCENE_EARTH`, `EARTH_REF` or a default Earth
 body, so it loads and runs with no Earth row. No behaviour change in the app.
 
-**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../specs/2026-11-24-body-content-out-of-core-design.md)
+**Spec:** [`2026-11-24-body-content-out-of-core-design.md`](../../specs/2026-11-24-body-content-out-of-core-design.md)
 §4.4, §4.5, §5 prep 1–3. This is the first of four PRs (§6); B, C and D get their own plans.
 
 **Why it is safe to land alone:** the app composition still has Earth, so every fold below holds
