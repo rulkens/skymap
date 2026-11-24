@@ -4,7 +4,7 @@ import { planInline } from '../../../../tools/utils/refactor/planInline';
 import type { RefReport } from '../../../../tools/@types/refactor/RefReport';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
-// In-memory Projects mirror the planDelete/planRename fixtures: seed a tiny module
+// In-memory ts-morph Projects: seed a tiny module
 // graph, resolve the target the way the CLI does, run the planner, then read back
 // the resulting files. planInline validates (via detectPassthrough) before
 // mutating and never saves, so every assertion reads from the live Project.

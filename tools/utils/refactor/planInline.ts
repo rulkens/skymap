@@ -31,9 +31,9 @@
  * Under the house one-symbol-per-file rule, a wrapper file exists only to carry
  * the wrapper. Once the wrapper is inlined, the file's remaining statements are at
  * most the import it used to forward through — an empty husk — so the file is
- * dropped, and its `tests/` mirror with it, through the shared
- * `removeFileWithMirror` / `hasMeaningfulStatements` helpers `planDelete` uses, so
- * the husk-and-mirror convention has one definition, not two.
+ * dropped, and its `tests/` mirror with it, through
+ * `removeFileWithMirror` / `hasMeaningfulStatements`. `planDelete` runs on the engine
+ * and carries its own copy of the husk check.
  *
  * ## Mutate-only, validate-first
  *
