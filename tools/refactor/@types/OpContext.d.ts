@@ -6,6 +6,8 @@ import type { Plan } from '../../@types/refactor/Plan';
 export type OpContext = {
   readonly project: () => Promise<Project>;
   readonly apply: (plan: Plan) => void;
+  readonly settle: () => void; // tell the engine what the folds changed
   readonly findings: Finding[];
   readonly batch: boolean;
+  readonly texts: () => ReadonlyMap<string, string>; // every project file's text, overlay applied
 };

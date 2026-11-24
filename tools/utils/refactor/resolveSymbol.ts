@@ -4,7 +4,7 @@
  *
  * ## Why resolution is its own step, and why it fails loudly
  *
- * `parseSymbolAddress` proves an address is well-FORMED; it can't prove the file
+ * `parseTarget` proves an address is well-FORMED; it can't prove the file
  * exists in the loaded `Project`, that the name is actually exported, or that the
  * name resolves to a SINGLE declaration. Those three checks are the load-bearing
  * error paths of the whole refactor CLI (Q7): every subcommand resolves its

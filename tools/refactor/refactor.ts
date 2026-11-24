@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * refactor: the symbol-level refactoring CLI. `refs`, `rename` and `delete` run on the
+ * refactor: the symbol-level refactoring CLI. `refs`, `rename`, `delete`, the property
+ * rows (`prop-refs`, `rename-prop`, `remove-prop`) and `params-to-object` run on the
  * TypeScript 7 engine; `extract` and `inline` still run on ts-morph, imported only for
  * their rows. Moving files is `npm run move-files`, not a subcommand here.
  *
@@ -15,18 +16,26 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import type { Project } from 'ts-morph';
 import { listProjectFiles } from '../../packages/move-files/src/listProjectFiles';
 import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
+import { collectPropRefs } from '../utils/refactor/collectPropRefs';
 import { collectRefs } from '../utils/refactor/collectRefs';
+import { checkRun } from '../utils/refactor/checkRun';
 import { closeEngine } from '../utils/refactor/engine/closeEngine';
 import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
 import { openEngine } from '../utils/refactor/engine/openEngine';
 import { syncOverlay } from '../utils/refactor/engine/syncOverlay';
 import { foldPlan } from '../utils/refactor/foldPlan';
 import { normaliseAddress } from '../utils/refactor/normaliseAddress';
-import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { parseTarget } from '../utils/refactor/parseTarget';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
+import { planParamsToObject } from '../utils/refactor/planParamsToObject';
+import { planRemoveProp } from '../utils/refactor/planRemoveProp';
+import { planRenameProp } from '../utils/refactor/planRenameProp';
+import { overlaidTexts } from '../utils/refactor/overlaidTexts';
 import { readManifest } from '../utils/refactor/readManifest';
+import { renameMergeRefusal } from '../utils/refactor/renameMergeRefusal';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
+import { renderTypeErrors } from '../utils/refactor/renderTypeErrors';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
 import { writePlan } from '../utils/refactor/writePlan';
 import type { DiskView } from '../@types/refactor/DiskView';
@@ -36,18 +45,30 @@ import type { OpContext } from './@types/OpContext';
 import type { Overlay } from '../@types/refactor/Overlay';
 import type { OverlayChanges } from '../@types/refactor/OverlayChanges';
 import type { Plan } from '../@types/refactor/Plan';
-import type { RunInput } from './@types/RunInput';
+import type { PlanResult } from '../@types/refactor/PlanResult';
+import type { PropAddress } from '../@types/refactor/PropAddress';
+import type { RefReport } from '../@types/refactor/RefReport';
+import type { SymbolAddress } from '../@types/refactor/SymbolAddress';
+import type { Target } from '../@types/refactor/Target';
+import type { RunBase } from './@types/RunBase';
 import type { Subcommand } from './@types/Subcommand';
 
-const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
+const FLAG_SCHEMA = {
+  '--dry': 'bool',
+  '--json': 'bool',
+  '--no-file-rename': 'bool',
+  '--no-check': 'bool',
+} as const;
 
 // A `legacy` row mutates the ts-morph project after the driver printed its preview; a
 // `plan` row only describes what to change. `arity` is how many positionals the row needs.
 const SUBCOMMANDS: readonly Subcommand[] = [
   {
+    accepts: 'symbol',
     kind: 'plan',
     name: 'rename',
     arity: 2,
+    checks: false,
     usage: 'refactor rename  <file>#<symbol> <newName>   [--no-file-rename]',
     plan: ({ engine, address, found, read, exists, positionals, flags }) =>
       planRename({
@@ -61,9 +82,11 @@ const SUBCOMMANDS: readonly Subcommand[] = [
       }),
   },
   {
+    accepts: 'symbol',
     kind: 'legacy',
     name: 'extract',
     arity: 2,
+    checks: false,
     usage: 'refactor extract <file>#<symbol> <dest.ts>',
     run: async ({ project, address, positionals }) => {
       const { planExtract } = await import('../utils/refactor/planExtract');
@@ -71,9 +94,11 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     },
   },
   {
+    accepts: 'symbol',
     kind: 'legacy',
     name: 'inline',
     arity: 1,
+    checks: false,
     usage: 'refactor inline  <file>#<symbol>',
     run: async ({ project, address, report }) => {
       const { planInline } = await import('../utils/refactor/planInline');
@@ -81,19 +106,73 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     },
   },
   {
+    accepts: 'symbol',
     kind: 'plan',
     name: 'delete',
     arity: 1,
+    checks: false,
     usage: 'refactor delete  <file>#<symbol>',
     plan: ({ engine, address, found, read, exists }) =>
       planDelete({ found, root: engine.root, read, exists }),
   },
   {
+    accepts: 'symbol',
     kind: 'report',
     name: 'refs',
     arity: 1,
+    checks: false,
     usage: 'refactor refs    <file>#<symbol>',
     report: ({ found, flags }) => renderRefReport(found.report, flags['--json']),
+  },
+  {
+    accepts: 'prop',
+    kind: 'report',
+    name: 'prop-refs',
+    arity: 1,
+    checks: false,
+    usage: 'refactor prop-refs <file>#<Type>.<prop>',
+    report: ({ found, address, flags }) =>
+      renderRefReport(found.report, flags['--json'], {
+        prop: address.prop,
+        findings: found.unreported,
+      }),
+  },
+  {
+    accepts: 'prop',
+    kind: 'plan',
+    name: 'rename-prop',
+    arity: 2,
+    checks: true,
+    usage: 'refactor rename-prop <file>#<Type>.<prop> <newName>',
+    plan: ({ address, found, read, positionals }) =>
+      planRenameProp({ address, found, newName: positionals[1] ?? '', read }),
+    after: ({ engine, read, address, found, positionals }, plan) =>
+      renameMergeRefusal({
+        engine,
+        read,
+        address,
+        newName: positionals[1] ?? '',
+        before: found,
+        plan,
+      }),
+  },
+  {
+    accepts: 'prop',
+    kind: 'plan',
+    name: 'remove-prop',
+    arity: 1,
+    checks: true,
+    usage: 'refactor remove-prop <file>#<Type>.<prop>',
+    plan: ({ address, found, read }) => planRemoveProp({ address, found, read }),
+  },
+  {
+    accepts: 'symbol',
+    kind: 'plan',
+    name: 'params-to-object',
+    arity: 1,
+    checks: true,
+    usage: 'refactor params-to-object <file>#<function>',
+    plan: ({ address, found, read }) => planParamsToObject({ address, found, read }),
   },
 ];
 
@@ -103,6 +182,13 @@ ${SUBCOMMANDS.map((row) => `  ${row.usage}`).join('\n')}
 
 Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
 
+// Before any engine query: a property address given to a symbol row, or the other way.
+function wrongKind(row: Subcommand, target: string, given: Target['kind']): string {
+  const use = SUBCOMMANDS.filter((other) => other.accepts === given).map((other) => other.name);
+  const noun = given === 'prop' ? 'property' : 'symbol';
+  return `refactor ${row.name}: '${target}' is a ${noun} address; use ${use.join(', ')}.`;
+}
+
 function refuse(message: string): false {
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;
@@ -110,25 +196,36 @@ function refuse(message: string): false {
 }
 
 // Argument errors throw before anything runs, so a batch aborts before it writes. One
-// engine query serves the preview and the row. A legacy row's preview shows the references
-// as they stand BEFORE it mutates, and in a batch the disk may no longer hold what
-// ts-morph does, so there a preview that cannot be built is skipped. A plan row's preview
-// follows its acceptance, and only when something references the symbol, since a refusal
-// carries its own list.
-async function runOp(
-  row: Subcommand,
-  base: Omit<RunInput, 'address' | 'found'>,
-  context: OpContext,
-): Promise<boolean> {
-  const { engine, positionals } = base;
-  const [target] = positionals;
-  if (target === undefined || positionals.length < row.arity) {
+// engine query serves the preview and the row.
+async function runOp(row: Subcommand, base: RunBase, context: OpContext): Promise<boolean> {
+  const [target] = base.positionals;
+  if (target === undefined || base.positionals.length < row.arity) {
     throw new Error(`refactor ${row.name}: missing arguments.\n  ${row.usage}`);
   }
-  const typed = parseSymbolAddress(target);
-  const normal = normaliseAddress(engine.root, typed);
+  const parsed = parseTarget(target);
+  if (row.accepts === 'prop' && parsed.kind === 'prop') {
+    const { file, typeName, prop } = parsed;
+    return runPropOp(row, { file, typeName, prop }, base, context);
+  }
+  if (row.accepts === 'symbol' && parsed.kind === 'symbol') {
+    return runSymbolOp(row, { file: parsed.file, symbol: parsed.symbol }, base, context);
+  }
+  throw new Error(wrongKind(row, target, parsed.kind));
+}
+
+// A legacy row's preview shows the references as they stand BEFORE it mutates, and in a
+// batch the disk may no longer hold what ts-morph does, so there a preview that cannot be
+// built is skipped.
+async function runSymbolOp(
+  row: Subcommand & { accepts: 'symbol' },
+  typed: SymbolAddress,
+  base: RunBase,
+  context: OpContext,
+): Promise<boolean> {
+  const target = base.positionals[0] ?? '';
+  const normal = normaliseAddress(base.engine.root, typed);
   const found = normal.ok
-    ? collectRefs({ address: normal.address, engine, read: base.read })
+    ? collectRefs({ address: normal.address, engine: base.engine, read: base.read })
     : normal;
 
   if (!found.ok) {
@@ -143,26 +240,74 @@ async function runOp(
   const run = { ...base, address, found };
   if (row.kind === 'report') {
     process.stdout.write(`${row.report(run)}\n`);
-  } else if (row.kind === 'plan') {
-    const result = row.plan(run);
-    if (!result.ok) return refuse(result.refusals.join('\n'));
-    if (found.report.refs.length > 0) {
-      process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
-    }
-    context.apply(result.plan);
-    context.findings.push(...result.plan.findings);
-  } else {
-    process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
-    await runLegacy(row, base, context, typed, found.report);
+    return true;
   }
+  if (row.kind === 'plan') return acceptPlan(row.plan(run), found.report, base, context);
+  process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
+  await runLegacy(row, base, context, typed, found.report);
+  return true;
+}
+
+async function runPropOp(
+  row: Subcommand & { accepts: 'prop' },
+  typed: PropAddress,
+  base: RunBase,
+  context: OpContext,
+): Promise<boolean> {
+  const normal = normaliseAddress(base.engine.root, typed);
+  if (!normal.ok) return refuse(normal.refusal);
+  const found = collectPropRefs({
+    address: normal.address,
+    engine: base.engine,
+    read: base.read,
+    texts: context.texts,
+  });
+  if (!found.ok) return refuse(found.refusal);
+  const run = { ...base, address: normal.address, found: found.found };
+  if (row.kind === 'report') {
+    process.stdout.write(`${row.report(run)}\n`);
+    return true;
+  }
+  const { after } = row;
+  return acceptPlan(
+    row.plan(run),
+    found.found.report,
+    base,
+    context,
+    { prop: normal.address.prop, findings: found.found.unreported },
+    after && ((plan) => after(run, plan)),
+  );
+}
+
+// A plan row's preview follows its acceptance, and only when something references the
+// target, since a refusal carries its own list.
+function acceptPlan(
+  result: PlanResult,
+  report: RefReport<string>,
+  base: RunBase,
+  context: OpContext,
+  untracked?: { prop: string; findings: readonly Finding[] },
+  after?: (plan: Plan) => readonly string[],
+): boolean {
+  if (!result.ok) return refuse(result.refusals.join('\n'));
+  if (report.refs.length > 0) {
+    process.stdout.write(`${renderRefReport(report, base.flags['--json'], untracked)}\n`);
+  }
+  context.apply(result.plan);
+  if (after) {
+    context.settle();
+    const refusals = after(result.plan);
+    if (refusals.length > 0) return refuse(refusals.join('\n'));
+  }
+  context.findings.push(...result.plan.findings);
   return true;
 }
 
 async function runLegacy(
   row: Subcommand & { kind: 'legacy' },
-  base: Omit<RunInput, 'address' | 'found'>,
+  base: RunBase,
   context: OpContext,
-  address: RunInput['address'],
+  address: SymbolAddress,
   report: LegacyInput['report'],
 ): Promise<void> {
   await row.run({
@@ -172,6 +317,17 @@ async function runLegacy(
     flags: base.flags,
     report,
   });
+}
+
+// The generic names a run touches: each entry's property or symbol, and the new name.
+function runNames(row: Subcommand, ops: readonly (readonly string[])[]): readonly string[] {
+  const names = new Set<string>();
+  for (const [target = '', replacement] of ops) {
+    const parsed = parseTarget(target);
+    names.add(parsed.kind === 'prop' ? parsed.prop : parsed.symbol);
+    if (row.arity > 1 && replacement !== undefined) names.add(replacement);
+  }
+  return [...names];
 }
 
 function entryToPositionals(entry: unknown): readonly string[] {
@@ -219,6 +375,9 @@ async function main(): Promise<void> {
     // Folding and the engine resync cost seconds on a file move, so each happens only
     // when something reads its result: the resync before a next entry, the fold before
     // that or before the write.
+    // A checking row needs the last fold and a sync too, even under --dry.
+    const check = row.checks && !flags['--no-check'];
+    const verifies = row.kind === 'plan' && row.accepts === 'prop' && row.after !== undefined;
     let last = false;
     let unsynced: OverlayChanges | undefined;
     const manifest = readManifest(argv);
@@ -226,8 +385,15 @@ async function main(): Promise<void> {
       project,
       findings,
       batch: manifest !== null,
+      texts: () => overlaidTexts(disk.snapshot().texts, engine),
       apply: (plan: Plan) => {
-        if (!(last && flags['--dry'])) unsynced = foldPlan(plan, overlay, disk);
+        if (!(last && flags['--dry'] && !check && !verifies)) {
+          unsynced = foldPlan(plan, overlay, disk);
+        }
+      },
+      settle: () => {
+        if (unsynced) syncOverlay(engine, unsynced);
+        unsynced = undefined;
       },
     };
     const ops =
@@ -240,14 +406,30 @@ async function main(): Promise<void> {
       unsynced = undefined;
       if (!(await runOp(row, { engine, read, exists, positionals, flags }, context))) return;
     }
+    const names = runNames(row, ops);
+    const checked = checkRun({ enabled: check, engine, unsynced, texts: context.texts, names });
+    if (checked && checked.errors.length > 0) {
+      process.stderr.write(`${renderTypeErrors(checked.errors, root)}\n`);
+      process.stderr.write(
+        'Nothing written. Fix the sites above, add the twin to a --manifest, or pass --no-check.\n',
+      );
+      process.exitCode = 1;
+      return;
+    }
+    // stderr, so `--json` stays parseable on stdout
+    if (checked) {
+      process.stderr.write(
+        `Type check: 0 errors in ${checked.files.length} files that were changed or mention ${names.join(', ')}.\n`,
+      );
+    }
+    for (const f of findings) process.stdout.write(`${f.file}:${f.line}  ${f.message}\n`);
+    if (findings.length > 0) process.exitCode = 1;
     if (flags['--dry']) return;
     if (loaded) await loaded.save();
     const written = writePlan(overlay, root);
     if (written.failed !== null) {
       throw new Error(`Writing stopped at ${written.failed}; ${written.completed.length} done.`);
     }
-    for (const f of findings) process.stdout.write(`${f.file}:${f.line}  ${f.message}\n`);
-    if (findings.length > 0) process.exitCode = 1;
   } finally {
     closeEngine(engine);
   }

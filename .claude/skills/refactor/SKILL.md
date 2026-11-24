@@ -1,13 +1,13 @@
 ---
 name: refactor
-description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize files of any kind (TS, CSS, assets). Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg".
+description: Use when performing a mechanical code refactor in skymap. Rename a symbol repo-wide, extract a symbol into its own file, inline or delete a passthrough wrapper, find who uses a symbol, or move/reorganize files of any kind (TS, CSS, assets). Triggers like "/refactor", "rename this function everywhere", "extract X into its own file", "inline this wrapper", "delete this unused helper", "who uses this symbol", "move X to Y", "rename this file", "update all the imports", "reorganize the utils folder", "shift these renderers into a subfolder", "folder reorg", "rename this property everywhere", "remove this field from the type", "turn these arguments into an object".
 ---
 
 # `/refactor`: symbol refactoring CLI
 
 `npm run refactor -- <subcommand>` finds references with the TypeScript 7 engine across
-the repo's four tsconfig projects. `refs`, `rename` and `delete` run on it (about 3 to 5 s
-on a symbol with 500 references); `extract` and `inline` still run on ts-morph over one
+the repo's four tsconfig projects. `refs`, `rename`, `delete` and the property and parameter
+subcommands run on it (about 3 to 5 s on a symbol with 500 references); `extract` and `inline` still run on ts-morph over one
 `Project` spanning `src/ + tests/ + tools/ + packages/` (about 8 s). Every import in
 skymap is deep + relative with no barrels, so a mechanical rename or move re-derives
 every `../../foo` per importer, a job for the AST rather than a hand-edit.
@@ -18,10 +18,14 @@ npm run refactor -- extract <file>#<symbol> <dest.ts>
 npm run refactor -- inline  <file>#<symbol>
 npm run refactor -- delete  <file>#<symbol>
 npm run refactor -- refs    <file>#<symbol>
+npm run refactor -- prop-refs   <file>#<Type>.<prop>
+npm run refactor -- rename-prop <file>#<Type>.<prop> <newName>
+npm run refactor -- remove-prop <file>#<Type>.<prop>
+npm run refactor -- params-to-object <file>#<function>
 npm run move-files -- <from> <to>   # the only move command
 ```
 
-Global flags on every subcommand: `--dry` (report the blast radius, write nothing) and
+Global flags on every subcommand: `--dry` (report the blast radius and any findings, exit 1 on findings, write nothing) and
 `--manifest <ops.json>` (batch: each entry sees the earlier entries' edits, moved files
 included, and everything is written once after the last; a refusal on any entry writes
 nothing). `--json` (machine-readable) applies to the symbol subcommands
@@ -65,6 +69,52 @@ lists what it left broken. Exit 1 with a refusal means nothing was written.
   the manual paths the CLI deliberately does not automate (change-signature,
   non-passthrough inlining). `--json` emits
   `{ target, summary: { refs, files, tests }, refs: [{ filePath, line, column, kind, inTest, enclosing }] }`.
+
+- **`prop-refs`**: `refs` for one property of an exported type (`<file>#Type.prop`, the type
+  an object `type`/`interface` with the property as a direct member). Each use is one of
+  `PropUseKind`: `read`, `write`, `shorthand-write`, `destructure`, `shorthand-destructure`,
+  `string-key`, `doc-link` (a `{@link Type.prop}` in a comment). A footer lists quoted mentions the engine cannot see: `'prop'` inside a
+  string-literal type (`Pick<T, 'prop'>`) in a file naming the type, or a string in a file
+  using `keyof T`.
+
+- **`rename-prop`**: renames the property and every use. A shorthand keeps its local
+  (`{ radius }` becomes `{ size: radius }`), and a `key: value` that becomes equal collapses
+  to the shorthand. Refuses an invalid name, the same name, or one the type already has,
+  a rename after which uses of another property named the same (a wider `Shape & { size }`)
+  would also answer to this one (nothing is written), and a property that an interface
+  re-declares from its base or a library type (`Sub.radius` beside `Base.radius`,
+  `Mine.length` beside `Array.length`): the engine treats them as one property, so change both
+  by hand. It rewrites `{@link}` mentions. Exit 1 after the write means quoted mentions to check by hand.
+
+- **`remove-prop`**: removes the declaration and every write that only builds it (object
+  literal, JSX attribute, shorthand, a whole `a.prop = v;` statement). Refuses, listing
+  every `file:line:col  kind`, while anything reads it (read, destructure, string key), and
+  for a write whose value, or whose assignment target (`get().radius = 3;`), does work (a
+  call, `new`, `await`, an assignment) or that is `+=`, `++` or `delete`. A `{@link}` does
+  not block. Findings, exit 1: quoted mentions, a local that a cut shorthand leaves behind,
+  and a remaining doc-comment mention.
+
+- **`params-to-object`**: `area(w, h)` becomes `area({ w, h })`: signature and every call.
+  Refuses, listing the sites, for any use that is not a call, import or re-export (callback,
+  alias, `typeof`), overloads, an annotated `const`, a rest, `this` or destructured
+  parameter, a parameter without a type annotation, fewer than two parameters, a comment
+  before, between or after the parameters, a body that reads `arguments`, and a call that is
+  optional (`?.`), is a `new`, spreads, has a comment between arguments, or contains another
+  call of the same function. `ns.f(1, 2)` and `f<T>(a, b)` are rewritten. A finding (exit 1)
+  when the JSDoc has `@param` tags, which still describe the old parameters.
+
+- **The type check** (`rename-prop`, `remove-prop`, `params-to-object`): after the last
+  entry is folded (also under `--dry`) the tool type checks the files the run changed plus
+  every TypeScript file that mentions, as a whole word, the run's names (the property or
+  function and the new name), a batch as a whole, so a manifest that renames both twins
+  passes. Errors print as `file:line:col  TSxxxx: message` on stderr, nothing is written,
+  exit 1; a pass prints `Type check: 0 errors in N files that were changed or mention ...`.
+  It is not the full check: a file that gets the property only through an inferred type
+  (`...orbitAnglesLookingAlong(...)` spread into a pose) never names it and is missed, so
+  `npm run typecheck:fast` stays the full check. A whole-program check through the API costs
+  11 to 14 s (measured 2026-11-24). It reports every error in the checked files, so one that
+  was there before the run shows too (no baseline is computed). Syntax errors count. The pass
+  line goes to stderr, so `--json` stays parseable. `--no-check` skips it.
 
 - **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
   `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
@@ -110,9 +160,15 @@ list, below; it does handle `import()`, `vi.mock()` and `?worker` specifiers.
 - **An import alias spelled like the renamed symbol**: `import { bar as foo }`, where
   `bar` is a re-export of the `foo` being renamed, has its later uses of `foo` renamed
   while the alias stays. It needs a barrel, so it is rare here; `typecheck:fast` catches it.
-- **Type properties and loose fixtures**: `rename` handles exported declarations
-  only, not type properties, and fixtures full of `as unknown as` / `Partial<…>`
-  accept a stale key silently. Grep them separately.
+- **Untracked property forms**: `rename-prop` and `remove-prop` handle declared
+  properties; what stays untracked is the `Pick<T, 'key'>` string, a `keyof` comparison,
+  and literals forced through `as unknown as`, which accept a stale key silently. The first
+  two are the quoted-mention findings (exit 1); grep the third.
+- **A twin property**: `rename-prop` and `remove-prop` follow one declared property. A
+  second type that declares the same property name and is used interchangeably (structural
+  typing, e.g. `OrbitCamera.yaw` beside `CameraPose.yaw`), or an intersection that
+  re-declares it, is a separate property. The type check above names the sites it covers; the fix is
+  yours: add the twin to the same `--manifest` and re-run.
 - **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
   hold paths as strings and are not updated.
 - **Ad-hoc ts-morph importer rewrites**: never repoint importers with a one-off

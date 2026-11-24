@@ -7,9 +7,15 @@
  * so its columns are free to change and no test pins them.
  */
 
+import type { Finding } from '../../@types/refactor/Finding';
 import type { RefReport } from '../../@types/refactor/RefReport';
 
-export function renderRefReport(report: RefReport<string>, json: boolean): string {
+// A property report also lists the quoted mentions of `prop` the engine cannot track.
+export function renderRefReport(
+  report: RefReport<string>,
+  json: boolean,
+  untracked?: { prop: string; findings: readonly Finding[] },
+): string {
   if (json) {
     return JSON.stringify(
       {
@@ -27,6 +33,7 @@ export function renderRefReport(report: RefReport<string>, json: boolean): strin
           inTest: entry.inTest,
           enclosing: entry.enclosing,
         })),
+        ...(untracked && { unreported: untracked.findings }),
       },
       null,
       2,
@@ -38,5 +45,11 @@ export function renderRefReport(report: RefReport<string>, json: boolean): strin
     (entry) =>
       `  ${entry.filePath}:${entry.line}:${entry.column}  ${entry.kind}${entry.inTest ? ' (test)' : ''}  ${entry.enclosing}`,
   );
-  return [header, ...rows].join('\n');
+  const footer = untracked?.findings.length
+    ? [
+        `${untracked.findings.length} quoted mention(s) of '${untracked.prop}' are not tracked: ` +
+          untracked.findings.map((f) => `${f.file}:${f.line}`).join(', '),
+      ]
+    : [];
+  return [header, ...rows, ...footer].join('\n');
 }

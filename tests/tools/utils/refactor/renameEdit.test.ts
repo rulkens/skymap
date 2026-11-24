@@ -23,6 +23,12 @@ describe('renameEdit', () => {
     );
   });
 
+  it('collapses key: value to shorthand when the names become equal', () => {
+    expect(apply('export const o = { bar: foo };', '{')).toBe('export const o = { bar };');
+    expect(apply('const { bar: foo } = a;', 'const')).toBe('const { bar } = a;');
+    expect(apply('const { bar: foo = 1 } = a;', 'const')).toBe('const { bar = 1 } = a;');
+  });
+
   it('replaces an import specifier', () => {
     expect(apply("import { foo } from './a';", 'import')).toBe("import { bar } from './a';");
   });

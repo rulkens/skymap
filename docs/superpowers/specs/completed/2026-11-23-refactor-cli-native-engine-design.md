@@ -6,7 +6,7 @@
 > **Written against** main at 7a2cd51fb (#1150: `typescript-native` = `typescript@7.0.2` installed
 > beside TypeScript 6).
 > **Inputs.** Spike timings and API probes from 2026-11-22 (numbers in §2 and §8), the refactor CLI
-> survey, and [`docs/backlog/2026-07-21-refactor-cli-followups.md`](../../backlog/2026-07-21-refactor-cli-followups.md).
+> survey, and [`docs/backlog/2026-07-21-refactor-cli-followups.md`](../../../backlog/2026-07-21-refactor-cli-followups.md).
 
 ## 1. Why
 
@@ -72,8 +72,15 @@ which needs an editing layer TypeScript 7 does not have.
 - **D6. A batch plans against memory.** Each manifest entry is planned against the current texts,
   its edits are folded in, and the changed files are handed to the engine as an overlay (3 ms to
   resync in the probe). Disk is written once, at the end, or not at all on a refusal.
-- **D7. The tool does not typecheck its own output.** `npm run typecheck:fast` after a run is the
-  check, as it is after `move-files`. A built-in check would double every run's time.
+- **D7. The contract-changing rows typecheck their own output** (owner ruling, 2026-11-24).
+  Renaming `CameraPose.yaw` left 38 errors because `OrbitCamera` declares its own `yaw` and the
+  two are used interchangeably, and the tool is the one that knows it just changed a contract.
+  `rename-prop`, `remove-prop` and `params-to-object` run the engine's semantic check on the
+  folded result of the whole batch (also under `--dry`), over the files the run changed plus
+  every file that mentions the run's names as a whole word, and write nothing when it finds
+  errors; `--no-check` skips it. It is not the full check, which stays `npm run typecheck:fast`:
+  a whole-program check through the API costs 11 to 14 s (measured 2026-11-24), and a file that
+  gets the property only through an inferred type never names it. The other rows keep the fast path.
 
 ## 4. Contracts
 
@@ -164,7 +171,6 @@ the refactor skill's text is updated in the same PR.
 ```ts
 export function openEngine(input: { root: string; fs?: EngineFs }): Engine;
 export function findReferences(engine: Engine, at: NodeLocation): readonly RawReference[];
-export function findSignatureUsage(engine: Engine, at: NodeLocation): readonly SignatureUsage[];
 export function syncOverlay(engine: Engine, changed: readonly string[]): void;
 export function closeEngine(engine: Engine): void;
 ```
@@ -173,7 +179,8 @@ export function closeEngine(engine: Engine): void;
 only the cross-file question. Everything syntactic (where an export is declared, what kind of use
 a reference is, the span of a statement to remove) is read by parsing the one file with the
 TypeScript 6 parser, the stable API `move-files` already uses, so no engine node leaves the
-adapter. `findSignatureUsage` lands with PR B. The adapter owns three facts the probes found:
+adapter. `findSignatureUsage` was not needed: `params-to-object` classifies the references the
+driver already has (§5.5). The adapter owns three facts the probes found:
 
 - The engine opens four projects (`tsconfig.json`, `tsconfig.tools.json`,
   `packages/desktop/tsconfig.json`, `packages/website/tsconfig.json`). A file in two projects is
@@ -264,6 +271,8 @@ exits 1.
 - Each call site becomes an object literal in parameter order, shorthand where the argument is an
   identifier with the parameter's name. Omitted trailing arguments are omitted keys.
 - Works on an exported function declaration and on an exported `const` arrow function.
+- It uses no engine signature call: a reference the driver already classified as a `call` is
+  rewritten, an import or re-export needs nothing, and every other kind refuses.
 - Refuses, with the list, when: any usage is not a direct call (an alias, `.bind`, the function
   passed as a callback); a call spreads its arguments; the function has a rest parameter or
   overloads; the `const` carries a type annotation, so its shape is another type's contract.
@@ -362,5 +371,4 @@ PR B:
   times and its shape is known.
 - **`extract` and `inline` on TS 7**, and their open bugs (the two `extract` backlog items).
 - **Class methods and interface members** in `params-to-object`.
-- **A built-in typecheck** after a run (D7).
 - **`move-files` on TS 7.** It is already 1.5 s on the TypeScript 6 API.
