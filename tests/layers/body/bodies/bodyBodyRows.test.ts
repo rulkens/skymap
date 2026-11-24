@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BODY_BODY_ROWS } from '../../../../src/layers/body/bodies/bodyBodyRows';
-import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorrections.generated';
+import { EPHEMERIS_CORRECTIONS } from '../../../../src/layers/body/bodies/ephemerisCorrections.generated';
 
 describe('BODY_BODY_ROWS', () => {
   // The join drops a correction silently when its id matches no orbit row: a renamed or

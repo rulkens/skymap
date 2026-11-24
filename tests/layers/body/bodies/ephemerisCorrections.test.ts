@@ -17,15 +17,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { EPHEMERIS_CORRECTIONS } from '../../../src/data/bodies/ephemerisCorrections.generated';
-import { elementsById } from '../../../src/data/bodies/orbitalElements';
-import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
-import { propagateElements } from '../../../src/utils/orbit/propagateElements';
-import HORIZONS from '../../fixtures/horizonsPlanets.json';
-import HORIZONS_MOONS from '../../fixtures/horizonsMoons.json';
-import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { EPHEMERIS_CORRECTIONS } from '../../../../src/layers/body/bodies/ephemerisCorrections.generated';
+import { elementsById } from '../../../../src/data/bodies/orbitalElements';
+import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
+import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
+import HORIZONS from '../../../fixtures/horizonsPlanets.json';
+import HORIZONS_MOONS from '../../../fixtures/horizonsMoons.json';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Earth is compared with 399 (Earth centre), so its error also carries the app Moon's
 // error through the reflex: measured max 621 km, inside the planets' own bound.

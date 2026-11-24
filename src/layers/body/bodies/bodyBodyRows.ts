@@ -8,7 +8,7 @@
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
-import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
+import { EPHEMERIS_CORRECTIONS } from './ephemerisCorrections.generated';
 import { EARTH } from './planets/earth';
 import { MERCURY } from './planets/mercury';
 import { VENUS } from './planets/venus';

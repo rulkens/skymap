@@ -133,9 +133,9 @@ switch that the `anchor` arm breaks in a way that needs a decision.
   zero diff. If it does not, say so in the report; do not fetch.
 - Repoint `scienceFacts.ts:333` and `docs/DATA.md:217`.
 
-- [ ] Move, fix findings, `grep -rn "data/bodies/ephemerisCorrections" src tools tests packages docs/DATA.md` is empty.
-- [ ] `npm test -- ephemerisCorrections facts layerImportBoundary` passes.
-- [ ] Commit.
+- [x] Move, fix findings, `grep -rn "data/bodies/ephemerisCorrections" src tools tests packages docs/DATA.md` is empty.
+- [x] `npm test -- ephemerisCorrections facts layerImportBoundary` passes.
+- [x] Commit.
 
 ### Task 3: Sun, famous stars and S-stars are star-Layer body rows
 

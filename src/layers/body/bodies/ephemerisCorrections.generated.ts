@@ -1,8 +1,8 @@
-// src/data/bodies/ephemerisCorrections.generated.ts
+// src/layers/body/bodies/ephemerisCorrections.generated.ts
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
 // Regenerate with:  npm run fetch-horizons && npm run build-ephemeris-corrections
 // Source of truth:  data/raw/horizons/ (JPL Horizons) minus orbitalElements.ts
-import type { EphemerisCorrection } from '../../@types/scene/EphemerisCorrection';
+import type { EphemerisCorrection } from '../../../@types/scene/EphemerisCorrection';
 
 export const EPHEMERIS_CORRECTIONS: Readonly<Record<string, EphemerisCorrection>> = {
   // mercury: 46 terms, max 893 km vs Horizons (1-day grid)

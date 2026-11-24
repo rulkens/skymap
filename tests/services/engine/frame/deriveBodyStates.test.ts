@@ -10,7 +10,7 @@ import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
-import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorrections.generated';
+import { EPHEMERIS_CORRECTIONS } from '../../../../src/layers/body/bodies/ephemerisCorrections.generated';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
