@@ -12,7 +12,7 @@ import { createLabelDirectorState } from '../../../src/services/engine/labels/cr
 import { LABEL_DIRECTORS } from '../../../src/data/labels/labelDirectors';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { bodyLayerWithoutGpu } from '../../helpers/engine/bodyLayerWithoutGpu';
-import { EARTH_HOME } from '../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../src/compositions/appHome';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { selectFocusRef, selectPendingFocusId } from '../../../src/state/selection/selectors';
@@ -59,7 +59,7 @@ describe('the body selection kind at boot', () => {
     });
     const rows = () => store.getState()[selectionRowsRoute];
 
-    store.dispatch(updateSelectionSelect(EARTH_HOME.focus!.ref));
+    store.dispatch(updateSelectionSelect(APP_HOME.focus!.ref));
     await flush();
     expect(rows().select).toBeNull();
 

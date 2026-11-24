@@ -49,7 +49,7 @@ import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
-import { EARTH_HOME } from '../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../src/compositions/appHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
@@ -97,9 +97,9 @@ const PROJECTION = { fovYRad: LIVE.fovYRad, aspect: 1, near: 1e-20, far: 1e5 };
 
 function build({
   milkyWayLanded = true,
-  home = EARTH_HOME,
+  home = APP_HOME,
   nextFrame = () => Promise.resolve(),
-}: { milkyWayLanded?: boolean; home?: typeof EARTH_HOME; nextFrame?: () => Promise<void> } = {}) {
+}: { milkyWayLanded?: boolean; home?: typeof APP_HOME; nextFrame?: () => Promise<void> } = {}) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
@@ -344,7 +344,7 @@ describe('arrivalSaga', () => {
     // Framed against the wall-clock sun: the store's seed anchor is J2000.
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
+    const expected = worldArmOf(homePose(APP_HOME, LIVE.fovYRad, now, B));
     const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
@@ -364,7 +364,7 @@ describe('arrivalSaga', () => {
     expect(seeded.orientation).toBe(selectOrientation(root));
     const simDays = deriveSimDays(root.time, performance.now());
     const expected = worldArmOf(
-      homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
+      homePose(APP_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
     );
     const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
@@ -372,7 +372,7 @@ describe('arrivalSaga', () => {
   });
 
   it('a home that does not seed the selection focuses but never selects', async () => {
-    const h = build({ home: { ...EARTH_HOME, seedSelection: false } });
+    const h = build({ home: { ...APP_HOME, seedSelection: false } });
     h.arrive({ view: { kind: 'home' } });
     h.boot();
     await flush();

@@ -41,7 +41,7 @@ export function* exhibitBodySaga(
   layers: readonly LayerSwitch[] = [],
 ): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
-  // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
+  // home seeds Earth into it (`APP_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
   // `resting`@0. The clip@95 driver hides that while it plays; the frame it
   // ends on, follow wins and eases the camera off the exhibit's pose toward

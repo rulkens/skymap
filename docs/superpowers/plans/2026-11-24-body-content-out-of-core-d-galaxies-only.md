@@ -77,10 +77,10 @@ export const FOREGROUND_FALLBACK_DISTANCE_MPC = 0.23;
 `tests/services/engine/camera/framing/homePose.test.ts`,
 `tests/services/engine/phases/wireInput.test.ts`.
 
-- [ ] `APP_HOME` is the literal (`focus: followedBodyHome(EARTH_REF)`, `seedSelection: true`).
+- [x] `APP_HOME` is the literal (`focus: followedBodyHome(EARTH_REF)`, `seedSelection: true`).
       Repoint the five tests to `APP_HOME`; delete `earthHome.ts`. Use `refactor` where it fits.
-- [ ] `git grep -n "earthHome\|EARTH_HOME"` finds nothing outside `*/completed/` history.
-- [ ] `npm run typecheck`, the touched tests. Commit.
+- [x] `git grep -n "earthHome\|EARTH_HOME"` finds nothing outside `*/completed/` history.
+- [x] `npm run typecheck`, the touched tests. Commit.
 
 ### Task 3: A test that fails when core names a body at load
 
