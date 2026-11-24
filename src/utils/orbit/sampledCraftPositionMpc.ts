@@ -11,7 +11,7 @@ import type { SampledBody } from '../../@types/missions/SampledBody';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { orientationForBody } from '../../data/bodies/orientationForBody';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
+import { EARTH_DATUM_RADIUS_M } from '../../data/bodies/earthDatumRadiusM';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 import { surfacePointBodyFixed } from '../geo/surfacePointBodyFixed';
@@ -51,7 +51,7 @@ export function sampledCraftPositionMpc(
     joinVelKmS[i] = track.velKmS[i]! - earthVelKmS[i]!;
   }
 
-  const groundKm = SCENE_EARTH.surface.datumRadiusM * 1e-3;
+  const groundKm = EARTH_DATUM_RADIUS_M * 1e-3;
   const { latDeg, lonDeg } = body.launchPad;
   const padDir = rotateVec3ByTightMat3(
     orientationForBody('earth', simDays, NO_POSITIONS),

@@ -18,7 +18,7 @@ import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { isBodyResolved } from '../../../utils/scene/isBodyResolved';
 import { sceneBodyStates } from './sceneBodyStates';
-import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SCENE_EARTH_BODIES } from '../../../data/bodies/sceneEarthBodies';
 
 export function sceneOccluderBodies(state: PassState, ctx: FrameView): readonly OccluderBody[] {
   const occluderOf = (positionMpc: Readonly<Vec3>, surface: BodySurface): OccluderBody => ({
@@ -37,17 +37,20 @@ export function sceneOccluderBodies(state: PassState, ctx: FrameView): readonly 
 
   // Earth is not a sorted scene body (`earthPass` draws it alone, with no glint form),
   // yet uses its resolve size: under 3 px its disc hides under a pixel of stroke.
-  const earth = occluderOf(
-    sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!.positionMpc,
-    SCENE_EARTH.surface,
-  );
-  const diameterPx = bodyApparentDiameterPx({
-    positionMpc: earth.positionMpc,
-    radiusM: earth.radiusM,
-    camPosMpc: ctx.drawCamPos,
-    pxPerRad: ctx.drawPxPerRad,
-  });
-  if (diameterPx >= SCENE_EARTH.resolvePx) occluders.push(earth);
+  for (let i = 0; i < SCENE_EARTH_BODIES.length; i++) {
+    const earthBody = SCENE_EARTH_BODIES[i]!;
+    const earth = occluderOf(
+      sceneBodyStates(state, ctx).get(earthBody.id)!.positionMpc,
+      earthBody.surface,
+    );
+    const diameterPx = bodyApparentDiameterPx({
+      positionMpc: earth.positionMpc,
+      radiusM: earth.radiusM,
+      camPosMpc: ctx.drawCamPos,
+      pxPerRad: ctx.drawPxPerRad,
+    });
+    if (diameterPx >= earthBody.resolvePx) occluders.push(earth);
+  }
 
   return occluders;
 }

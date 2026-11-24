@@ -5,7 +5,7 @@
  * fields the `SceneBody` union shares (`id`, `label`).
  */
 
-import { SCENE_EARTH } from './sceneEarth';
+import { SCENE_EARTH_BODIES } from './sceneEarthBodies';
 import { SCENE_STARS } from './sceneStars';
 import { SCENE_SUN } from './sceneSun';
 import { SCENE_PLANETS } from './scenePlanets';
@@ -14,7 +14,7 @@ import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 import type { SceneBody } from '../../@types/scene/SceneBody';
 
 export const SCENE_BODIES: readonly SceneBody[] = [
-  SCENE_EARTH,
+  ...SCENE_EARTH_BODIES,
   ...SCENE_SUN,
   ...SCENE_STARS,
   ...SCENE_PLANETS,
