@@ -6,6 +6,7 @@
  * ends the trail on the snapshot position so it welds to the mesh. The vp is
  * rebased about the eye in f64 (as `near0SelectionRingPass` does) and the shader
  * subtracts the eye's hi/lo pair from each hi/lo vertex, keeping 160 AU in 1 km.
+ * Vertices and eye are both relative to the trail's centre body, so it rides that body.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -34,10 +35,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
     draw(pass, view, ctx, state, fade) {
       const renderer = runtime.trailRenderer;
       const states = sceneBodyStates(state, ctx);
-      const tracks = renderer.ensureTracks(
-        trajectoryRegistry.version(),
-        states.get('sun')!.positionMpc,
-      );
+      const tracks = renderer.ensureTracks(trajectoryRegistry.version());
 
       renderer.beginFrame(pass, {
         vp: near0OverlayVpF32(
@@ -58,7 +56,8 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         if (k === 0) continue;
         // Past the last vertex the craft is held on it: no head segment to draw.
         const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
-        renderer.drawTrail(pass, id, trailColor, fade * dim, k - 1, head);
+        const centre = states.get(track.centreId)!.positionMpc;
+        renderer.drawTrail(pass, id, trailColor, fade * dim, k - 1, centre, head);
       }
     },
   };

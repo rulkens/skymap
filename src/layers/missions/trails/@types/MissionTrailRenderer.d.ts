@@ -11,12 +11,13 @@ import type { MissionTrailFrame } from './MissionTrailFrame';
 import type { MissionTrailGeometry } from './MissionTrailGeometry';
 
 export type MissionTrailRenderer = Renderer & {
-  /** The uploaded tracks, rebuilt about `sunMpc` only when `version` differs. */
-  ensureTracks(version: number, sunMpc: Readonly<Vec3>): ReadonlyMap<string, MissionTrailGeometry>;
+  /** The uploaded tracks, rebuilt only when `version` differs. */
+  ensureTracks(version: number): ReadonlyMap<string, MissionTrailGeometry>;
   beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
   /**
-   * Draw the first `segmentCount` segments of `id`'s trail, then a head segment
-   * from vertex `segmentCount` to `headMpc` (the craft's own position) when given.
+   * Draw the first `segmentCount` segments of `id`'s trail about `centreMpc` (its
+   * centre body's position now), then a head segment from vertex `segmentCount`
+   * to `headMpc` (the craft's own world position) when given.
    */
   drawTrail(
     pass: GPURenderPassEncoder,
@@ -24,6 +25,7 @@ export type MissionTrailRenderer = Renderer & {
     color: Readonly<Vec3>,
     opacity: number,
     segmentCount: number,
+    centreMpc: Readonly<Vec3>,
     headMpc: Readonly<Vec3> | null,
   ): void;
 };

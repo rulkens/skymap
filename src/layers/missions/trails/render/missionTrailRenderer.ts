@@ -129,30 +129,29 @@ export function createMissionTrailRenderer(
   const uniformScratch = new Float32Array(TRAIL_UNIFORM_BYTES / 4);
   const headScratch = new Float32Array(HEAD_BYTES / 4);
   const eyeScratch = new Float32Array(6);
+  const relScratch = new Float64Array(3);
+  const eyeMpc = new Float64Array(3);
   let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
   let slot = 0;
 
-  function ensureTracks(
-    version: number,
-    sunMpc: Readonly<Vec3>,
-  ): ReadonlyMap<string, MissionTrailGeometry> {
+  function ensureTracks(version: number): ReadonlyMap<string, MissionTrailGeometry> {
     if (version === uploadedVersion) return tracks;
     uploadedVersion = version;
     vertexBuffer?.destroy();
     vertexBuffer = null;
     firstVertex.clear();
-    const built = buildMissionTrails(sunMpc);
+    const built = buildMissionTrails();
     tracks = new Map(built.map((t) => [t.id, t]));
-    const total = built.reduce((sum, t) => sum + t.posMpc.length / 3, 0);
+    const total = built.reduce((sum, t) => sum + t.relMpc.length / 3, 0);
     if (total === 0) return tracks;
     const data = new Float32Array(total * 6);
     let at = 0;
     for (const t of built) {
       firstVertex.set(t.id, at);
-      for (let i = 0; i < t.posMpc.length / 3; i++) {
-        writeHiLoVertex(t.posMpc, 3 * i, data, 6 * (at + i));
+      for (let i = 0; i < t.relMpc.length / 3; i++) {
+        writeHiLoVertex(t.relMpc, 3 * i, data, 6 * (at + i));
       }
-      at += t.posMpc.length / 3;
+      at += t.relMpc.length / 3;
     }
     vertexBuffer = device.createBuffer({
       label: 'mission-trail-vbo',
@@ -183,18 +182,14 @@ export function createMissionTrailRenderer(
       };
     }
     // The per-view uniform fields are filled once here; drawTrail overwrites
-    // only opacity / colour.
+    // opacity, colour and the eye, which it states relative to the trail's centre.
     const o = TRAIL_UNIFORM_OFFSETS;
-    writeHiLoVertex(camPosMpc, 0, eyeScratch, 0);
+    eyeMpc.set(camPosMpc);
     uniformScratch.set(vp, o.viewProj / 4);
     uniformScratch[o.viewportPx / 4] = viewportPx[0];
     uniformScratch[o.viewportPx / 4 + 1] = viewportPx[1];
     uniformScratch[o.pxPerRad / 4] = pxPerRad;
     uniformScratch[o.widthPx / 4] = MISSION_TRAIL_WIDTH_PX;
-    for (let k = 0; k < 3; k++) {
-      uniformScratch[o.camHi / 4 + k] = eyeScratch[k]!;
-      uniformScratch[o.camLo / 4 + k] = eyeScratch[3 + k]!;
-    }
     pass.setPipeline(pipeline);
   }
 
@@ -204,6 +199,7 @@ export function createMissionTrailRenderer(
     color: Readonly<Vec3>,
     opacity: number,
     segmentCount: number,
+    centreMpc: Readonly<Vec3>,
     headMpc: Readonly<Vec3> | null,
   ): void {
     const first = firstVertex.get(id);
@@ -211,6 +207,13 @@ export function createMissionTrailRenderer(
       return;
     }
     const o = TRAIL_UNIFORM_OFFSETS;
+    // Vertices are centre-relative, so the shader's eye is too: subtracted in f64, then split.
+    for (let k = 0; k < 3; k++) relScratch[k] = eyeMpc[k]! - centreMpc[k]!;
+    writeHiLoVertex(relScratch, 0, eyeScratch, 0);
+    for (let k = 0; k < 3; k++) {
+      uniformScratch[o.camHi / 4 + k] = eyeScratch[k]!;
+      uniformScratch[o.camLo / 4 + k] = eyeScratch[3 + k]!;
+    }
     uniformScratch[o.opacity / 4] = opacity;
     uniformScratch[o.color / 4] = color[0];
     uniformScratch[o.color / 4 + 1] = color[1];
@@ -224,8 +227,9 @@ export function createMissionTrailRenderer(
       pass.draw(6, segmentCount);
     }
     if (headMpc !== null) {
-      writeHiLoVertex(tracks.get(id)!.posMpc, 3 * segmentCount, headScratch, 0);
-      writeHiLoVertex(headMpc, 0, headScratch, 6);
+      writeHiLoVertex(tracks.get(id)!.relMpc, 3 * segmentCount, headScratch, 0);
+      for (let k = 0; k < 3; k++) relScratch[k] = headMpc[k]! - centreMpc[k]!;
+      writeHiLoVertex(relScratch, 0, headScratch, 6);
       device.queue.writeBuffer(headBuffer, slot * HEAD_BYTES, headScratch);
       pass.setVertexBuffer(0, headBuffer, slot * HEAD_BYTES);
       pass.setVertexBuffer(1, headBuffer, slot * HEAD_BYTES + TRAIL_VERTEX_STRIDE);

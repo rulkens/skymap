@@ -1,6 +1,6 @@
 // missionTrail/io.wesl — vertex input and inter-stage struct for the sampled-
-// craft trail. One instance = one segment; each endpoint is a world-Mpc position
-// split into an f32 hi/lo pair (see utils/math/splitF64HiLo.ts). TS twin:
+// craft trail. One instance = one segment; each endpoint is an Mpc position
+// relative to the trail's centre body, split into an f32 hi/lo pair (see utils/math/splitF64HiLo.ts). TS twin:
 // missionTrailRenderer.ts's endpoint attribute table, pinned by its parity test.
 
 import package::lib::camera::CameraUniforms;
@@ -13,7 +13,7 @@ struct TrailSegment {
 };
 
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2, one
-// dynamic-offset slot per craft. The hi/lo camera pair is camera.xyz in f64.
+// dynamic-offset slot per craft. The hi/lo camera pair is the eye relative to the trail's centre, from f64.
 struct TrailUniforms {
   cam: CameraUniforms,
   camHi: vec3<f32>,
