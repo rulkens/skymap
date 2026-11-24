@@ -1,30 +1,11 @@
 #!/usr/bin/env node
 /**
  * buildPlanetFacts — compile the curated planet/moon fact seed into the
- * committed generated `BODY_FACTS` table the InfoCard renders.
+ * committed generated `BODY_FACTS` table the InfoCard renders. The fields and
+ * why they are compiled in: `BodyFacts` (`src/@types/scene/BodyFacts.d.ts`).
  *
- * Reads:
- *   - `data/seeds/planet_facts.seed.json`   (curated entries, single source of truth)
- *
- * Writes:
- *   - `src/data/bodies/bodyFacts.generated.ts`  (committed generated code)
- *
- * Why store the values (all but `massKg`, which the app calculates with) as
- * pre-formatted display *strings* rather than raw numbers?  Each body picks the unit that reads best — AU from the
- * Sun for a planet, km from its planet for a moon, '243 Earth days
- * (retrograde)' where a bare number would mislead — so baking the unit +
- * friendly rounding into the datum keeps the card a dumb renderer.
- *
- * Why compiled-in generated code rather than a runtime fetch (as the
- * famous-star meta uses)?  The Solar System is a tiny fixed set whose masses
- * and orbits don't change between builds, so a fetch would be pure overhead.
- * The generated `.ts` is committed and imported synchronously; `tsc` validates
- * it on every typecheck via the `Record<string, BodyFacts>` annotation.
- *
- * Conventions the seed encodes: `parent` present ⇒ the body is a moon (the
- * card relabels its distance/period rows to speak of the parent planet), and
- * `wikiTitle` is stated explicitly per body because the article-title mapping
- * is irregular ('Mercury_(planet)' vs plain 'Venus').
+ * Reads:  `data/seeds/planet_facts.seed.json` (curated, single source of truth)
+ * Writes: `src/data/bodies/bodyFacts.generated.ts` (committed generated code)
  *
  * The npm script is `build-planet-facts`.
  */

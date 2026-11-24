@@ -13,14 +13,11 @@ export const MISSION_TRAIL_MAX_SAG_KM = 10;
  */
 export const TRAIL_REACH_HILL_RADII = 1.5;
 
-/**
- * The Sun trail and a planet's piece cross-fade over this fraction of the stay's length, once
- * after the craft enters the planet's reach and once after it leaves (the piece runs on that far).
- */
+/** Cross-fade length after entry and after exit, as a fraction of the stay. */
 export const TRAIL_STAY_FADE = 0.15;
 
 /** A planet's piece fades to nothing toward where the craft entered, over this fraction of the reach. */
-export const TRAIL_CUT_FADE_REACH = 0.5;
+export const TRAIL_ENTRY_FADE_REACH = 0.5;
 
 /** Opacity factor for a sampled craft's trail and caption while the other one is emphasised. */
 export const MISSION_EMPHASIS_DIM = 0.25;

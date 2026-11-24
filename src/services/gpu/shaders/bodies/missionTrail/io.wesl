@@ -1,7 +1,8 @@
 // missionTrail/io.wesl — vertex input and inter-stage struct for the sampled-
 // craft trail. One instance = one segment; each endpoint is an Mpc position
-// relative to the trail's centre body, split into an f32 hi/lo pair (see utils/math/splitF64HiLo.ts). TS twin:
-// missionTrailRenderer.ts's endpoint attribute table, pinned by its parity test.
+// relative to the trail's centre body, split into an f32 hi/lo pair (see
+// utils/math/splitF64HiLo.ts). TS twin: missionTrailRenderer.ts's endpoint
+// attribute table, pinned by its parity test.
 
 import package::lib::camera::CameraUniforms;
 

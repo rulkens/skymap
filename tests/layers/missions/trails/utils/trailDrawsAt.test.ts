@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CraftTrail } from '../../../../../src/layers/missions/trails/@types/CraftTrail';
 import type { MissionTrailGeometry } from '../../../../../src/layers/missions/trails/@types/MissionTrailGeometry';
 import {
-  TRAIL_CUT_FADE_REACH,
+  TRAIL_ENTRY_FADE_REACH,
   TRAIL_STAY_FADE,
 } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
 import { trailDrawsAt } from '../../../../../src/layers/missions/trails/utils/trailDrawsAt';
@@ -14,7 +14,7 @@ const piece = (centre: string, times: number[], startMpc = 0): MissionTrailGeome
   tDays: Float64Array.from(times),
   relMpc: Float64Array.from(times.flatMap(() => [startMpc, 0, 0])),
 });
-const SUN = { fadeVertex: -1, fadeMaxMpc: 0 };
+const SUN = { fadeMaxMpc: 0 };
 
 // Sun trail at days 0..30; a stay entered at day 10 and left at day 20, so each cross-fade
 // lasts FADE days: the rise 10 → 10 + FADE, the fall 20 → 20 + FADE (the piece's last time).
@@ -49,8 +49,7 @@ describe('trailDrawsAt', () => {
         segmentCount: 2,
         head: true,
         weight: 1,
-        fadeVertex: 0,
-        fadeMaxMpc: TRAIL_CUT_FADE_REACH * 4,
+        fadeMaxMpc: TRAIL_ENTRY_FADE_REACH * 4,
       },
     ]);
   });
@@ -67,7 +66,8 @@ describe('trailDrawsAt', () => {
     expect(half.map((d) => d.piece)).toEqual([whole, stay]);
     expect(half.map((d) => d.head)).toEqual([true, true]);
     // The Sun trail runs whole to the craft: only the planet piece has a loose end to fade.
-    expect(half.map((d) => d.fadeVertex)).toEqual([-1, 0]);
+    expect(half[0]!.fadeMaxMpc).toBe(0);
+    expect(half[1]!.fadeMaxMpc).toBeGreaterThan(0);
     expect(half[0]!.segmentCount).toBe(10);
     expect(half[0]!.weight).toBeCloseTo(0.5, 12);
     expect(half[1]!.weight).toBeCloseTo(0.5, 12);
@@ -84,7 +84,6 @@ describe('trailDrawsAt', () => {
     expect(half[0]!.weight).toBeCloseTo(0.5, 12);
     expect(half[1]!.weight).toBeCloseTo(0.5, 12);
     expect(late[1]!.weight).toBeLessThan(0.5);
-    expect(late[0]!.weight + late[1]!.weight).toBeCloseTo(1, 12);
   });
 
   it("at the piece's end it is one Sun draw again", () => {

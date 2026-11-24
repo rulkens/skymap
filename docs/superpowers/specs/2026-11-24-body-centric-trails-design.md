@@ -59,8 +59,7 @@ export type TrailDraw = {
   readonly segmentCount: number;
   readonly head: boolean; // end on the craft's live position
   readonly weight: number; // opacity factor: the Sun trail and a planet's piece cross-fade where they swap
-  readonly fadeVertex: number; // a planet's piece fades to nothing toward its first vertex; -1 = none
-  readonly fadeMaxMpc: number;
+  readonly fadeMaxMpc: number; // a planet's piece fades to nothing toward its first vertex over this; 0 = none
 };
 
 // src/layers/missions/@types/MissionTrailsSettings.d.ts
@@ -119,8 +118,8 @@ export function hillRadiusKm(semiMajorKm: number, massKg: number): number; // a 
 Done, commit f6e00887a: a trail names its centre body. Trail vertices were absolute world positions
 built once about the Sun, with the Sun threaded pass → renderer → build. They are now relative to
 `centreId`, and the centre's position joins per frame at draw. Shader and uniform layout unchanged;
-owner's eye check passed 2026-11-24. With that joint in place this feature is growth: two new types,
-three new utils, a list where the build pushed one piece. The one contract edit left is the
+owner's eye check passed 2026-11-24. With that joint in place this feature is growth: five new types,
+five new utils, a list where the build pushed one piece. The one contract edit left is the
 renderer's (§3), which the prep could not make without the list existing.
 
 ## 6. Risks

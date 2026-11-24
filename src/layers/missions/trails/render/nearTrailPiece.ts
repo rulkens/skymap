@@ -34,12 +34,11 @@ export function nearTrailPiece(
     const craftVel = hermiteTrackVelAt(track, t);
     const sun = positionAt('sun', t);
     const body = positionAt(centreId, t);
-    const sunVel = bodyVelocityKmS('sun', t, positionAt);
     const bodyVel = bodyVelocityKmS(centreId, t, positionAt);
     for (let k = 0; k < 3; k++) {
       // The track is Sun-centred, so the centre's offset from the Sun is what comes off.
       posKm[3 * i + k] = craftPos[k]! - (body[k]! - sun[k]!) / SCALE_UNITS.KM_TO_MPC;
-      velKmS[3 * i + k] = craftVel[k]! - (bodyVel[k]! - sunVel[k]!);
+      velKmS[3 * i + k] = craftVel[k]! - bodyVel[k]!;
     }
   });
 

@@ -13,22 +13,13 @@ import type { CraftTrail } from '../@types/CraftTrail';
 import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
 import type { NearTrail } from '../@types/NearTrail';
 import type { TrailDraw } from '../@types/TrailDraw';
-import { TRAIL_CUT_FADE_REACH, TRAIL_STAY_FADE } from '../data/missionTrailStyle';
+import { TRAIL_ENTRY_FADE_REACH, TRAIL_STAY_FADE } from '../data/missionTrailStyle';
 
-const NO_FADE = -1;
-
-function drawTo(piece: MissionTrailGeometry, t: number, weight: number): TrailDraw {
+function drawTo(piece: MissionTrailGeometry, t: number, weight: number, fadeMaxMpc = 0): TrailDraw {
   const k = countAtOrBefore(piece.tDays, t);
   // Past the last vertex the craft is held on it: no head segment to draw.
   const head = k < piece.tDays.length;
-  return {
-    piece,
-    segmentCount: Math.max(k - 1, 0),
-    head,
-    weight,
-    fadeVertex: NO_FADE,
-    fadeMaxMpc: 0,
-  };
+  return { piece, segmentCount: k - 1, head, weight, fadeMaxMpc };
 }
 
 /** The planet piece's share of the line: 0 at the entry, 1 mid-stay, 0 at the piece's end. */
@@ -57,15 +48,10 @@ export function trailDrawsAt(
   // A stay that opens the track (the launch) has no Sun trail before it: no rise, no loose start.
   const opensTrack = piece.tDays[0]! <= whole.tDays[0]!;
   const w = nearWeight(stay, opensTrack, simDays);
-  const planet: TrailDraw = opensTrack
-    ? drawTo(piece, simDays, w)
-    : {
-        ...drawTo(piece, simDays, w),
-        fadeVertex: 0,
-        fadeMaxMpc:
-          TRAIL_CUT_FADE_REACH * Math.hypot(piece.relMpc[0]!, piece.relMpc[1]!, piece.relMpc[2]!),
-      };
-  return [drawTo(whole, simDays, 1 - w), planet].filter(
-    (d) => d.weight > 0 && (d.segmentCount > 0 || d.head),
+  const fadeMaxMpc = opensTrack
+    ? 0
+    : TRAIL_ENTRY_FADE_REACH * Math.hypot(piece.relMpc[0]!, piece.relMpc[1]!, piece.relMpc[2]!);
+  return [drawTo(whole, simDays, 1 - w), drawTo(piece, simDays, w, fadeMaxMpc)].filter(
+    (d) => d.weight > 0,
   );
 }

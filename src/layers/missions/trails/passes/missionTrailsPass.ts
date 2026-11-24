@@ -58,12 +58,12 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         const opacity = fade * emphasisDim(state.settings.missions.craft, id);
         const craft = states.get(id)!.positionMpc;
         for (const draw of trailDrawsAt(trail, ctx.snapshot.simDays, nearPlanets)) {
-          const { piece, segmentCount, fadeVertex } = draw;
+          const { piece, segmentCount } = draw;
           const centre = states.get(piece.centreId)!.positionMpc;
-          // The fade grows with the craft's distance from the cut, so entering shows no jump.
+          // The fade grows with the craft's distance from the entry, so entering shows no jump.
           let fadeRadius = 0;
-          if (fadeVertex >= 0) {
-            for (let k = 0; k < 3; k++) fadeMpc[k] = centre[k]! + piece.relMpc[3 * fadeVertex + k]!;
+          if (draw.fadeMaxMpc > 0) {
+            for (let k = 0; k < 3; k++) fadeMpc[k] = centre[k]! + piece.relMpc[k]!;
             const away = Math.hypot(
               craft[0] - fadeMpc[0],
               craft[1] - fadeMpc[1],
