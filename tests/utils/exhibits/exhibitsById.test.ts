@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { exhibitsById } from '../../../src/utils/exhibits/exhibitsById';
 import type { Exhibit } from '../../../src/@types/exhibits/Exhibit';
@@ -36,10 +36,8 @@ describe('exhibitsById', () => {
   it('keeps the keys literal, so ExhibitId can be derived from the rows', () => {
     const a = { id: 'a', body: [] } as unknown as Exhibit<'a'>;
     const b = { id: 'b', body: [] } as unknown as Exhibit<'b'>;
-    // Fails to compile if the keys widen to `string`.
-    const keys: ('a' | 'b')[] = Object.keys(exhibitsById([a, b] as const)) as (keyof ReturnType<
-      typeof exhibitsById<readonly [typeof a, typeof b]>
-    >)[];
-    expect(keys).toEqual(['a', 'b']);
+    const byId = exhibitsById([a, b]);
+    expectTypeOf<keyof typeof byId>().toEqualTypeOf<'a' | 'b'>();
+    expect(Object.keys(byId)).toEqual(['a', 'b']);
   });
 });
