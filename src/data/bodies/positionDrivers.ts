@@ -25,7 +25,7 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
   ...APP_BODY_REGISTRY.flatMap(({ position }): PositionDriver[] => {
     if (position.kind !== 'orbit') return [];
     const { elements, correction, pair } = position;
-    // Resolved here, once, so the per-frame placement does no lookup. A misspelt secondary throws.
+    // A misspelt secondary throws.
     const reflex = pair && {
       secondary: findByIdOrThrow(ORBITAL_ELEMENTS, pair.secondaryId, 'positionDrivers'),
       k: pair.secondaryMassFraction,

@@ -31,6 +31,8 @@ In the 279 kB build, body content that core imports directly, with no registry i
 | `layers/starCatalog/bodies/sStarElements.ts`     | 7.7 kB  | `orbitalElements → sStarOrbitalElements`              |
 | `data/bodies/meshAssets.generated.ts`               | 6.5 kB  | `meshAssetRows`, `meshPresentations`                  |
 
+This list is a snapshot from before PR B; the paths show where those files live now.
+
 About 160 kB minified. Core also *assumes* bodies: five tables throw at import with no Earth, Moon
 or Sun row, and `deriveBodyStates` solves every frame whatever is composed.
 

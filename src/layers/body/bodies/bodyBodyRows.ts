@@ -88,7 +88,8 @@ const AUTHORED_ROWS: readonly LayerBody[] = [
 // Joined here rather than pasted into each row: the generated file stays the one statement of
 // which bodies are corrected, and regenerating it touches no authored row.
 export const BODY_BODY_ROWS: readonly LayerBody[] = AUTHORED_ROWS.map((row) => {
-  const correction = EPHEMERIS_CORRECTIONS[row.body.id];
-  if (correction === undefined || row.position.kind !== 'orbit') return row;
+  if (row.position.kind !== 'orbit') return row;
+  const correction = EPHEMERIS_CORRECTIONS[row.position.elements.id];
+  if (correction === undefined) return row;
   return { ...row, position: { ...row.position, correction } };
 });

@@ -242,7 +242,7 @@ Then one `move-files` manifest:
 - [x] `grep -rn "data/bodies/\(famousStars\|sun\.generated\|sStar\|sceneStars\|sceneSun\|sceneSStars\|seededStarCatalogs\|starResolvePx\|bodySearchNames\|famousStarsIndex\)" src tools tests packages .claude/skills docs/DATA.md docs/science.md`
       is empty.
 - [x] `npm test` (whole suite), `npm run typecheck`, `npm run format` pass.
-- [x] Commit the move; commit docs and backlog separately.
+- [x] Commit the move; docs and backlog went in the same commit (ae7107d8f), not separately.
 
 ### Task 5: Verify the app is unchanged
 

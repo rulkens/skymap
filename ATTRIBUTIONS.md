@@ -512,7 +512,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** No licence stated
 - **Attribution:** Cite Gillessen et al. 2017.
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJ/837/30>
-- **Enters skymap:** typed by hand into `src/data/bodies/sStarElements.ts`
+- **Enters skymap:** typed by hand into `src/layers/starCatalog/bodies/sStarElements.ts`
   (one source line per row) and `tests/fixtures/sStarAstrometry.json`.
 - **Modified:** No values changed. The 40th published row, S111, is left out as
   unbound.
@@ -535,7 +535,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** Reference only
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://arxiv.org/abs/2607.12664>
-- **Enters skymap:** one row of `src/data/bodies/sStarElements.ts`.
+- **Enters skymap:** one row of `src/layers/starCatalog/bodies/sStarElements.ts`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1038/s41586-026-10894-w>
   and <https://export.arxiv.org/abs/2607.12664> (the reference: authors, title,
@@ -554,7 +554,7 @@ unclear, and no entry here reads them as a licence.
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://doi.org/10.1051/0004-6361/201935656> (A&A 625, L10).
 - **Enters skymap:** `src/data/bodies/sgrAStarMassSolar.ts`,
-  `src/data/bodies/sStarOrbitInfo.ts` and the S-star scale.
+  `src/layers/starCatalog/bodies/sStarOrbitInfo.ts` and the S-star scale.
 - **Modified:** No.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1051/0004-6361/201935656>
   (the reference: authors, title, volume and page).
@@ -571,7 +571,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** Reference only
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://doi.org/10.1088/0067-0049/208/1/9> (ApJS 208, 9).
-- **Enters skymap:** `src/data/bodies/sStarAppearance.ts`.
+- **Enters skymap:** `src/layers/starCatalog/bodies/sStarAppearance.ts`.
 - **Modified:** The values in the file are our own representative table, not
   the paper's.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1088/0067-0049/208/1/9>
@@ -621,7 +621,7 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
-  `src/data/bodies/ephemerisCorrections.generated.ts`. Also the orbit rows of
+  `src/layers/body/bodies/ephemerisCorrections.generated.ts`. Also the orbit rows of
   the spacecraft bodies (see each model's README).
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
@@ -2755,7 +2755,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
 
 <!-- attribution: id=helland; hosts=tannerhelland.com -->
 
-- **What:** The piecewise fit in `src/utils/color/temperatureToLinearRgb.ts`
+- **What:** The piecewise fit in `src/layers/starCatalog/bodies/utils/temperatureToLinearRgb.ts`
   that gives a star its colour from its temperature.
 - **By:** Tanner Helland, "How to Convert Temperature (K) to RGB: Algorithm
   and Sample Code", 2012.
