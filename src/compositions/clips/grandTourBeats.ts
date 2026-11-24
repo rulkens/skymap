@@ -15,34 +15,28 @@
  * via the settings panel or a reload.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import { parkOpening, parkOpeningDwell } from '../../../compositions/tours/grandTour/parkOpening';
-import {
-  youAreHereEarth,
-  youAreHereEarthDwell,
-} from '../../../compositions/tours/grandTour/youAreHereEarth';
-import {
-  earthAndMoon,
-  earthAndMoonDwell,
-} from '../../../compositions/tours/grandTour/earthAndMoon';
-import { solarSystem, solarSystemDwell } from '../../../compositions/tours/grandTour/solarSystem';
+import type { Clip } from '../../@types/animation/Clip';
+import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
+import { youAreHereEarth, youAreHereEarthDwell } from '../tours/grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from '../tours/grandTour/earthAndMoon';
+import { solarSystem, solarSystemDwell } from '../tours/grandTour/solarSystem';
 import {
   stellarNeighbourhood,
   stellarNeighbourhoodDwell,
-} from '../../../compositions/tours/grandTour/stellarNeighbourhood';
-import { youAreHere, youAreHereDwell } from '../../../compositions/tours/grandTour/youAreHere';
-import { approachM31 } from '../../../compositions/tours/grandTour/approachM31';
-import { localGroup } from '../../../compositions/tours/grandTour/localGroup';
-import { neighbourhoodReveal } from '../../../compositions/tours/grandTour/neighbourhoodReveal';
-import { neighbourhoodFlythrough } from '../../../compositions/tours/grandTour/neighbourhoodFlythrough';
-import { approachVirgo } from '../../../compositions/tours/grandTour/approachVirgo';
-import { laniakea } from '../../../compositions/tours/grandTour/laniakea';
-import { cosmicWeb, cosmicWebDwell } from '../../../compositions/tours/grandTour/cosmicWeb';
-import { cosmicFlows } from '../../../compositions/tours/grandTour/cosmicFlows';
-import { emptiness } from '../../../compositions/tours/grandTour/emptiness';
-import { deepField } from '../../../compositions/tours/grandTour/deepField';
-import { theEdge } from '../../../compositions/tours/grandTour/theEdge';
-import { homeAgain } from '../../../compositions/tours/grandTour/homeAgain';
+} from '../tours/grandTour/stellarNeighbourhood';
+import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
+import { approachM31 } from '../tours/grandTour/approachM31';
+import { localGroup } from '../tours/grandTour/localGroup';
+import { neighbourhoodReveal } from '../tours/grandTour/neighbourhoodReveal';
+import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
+import { approachVirgo } from '../tours/grandTour/approachVirgo';
+import { laniakea } from '../tours/grandTour/laniakea';
+import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
+import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
+import { emptiness } from '../tours/grandTour/emptiness';
+import { deepField } from '../tours/grandTour/deepField';
+import { theEdge } from '../tours/grandTour/theEdge';
+import { homeAgain } from '../tours/grandTour/homeAgain';
 
 export const tourParkOpening: Clip = {
   id: 'tourParkOpening',

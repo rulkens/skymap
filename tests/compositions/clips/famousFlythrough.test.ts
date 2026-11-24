@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { famousFlythrough } from '../../../../src/data/animation/clips/famousFlythrough';
+import { famousFlythrough } from '../../../src/compositions/clips/famousFlythrough';
 
 describe('famousFlythrough clip', () => {
   it('is a single flyPath that launches from the live camera pose', () => {

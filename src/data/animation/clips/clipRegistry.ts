@@ -32,15 +32,15 @@ import type { Clip } from '../../../@types/animation/Clip';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import { CONST_J2000 } from '../../time/constJ2000';
 import { cosmicFlows } from '../../../compositions/clips/cosmicFlows';
-import { flyout } from './flyout';
-import { earthFlyout } from './earthFlyout';
-import { earthCosmicWebLoop } from './earthCosmicWebLoop';
-import { earthUniverseLoop } from './earthUniverseLoop';
-import { sondermarkenFlyout } from './sondermarkenFlyout';
-import { perseveranceToSondermarken } from './perseveranceToSondermarken';
-import { flowOrbit } from './flowOrbit';
-import { flyPathDemo } from './flyPathDemo';
-import { famousFlythrough } from './famousFlythrough';
+import { flyout } from '../../../compositions/clips/flyout';
+import { earthFlyout } from '../../../compositions/clips/earthFlyout';
+import { earthCosmicWebLoop } from '../../../compositions/clips/earthCosmicWebLoop';
+import { earthUniverseLoop } from '../../../compositions/clips/earthUniverseLoop';
+import { sondermarkenFlyout } from '../../../compositions/clips/sondermarkenFlyout';
+import { perseveranceToSondermarken } from '../../../compositions/clips/perseveranceToSondermarken';
+import { flowOrbit } from '../../../compositions/clips/flowOrbit';
+import { flyPathDemo } from '../../../compositions/clips/flyPathDemo';
+import { famousFlythrough } from '../../../compositions/clips/famousFlythrough';
 import {
   tourParkOpening,
   tourParkOpeningDwell,
@@ -67,7 +67,7 @@ import {
   tourDeepField,
   tourTheEdge,
   tourHomeAgain,
-} from './grandTourBeats';
+} from '../../../compositions/clips/grandTourBeats';
 
 export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   cosmicFlows: () => cosmicFlows,

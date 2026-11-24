@@ -35,9 +35,9 @@
  * `resolveFocusId`.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import { flyPath, atFocus } from '../../../services/engine/animation/effectHelpers';
-import { focusId } from '../../../utils/animation/focusId';
+import type { Clip } from '../../@types/animation/Clip';
+import { flyPath, atFocus } from '../../services/engine/animation/effectHelpers';
+import { focusId } from '../../utils/animation/focusId';
 
 export const flyPathDemo: Clip = {
   id: 'flyPathDemo',

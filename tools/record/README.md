@@ -200,7 +200,7 @@ automatically: no flag, nothing to remember. It records exactly
 recording one seamless cycle (N frames)`. The artifact is exactly one cycle,
 frames `[0, duration)` — the closing frame is deliberately excluded because a
 looping clip is authored so `pose(duration) ≡ pose(0)` (the seam contract;
-see `src/data/animation/clips/earthUniverseLoop.ts`), and including it would
+see `src/compositions/clips/earthUniverseLoop.ts`), and including it would
 duplicate a frame at the mp4's loop splice. If `durationSec × fps` is not a
 whole number the recorder rounds to the nearest frame and logs a notice —
 the resulting sub-frame seam offset is imperceptible at these camera speeds,

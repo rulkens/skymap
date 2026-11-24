@@ -10,8 +10,8 @@
  * 4000 km of altitude in about a second.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Clip } from '../../@types/animation/Clip';
+import type { Vec3 } from '../../@types/math/Vec3';
 import {
   aimAlong,
   all,
@@ -20,13 +20,13 @@ import {
   seq,
   tween,
   wait,
-} from '../../../services/engine/animation/effectHelpers';
-import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { linkedPoseToWorld } from '../../../services/engine/camera/arms/utils/linkedPoseToWorld';
-import { normalize3 } from '../../../utils/math/normalize3';
-import { northUpRoll } from '../../../utils/camera/orbitPose/northUpRoll';
-import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { SCENE_EARTH } from '../../bodies/sceneEarth';
+} from '../../services/engine/animation/effectHelpers';
+import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
+import { linkedPoseToWorld } from '../../services/engine/camera/arms/utils/linkedPoseToWorld';
+import { normalize3 } from '../../utils/math/normalize3';
+import { northUpRoll } from '../../utils/camera/orbitPose/northUpRoll';
+import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 
 // Eye-tuned: a few seconds on the opening view, ~24 decades at earthFlyout's
 // pace, the tilt done by ~10 km up, and a beat at the horizon before the end.

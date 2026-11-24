@@ -176,7 +176,7 @@ export const FACTS: readonly Fact[] = [
     id: 'sondermarken-flyout',
     about: 'app',
     text: 'The “Søndermarken to the Edge” clip opens over Søndermarken, a park in Copenhagen, about 46 metres above the sphere of 6,371 kilometres radius that Skymap uses for Earth’s surface, and pulls back in one continuous move to the edge of the observable universe.',
-    source: `${REPO_BLOB}/src/data/animation/clips/sondermarkenFlyout.ts`,
+    source: `${REPO_BLOB}/src/compositions/clips/sondermarkenFlyout.ts`,
     sourceLabel: 'the clip, in the Skymap repository',
     checked: CHECKED,
   },

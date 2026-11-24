@@ -38,9 +38,9 @@
  * point to bend a kink. Inspect + replay live via the Clip Path Inspector.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import { atFocus, flyPath } from '../../../services/engine/animation/effectHelpers';
-import { focusId } from '../../../utils/animation/focusId';
+import type { Clip } from '../../@types/animation/Clip';
+import { atFocus, flyPath } from '../../services/engine/animation/effectHelpers';
+import { focusId } from '../../utils/animation/focusId';
 
 export const famousFlythrough: Clip = {
   id: 'famousFlythrough',

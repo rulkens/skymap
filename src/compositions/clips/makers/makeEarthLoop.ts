@@ -8,10 +8,10 @@
  * position is a function of the clock, frozen at clip start.
  */
 
-import type { Clip } from '../../../../@types/animation/Clip';
-import type { ClipId } from '../../../../@types/animation/ClipId';
-import type { Ease } from '../../../../@types/animation/Ease';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Clip } from '../../../@types/animation/Clip';
+import type { ClipId } from '../../../@types/animation/ClipId';
+import type { Ease } from '../../../@types/animation/Ease';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import {
   dollyTo,
   spin,
@@ -19,13 +19,13 @@ import {
   seq,
   hold,
   hide,
-} from '../../../../services/engine/animation/effectHelpers';
-import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
-import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
-import { SCENE_EARTH } from '../../../bodies/sceneEarth';
-import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
-import { SCALE_UNITS } from '../../../scaleUnits';
+} from '../../../services/engine/animation/effectHelpers';
+import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 const FLIGHT_SEC = 70; // default one-leg pull-back window, same as earthFlyout
 const HOLD_SEC = 4;

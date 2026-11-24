@@ -53,10 +53,10 @@ content, the galaxies-only composition, the empty-registry test (PR D).
 → `src/compositions/clips/`, and `makers/makeEarthLoop.ts` → `src/compositions/clips/makers/`.
 `clipRegistry.ts` and `makers/flyToPoseClip.ts` stay. The `tests/` mirror follows.
 
-- [ ] One `move-files` manifest, `--dry` first. Fix every finding it lists.
-- [ ] Grep for the old paths in non-import strings and repoint them:
+- [x] One `move-files` manifest, `--dry` first. Fix every finding it lists.
+- [x] Grep for the old paths in non-import strings and repoint them:
       `packages/website/src/data/facts.ts:179`, `tools/record/README.md:203`, any comment.
-- [ ] `npm run typecheck`, `npm test`. Commit.
+- [x] `npm run typecheck`, `npm test`. Commit.
 
 ### Task 2: The registry is `appClips.ts`; `ClipId` follows from it
 

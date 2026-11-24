@@ -33,8 +33,8 @@
  * loop), this clip is one clean revolution; replay it for a longer orbit.
  */
 
-import type { Clip } from '../../../@types/animation/Clip';
-import { spin, oscillate, fork } from '../../../services/engine/animation/effectHelpers';
+import type { Clip } from '../../@types/animation/Clip';
+import { spin, oscillate, fork } from '../../services/engine/animation/effectHelpers';
 
 /** Seconds per full 360° revolution. */
 const PERIOD_SEC = 30;

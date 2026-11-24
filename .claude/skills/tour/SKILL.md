@@ -32,7 +32,7 @@ Branch: `grand-tour`, draft PR #400. Full suite must stay green.
 | ---------------------------------------------------------- | ------------------------------------------------- |
 | Storyboard (beat order, captions, dwellClips)              | `src/compositions/tours/grandTour.ts`           |
 | One choreography per beat                                  | `src/compositions/tours/grandTour/<beat>.ts`    |
-| Debugger clip wrappers (ids `tour*`)                       | `src/data/animation/clips/grandTourBeats.ts`      |
+| Debugger clip wrappers (ids `tour*`)                       | `src/compositions/clips/grandTourBeats.ts`        |
 | Clip id union (append-only)                                | `src/@types/animation/ClipId.ts`                  |
 | Clip registry                                              | `src/data/animation/clips/clipRegistry.ts`        |
 | Registry key-freeze test                                   | `tests/data/animation/clips/clipRegistry.test.ts` |
