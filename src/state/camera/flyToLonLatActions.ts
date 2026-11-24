@@ -10,8 +10,8 @@ import { createAction } from '@reduxjs/toolkit';
 export type FlyToLonLatPayload = {
   readonly lonDeg: number;
   readonly latDeg: number;
-  /** Defaults to Earth. A raw id (a DebugPanel field, an injected dispatch): the saga checks it. */
-  readonly body?: string;
+  /** A raw id (a DebugPanel field, an injected dispatch): the saga checks it. */
+  readonly body: string;
   readonly altKm?: number;
   readonly headingRad?: number;
   readonly durationMs?: number;
