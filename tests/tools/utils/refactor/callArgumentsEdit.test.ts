@@ -44,12 +44,15 @@ describe('callArgumentsEdit', () => {
     expect(rewrite('area(1, 2,);')).toBe('area({ width: 1, height: 2 },);');
   });
 
-  it('refuses a call through a property access', () => {
-    expect(rewrite('utils.area(1, 2);')).toContain('refused: called through a property access');
+  it('rewrites a call through a namespace import', () => {
+    expect(rewrite('utils.area(1, 2);')).toBe('utils.area({ width: 1, height: 2 });');
   });
 
-  it('refuses type arguments, an optional call and new', () => {
-    expect(rewrite('area<number>(1, 2);')).toContain('refused: the call has type arguments');
+  it('rewrites a call with type arguments and keeps them', () => {
+    expect(rewrite('area<number>(1, 2);')).toBe('area<number>({ width: 1, height: 2 });');
+  });
+
+  it('refuses an optional call and new', () => {
     expect(rewrite('area?.(1, 2);')).toContain('refused: an optional call');
     expect(rewrite('new area(1, 2);')).toContain('refused: a `new` is not a function call');
   });

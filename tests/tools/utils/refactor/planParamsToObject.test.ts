@@ -1,11 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { collectRefs } from '../../../../tools/utils/refactor/collectRefs';
-import { syncOverlay } from '../../../../tools/utils/refactor/engine/syncOverlay';
-import { foldPlan } from '../../../../tools/utils/refactor/foldPlan';
 import { planParamsToObject } from '../../../../tools/utils/refactor/planParamsToObject';
-import type { DiskView } from '../../../../tools/@types/refactor/DiskView';
 import type { PlanResult } from '../../../../tools/@types/refactor/PlanResult';
-import { engineFixture } from '../../../helpers/refactor/engineFixture';
+import { planFixture } from '../../../helpers/refactor/planFixture';
 
 const FILES: Record<string, string> = {
   'src/geom.ts': `export function area(width: number, height: number = 2, label?: string): number {
@@ -42,16 +39,10 @@ export const r = rec(1, 2);
 `,
 };
 
-const fixture = engineFixture(FILES);
+const fixture = planFixture(FILES);
 afterAll(fixture.dispose);
 
-const { engine, root } = fixture;
-const abs = (name: string) => `${root}/${name}`;
-const disk: DiskView = {
-  read: (file) => FILES[file.slice(root.length + 1)] ?? '',
-  snapshot: () => ({ texts: new Map(), fileExists: () => true }),
-};
-const read = (file: string) => engine.overlay.get(file) ?? disk.read(file);
+const { engine, abs, read, applied } = fixture;
 
 function found(symbol: string) {
   const result = collectRefs({ address: { file: 'src/geom.ts', symbol }, engine, read });
@@ -65,17 +56,6 @@ function convert(symbol: string): PlanResult {
     found: found(symbol),
     read,
   });
-}
-
-function applied(result: PlanResult): Record<string, string> {
-  if (!result.ok) throw new Error(result.refusals.join('; '));
-  const out: Record<string, string> = {};
-  for (const edit of [...result.plan.edits].sort((x, y) => y.start - x.start)) {
-    const name = edit.file.slice(root.length + 1);
-    const text = out[name] ?? FILES[name]!;
-    out[name] = text.slice(0, edit.start) + edit.text + text.slice(edit.end);
-  }
-  return out;
 }
 
 function refusalsOf(result: PlanResult): string {
@@ -125,11 +105,93 @@ describe('planParamsToObject', () => {
 
   it('the folded result still resolves every call', () => {
     const before = found('area').report.refs.filter((r) => r.kind === 'call').length;
-    const overlay = { texts: engine.overlay, moves: [], deletes: engine.removed };
     const result = convert('area');
     if (!result.ok) throw new Error(result.refusals.join('; '));
-    syncOverlay(engine, foldPlan(result.plan, overlay, disk));
+    fixture.fold(result.plan);
     expect(found('area').report.refs.filter((r) => r.kind === 'call')).toHaveLength(before);
     expect(read(abs('src/a.ts'))).toContain('area({ width: 1, height: 2 })');
+  });
+});
+
+describe('planParamsToObject: what review found', () => {
+  const FILES2: Record<string, string> = {
+    'src/f.ts': `export function withComments(
+  /** the width */
+  width: number,
+  // the height
+  height: number,
+): number {
+  return width * height;
+}
+export function trailing(a: number, b: number, // last
+): number {
+  return a + b;
+}
+export function usesArgs(a: number, b: number): number {
+  return arguments.length + a + b;
+}
+export function nestedArgs(a: number, b: number): number {
+  const g = function () { return arguments.length; };
+  const h = () => a + b;
+  return g() + h();
+}
+export function arrowArgs(a: number, b: number): number {
+  const h = () => arguments.length;
+  return h() + a + b;
+}
+/**
+ * Area.
+ * @param width the width
+ * @param height the height
+ */
+export function documented(width: number, height: number): number {
+  return width * height;
+}
+`,
+    'src/use.ts': `import * as ns from './f';
+import { documented, nestedArgs } from './f';
+export const a = ns.documented(1, 2) + documented(3, 4) + nestedArgs(1, 2);
+export const b = documented<never>(1, 2);
+`,
+  };
+  const fx = planFixture(FILES2);
+  afterAll(fx.dispose);
+  const convertIn = (symbol: string): PlanResult => {
+    const result = collectRefs({
+      address: { file: 'src/f.ts', symbol },
+      engine: fx.engine,
+      read: fx.read,
+    });
+    if (!result.ok) throw new Error(result.refusal);
+    return planParamsToObject({
+      address: { file: 'src/f.ts', symbol },
+      found: result,
+      read: fx.read,
+    });
+  };
+
+  it('refuses comments before, between or after the parameters', () => {
+    expect(refusalsOf(convertIn('withComments'))).toContain(
+      'a comment between parameters would be lost',
+    );
+    expect(refusalsOf(convertIn('trailing'))).toContain(
+      'a comment between parameters would be lost',
+    );
+  });
+
+  it('refuses a body that reads arguments, also through an arrow, not through another function', () => {
+    expect(refusalsOf(convertIn('usesArgs'))).toContain('uses `arguments`');
+    expect(refusalsOf(convertIn('arrowArgs'))).toContain('uses `arguments`');
+    expect(convertIn('nestedArgs').ok).toBe(true);
+  });
+
+  it('rewrites a namespace call and one with type arguments, and flags stale @param tags', () => {
+    const result = convertIn('documented');
+    const out = fx.applied(result);
+    expect(out['src/use.ts']).toContain('ns.documented({ width: 1, height: 2 })');
+    expect(out['src/use.ts']).toContain('documented<never>({ width: 1, height: 2 })');
+    expect(result.ok && result.plan.findings).toEqual([
+      { file: 'src/f.ts', line: 30, message: '@param tags describe the old parameters' },
+    ]);
   });
 });

@@ -17,8 +17,11 @@ import type { SymbolAddress } from '../../@types/refactor/SymbolAddress';
 import type { TextEdit } from '../../@types/refactor/TextEdit';
 import { callArgumentsEdit } from './callArgumentsEdit';
 import { findNameNode } from './findNameNode';
+import { hasCommentAmongParams } from './hasCommentAmongParams';
 import { objectParamText } from './objectParamText';
 import { parseTs } from './parseTs';
+import { usesArguments } from './usesArguments';
+import type { Finding } from '../../@types/refactor/Finding';
 
 export function planParamsToObject(input: {
   address: SymbolAddress;
@@ -32,9 +35,19 @@ export function planParamsToObject(input: {
   const sites = new Map<TextEdit, string>();
 
   const declaration = declarationEdit(read(at.file), at);
+  const findings: Finding[] = [];
   const file = report.target.split('#')[0]!;
   if (!declaration.ok) refusals.push(`${file}:${declaration.line}  ${declaration.refusal}`);
-  else edits.push({ file: at.file, ...declaration.edit });
+  else {
+    edits.push({ file: at.file, ...declaration.edit });
+    if (declaration.staleParamTags) {
+      findings.push({
+        file,
+        line: declaration.line,
+        message: '@param tags describe the old parameters',
+      });
+    }
+  }
 
   found.refs.forEach((ref, i) => {
     const row = report.refs[i]!;
@@ -66,7 +79,7 @@ export function planParamsToObject(input: {
       ],
     };
   }
-  return { ok: true, plan: { edits, moves: [], deletes: [], findings: [] } };
+  return { ok: true, plan: { edits, moves: [], deletes: [], findings } };
 }
 
 // The edit to the parameter list of the function declared at `at`, or why it cannot be one.
@@ -95,6 +108,10 @@ function declarationEdit(
   }
   if (!fn) return no('not an exported function declaration or const function.');
 
+  if (usesArguments(fn)) return no('the body uses `arguments`, which the new signature changes.');
+  if (hasCommentAmongParams(text, fn.parameters)) {
+    return no('a comment between parameters would be lost.');
+  }
   const first = fn.parameters[0];
   const last = fn.parameters[fn.parameters.length - 1];
   if (!first || !last) return no('nothing to gain: no parameters.');
@@ -102,5 +119,12 @@ function declarationEdit(
   const end = last.getEnd();
   const params = objectParamText(text, { start, end });
   if (!params.ok) return no(params.refusal);
-  return { ok: true, edit: { start, end, text: params.text }, names: params.names };
+  const staleParamTags = ts.getJSDocTags(fn).some(ts.isJSDocParameterTag);
+  return {
+    ok: true,
+    edit: { start, end, text: params.text },
+    names: params.names,
+    line,
+    staleParamTags,
+  };
 }
