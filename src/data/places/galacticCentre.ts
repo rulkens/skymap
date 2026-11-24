@@ -4,7 +4,7 @@
  * and R₀ all key on. Sgr A* is what sits there, not what defines it.
  *
  * A plain `raDecDistToCartesian` of the radio source's catalogue coordinates
- * — the same right-handed equatorial J2000 conversion `starAnchor` uses, so
+ * — the same right-handed equatorial J2000 conversion the seeded stars use, so
  * the Centre is not rotated against the sky the catalogues paint. Every
  * reader imports THIS rather than re-transcribing the pair; the rounded one
  * `galacticCenter.ts` used to carry put the impostor's hub 178 pc off the

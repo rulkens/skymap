@@ -22,7 +22,7 @@ import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
-import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
+import { SCENE_SUN } from '../../../../src/layers/starCatalog/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';

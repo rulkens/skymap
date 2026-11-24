@@ -5,8 +5,8 @@
  */
 
 import type { FadeValueOf } from '../../../../@types/animation/FadeValueOf';
-import type { SeededStarCatalogId } from '../../../../@types/data/starCatalog/SeededStarCatalogId';
-import { SEEDED_STAR_CATALOGS } from '../../../../data/bodies/seededStarCatalogs';
+import type { SeededStarCatalogId } from '../../@types/SeededStarCatalogId';
+import { SEEDED_STAR_CATALOGS } from '../data/seededStarCatalogs';
 
 const SEEDED_ITEMS = Object.keys(SEEDED_STAR_CATALOGS) as SeededStarCatalogId[];
 

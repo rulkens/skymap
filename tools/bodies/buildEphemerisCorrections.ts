@@ -30,7 +30,7 @@ import { fitSinusoidSeries } from '../utils/math/fitSinusoidSeries';
 import { meanAnomalyCorrectionTarget } from '../utils/math/meanAnomalyCorrectionTarget';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-const GENERATED_PATH = 'src/data/bodies/ephemerisCorrections.generated.ts';
+const GENERATED_PATH = 'src/layers/body/bodies/ephemerisCorrections.generated.ts';
 const GENERATED_BANNER =
   `// ${GENERATED_PATH}\n` +
   '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
   }
   const source =
     GENERATED_BANNER +
-    "import type { EphemerisCorrection } from '../../@types/scene/EphemerisCorrection';\n\n" +
+    "import type { EphemerisCorrection } from '../../../@types/scene/EphemerisCorrection';\n\n" +
     'export const EPHEMERIS_CORRECTIONS: Readonly<Record<string, EphemerisCorrection>> = {\n' +
     `${rows.join('\n')}\n};\n`;
   const outPath = resolve(GENERATED_PATH);

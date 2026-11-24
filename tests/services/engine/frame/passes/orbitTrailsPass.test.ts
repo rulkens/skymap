@@ -11,7 +11,7 @@
  * `state.orbitTrailGroups`.
  */
 
-import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
@@ -41,7 +41,7 @@ import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orb
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
+import { SCENE_SUN } from '../../../../../src/layers/starCatalog/bodies/sceneSun';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';

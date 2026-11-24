@@ -25,11 +25,13 @@ In the 279 kB build, body content that core imports directly, with no registry i
 
 | Source                                              | min     | Reaches core through                                  |
 | --------------------------------------------------- | ------- | ----------------------------------------------------- |
-| `data/bodies/ephemerisCorrections.generated.ts`     | 94.0 kB | `deriveBodyStates → orbitRowPlacement`                |
+| `layers/body/bodies/ephemerisCorrections.generated.ts` | 94.0 kB | `deriveBodyStates → orbitRowPlacement`                |
 | `meshoptimizer` (+ `meshFetcher`, `meshBinaryFormat`) | 25.6 kB | `createLayers → meshAssetRows → meshFetcher`          |
-| `data/bodies/famousStars.generated.ts`              | 24.5 kB | `deriveBodyStates → sceneAnchors`, `sceneStars`       |
-| `data/bodies/sStarElements.ts`                      | 7.7 kB  | `orbitalElements → sStarOrbitalElements`              |
+| `layers/starCatalog/bodies/famousStars.generated.ts` | 24.5 kB | `deriveBodyStates → sceneAnchors`, `sceneStars`       |
+| `layers/starCatalog/bodies/sStarElements.ts`     | 7.7 kB  | `orbitalElements → sStarOrbitalElements`              |
 | `data/bodies/meshAssets.generated.ts`               | 6.5 kB  | `meshAssetRows`, `meshPresentations`                  |
+
+This list is a snapshot from before PR B; the paths show where those files live now.
 
 About 160 kB minified. Core also *assumes* bodies: five tables throw at import with no Earth, Moon
 or Sun row, and `deriveBodyStates` solves every frame whatever is composed.
@@ -97,8 +99,8 @@ export type BodyPosition =
   `{ secondaryId: SceneBodyId; secondaryMassFraction: number }`.
 - `PositionDriver`'s orbit arm carries `correction` and `pair` whole, as it carries `elements`.
 - `orbitRowPlacement` takes the orbit driver instead of bare elements, and a lookup of the
-  secondary's elements that the fold resolves once (as `BARYCENTRIC_REFLEX_BY_PRIMARY` does today,
-  `src/data/bodies/barycentricPairs.ts:17`). Its two callers are `deriveBodyStates` and
+  secondary's elements that the fold resolves once (as `BARYCENTRIC_REFLEX_BY_PRIMARY` did in the
+  since-deleted `src/data/bodies/barycentricPairs.ts`). Its two callers are `deriveBodyStates` and
   `bodyPositionMpcAt`.
 - `OrbitalElements` is untouched: satellites, asteroids and trails read it and none has a
   correction.

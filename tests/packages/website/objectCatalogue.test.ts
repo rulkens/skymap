@@ -17,7 +17,7 @@ import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
-import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
 import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';

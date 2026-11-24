@@ -49,7 +49,7 @@ import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/dat
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };

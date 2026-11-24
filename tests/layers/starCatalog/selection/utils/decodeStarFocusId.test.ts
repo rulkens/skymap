@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { decodeStarFocusId } from '../../../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
+import { SCENE_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneSStars';
 
 const ABSENT = { kind: 'absent' };
 const hit = (source: string, index: number) => ({

@@ -142,11 +142,11 @@ describe('serializeGeneratedTable', () => {
     // first at every import site.
     const text = serializeGeneratedTable(seedToGeneratedRows(FIXTURE), {
       seedKey: 'sun.seed',
-      generatedPath: 'src/data/bodies/sun.generated.ts',
+      generatedPath: 'src/layers/starCatalog/bodies/sun.generated.ts',
       exportName: 'SUN_GENERATED',
     });
 
-    expect(text).toContain('// src/data/bodies/sun.generated.ts');
+    expect(text).toContain('// src/layers/starCatalog/bodies/sun.generated.ts');
     expect(text).toContain('// Source of truth:  data/seeds/sun.seed.json');
     expect(text).toContain('export const SUN_GENERATED: readonly FamousStarRow[] = [');
   });

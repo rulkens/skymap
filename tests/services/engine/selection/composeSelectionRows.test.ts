@@ -28,8 +28,8 @@ import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types
 import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { testPickCode } from '../../../support/testPickCode';
 import { FAMOUS_GALAXY_NAMES } from '../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
+import { SCENE_STARS } from '../../../../src/layers/starCatalog/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../../../src/layers/starCatalog/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';

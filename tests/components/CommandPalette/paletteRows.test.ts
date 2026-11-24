@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 import { ROW_VIEW } from '../../../src/components/CommandPalette/paletteRows';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../src/layers/starCatalog/bodies/sceneStars';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 

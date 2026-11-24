@@ -14,7 +14,7 @@ import { siteShot } from '../../../packages/website/src/data/siteShot';
 import { appLink, APP_BASE } from '../../../packages/website/src/data/appLink';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
-import { FAMOUS_STARS_GENERATED } from '../../../src/data/bodies/famousStars.generated';
+import { FAMOUS_STARS_GENERATED } from '../../../src/layers/starCatalog/bodies/famousStars.generated';
 
 const paletteFocusIds = new Set(
   FEATURED_TABS.flatMap((tab) => tab.cards).flatMap((card) =>

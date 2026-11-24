@@ -106,6 +106,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'src/layers/missions/craft/present/missionLabelSource.ts',
     "fade precedent — bridges a seed's metre reveal distance to the Mpc revealBand the label fade reads, no slab MVP involved",
   ],
+  [
+    'src/layers/starCatalog/bodies/sStarOrbitInfo.ts',
+    "card-fact precedent — Sgr A*'s Schwarzschild radius goes metres to AU through Mpc for the S-star card's pericentre row; module-load data, no pose or MVP",
+  ],
 ]);
 
 function scaleUnitsMembersUsed(file: string): string[] {

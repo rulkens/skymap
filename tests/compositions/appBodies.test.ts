@@ -20,3 +20,12 @@ describe('APP_BODY_REGISTRY covers every composed Layer', () => {
     }
   });
 });
+
+describe('APP_BODY_REGISTRY orbit rows', () => {
+  it("every orbit row's body id is its elements id", () => {
+    for (const row of APP_BODY_REGISTRY) {
+      if (row.position.kind !== 'orbit') continue;
+      expect(row.position.elements.id, row.body.id).toBe(row.body.id);
+    }
+  });
+});

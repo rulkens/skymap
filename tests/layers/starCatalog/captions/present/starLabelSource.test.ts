@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 
 import { starLabelSource } from '../../../../../src/layers/starCatalog/captions/present/starLabelSource';
 import { STAR_MAP_CAPTION_BAND } from '../../../../../src/layers/starCatalog/captions/data/starMapCaptionBand';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
+import { SCENE_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneStars';
+import { SCENE_SUN } from '../../../../../src/layers/starCatalog/bodies/sceneSun';
 import { packPickWord, unpackPick } from '../../../../../src/data/selectionEncoding';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../../support/layerPickCodes';

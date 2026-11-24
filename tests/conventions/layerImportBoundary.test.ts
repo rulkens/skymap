@@ -84,9 +84,7 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-const CORE_ALLOWED: Readonly<Record<string, number>> = {
-  '@types/data/starCatalog/SeededStarCatalogId.d': 1,
-};
+const CORE_ALLOWED: Readonly<Record<string, number>> = {};
 
 const coreFiles = walk('src').filter(
   (file) => !file.startsWith('src/layers/') && !file.startsWith('src/compositions/'),
