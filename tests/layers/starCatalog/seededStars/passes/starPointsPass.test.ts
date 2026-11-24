@@ -232,7 +232,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
-        missionTrails: { enabled: false },
+        missionTrails: { enabled: false, nearPlanets: false },
       },
       orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
       subsystems: { fades: { opacityOf: () => 0 } },

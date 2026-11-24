@@ -62,6 +62,8 @@ describe('missionTrail/io.wesl parity', () => {
       camLo: TRAIL_UNIFORM_OFFSETS.camLo,
       widthPx: TRAIL_UNIFORM_OFFSETS.widthPx,
       color: TRAIL_UNIFORM_OFFSETS.color,
+      fadeInvKm: TRAIL_UNIFORM_OFFSETS.fadeInvKm,
+      fadeRelKm: TRAIL_UNIFORM_OFFSETS.fadeRelKm,
     });
     expect(Math.ceil(at / 16) * 16).toBe(TRAIL_UNIFORM_BYTES);
     // CameraUniforms prefix: viewProj 0, viewportPx 64, pxPerRad 72.

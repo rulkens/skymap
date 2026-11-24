@@ -39,7 +39,7 @@ describe('BodyDetailCard', () => {
       screen.getByText(`${(JUPITER_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
     ).toBeInTheDocument();
     // A few fact-sheet rows from BODY_FACTS.jupiter.
-    expect(screen.getByText('317.8 M⊕')).toBeInTheDocument();
+    expect(screen.getByText('318 M⊕')).toBeInTheDocument();
     expect(screen.getByText('2.53 g')).toBeInTheDocument();
     expect(screen.getByText('9.9 hours')).toBeInTheDocument();
     expect(screen.getByText('95')).toBeInTheDocument();
