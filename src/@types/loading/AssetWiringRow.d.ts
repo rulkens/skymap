@@ -1,6 +1,6 @@
 /**
  * AssetWiringRow — one fetchable asset's lifecycle contract. `createLayers`
- * composes core's rows with every Layer's into `state.assetRows`, and the demand
+ * composes every Layer's rows into `state.assetRows`, and the demand
  * loop walks that list. A row that tracks a sibling's
  * demand/priority/request is a `CompanionAssetRow`, folded into one of these.
  * `Key` narrows to the authoring Layer's own key type; core reads it as `AssetKey`.
@@ -15,8 +15,8 @@ import type { VisibilityAddress } from '../animation/VisibilityAddress';
 export type AssetWiringRow<T = unknown, R = unknown, Key extends AssetKey = AssetKey> = {
   key: Key;
   /**
-   * The slot this row drives, minted by whoever authors the row (a Layer's
-   * `create`, or core's `meshAssetRows`) and never loaded by them:
+   * The slot this row drives, minted by the Layer that authors the row (in its
+   * `create` or its `assets`) and never loaded by it:
    * `reevaluateDemand` owns when a slot loads.
    */
   slot: AssetSlot<T, R>;

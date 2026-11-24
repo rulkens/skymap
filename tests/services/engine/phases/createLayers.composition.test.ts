@@ -1,8 +1,7 @@
 /**
  * createLayers — the contribution composition: core's constants first, then
- * every Layer's, in tuple order (asset rows the other way round: Layers' before
- * core's meshes), with each asset row's slot indexed by its key and no two rows
- * claiming one slot key.
+ * every Layer's, in tuple order, with each asset row's slot indexed by its key
+ * and no two rows claiming one slot key.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -17,6 +16,9 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { bodyPickCodes } from '../../../support/layerPickCodes';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
+import { missionsLayer } from '../../../../src/layers/missions/layer';
+import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/craft/present/missionCraftIds';
+import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/layers/body/textures/data/bodyTextureKeys';
 import { bodyTextureSlotKey } from '../../../../src/layers/body/textures/load/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
@@ -116,7 +118,7 @@ function orbitTrailLayer(
 }
 
 describe('createLayers composition', () => {
-  it("composes a Layer's passes and labels after core's and its assets before core's, in tuple order", async () => {
+  it("composes a Layer's passes and labels after core's, and its assets in tuple order", async () => {
     const { store } = createAppStore();
     const slotA = { name: 'slot-a' };
     const slotB = { name: 'slot-b' };
@@ -133,7 +135,7 @@ describe('createLayers composition', () => {
       'a-pass',
       'b-pass',
     ]);
-    expect(state.assetRows.map((row) => row.key).slice(0, 2)).toEqual(['a-asset', 'b-asset']);
+    expect(state.assetRows.map((row) => row.key)).toEqual(['a-asset', 'b-asset']);
     expect(state.slotsByKey.get('a-asset' as never)).toBe(slotA);
     expect(state.slotsByKey.get('b-asset' as never)).toBe(slotB);
     const cosmo = state.subsystems.labelDirectors.find((d) => d.row.slab === COSMO)!;
@@ -176,22 +178,34 @@ describe('createLayers composition', () => {
     expect(near.sources.filter((source) => source.toggle === 'body')).toHaveLength(1);
   });
 
-  it('lists body texture rows before core mesh rows, so equal ranks load textures first', async () => {
+  it('body textures rank ahead of craft meshes', async () => {
     const { store } = createAppStore();
     const state = makeState();
-    const deps = makeDeps([bodyLayerWithoutGpu], store);
+    // The app composes missions before body, so array order alone would fetch craft meshes first.
+    const missionsLayerWithoutGpu = {
+      ...missionsLayer,
+      create: (deps: LayerCoreDeps) => ({ meshBodies: deps.meshBodies, pickCode: 0 }),
+      destroy: () => {},
+    } as unknown as Layer<string, unknown>;
+    const deps = makeDeps([missionsLayerWithoutGpu, bodyLayerWithoutGpu], store);
     (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
     await createLayers(state, deps);
 
-    const keys = state.assetRows.map((row) => String(row.key));
-    const firstMesh = keys.findIndex((key) => key.startsWith(String(meshBodySlotKey(''))));
+    // The queue's order: rank, then array index.
+    const keys = state.assetRows
+      .map((row, index) => ({ row, index }))
+      .sort((a, b) => a.row.priority - b.row.priority || a.index - b.index)
+      .map(({ row }) => String(row.key));
+    const firstCraftMesh = Math.min(
+      ...[...MISSION_CRAFT_IDS].map((id) => keys.indexOf(String(meshBodySlotKey(id)))),
+    );
     const lastTexture = Math.max(
       ...ALL_BODY_TEXTURE_KEYS.map((e) =>
         keys.indexOf(String(bodyTextureSlotKey(e.bodyId, e.kind))),
       ),
     );
-    expect(firstMesh).toBeGreaterThan(-1);
-    expect(lastTexture).toBeLessThan(firstMesh);
+    expect(firstCraftMesh).toBeGreaterThan(-1);
+    expect(lastTexture).toBeLessThan(firstCraftMesh);
   });
 
   it('composes Layer world label producers onto state.label3DProducers', async () => {
@@ -310,14 +324,6 @@ describe('createLayers composition', () => {
 
     expect(state.terrainHeightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
     expect(heightAt).toHaveBeenCalledTimes(1);
-  });
-
-  it('throws at boot when a Layer mints a slot key core already owns', async () => {
-    const { store } = createAppStore();
-    const state = makeState();
-    const layer = contributingLayer('a', 'mesh:curiosity', {});
-
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/mesh:curiosity/);
   });
 
   it('routes a label source to the director owning its named slab, and throws for one naming an unknown slab', async () => {

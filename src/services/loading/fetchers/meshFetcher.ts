@@ -1,7 +1,7 @@
 /**
  * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
  * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>-<px>.*`
- * (`req.tier` already clamped to the body's ceiling by `meshBodyRow.req`); the
+ * (`req.tier` already clamped to the body's ceiling by `meshAssetRow`'s `req`); the
  * contact mask stays untiered at `<key>_contact.webp`.
  *
  * A slot whose format is not sRGB carries numeric channels rather than a

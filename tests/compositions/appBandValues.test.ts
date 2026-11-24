@@ -7,7 +7,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foreground
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { cosmicFlows } from '../../src/compositions/exhibits/cosmicFlows/cosmicFlows';
 import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse/observableUniverse';
-import { THE_EDGE_MPC } from '../../src/data/animation/tours/grandTour/theEdge';
+import { THE_EDGE_MPC } from '../../src/compositions/tours/grandTour/theEdge';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';

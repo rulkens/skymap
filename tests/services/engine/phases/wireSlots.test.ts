@@ -84,7 +84,8 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 }));
 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
+import { meshAssetRow } from '../../../../src/services/engine/wiring/meshAssetRow';
+import { MESH_PRESENTATIONS } from '../../../../src/data/bodies/meshPresentations';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
@@ -161,7 +162,7 @@ const readyValue = (count: number): LoadState<unknown> => ({
   loadedAtMs: 0,
 });
 
-/** A post-`createLayers` `EngineState` over a hand-picked subset of asset rows (core's meshes, the
+/** A post-`createLayers` `EngineState` over a hand-picked subset of asset rows (the mesh rows, the
  *  galaxy catalog on fake slots, the density cubes, the structure catalog) and the REAL settings
  *  root and visibility registry, so a new Layer, slot or setting needs no edit here. */
 function makeState(
@@ -253,7 +254,7 @@ function makeState(
     selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
-    ...meshAssetRows(state),
+    ...MESH_PRESENTATIONS.map((p) => meshAssetRow({ setMesh: () => {}, clearMesh: () => {} }, p)),
     ...galaxyCatalogAssetRows(galaxyRuntime),
     ...cosmicWebDensityAssetRows(densityRuntime),
     ...structureAssetRows(structureRuntime),
@@ -448,7 +449,7 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Asserted as a superset so additive changes don't break the test for the wrong reason: the Layer's
-    // slots, the structure Layer's catalog slot, and core's mesh slots.
+    // slots, the structure Layer's catalog slot, and the mesh Layers' mesh slots.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);

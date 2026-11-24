@@ -12,7 +12,7 @@ The "You are here" label marks our location in the Milky Way, but it vanishes as
 - Visibility is the product of two fades (the label source's toggle and record band):
   - **Far fade**: the `youAreHere` band's `out: [0.6, 2]` — full at 0.6 Mpc, gone by 2.0 Mpc (`src/layers/milkyWay/visibility.ts:24`).
   - **Near fade (the disappearance in question)**: the same band's `in: SURVEY_DEEP_ZOOM.in` — fully gone by 2 kpc (`src/data/bands/surveyDeepZoom.ts`, `in: [0.002, …]`). The label is origin-anchored COSMO-slab content, so it cannot survive inside the cosmological near plane; the fade hides it before it clips.
-- The grand tour has a beat built around it: `src/data/animation/tours/grandTour/youAreHere.ts`.
+- The grand tour has a beat built around it: `src/compositions/tours/grandTour/youAreHere.ts`.
 
 ## Directions to explore (design decides)
 

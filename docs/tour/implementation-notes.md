@@ -8,7 +8,7 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 - `Tour` = `{ id, label, beats[] }` → registered in `tourRegistry.ts`.
 - `BeatData` = `{ caption, enterClip?, dwellClip }`. Focus lives in the enterClip (`focus(id)`), not the beat. `enterClip` (the establishing move) is optional — omit it when the previous beat already framed the subject; the dwell then starts at once.
 - Clips: `flyToClip(id)` (camera), `flyAndFocusOnClip(id)` (camera + isolate, = `focusOnId` composite), or hand-authored `flyPath([...])`.
-- Grand-tour clips live one-per-file in `src/data/animation/tours/grandTour/`; `grandTour.ts` is the storyboard (beat order, captions, dwell lengths) and imports each beat's choreography.
+- Grand-tour clips live one-per-file in `src/compositions/tours/grandTour/`; `grandTour.ts` is the storyboard (beat order, captions, dwell lengths) and imports each beat's choreography.
 - `startTour(id)` → `guidedTourSaga`: auto snapshot/restore of settings + focus. HUD-hide derived from `tour.active`.
 - Focus ids: structures `${category}-${seedId}` (e.g. `galaxy-cluster-virgo-m87`, `void-bootes-void`, `galaxy-group-local-group`); famous bare (`m31`, `m87`); Milky Way `milkyWay` (resolves with no data).
 
