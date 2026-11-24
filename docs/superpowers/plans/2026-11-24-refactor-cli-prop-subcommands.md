@@ -338,23 +338,23 @@ Rules:
   rewritten.
 - The function's own body is not touched: the destructured names equal the old parameter names.
 
-- [ ] `objectParamText` — `two annotated parameters`; `a default becomes an optional key`;
+- [x] `objectParamText` — `two annotated parameters`; `a default becomes an optional key`;
       `an optional parameter stays optional`; `refuses a rest parameter`;
       `refuses a default without an annotation`; `refuses a single parameter`.
-- [ ] `callArgumentsEdit` — `positional arguments become keys`; `a matching identifier is
+- [x] `callArgumentsEdit` — `positional arguments become keys`; `a matching identifier is
       shorthand`; `omitted trailing arguments are omitted keys`; `refuses a spread`;
       `keeps a multi-line argument verbatim`.
-- [ ] `planParamsToObject` — `rewrites the signature and calls in two files`;
+- [x] `planParamsToObject` — `rewrites the signature and calls in two files`;
       `rewrites a const arrow function`; `rewrites a call through an import alias`;
       `refuses when the function is passed as a callback and lists the site`;
       `refuses overloads`; `refuses an annotated const`;
       `the folded result still resolves every call` (fold, sync, `collectRefs` finds the same
       number of `'call'` references).
-- [ ] Smoke on a real two-or-three-parameter util in `src/utils/` with callers in at least three
+- [x] Smoke on a real two-or-three-parameter util in `src/utils/` with callers in at least three
       files: for real, `npm run typecheck:fast` and that util's tests pass, then
       `git restore`/`git checkout --` the touched paths so the tree is clean. Report the util and
       the wall time.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: docs
 

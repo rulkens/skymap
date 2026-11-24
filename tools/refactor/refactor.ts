@@ -26,6 +26,7 @@ import { normaliseAddress } from '../utils/refactor/normaliseAddress';
 import { parseTarget } from '../utils/refactor/parseTarget';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
+import { planParamsToObject } from '../utils/refactor/planParamsToObject';
 import { planRemoveProp } from '../utils/refactor/planRemoveProp';
 import { planRenameProp } from '../utils/refactor/planRenameProp';
 import { overlaidTexts } from '../utils/refactor/overlaidTexts';
@@ -137,6 +138,14 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     arity: 1,
     usage: 'refactor remove-prop <file>#<Type>.<prop>',
     plan: ({ address, found, read }) => planRemoveProp({ address, found, read }),
+  },
+  {
+    accepts: 'symbol',
+    kind: 'plan',
+    name: 'params-to-object',
+    arity: 1,
+    usage: 'refactor params-to-object <file>#<function>',
+    plan: ({ address, found, read }) => planParamsToObject({ address, found, read }),
   },
 ];
 
