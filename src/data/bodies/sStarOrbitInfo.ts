@@ -13,7 +13,7 @@ import { pericentreSpeedKmS } from '../../utils/orbit/pericentreSpeedKmS';
 import { schwarzschildRadiusM } from '../../utils/physics/schwarzschildRadiusM';
 import { SCALE_UNITS } from '../scaleUnits';
 import { sStar } from './makers/sStar';
-import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
+import { SGR_A_STAR_LABEL } from './sgrAStarLabel';
 import { SGR_A_STAR_MASS_SOLAR } from './sgrAStarMassSolar';
 import { S_STAR_SEEDS } from './sStarElements';
 import type { StarOrbitInfo } from '../../@types/engine/StarOrbitInfo';
@@ -28,7 +28,7 @@ const S_STAR_ORBIT_INFO: ReadonlyMap<string, StarOrbitInfo> = new Map(
     return [
       seed.id,
       {
-        focusLabel: APP_SOURCE_REGISTRY['sgr-a-star'].label,
+        focusLabel: SGR_A_STAR_LABEL,
         periodYr: seed.periodYr,
         eccentricity: seed.eccentricity,
         pericentreAu,

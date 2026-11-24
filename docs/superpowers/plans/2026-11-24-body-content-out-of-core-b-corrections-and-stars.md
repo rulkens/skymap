@@ -237,7 +237,7 @@ Then one `move-files` manifest:
   `docs/backlog/2026-08-16-barycentric-orbit-pairs.md:14` say the pair is a field on the
   primary's row.
 
-- [ ] Hand fixes 1–2, with `npm test -- CompactBodyCard sStarOrbitInfo starDetail` green. Commit.
+- [x] Hand fixes 1–2, with `npm test -- CompactBodyCard sStarOrbitInfo starDetail` green. Commit.
 - [ ] `--dry`, then the move with fix 3; resolve every finding.
 - [ ] `grep -rn "data/bodies/\(famousStars\|sun\.generated\|sStar\|sceneStars\|sceneSun\|sceneSStars\|seededStarCatalogs\|starResolvePx\|bodySearchNames\|famousStarsIndex\)" src tools tests packages .claude/skills docs/DATA.md docs/science.md`
       is empty.
