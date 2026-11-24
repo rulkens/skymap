@@ -110,19 +110,19 @@ Runs after the controller's measurements; the numbers come in the dispatch.
 `docs/RENDERER.md`, `src/layers/README.md`, `src/compositions/README.md`,
 `docs/superpowers/specs/2026-11-24-body-content-out-of-core-design.md`, `docs/BACKLOG.md`.
 
-- [ ] **ADR 0016**: the principle of spec §3 (core keeps mechanisms that run on an empty body
+- [x] **ADR 0016**: the principle of spec §3 (core keeps mechanisms that run on an empty body
       list; body content is Layer body rows), the contract growth it took (`BodyPosition` `anchor`
       arm and `correction?` / `pair?`; `LayerBody.shapeModel?`; `LayerCoreDeps.meshBodies`), the
       clip registry moving to the composition, the fade-edge fallback, the guard test, the
       measured result, and what it does not do (registries are still chosen by import, spec §8).
-- [ ] `docs/RENDERER.md`: the "bodies stay core" bullet near the top says what is true now.
-- [ ] `src/layers/README.md`: status lines that still say core owns mesh slots or body content.
-- [ ] `src/compositions/README.md`: recount `APP_BODY_REGISTRY`'s core readers with the README's
+- [x] `docs/RENDERER.md`: the "bodies stay core" bullet near the top says what is true now.
+- [x] `src/layers/README.md`: status lines that still say core owns mesh slots or body content.
+- [x] `src/compositions/README.md`: recount `APP_BODY_REGISTRY`'s core readers with the README's
       recipe; the `APP_HOME` row no longer names `earthHome.ts`.
-- [ ] Spec: correct §7's sky-capture bullet and the no-rows value (rulings above), note that
+- [x] Spec: correct §7's sky-capture bullet and the no-rows value (rulings above), note that
       clips moved first (#1164), and fill §10 with the measured numbers.
-- [ ] Backlog sweep: remove any index line and detail file this effort finished.
-- [ ] Commit.
+- [x] Backlog sweep: remove any index line and detail file this effort finished.
+- [x] Commit.
 
 ## Definition of Done
 
