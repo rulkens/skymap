@@ -182,19 +182,19 @@ existing `disk.snapshot().texts` overlaid with `engine.overlay`. `renderRefRepor
 `N quoted mention(s) of 'radius' are not tracked: <file:line>, …` (all of them in `--json`, under
 `unreported`).
 
-- [ ] `locateProp` — finds a member of a type alias; finds a string-keyed member; refuses a
+- [x] `locateProp` — finds a member of a type alias; finds a string-keyed member; refuses a
       union type; refuses a missing member and lists the members.
-- [ ] `classifyPropUse` — one test per table row (8), plus `a.radius` on the right of an
+- [x] `classifyPropUse` — one test per table row (8), plus `a.radius` on the right of an
       assignment is `read`.
-- [ ] `collectPropRefs` — `finds a write through Pick<Shape, 'radius'> typed literal`;
+- [x] `collectPropRefs` — `finds a write through Pick<Shape, 'radius'> typed literal`;
       `a use inside tests/ keeps its kind with inTest true`; `the declaration is not counted`;
       `refuses a file in none of the projects`.
-- [ ] `findQuotedMentions` — `reports the string in Pick<Shape, 'radius'>`;
+- [x] `findQuotedMentions` — `reports the string in Pick<Shape, 'radius'>`;
       `skips a string-key reference the engine already reported`;
       `skips a file that never mentions the type`.
-- [ ] Smoke: `npm run refactor -- prop-refs <a real src type>#<Type>.<prop>` on a type with at
+- [x] Smoke: `npm run refactor -- prop-refs <a real src type>#<Type>.<prop>` on a type with at
       least 20 uses; put the counts and wall time in your reply.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3: `rename-prop`
 

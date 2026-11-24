@@ -8,4 +8,5 @@ export type OpContext = {
   readonly apply: (plan: Plan) => void;
   readonly findings: Finding[];
   readonly batch: boolean;
+  readonly texts: () => ReadonlyMap<string, string>; // every project file's text, overlay applied
 };

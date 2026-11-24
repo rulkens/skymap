@@ -15,6 +15,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import type { Project } from 'ts-morph';
 import { listProjectFiles } from '../../packages/move-files/src/listProjectFiles';
 import { readSnapshot } from '../../packages/move-files/src/readSnapshot';
+import { collectPropRefs } from '../utils/refactor/collectPropRefs';
 import { collectRefs } from '../utils/refactor/collectRefs';
 import { closeEngine } from '../utils/refactor/engine/closeEngine';
 import { ENGINE_PROJECTS } from '../utils/refactor/engine/ENGINE_PROJECTS';
@@ -25,6 +26,7 @@ import { normaliseAddress } from '../utils/refactor/normaliseAddress';
 import { parseTarget } from '../utils/refactor/parseTarget';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
+import { overlaidTexts } from '../utils/refactor/overlaidTexts';
 import { readManifest } from '../utils/refactor/readManifest';
 import { renderRefReport } from '../utils/refactor/renderRefReport';
 import { resolveSymbol } from '../utils/refactor/resolveSymbol';
@@ -36,8 +38,12 @@ import type { OpContext } from './@types/OpContext';
 import type { Overlay } from '../@types/refactor/Overlay';
 import type { OverlayChanges } from '../@types/refactor/OverlayChanges';
 import type { Plan } from '../@types/refactor/Plan';
+import type { PlanResult } from '../@types/refactor/PlanResult';
+import type { PropAddress } from '../@types/refactor/PropAddress';
+import type { RefReport } from '../@types/refactor/RefReport';
+import type { SymbolAddress } from '../@types/refactor/SymbolAddress';
 import type { Target } from '../@types/refactor/Target';
-import type { SymbolRun } from './@types/SymbolRun';
+import type { RunBase } from './@types/RunBase';
 import type { Subcommand } from './@types/Subcommand';
 
 const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
@@ -101,6 +107,18 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     usage: 'refactor refs    <file>#<symbol>',
     report: ({ found, flags }) => renderRefReport(found.report, flags['--json']),
   },
+  {
+    accepts: 'prop',
+    kind: 'report',
+    name: 'prop-refs',
+    arity: 1,
+    usage: 'refactor prop-refs <file>#<Type>.<prop>',
+    report: ({ found, address, flags }) =>
+      renderRefReport(found.report, flags['--json'], {
+        prop: address.prop,
+        findings: found.unreported,
+      }),
+  },
 ];
 
 const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
@@ -123,27 +141,36 @@ function refuse(message: string): false {
 }
 
 // Argument errors throw before anything runs, so a batch aborts before it writes. One
-// engine query serves the preview and the row. A legacy row's preview shows the references
-// as they stand BEFORE it mutates, and in a batch the disk may no longer hold what
-// ts-morph does, so there a preview that cannot be built is skipped. A plan row's preview
-// follows its acceptance, and only when something references the symbol, since a refusal
-// carries its own list.
-async function runOp(
-  row: Subcommand,
-  base: Omit<SymbolRun, 'address' | 'found'>,
-  context: OpContext,
-): Promise<boolean> {
-  const { engine, positionals } = base;
-  const [target] = positionals;
-  if (target === undefined || positionals.length < row.arity) {
+// engine query serves the preview and the row.
+async function runOp(row: Subcommand, base: RunBase, context: OpContext): Promise<boolean> {
+  const [target] = base.positionals;
+  if (target === undefined || base.positionals.length < row.arity) {
     throw new Error(`refactor ${row.name}: missing arguments.\n  ${row.usage}`);
   }
   const parsed = parseTarget(target);
-  if (parsed.kind !== 'symbol') throw new Error(wrongKind(row, target, parsed.kind));
-  const typed = { file: parsed.file, symbol: parsed.symbol };
-  const normal = normaliseAddress(engine.root, typed);
+  if (row.accepts === 'prop' && parsed.kind === 'prop') {
+    const { file, typeName, prop } = parsed;
+    return runPropOp(row, { file, typeName, prop }, base, context);
+  }
+  if (row.accepts === 'symbol' && parsed.kind === 'symbol') {
+    return runSymbolOp(row, { file: parsed.file, symbol: parsed.symbol }, base, context);
+  }
+  throw new Error(wrongKind(row, target, parsed.kind));
+}
+
+// A legacy row's preview shows the references as they stand BEFORE it mutates, and in a
+// batch the disk may no longer hold what ts-morph does, so there a preview that cannot be
+// built is skipped.
+async function runSymbolOp(
+  row: Subcommand & { accepts: 'symbol' },
+  typed: SymbolAddress,
+  base: RunBase,
+  context: OpContext,
+): Promise<boolean> {
+  const target = base.positionals[0] ?? '';
+  const normal = normaliseAddress(base.engine.root, typed);
   const found = normal.ok
-    ? collectRefs({ address: normal.address, engine, read: base.read })
+    ? collectRefs({ address: normal.address, engine: base.engine, read: base.read })
     : normal;
 
   if (!found.ok) {
@@ -158,26 +185,59 @@ async function runOp(
   const run = { ...base, address, found };
   if (row.kind === 'report') {
     process.stdout.write(`${row.report(run)}\n`);
-  } else if (row.kind === 'plan') {
-    const result = row.plan(run);
-    if (!result.ok) return refuse(result.refusals.join('\n'));
-    if (found.report.refs.length > 0) {
-      process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
-    }
-    context.apply(result.plan);
-    context.findings.push(...result.plan.findings);
-  } else {
-    process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
-    await runLegacy(row, base, context, typed, found.report);
+    return true;
   }
+  if (row.kind === 'plan') return acceptPlan(row.plan(run), found.report, base, context);
+  process.stdout.write(`${renderRefReport(found.report, base.flags['--json'])}\n`);
+  await runLegacy(row, base, context, typed, found.report);
+  return true;
+}
+
+async function runPropOp(
+  row: Subcommand & { accepts: 'prop' },
+  typed: PropAddress,
+  base: RunBase,
+  context: OpContext,
+): Promise<boolean> {
+  const normal = normaliseAddress(base.engine.root, typed);
+  if (!normal.ok) return refuse(normal.refusal);
+  const found = collectPropRefs({
+    address: normal.address,
+    engine: base.engine,
+    read: base.read,
+    texts: context.texts,
+  });
+  if (!found.ok) return refuse(found.refusal);
+  const run = { ...base, address: normal.address, found: found.found };
+  if (row.kind === 'report') {
+    process.stdout.write(`${row.report(run)}\n`);
+    return true;
+  }
+  return acceptPlan(row.plan(run), found.found.report, base, context);
+}
+
+// A plan row's preview follows its acceptance, and only when something references the
+// target, since a refusal carries its own list.
+function acceptPlan(
+  result: PlanResult,
+  report: RefReport<string>,
+  base: RunBase,
+  context: OpContext,
+): boolean {
+  if (!result.ok) return refuse(result.refusals.join('\n'));
+  if (report.refs.length > 0) {
+    process.stdout.write(`${renderRefReport(report, base.flags['--json'])}\n`);
+  }
+  context.apply(result.plan);
+  context.findings.push(...result.plan.findings);
   return true;
 }
 
 async function runLegacy(
   row: Subcommand & { kind: 'legacy' },
-  base: Omit<SymbolRun, 'address' | 'found'>,
+  base: RunBase,
   context: OpContext,
-  address: SymbolRun['address'],
+  address: SymbolAddress,
   report: LegacyInput['report'],
 ): Promise<void> {
   await row.run({
@@ -241,6 +301,7 @@ async function main(): Promise<void> {
       project,
       findings,
       batch: manifest !== null,
+      texts: () => overlaidTexts(disk.snapshot().texts, engine),
       apply: (plan: Plan) => {
         if (!(last && flags['--dry'])) unsynced = foldPlan(plan, overlay, disk);
       },
