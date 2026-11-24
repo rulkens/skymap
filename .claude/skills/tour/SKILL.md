@@ -84,8 +84,8 @@ override (A/B live-tuning before it's baked as a default).
 ## Add-a-beat checklist
 
 1. Read the stage doc + the last few implementation-notes entries.
-2. **RED**: add the new `tour*` key to the expected-keys list in
-   `appClips.test.ts`, run that test, watch it fail.
+2. **RED**: write the beat's wrapper in `grandTourBeats.ts` with its `id:`;
+   `npm run typecheck` fails until the `appClips.ts` row exists (`ClipId`).
 3. Author the choreography in a new `src/compositions/tours/grandTour/<beat>.ts`
    (didactic module header explaining the beat's grammar and scene shifts).
 4. Wire three places: storyboard beat in `grandTour.ts` (caption from the

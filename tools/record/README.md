@@ -169,9 +169,11 @@ full take's hour-plus.
 npm run record-clip -- flyout
 ```
 
-Clip ids are the keys of `APP_CLIP_REGISTRY` (`src/compositions/appClips.ts`). Six ids are
+Clip ids are the keys of `APP_CLIP_REGISTRY` (`src/compositions/appClips.ts`). Ten ids are
 standalone clips and the interesting ones to record this way — `flyout`,
-`earthFlyout`, `flowOrbit`, `flyPathDemo`, `famousFlythrough`, `cosmicFlows`.
+`earthFlyout`, `sondermarkenFlyout`, `perseveranceToSondermarken`,
+`earthUniverseLoop`, `earthCosmicWebLoop`, `flowOrbit`, `flyPathDemo`,
+`famousFlythrough`, `cosmicFlows`.
 The rest (`tourXxx`) are grand-tour beats: they exist to be stitched into a
 tour's timeline, not played alone, so film them as a windowed tour take
 (`npm run record-tour -- grandTour --beats a..b`) instead.
