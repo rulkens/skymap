@@ -380,7 +380,7 @@ Owner ruling, 2026-11-24: a rename of `CameraPose.yaw` left 38 type errors becau
 declares its own `yaw` and the two are used interchangeably. The tool reports such sites itself.
 This reverses spec D7 for the three contract-changing rows.
 
-**Files:** `tools/@types/refactor/TypeError.d.ts` (create),
+**Files:** `tools/@types/refactor/TypeErrorSite.d.ts` (create),
 `tools/utils/refactor/engine/findTypeErrors.ts` (create),
 `tools/utils/refactor/renderTypeErrors.ts` (create), `tools/refactor/@types/{Subcommand,Flags}.d.ts`
 (modify), `tools/refactor/refactor.ts` (modify), a test file per new util,
@@ -388,28 +388,34 @@ This reverses spec D7 for the three contract-changing rows.
 `.claude/skills/refactor/SKILL.md`, the spec (modify)
 
 ```ts
-export type TypeError = {
+export type TypeErrorSite = {
   readonly file: string; // absolute, real case
   readonly line: number; // 1-based
   readonly column: number;
   readonly message: string; // first line of the diagnostic, with its TS code
 };
 
-/** Every semantic error in the engine's projects as the overlay stands, each site once. */
-export function findTypeErrors(engine: Engine): readonly TypeError[];
+/** The syntax and semantic errors of `files` as the overlay stands; each file is asked of its owning project. */
+export function findTypeErrors(engine: Engine, files: readonly string[]): readonly TypeErrorSite[];
+
+/** The files worth checking: those the run changed plus every TypeScript file naming one of its names. */
+export function checkCandidates(input: { texts; changed; names }): readonly string[];
+
+/** Sync the last fold, pick the candidates, check them; undefined when `enabled` is false. */
+export function checkRun(input: { enabled; engine; unsynced; texts; names }): { files; errors } | undefined;
 
 /** `N type error(s) after this change:` then one `file:line:col  message` row each, root-relative. */
-export function renderTypeErrors(errors: readonly TypeError[], root: string): string;
+export function renderTypeErrors(errors: readonly TypeErrorSite[], root: string): string;
 
 // Subcommand's Common grows:
 readonly checks: boolean; // run the type check on the folded result
 ```
 
-`findTypeErrors` uses `project.program.getSemanticDiagnostics()` (no argument: all files) on each
-of the engine's projects, keeps category Error, drops files under `node_modules`, and removes the
-duplicates a file in two projects produces. It lives in the engine folder and exposes no
-`typescript-native` type. Read `node_modules/typescript-native/dist/api/sync/api.d.ts` for the
-`Diagnostic` shape (position to line and column, message chains).
+`findTypeErrors` asks `getSyntacticDiagnostics(file)` and `getSemanticDiagnostics(file)` of the first
+project that owns each candidate file (a whole-program check costs 11 to 14 s through the API; the
+candidates are a fraction), keeps category Error and drops files under `node_modules`. It lives in the
+engine folder and exposes no `typescript-native` type. See `node_modules/typescript-native/dist/api/sync/api.d.ts`
+for the `Diagnostic` shape.
 
 Driver rules:
 
@@ -430,7 +436,7 @@ Tests:
 
 - [x] Contract test `findTypeErrors is empty on a clean fixture and reports an error introduced through the overlay`,
       asserting file, line and that the message carries a `TS` code.
-- [x] Contract test `findTypeErrors reports an error in a file of two projects once`.
+- [x] Contract test `findTypeErrors reports a syntax error the semantic check does not`.
 - [x] `renderTypeErrors` — `prints the count and root-relative file:line:col rows`.
 - [x] The twin case, at the fold level (`tests/tools/utils/refactor/typeCheckAfterRename.test.ts`):
       a fixture with `type A = { yaw: number }`, `type B = { yaw: number }` and

@@ -25,7 +25,7 @@ npm run refactor -- params-to-object <file>#<function>
 npm run move-files -- <from> <to>   # the only move command
 ```
 
-Global flags on every subcommand: `--dry` (report the blast radius, write nothing) and
+Global flags on every subcommand: `--dry` (report the blast radius and any findings, exit 1 on findings, write nothing) and
 `--manifest <ops.json>` (batch: each entry sees the earlier entries' edits, moved files
 included, and everything is written once after the last; a refusal on any entry writes
 nothing). `--json` (machine-readable) applies to the symbol subcommands
@@ -73,27 +73,35 @@ lists what it left broken. Exit 1 with a refusal means nothing was written.
 - **`prop-refs`**: `refs` for one property of an exported type (`<file>#Type.prop`, the type
   an object `type`/`interface` with the property as a direct member). Each use is one of
   `PropUseKind`: `read`, `write`, `shorthand-write`, `destructure`, `shorthand-destructure`,
-  `string-key`. A footer lists quoted mentions the engine cannot see: `'prop'` inside a
+  `string-key`, `doc-link` (a `{@link Type.prop}` in a comment). A footer lists quoted mentions the engine cannot see: `'prop'` inside a
   string-literal type (`Pick<T, 'prop'>`) in a file naming the type, or a string in a file
   using `keyof T`.
 
 - **`rename-prop`**: renames the property and every use. A shorthand keeps its local
   (`{ radius }` becomes `{ size: radius }`), and a `key: value` that becomes equal collapses
-  to the shorthand. Refuses an invalid name, the same name, or one the type already has.
-  Exit 1 after the write means quoted mentions to check by hand.
+  to the shorthand. Refuses an invalid name, the same name, or one the type already has,
+  a rename after which uses of another property named the same (a wider `Shape & { size }`)
+  would also answer to this one (nothing is written), and a property that an interface
+  re-declares from its base or a library type (`Sub.radius` beside `Base.radius`,
+  `Mine.length` beside `Array.length`): the engine treats them as one property, so change both
+  by hand. It rewrites `{@link}` mentions. Exit 1 after the write means quoted mentions to check by hand.
 
 - **`remove-prop`**: removes the declaration and every write that only builds it (object
   literal, JSX attribute, shorthand, a whole `a.prop = v;` statement). Refuses, listing
   every `file:line:col  kind`, while anything reads it (read, destructure, string key), and
-  for a write whose value does work (a call, `new`, `await`, an assignment) or that is
-  `+=`, `++` or `delete`. Same exit 1 rule for quoted mentions.
+  for a write whose value, or whose assignment target (`get().radius = 3;`), does work (a
+  call, `new`, `await`, an assignment) or that is `+=`, `++` or `delete`. A `{@link}` does
+  not block. Findings, exit 1: quoted mentions, a local that a cut shorthand leaves behind,
+  and a remaining doc-comment mention.
 
 - **`params-to-object`**: `area(w, h)` becomes `area({ w, h })`: signature and every call.
   Refuses, listing the sites, for any use that is not a call, import or re-export (callback,
   alias, `typeof`), overloads, an annotated `const`, a rest, `this` or destructured
-  parameter, a parameter without a type annotation, fewer than two parameters, and a call
-  that is a property access, has type arguments, is optional (`?.`), is a `new`, spreads, has
-  a comment between arguments, or contains another call of the same function.
+  parameter, a parameter without a type annotation, fewer than two parameters, a comment
+  before, between or after the parameters, a body that reads `arguments`, and a call that is
+  optional (`?.`), is a `new`, spreads, has a comment between arguments, or contains another
+  call of the same function. `ns.f(1, 2)` and `f<T>(a, b)` are rewritten. A finding (exit 1)
+  when the JSDoc has `@param` tags, which still describe the old parameters.
 
 - **The type check** (`rename-prop`, `remove-prop`, `params-to-object`): after the last
   entry is folded (also under `--dry`) the tool type checks the files the run changed plus
@@ -105,7 +113,8 @@ lists what it left broken. Exit 1 with a refusal means nothing was written.
   (`...orbitAnglesLookingAlong(...)` spread into a pose) never names it and is missed, so
   `npm run typecheck:fast` stays the full check. A whole-program check through the API costs
   11 to 14 s (measured 2026-11-24). It reports every error in the checked files, so one that
-  was there before the run shows too (no baseline is computed). `--no-check` skips it.
+  was there before the run shows too (no baseline is computed). Syntax errors count. The pass
+  line goes to stderr, so `--json` stays parseable. `--no-check` skips it.
 
 - **Moving files** is `npm run move-files -- <from> <to>` (or `--manifest <moves.json>` with
   `[{from,to}, ...]`), not a `refactor` subcommand. See [`move-files`](#move-files) below.
