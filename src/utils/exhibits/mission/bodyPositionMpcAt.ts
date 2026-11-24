@@ -19,11 +19,8 @@ export function bodyPositionMpcAt(id: string, simDays: number): Vec3 {
     case 'anchor':
       return driver.positionMpc;
     case 'orbit':
-      return orbitRowPlacement(
-        driver.elements,
-        bodyPositionMpcAt(driver.elements.focusId, simDays),
-        simDays,
-      ).positionMpc;
+      return orbitRowPlacement(driver, bodyPositionMpcAt(driver.elements.focusId, simDays), simDays)
+        .positionMpc;
     case 'sampled': {
       const track = trajectoryRegistry.get(id);
       if (track === undefined) return bodyPositionMpcAt('earth', simDays);

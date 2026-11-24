@@ -8,6 +8,7 @@
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
+import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
 import { EARTH } from './planets/earth';
 import { MERCURY } from './planets/mercury';
 import { VENUS } from './planets/venus';
@@ -45,7 +46,7 @@ import { VESTA } from './smallBodies/vesta';
 import { CERES } from './smallBodies/ceres';
 import { BENNU } from './smallBodies/bennu';
 
-export const BODY_BODY_ROWS: readonly LayerBody[] = [
+const AUTHORED_ROWS: readonly LayerBody[] = [
   EARTH,
   MERCURY,
   VENUS,
@@ -83,3 +84,11 @@ export const BODY_BODY_ROWS: readonly LayerBody[] = [
   CERES,
   BENNU,
 ];
+
+// Joined here rather than pasted into each row: the generated file stays the one statement of
+// which bodies are corrected, and regenerating it touches no authored row.
+export const BODY_BODY_ROWS: readonly LayerBody[] = AUTHORED_ROWS.map((row) => {
+  const correction = EPHEMERIS_CORRECTIONS[row.body.id];
+  if (correction === undefined || row.position.kind !== 'orbit') return row;
+  return { ...row, position: { ...row.position, correction } };
+});

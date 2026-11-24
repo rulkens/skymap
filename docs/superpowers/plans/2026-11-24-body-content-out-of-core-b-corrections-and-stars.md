@@ -103,17 +103,17 @@ export function orbitRowPlacement(
 **Stop and report if:** any reader of `BodyPosition['kind']` or `PositionDriver` is an exhaustive
 switch that the `anchor` arm breaks in a way that needs a decision.
 
-- [ ] Before editing, record positions for every id from `deriveBodyStates` at two instants
+- [x] Before editing, record positions for every id from `deriveBodyStates` at two instants
       (J2000 + 300 d, J2000 + 9000 d) to a scratch file; not committed.
-- [ ] Add the test `every corrected id carries its correction on its row` (each key of
+- [x] Add the test `every corrected id carries its correction on its row` (each key of
       `EPHEMERIS_CORRECTIONS` is a `BODY_BODY_ROWS` orbit row whose `correction` is that entry).
-- [ ] Rewrite the reflex test in `deriveBodyStates.test.ts:154` to read the mass fraction off
+- [x] Rewrite the reflex test in `deriveBodyStates.test.ts:154` to read the mass fraction off
       Earth's row instead of `BARYCENTRIC_REFLEX_BY_PRIMARY`.
-- [ ] Implement.
-- [ ] Positions at both instants equal the recorded ones exactly, id for id.
-- [ ] `npm test -- deriveBodyStates bodyPositionMpcAt ephemerisCorrections bodyBodyRows positionDrivers missionFrame`
+- [x] Implement.
+- [x] Positions at both instants equal the recorded ones exactly, id for id.
+- [x] `npm test -- deriveBodyStates bodyPositionMpcAt ephemerisCorrections bodyBodyRows positionDrivers missionFrame`
       and `npm run typecheck:fast` pass.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2: The corrections file lives in the body Layer
 
