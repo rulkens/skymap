@@ -35,6 +35,19 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
 import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
+import type { EngineHomeConfig } from '../../../src/@types/engine/EngineHomeConfig';
+import { APP_HOME } from '../../../src/compositions/appHome';
+
+// Lets one case swap the composition's home; every other case reads the real APP_HOME.
+const homeOverride = vi.hoisted(() => ({ value: null as EngineHomeConfig | null }));
+vi.mock('../../../src/compositions/appHome', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/compositions/appHome')>();
+  return {
+    get APP_HOME() {
+      return homeOverride.value ?? actual.APP_HOME;
+    },
+  };
+});
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
@@ -66,6 +79,7 @@ function focusedOn(row: SelectionRowBase, focusId: string): RootState {
 
 afterEach(() => {
   vi.useRealTimers();
+  homeOverride.value = null;
 });
 
 describe('focus row', () => {
@@ -105,8 +119,14 @@ describe('focus row', () => {
     expect(focusSource.write(state)).toBe('m31');
   });
 
-  it('writes nothing for the Earth home body (a bare URL is home)', () => {
-    expect(focusSource.write(focusedOn(earthRow, 'body-earth'))).toBeNull();
+  it("a focus that is the composition's home composes no param", () => {
+    const homeId = APP_HOME.focus!.ref.id;
+    expect(focusSource.write(focusedOn(bodyRowAt(homeId, [0, 0, 0]), `body-${homeId}`))).toBeNull();
+  });
+
+  it('with a null-focus home, a focused body composes its param', () => {
+    homeOverride.value = { focus: null, seedSelection: false };
+    expect(focusSource.write(focusedOn(earthRow, 'body-earth'))).toBe('body-earth');
   });
 });
 

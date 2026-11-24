@@ -90,7 +90,7 @@ import { takeoverEnded, takeoverStarted } from '../takeover/takeoverActions';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
-import { EARTH_REF } from '../../data/selection/earthRef';
+import { APP_HOME } from '../../compositions/appHome';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
@@ -148,15 +148,16 @@ const focusSource: HashParamSource = {
     const focusId = selectFocusId(state);
     if (focusId === null) return null;
 
-    // Earth is the boot 'home' state: `wireInput` seeds it into focus so the
-    // camera frames Earth, but home is the canonical EMPTY URL. Like the
+    // The composition's home is the boot state: `wireInput` seeds it into focus
+    // so the camera frames it, but home is the canonical EMPTY URL. Like the
     // `orientation` row's DEFAULT_ORIENTATION and the `t` row's live mode, the
     // home target composes no param, so a fresh load stays a bare URL. Compared
-    // against EARTH_REF (the one home declaration) rather than a literal so the
-    // omit rule cannot drift from the seed. The read is unaffected, so an
-    // explicit `body-earth` from an old shared link still resolves on arrival.
+    // against APP_HOME (the declaration the seed reads) so the omit rule cannot
+    // drift from the seed. The read is unaffected, so an explicit `body-earth`
+    // from an old shared link still resolves on arrival.
     const focusRow = selectFocusRow(state);
-    if (isKind<BodySelectionRow>(focusRow, 'body') && focusRow.id === EARTH_REF.id) {
+    const homeId = APP_HOME.focus?.ref.id;
+    if (isKind<BodySelectionRow>(focusRow, 'body') && focusRow.id === homeId) {
       return null;
     }
 
