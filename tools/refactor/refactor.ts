@@ -22,7 +22,7 @@ import { openEngine } from '../utils/refactor/engine/openEngine';
 import { syncOverlay } from '../utils/refactor/engine/syncOverlay';
 import { foldPlan } from '../utils/refactor/foldPlan';
 import { normaliseAddress } from '../utils/refactor/normaliseAddress';
-import { parseSymbolAddress } from '../utils/refactor/parseSymbolAddress';
+import { parseTarget } from '../utils/refactor/parseTarget';
 import { planDelete } from '../utils/refactor/planDelete';
 import { planRename } from '../utils/refactor/planRename';
 import { readManifest } from '../utils/refactor/readManifest';
@@ -36,7 +36,8 @@ import type { OpContext } from './@types/OpContext';
 import type { Overlay } from '../@types/refactor/Overlay';
 import type { OverlayChanges } from '../@types/refactor/OverlayChanges';
 import type { Plan } from '../@types/refactor/Plan';
-import type { RunInput } from './@types/RunInput';
+import type { Target } from '../@types/refactor/Target';
+import type { SymbolRun } from './@types/SymbolRun';
 import type { Subcommand } from './@types/Subcommand';
 
 const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bool' } as const;
@@ -45,6 +46,7 @@ const FLAG_SCHEMA = { '--dry': 'bool', '--json': 'bool', '--no-file-rename': 'bo
 // `plan` row only describes what to change. `arity` is how many positionals the row needs.
 const SUBCOMMANDS: readonly Subcommand[] = [
   {
+    accepts: 'symbol',
     kind: 'plan',
     name: 'rename',
     arity: 2,
@@ -61,6 +63,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
       }),
   },
   {
+    accepts: 'symbol',
     kind: 'legacy',
     name: 'extract',
     arity: 2,
@@ -71,6 +74,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     },
   },
   {
+    accepts: 'symbol',
     kind: 'legacy',
     name: 'inline',
     arity: 1,
@@ -81,6 +85,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
     },
   },
   {
+    accepts: 'symbol',
     kind: 'plan',
     name: 'delete',
     arity: 1,
@@ -89,6 +94,7 @@ const SUBCOMMANDS: readonly Subcommand[] = [
       planDelete({ found, root: engine.root, read, exists }),
   },
   {
+    accepts: 'symbol',
     kind: 'report',
     name: 'refs',
     arity: 1,
@@ -102,6 +108,13 @@ const USAGE = `Usage: refactor <subcommand> <args...> [--dry] [--json]
 ${SUBCOMMANDS.map((row) => `  ${row.usage}`).join('\n')}
 
 Batch form (any subcommand): refactor <subcommand> --manifest <ops.json>`;
+
+// Before any engine query: a property address given to a symbol row, or the other way.
+function wrongKind(row: Subcommand, target: string, given: Target['kind']): string {
+  const use = SUBCOMMANDS.filter((other) => other.accepts === given).map((other) => other.name);
+  const noun = given === 'prop' ? 'property' : 'symbol';
+  return `refactor ${row.name}: '${target}' is a ${noun} address; use ${use.join(', ')}.`;
+}
 
 function refuse(message: string): false {
   process.stderr.write(`${message}\n`);
@@ -117,7 +130,7 @@ function refuse(message: string): false {
 // carries its own list.
 async function runOp(
   row: Subcommand,
-  base: Omit<RunInput, 'address' | 'found'>,
+  base: Omit<SymbolRun, 'address' | 'found'>,
   context: OpContext,
 ): Promise<boolean> {
   const { engine, positionals } = base;
@@ -125,7 +138,9 @@ async function runOp(
   if (target === undefined || positionals.length < row.arity) {
     throw new Error(`refactor ${row.name}: missing arguments.\n  ${row.usage}`);
   }
-  const typed = parseSymbolAddress(target);
+  const parsed = parseTarget(target);
+  if (parsed.kind !== 'symbol') throw new Error(wrongKind(row, target, parsed.kind));
+  const typed = { file: parsed.file, symbol: parsed.symbol };
   const normal = normaliseAddress(engine.root, typed);
   const found = normal.ok
     ? collectRefs({ address: normal.address, engine, read: base.read })
@@ -160,9 +175,9 @@ async function runOp(
 
 async function runLegacy(
   row: Subcommand & { kind: 'legacy' },
-  base: Omit<RunInput, 'address' | 'found'>,
+  base: Omit<SymbolRun, 'address' | 'found'>,
   context: OpContext,
-  address: RunInput['address'],
+  address: SymbolRun['address'],
   report: LegacyInput['report'],
 ): Promise<void> {
   await row.run({

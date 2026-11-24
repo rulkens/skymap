@@ -86,18 +86,18 @@ export type Subcommand = Common &
 each get their own `.d.ts` in `tools/refactor/@types/`. `FoundPropRefs` arrives in Task 2; in this
 task no row accepts `'prop'` yet, so declare `PropRun` in Task 2.
 
-- [ ] Rename with the tool itself: `npm run refactor -- rename tools/utils/refactor/parseSymbolAddress.ts#parseSymbolAddress parseTarget`
+- [x] Rename with the tool itself: `npm run refactor -- rename tools/utils/refactor/parseSymbolAddress.ts#parseSymbolAddress parseTarget`
       (it renames the file and its test). Trim the file's header to budget while there.
-- [ ] `parseTarget`: the part after `#` with exactly one `.` is a prop address
+- [x] `parseTarget`: the part after `#` with exactly one `.` is a prop address
       (`Shape.radius`); with none, a symbol address. More than one `.`, or an empty half, throws
       with the offending input, like today's messages (`parseSymbolAddress.ts:42-60`).
-- [ ] The five existing rows gain `accepts: 'symbol'`. A row given the other kind fails before any
+- [x] The five existing rows gain `accepts: 'symbol'`. A row given the other kind fails before any
       engine query: `refactor rename: 'Shape.radius' is a property address; use rename-prop.`
       (and the mirror message naming the symbol subcommands).
-- [ ] Tests: `parseTarget reads file#Type.prop as a prop address`;
+- [x] Tests: `parseTarget reads file#Type.prop as a prop address`;
       `parseTarget reads file#symbol as a symbol address`; `parseTarget rejects two dots`;
       in `tests/tools/refactor/cliArguments.test.ts`, `a symbol row refuses a property address and names rename-prop`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2: `prop-refs`
 
