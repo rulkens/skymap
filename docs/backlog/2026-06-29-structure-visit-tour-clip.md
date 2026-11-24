@@ -13,7 +13,7 @@ The **focus-isolation primitive already shipped**:
 
 - `SceneEffect` `focus` arm drives structure-isolation dim (the `focusRecession` channel) — `src/@types/animation/SceneEffect.ts`.
 - `FocusBoundEffect` + `focusId()` resolve durable structure ids at playback — `src/@types/animation/FocusBoundEffect.ts`, `src/utils/animation/focusId.ts`.
-- The `webShowcase` tour already isolates the Virgo Cluster (`flyAndFocusOnClip(focusId(...))`, `suspendDuringClip`) — `src/data/animation/tours/webShowcase.ts`.
+- The `webShowcase` tour already isolates the Virgo Cluster (`flyAndFocusOnClip(focusId(...))`, `suspendDuringClip`) — `src/compositions/tours/webShowcase.ts`.
 
 But `ClipId` is a closed union of three hand-authored clips (`'cosmicFlows' | 'flyout' | 'flowOrbit'`, `src/@types/animation/ClipId.ts:13`; `clipRegistry.ts`), and `webShowcase.ts` hardcodes the Virgo/M87 beats. There is **no** generic "visit any featured structure" clip factory.
 
