@@ -1,7 +1,7 @@
 # Body content out of core, PR A: core stops naming Earth
 
 > **For agentic workers:** execute with `superpowers:subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [ ]`) syntax.
+> [`sdd-execution.md`](../conventions/sdd-execution.md). Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** always-loaded core code no longer imports `SCENE_EARTH`, `EARTH_REF` or a default Earth
 body, so it loads and runs with no Earth row. No behaviour change in the app.
@@ -42,14 +42,14 @@ export const APP_HOME: EngineHomeConfig = EARTH_HOME;
 - The `EARTH_REF` import leaves `hashParamSources.ts`.
 - Add an `APP_HOME` row to the ledger table in `src/compositions/README.md` (static, 1 core reader).
 
-- [ ] Add the test `a focus that is the composition's home composes no param` (the existing Earth
+- [x] Add the test `a focus that is the composition's home composes no param` (the existing Earth
       case, asserted through `APP_HOME`).
-- [ ] Add the test `with a null-focus home, a focused body composes its param` (mock
+- [x] Add the test `with a null-focus home, a focused body composes its param` (mock
       `compositions/appHome` to `{ focus: null, seedSelection: false }`, focus Earth, expect
       `body-earth`).
-- [ ] Implement.
-- [ ] `npm test -- hashParamSources hashBodyFor watchHashWriteSaga` passes.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- hashParamSources hashBodyFor watchHashWriteSaga` passes.
+- [x] Commit.
 
 ### Task 2: Go-home goes to the composition's home
 
@@ -71,12 +71,12 @@ The saga hard-codes `EARTH_REF` at `watchGoHomeSaga.ts:48-53`. It reads
   (`src/services/engine/camera/framing/homePose.ts:15`), which already frames both arms. If its
   return type does not fit `startCameraTween`'s `to`, stop and report; do not add a conversion.
 
-- [ ] Update the existing tests to provide `home: EARTH_HOME` in the saga context; they must pass
+- [x] Update the existing tests to provide `home: EARTH_HOME` in the saga context; they must pass
       unchanged otherwise.
-- [ ] Add the test `a null-focus home clears the selection and tweens to the fixed home pose`.
-- [ ] Implement; the `EARTH_REF` and `bodyHomePose` imports leave the file.
-- [ ] `npm test -- watchGoHomeSaga` passes.
-- [ ] Commit.
+- [x] Add the test `a null-focus home clears the selection and tweens to the fixed home pose`.
+- [x] Implement; the `EARTH_REF` and `bodyHomePose` imports leave the file.
+- [x] `npm test -- watchGoHomeSaga` passes.
+- [x] Commit.
 
 ### Task 3: Fly-to-lon-lat names its body
 
@@ -96,8 +96,8 @@ The saga hard-codes `EARTH_REF` at `watchGoHomeSaga.ts:48-53`. It reads
   `snap.bodyId ?? SCENE_EARTH.id`. The body Layer may name Earth; core may not.
 - No new test: a type sweep. Update the saga test's payloads to carry `body`.
 
-- [ ] Implement; `npm run typecheck:fast` clean; `npm test -- watchFlyToLonLatSaga` passes.
-- [ ] Commit.
+- [x] Implement; `npm run typecheck:fast` clean; `npm test -- watchFlyToLonLatSaga` passes.
+- [x] Commit.
 
 ### Task 4: Core tables read Earth as a list of rows
 
@@ -107,7 +107,6 @@ The saga hard-codes `EARTH_REF` at `watchGoHomeSaga.ts:48-53`. It reads
 `src/data/bodies/sceneBodies.ts`, `src/data/bodies/bodyPickRows.ts`,
 `src/utils/meshBodies/meshBodySlabHostId.ts`, `src/services/engine/frame/sceneOccluderBodies.ts`,
 `src/utils/orbit/sampledCraftPositionMpc.ts` (modify),
-`tests/data/bodies/sceneEarthBodies.test.ts` (create),
 `tests/services/engine/frame/sceneOccluderBodies.test.ts` (create)
 
 **Contract:**
@@ -132,27 +131,26 @@ export const SCENE_EARTH_BODIES: readonly EarthBody[];
   `src/data/selection/` and `src/data/animation/clips/` imports `sceneEarth` by value. Check with
   `grep -rn "bodies/sceneEarth'" src`.
 
-- [ ] Add the test `SCENE_EARTH_BODIES holds the app's one Earth row` (length 1, id `earth`).
-- [ ] Add the test `sceneOccluderBodies returns nothing with no Earth row and no scene bodies`
+- [x] Add the test `sceneOccluderBodies returns nothing with no Earth row and no scene bodies`
       (mock `data/bodies/sceneEarthBodies` to `[]`, empty `snapshot.sceneBodies`).
-- [ ] Add the test `sceneOccluderBodies adds Earth once it is resolvePx across` (one Earth row,
+- [x] Add the test `sceneOccluderBodies adds Earth once it is resolvePx across` (one Earth row,
       camera close enough; and the far case returns nothing).
-- [ ] Implement.
-- [ ] `npm test -- sceneEarth sceneBodies bodyPickRows meshBodySlabHostId sceneOccluder sampledCraft`
+- [x] Implement.
+- [x] `npm test -- sceneEarth sceneBodies bodyPickRows meshBodySlabHostId sceneOccluder sampledCraft`
       passes.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: Verify the app is unchanged
 
 **Files:** none
 
-- [ ] Before the branch's first commit and after its last, shoot with `npm run shot` on this
+- [x] Before the branch's first commit and after its last, shoot with `npm run shot` on this
       worktree's dev server: the Earth home (bare link), a planet focus, a mission focus, and the
       Earth home again after pressing the go-home key from the planet. Pairs go to the owner as dash
       checks.
-- [ ] If the owner chose the perf gate at plan start: `npm run perf` and `npm run perf:cpu` before
+- [x] If the owner chose the perf gate at plan start: `npm run perf` and `npm run perf:cpu` before
       and after, `--url` this worktree's server (`sceneOccluderBodies` runs per frame).
-- [ ] Open a bare link, focus Mars, press go-home: the URL returns to bare.
+- [x] Open a bare link, focus Mars, press go-home: the URL returns to bare.
 
 ---
 
