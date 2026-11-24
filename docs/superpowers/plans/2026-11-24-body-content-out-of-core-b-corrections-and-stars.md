@@ -174,15 +174,15 @@ export const STAR_CATALOG_BODY_ROWS: readonly LayerBody[];
 `SCENE_ANCHORS` or `ORBITAL_ELEMENTS` (the ground map found none), or the id set of any of the
 three changes.
 
-- [ ] Before editing, record the id lists of `SCENE_BODIES`, `SCENE_ANCHORS`, `ORBITAL_ELEMENTS`
+- [x] Before editing, record the id lists of `SCENE_BODIES`, `SCENE_ANCHORS`, `ORBITAL_ELEMENTS`
       and the two-instant positions as in Task 1; not committed.
-- [ ] Add the test `every seeded star is a body row, once` (the ids of `STAR_CATALOG_BODY_ROWS`
+- [x] Add the test `every seeded star is a body row, once` (the ids of `STAR_CATALOG_BODY_ROWS`
       equal the ids across `SEEDED_STAR_CATALOGS`, no duplicates).
-- [ ] Implement.
-- [ ] Same id sets, and positions equal at both instants.
-- [ ] `npm test -- sceneAnchors sceneBodies orbitalElements bodyRegions deriveBodyStates composeSelectionRows starPointsPass starSpheresPass decodeStarFocusId encodeStarFocusId layerImportBoundary`
+- [x] Implement.
+- [x] Same id sets, and positions equal at both instants.
+- [x] `npm test -- sceneAnchors sceneBodies orbitalElements bodyRegions deriveBodyStates composeSelectionRows starPointsPass starSpheresPass decodeStarFocusId encodeStarFocusId layerImportBoundary`
       passes.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: The star files move into the star Layer
 

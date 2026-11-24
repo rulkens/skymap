@@ -6,7 +6,6 @@
 
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
-import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
 import { SAMPLED_BODIES } from './sampledBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
@@ -22,9 +21,6 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
       id: anchor.id,
       positionMpc: anchor.positionMpc,
     }),
-  ),
-  ...S_STAR_ORBITAL_ELEMENTS.map(
-    (elements): PositionDriver => ({ kind: 'orbit', id: elements.id, elements }),
   ),
   ...APP_BODY_REGISTRY.flatMap(({ position }): PositionDriver[] => {
     if (position.kind !== 'orbit') return [];

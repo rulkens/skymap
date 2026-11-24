@@ -13,8 +13,8 @@
  *     so this is the one place that boundary is crossed.
  *
  * The row's RA/Dec/distance are NOT read here: a star's position is a root of
- * the focus graph, so it becomes a `SCENE_ANCHORS` row via `starAnchor` rather
- * than a field on the drawn record.
+ * the focus graph, so it becomes the `anchor` position of the star Layer's body
+ * row rather than a field on the drawn record.
  *
  * Lives beside `SCENE_STARS` in `makers/` rather than in `src/utils/`: it is
  * authoring policy, has a single consumer (the stars table), and maker and

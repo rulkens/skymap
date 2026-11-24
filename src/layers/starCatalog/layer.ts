@@ -10,6 +10,7 @@ import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { starCatalogLayerSettings } from './state/slices';
 import { starCatalogVisibility } from './visibility';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
+import { STAR_CATALOG_BODY_ROWS } from './bodies/starCatalogBodyRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { starCatalogPlanner } from './frame';
@@ -39,6 +40,7 @@ export const starCatalogLayer = defineLayer({
   settings: starCatalogLayerSettings,
   visibility: starCatalogVisibility,
   sources: STAR_CATALOG_SOURCE_ROWS,
+  bodies: STAR_CATALOG_BODY_ROWS,
   facts: { famousStarsMeta: [], chunkSlotsError: null } as StarCatalogFacts,
   targets: [STAR_AGGREGATES_TARGET],
   create,

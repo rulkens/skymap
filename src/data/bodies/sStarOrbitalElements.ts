@@ -1,8 +1,8 @@
 /**
  * S_STAR_ORBITAL_ELEMENTS — the 39 bound S-stars, converted once from
- * `sStarElements.ts`'s raw seeds. Read twice: `orbitalElements.ts` spreads it
- * into `ORBITAL_ELEMENTS` (positions), and the star Layer's `guides.orbitTrails`
- * reads it for trails — declared once here so neither reader owns the other.
+ * `sStarElements.ts`'s raw seeds. Read twice: the star Layer's body rows
+ * (positions) and its `guides.orbitTrails` (trails) — declared once here so
+ * neither reader owns the other.
  */
 
 import { sStar } from './makers/sStar';
