@@ -1,7 +1,7 @@
 # Body content out of core: design spec
 
-> **Status.** Draft, 2026-11-24. Owner: Alexander Rulkens. The owner ruled the design the same day
-> in two dash sets (§2); nothing is coded.
+> **Status.** Shipped 2026-11-24 in PRs #1155, #1157, #1162, #1164 and the PR that files this spec.
+> Owner: Alexander Rulkens. Decision recorded in ADR 0016 (`docs/adrs/0016-body-content-rides-layer-rows.md`).
 > **Written against** main at b22840624.
 > **Inputs.** The galaxies-only spike of 2026-11-23/24 (uncommitted, worktree
 > `galaxies-only-reference-engine`; its tools are copied into this worktree's

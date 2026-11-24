@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 import { walkFiles } from '../../helpers/conventions/walkFiles';
+import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../src/data/rendering/foregroundMaxDistance';
 import { FOREGROUND_FALLBACK_DISTANCE_MPC } from '../../../src/data/rendering/foregroundFallbackDistanceMpc';
 
@@ -31,6 +32,12 @@ describe('FOREGROUND_MAX_DISTANCE_MPC value', () => {
     expect(FOREGROUND_MAX_DISTANCE_MPC).toBeLessThan(0.6);
   });
 
+  // Bug caught: the fallback (0.23) sits inside the range above, so without this the app value
+  // could silently be the fallback.
+  it('is derived from the app regions, not the fallback', () => {
+    expect(Math.max(...BODY_REGIONS.map((region) => region.extentMpc))).toBeGreaterThan(0);
+  });
+
   // Bug caught: a composition with no bodies zeroes every extent, inverting `SURVEY_DEEP_ZOOM`
   // so the survey fades out at every distance.
   it('falls back when no region has an extent, so the survey band stays upright', async () => {
@@ -42,7 +49,9 @@ describe('FOREGROUND_MAX_DISTANCE_MPC value', () => {
 
     expect(empty).toBe(FOREGROUND_FALLBACK_DISTANCE_MPC);
     expect(SURVEY_DEEP_ZOOM.in[0]).toBeLessThan(SURVEY_DEEP_ZOOM.in[1]);
+  });
 
+  afterEach(() => {
     vi.doUnmock('../../../src/compositions/appBodies');
     vi.resetModules();
   });

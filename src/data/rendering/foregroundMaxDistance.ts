@@ -19,7 +19,6 @@
  * (0.6 Mpc, the `youAreHere` band in `milkyWay/visibility.ts`) — this
  * gate is `SURVEY_DEEP_ZOOM`'s full edge, and the earlier ×1000 dimmed the "You
  * are here" label in the Local Group. Both edges are pinned by this file's test.
- * No bodies composed zeroes every extent; the fallback keeps that band upright.
  */
 
 import { BODY_REGIONS } from '../bodies/bodyRegions';
@@ -29,5 +28,6 @@ const MARGIN = 100;
 
 const DERIVED_MPC = Math.max(...BODY_REGIONS.map((region) => region.extentMpc)) * MARGIN;
 
+// No bodies composed zeroes every extent; the fallback keeps SURVEY_DEEP_ZOOM upright.
 export const FOREGROUND_MAX_DISTANCE_MPC =
   DERIVED_MPC > 0 ? DERIVED_MPC : FOREGROUND_FALLBACK_DISTANCE_MPC;

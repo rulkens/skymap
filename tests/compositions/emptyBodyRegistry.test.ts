@@ -1,7 +1,7 @@
 // Bug caught: core naming a body at load again (a module-scope `SCENE_EARTH`, a planet id
 // looked up by `findByIdOrThrow`), so a composition with no body rows throws before it draws.
-// Only the app registries that themselves state body content get a stand-in; the rest stay
-// real, and every extra mock is a hole in the guard.
+// The stand-ins replace the registries that reach body content at load (`appVisibility` and
+// `appSettingsSlices` are emptied whole); the rest stay real, and every mock is a hole in the guard.
 
 import { describe, expect, it, vi } from 'vitest';
 
