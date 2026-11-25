@@ -2,11 +2,12 @@
  * The body Layer: owns the body settings clusters (`bodies`, `earth`, `orbitTrails`),
  * their visibility entries, the Orbit trails toggle row, the Earth, planet and moon
  * body rows with their source rows, the `body` selection kind and card, palette rows,
- * name captions, orbit trails, the Solar System exhibit and the Earth and planet slab
- * rows. It draws Earth, the planets, moons and rings: its own renderers, texture slots,
- * passes and the two atmosphere computes. It streams and plans the surface tiles, is
- * the ground core's camera reads, and publishes the DebugPanel's tile readouts. The
- * shape-model moons and asteroids draw through core's one mesh handle, from its own mesh rows.
+ * name captions, orbit trails, the sampled small bodies' track load and trails, the Solar
+ * System exhibit and the Earth and planet slab rows. It draws Earth, the planets, moons
+ * and rings: its own renderers, texture slots, passes and the two atmosphere computes. It
+ * streams and plans the surface tiles, is the ground core's camera reads, and publishes the
+ * DebugPanel's tile readouts. The shape-model moons and asteroids draw through core's one
+ * mesh handle, from its own mesh rows.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -41,6 +42,9 @@ import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
+import { BODY_SAMPLED_TRAIL_ROWS } from './sampledTrails/data/bodySampledTrailRows';
+import { BODY_TRACK_IDS } from './sampledTrails/data/bodyTrackIds';
+import { loadSampledTracksSaga } from '../../services/bodies/loadSampledTracksSaga';
 import { bodyLabelSource } from './labels/present/bodyLabelSource';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
@@ -90,7 +94,7 @@ export const bodyLayer = defineLayer({
     ...meshPresentationsOf(BODY_BODY_ROWS).map((p) => meshAssetRow(runtime.meshBodies, p)),
   ],
   planners: (runtime) => [surfaceTilePlanner(runtime), atmosphereRosterPlanner],
-  sagas: [watchDebugPanelWakeSaga],
+  sagas: [watchDebugPanelWakeSaga, loadSampledTracksSaga(BODY_TRACK_IDS)],
   heightAt,
   guides: (runtime) => ({
     screenLabels: [bodyLabelSource(runtime)],
@@ -98,6 +102,12 @@ export const bodyLayer = defineLayer({
       show: 'orbitTrails',
       rows: BODY_TRAIL_ELEMENTS,
       selectedOnly: SMALL_BODY_TRAIL_IDS,
+    },
+    // 2026 QQ8's months near Earth read as loops only in Earth's frame.
+    sampledTrails: {
+      show: 'orbitTrails',
+      rows: BODY_SAMPLED_TRAIL_ROWS,
+      nearPlanets: () => true,
     },
   }),
   selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },
