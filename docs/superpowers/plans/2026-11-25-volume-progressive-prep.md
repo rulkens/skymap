@@ -266,10 +266,15 @@ Steps:
       `STEP_COUNT`. The fact text (`packages/website/src/data/docsRenderingFacts.ts:166-170`)
       still says 128.
 - [x] `npm run typecheck:fast`, `npm test -- volumeField createScalarVolumePass docsRenderingFacts`.
-- [ ] Controller, after the commit: shoot an inside-the-MCPM-cube pose, mono and dome, on main and
+- [x] Controller, after the commit: shoot an inside-the-MCPM-cube pose, mono and dome, on main and
       on this branch (`npm run shot`), and send the pairs to the dash as a check: same structure
       and brightness, grain only. Pixels cannot match exactly, because the jitter phase now
       follows `frameIndex` and a shot renders an arbitrary number of frames.
+      Done 2026-11-25 at `pose=a,-239.45,-16.5,201.3,0.5,0.3,600,0`, base 8809f9478 vs tip, 8-bit
+      RGB: volume off identical (RMS 0, mono and dome); volume on mono RMS 0.85 / max 34 / mean
+      shift 0.004 against a tip-vs-tip run-to-run RMS 0.86, dome RMS 0.29 / max 22, diff is
+      unstructured grain inside the volume's footprint. At this pose the volume lands in the
+      fisheye's front only, the same on both, so five-face coverage was not exercised.
 
 **Done when:**
 
