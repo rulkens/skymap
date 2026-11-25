@@ -10,12 +10,12 @@ import type { ToastAction } from '../../../../@types/ui/ToastAction';
 import Button from '../../../../../../src/components/common/Button/Button';
 import styles from './Toast.module.css';
 
-type Props = {
+type ToastProps = {
   readonly message: string;
   readonly action?: ToastAction;
 };
 
-function Toast({ message, action }: Props): ReactNode {
+function Toast({ message, action }: ToastProps): ReactNode {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     ref.current?.showPopover();

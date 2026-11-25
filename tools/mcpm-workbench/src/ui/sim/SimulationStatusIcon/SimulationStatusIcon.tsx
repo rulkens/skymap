@@ -11,11 +11,11 @@ import LoopPlayIcon from '../../icons/LoopPlayIcon/LoopPlayIcon';
 import { useFrameRateZone } from './useFrameRateZone';
 import styles from './SimulationStatusIcon.module.css';
 
-type Props = {
+type SimulationStatusIconProps = {
   readonly size: number;
 };
 
-function SimulationStatusIcon({ size }: Props): ReactNode {
+function SimulationStatusIcon({ size }: SimulationStatusIconProps): ReactNode {
   const running = useAppSelector(selectSimRunning);
   const zone = useFrameRateZone();
 

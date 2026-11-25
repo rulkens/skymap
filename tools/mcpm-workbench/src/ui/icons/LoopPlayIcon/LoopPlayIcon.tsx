@@ -3,12 +3,12 @@
 import type { ReactNode } from 'react';
 import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
 
-type Props = Pick<IconProps, 'size'> & {
+type LoopPlayIconProps = Pick<IconProps, 'size'> & {
   /** On the looping arrow alone, so it can turn while the play mark stays upright. */
   readonly loopClassName?: string;
 };
 
-function LoopPlayIcon({ size, loopClassName }: Props): ReactNode {
+function LoopPlayIcon({ size, loopClassName }: LoopPlayIconProps): ReactNode {
   return (
     <Icon size={size}>
       <path className={loopClassName} d="M20 12a8 8 0 1 1-2.35-5.65M20 4v4.5h-4.5" />

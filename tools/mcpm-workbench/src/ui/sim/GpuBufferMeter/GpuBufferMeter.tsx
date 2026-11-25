@@ -12,12 +12,12 @@ import { formatBytePair } from './utils/formatBytePair';
 import { gpuBufferReading } from './utils/gpuBufferReading';
 import styles from './GpuBufferMeter.module.css';
 
-type Props = {
+type GpuBufferMeterProps = {
   readonly usedBytes: number;
   readonly limitBytes: number | null;
 };
 
-function GpuBufferMeter({ usedBytes, limitBytes }: Props): ReactNode {
+function GpuBufferMeter({ usedBytes, limitBytes }: GpuBufferMeterProps): ReactNode {
   const reading = gpuBufferReading(usedBytes, limitBytes);
   const pair = reading && limitBytes !== null ? formatBytePair(usedBytes, limitBytes) : null;
 
