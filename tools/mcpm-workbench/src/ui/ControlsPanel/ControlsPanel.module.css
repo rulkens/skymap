@@ -40,6 +40,7 @@
    two children), not here, so the header's divider runs edge to edge. No grid
    gap: the header's own 14px bottom margin already spaces a collapsed one. */
 .scroll > div > div {
+  box-sizing: border-box; /* the header is width: 100% */
   padding-inline: 22px;
 }
 
