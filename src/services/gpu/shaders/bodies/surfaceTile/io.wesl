@@ -68,9 +68,9 @@ struct PatchInstance {
   // Cells across the sub-rect above: 128 >> levelDelta, so 128 on a leaf
   // drawing its own tile.
   heightCells: u32,
-  // The leaf's sub-rect of its horizon tile ('SurfaceCutTile.standalone.horizon'),
-  // flattened like 'nightRect'. Never zero: 'empty' and "none resident" both point
-  // at atlas slot 0, the lit sentinel, so the fragment reads it unconditionally.
+  // The leaf's sub-rect of its horizon tile ('SurfaceCutTile.standalone.horizon') in
+  // POST uv ('horizonPostRect.ts'), not slot uv like the rects above. Never zero:
+  // 'empty' and "none resident" both point at atlas slot 0, the lit sentinel.
   horizonRect: vec4<f32>,
 };
 
@@ -156,14 +156,12 @@ struct VSOut {
 //   offset 160..163: debugLodOverlay     f32
 //   offset 164..167: noDisplacement      f32
 //   offset 168..171: noSkirts            f32
-//   offset 172..175: padding (true padding -- struct rounds to the mat4x4's
-//                     16-byte alignment; nothing writes these bytes)
+//   offset 172..175: sunAngularRadiusRad f32
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'meshResolution', word 23, is written as a u32; word 43
-// is left as the scratch ArrayBuffer's zero fill). The single source of
-// truth for that packing is 'writeSurfaceTileUniforms' in
+// DataView (only 'meshResolution', word 23, is written as a u32). The single
+// source of truth for that packing is 'writeSurfaceTileUniforms' in
 // 'surfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
@@ -192,4 +190,6 @@ struct SurfaceTileUniforms {
   // multiplying: 0 * NaN is NaN, so a scale could never rule the height out.
   noDisplacement: f32,
   noSkirts: f32,
+  // The sun disc's angular radius from this body: the horizon shadow's penumbra.
+  sunAngularRadiusRad: f32,
 };

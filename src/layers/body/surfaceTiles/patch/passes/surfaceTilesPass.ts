@@ -21,6 +21,7 @@ import { CLOUD_SHELL_PARAMS } from '../../../clouds/data/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../../../slabs/present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../clouds/present/cloudDeckFade';
 import { sunDirLocal } from '../../../../../utils/camera/bodyCompose/sunDirLocal';
+import { sunAngularRadiusRad } from '../../../../../utils/camera/bodyCompose/sunAngularRadiusRad';
 import { isTexturedBodyKey } from '../../../textures/present/isTexturedBodyKey';
 import { prepareBodySurfaceFrame } from '../../../slabs/present/prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../../format/utils/surfaceTileSpecOf';
@@ -106,6 +107,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         eyeRelBodyM: pose.eyeRelBodyM,
         radiusM,
         sunDirLocal: sun,
+        sunAngularRadiusRad: sunAngularRadiusRad(bodyState.positionMpc, RENDER_ORIGIN_MPC),
         effects: spec.effects,
         effectInputs,
         shading: spec.shading,

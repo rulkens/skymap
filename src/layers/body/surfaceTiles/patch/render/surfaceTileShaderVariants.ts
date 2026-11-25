@@ -2,7 +2,7 @@
  * SURFACE_TILE_SHADER_VARIANTS — one fragment entry per `surfaceEffectsKey`,
  * with the fragment-only bindings it declares. Bindings 0/1/2/4 are shared
  * with the vertex stage and every variant; 8 stays a hole (the base globe's
- * normal map). Atlas bindings (5, 10) are the lane rows' `binding`s, listed here
+ * normal map). Atlas bindings (5, 10, 11) are the lane rows' `binding`s, listed here
  * so the layout declares them. A registry row whose key is missing here fails a test.
  */
 
@@ -12,9 +12,9 @@ import fragmentEarth from '../../../../../services/gpu/shaders/bodies/surfaceTil
 export const SURFACE_TILE_SHADER_VARIANTS: Readonly<
   Record<string, { readonly fragment: string; readonly bindings: readonly number[] }>
 > = {
-  '': { fragment: fragmentBare, bindings: [5] },
+  '': { fragment: fragmentBare, bindings: [5, 11] },
   'cloudShadows+materialMap+nightLights': {
     fragment: fragmentEarth,
-    bindings: [3, 5, 6, 7, 9, 10],
+    bindings: [3, 5, 6, 7, 9, 10, 11],
   },
 };

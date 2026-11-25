@@ -39,6 +39,7 @@ import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
+import { horizonPostRect } from '../../horizon/utils/horizonPostRect';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
 
@@ -48,12 +49,13 @@ const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
 /** Horizon atlas slot 0, the lit sentinel: an `'empty'` tile and "nothing resident" both read
  *  it, never an ancestor (a flat tile under a hilly ancestor must stay lit). The 1 × 1 stand-in
  *  bound when the lane is disengaged reads as the same sentinel through this rect. */
-const HORIZON_SENTINEL_RECT: Readonly<Vec4> = [
-  0,
-  0,
-  HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
-  HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
-];
+const HORIZON_SENTINEL_RECT = horizonPostRect({
+  atlasUvOrigin: [0, 0],
+  atlasUvScale: [
+    HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
+    HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
+  ],
+});
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -139,6 +141,12 @@ export function createSurfaceTileRenderer(
     7: { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     10: { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    // Horizon angle bytes, `textureLoad`ed and decoded per post (`lib/horizonLookup.wesl`).
+    11: {
+      binding: 11,
+      visibility: GPUShaderStage.FRAGMENT,
+      texture: { sampleType: 'unfilterable-float' },
+    },
   };
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'surfaceTile.vertex');
@@ -232,6 +240,7 @@ export function createSurfaceTileRenderer(
       radiusM,
       vp,
       sunDirLocal,
+      sunAngularRadiusRad,
       effects,
       effectInputs,
       shading,
@@ -321,12 +330,7 @@ export function createSurfaceTileRenderer(
         horizonRect:
           horizon === null || horizon === 'empty'
             ? HORIZON_SENTINEL_RECT
-            : [
-                horizon.atlasUvOrigin[0],
-                horizon.atlasUvOrigin[1],
-                horizon.atlasUvScale[0],
-                horizon.atlasUvScale[1],
-              ],
+            : horizonPostRect(horizon),
       });
     }
 
@@ -351,6 +355,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
+      sunAngularRadiusRad,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 

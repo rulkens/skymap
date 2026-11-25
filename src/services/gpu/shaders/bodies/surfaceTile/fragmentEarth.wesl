@@ -12,6 +12,9 @@ import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
+import package::lib::horizonLookup::horizonSunVisibility;
+import package::lib::horizonLookup::horizonSkyVisibility;
+import package::lib::horizonLookup::localSunAngles;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
@@ -27,6 +30,8 @@ import package::lib::math::TAU;
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
 // Night tiles (z7 and shallower), drawn like the albedo atlas through 'atlasSampler'.
 @group(0) @binding(10) var nightAtlas: texture_2d<f32>;
+// Horizon angles per post, slot 0 the lit sentinel (lib/horizonLookup.wesl reads it).
+@group(0) @binding(11) var horizonAtlas: texture_2d<f32>;
 
 // Inverse of 'equirectUvToDirection'. Duplicated from earth/fragment.wesl
 // rather than imported: it lives inline there, not in 'lib/'.
@@ -69,7 +74,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowCoverage = textureSample(cloudTexture, baseSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  let colour = composeSurfaceLight(direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, 1.0, 1.0);
+  // The datum normal, not the shaded one: the bake measured angles from the sphere's up.
+  let sunAngles = localSunAngles(geometricNormal, sunDir);
+  let sunVisibility = horizonSunVisibility(
+    horizonAtlas, in.horizonRect, in.uv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
+  );
+  let skyVisibility = horizonSkyVisibility(horizonAtlas, in.horizonRect, in.uv);
+  let colour = composeSurfaceLight(
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, sunVisibility, skyVisibility,
+  );
 
   // Both samples are unconditional: 'textureSample' needs uniform control
   // flow, and a zero-scale rect (no night tile resident) picks the global one.

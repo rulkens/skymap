@@ -80,6 +80,7 @@ export function writeSurfaceTileUniforms(
   debugLodOverlay: boolean,
   noDisplacement: boolean,
   noSkirts: boolean,
+  sunAngularRadiusRad: number,
 ): void {
   view.setFloat32(0, vp[0]!, true);
   view.setFloat32(4, vp[1]!, true);
@@ -124,5 +125,5 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(160, debugLodOverlay ? 1.0 : 0.0, true);
   view.setFloat32(164, noDisplacement ? 1.0 : 0.0, true);
   view.setFloat32(168, noSkirts ? 1.0 : 0.0, true);
-  // Bytes 172..175 stay the scratch ArrayBuffer's zero fill (true padding).
+  view.setFloat32(172, sunAngularRadiusRad, true);
 }

@@ -262,7 +262,7 @@ Rules:
   undefined, use the same convention as the bake (`marchHorizonSector`): name it in both places.
 - Into `composeSurfaceLight(direct, ambient, horizonSunVisibility(..) , horizonSkyVisibility(..))`;
   Earth's cloud shadow still dims `direct` first; night lights untouched.
-- [ ] Implement; typecheck and variant tests pass. Shots of `copernicus`, `valles`, `jezero` at the
+- [x] Implement; typecheck and variant tests pass. Shots of `copernicus`, `valles`, `jezero` at the
       Task 9 poses: shadows fall away from the sun, no speckle at tile edges. Commit.
 
 ---

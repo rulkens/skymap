@@ -134,6 +134,7 @@ function fieldForExpr(expr: string): string {
   if (/^debugLodOverlay/.test(expr)) return 'debugLodOverlay';
   if (/^noDisplacement/.test(expr)) return 'noDisplacement';
   if (/^noSkirts/.test(expr)) return 'noSkirts';
+  if (/^sunAngularRadiusRad$/.test(expr)) return 'sunAngularRadiusRad';
   throw new Error(`writer expression maps to no known field: '${expr}'`);
 }
 
