@@ -6,8 +6,11 @@
  * lands for free — a superseded fetch's `catalogLoaded` never fires, because
  * the generator that would `put` it is already dead. WHERE points come from is
  * `resolveCatalogPointsPlan`, below, pulled out so the decision is
- * unit-testable without a fetch, a DOM `location`, or a running saga.
+ * unit-testable without a fetch, a DOM `location`, or a running saga. A load
+ * from the dialog with Auto fit on fits the box here, in the same synchronous
+ * run as `catalogLoaded`: watchSceneSaga's debounce folds the two into one build.
  */
+import type { Action } from '@reduxjs/toolkit';
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
@@ -22,6 +25,7 @@ import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../../field/loadCatalogPoints';
 import { syntheticCatalog } from '../../field/syntheticCatalog';
 import { sagaContextRegistered } from '../../store/sagaContextRegistered';
+import { fitBoxToCatalog } from '../grid/gridSlice';
 import type { RootState } from '../../store/types';
 import {
   catalogLoaded,
@@ -67,13 +71,15 @@ function userFileOf(plan: CatalogPointsPlan): UserFileProvenance | null {
   return { fileName, settings, nPoints: points.count };
 }
 
-function* loadCatalogWorker() {
+function* loadCatalogWorker(trigger: Action) {
   try {
     const catalog = yield* select((s: RootState) => s.catalog);
     const plan = resolveCatalogPointsPlan(catalog, hasUrlGate('probe'));
     const points = yield* resolvePoints(plan);
     const weights = deriveAgentWeights(points.weight, catalog.weightMode);
     const bounds = points.count > 0 ? catalogBounds(points.positions) : null;
+    const fitBounds = userCatalogLoaded.match(trigger) ? trigger.payload.fitBounds : null;
+    if (fitBounds) yield* put(fitBoxToCatalog(fitBounds));
     yield* put(catalogLoaded({ points, weights, bounds, userFile: userFileOf(plan) }));
   } catch (err) {
     // A fetch failure must not kill this watcher (or, via takeLatest's shared

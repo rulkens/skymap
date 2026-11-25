@@ -6,9 +6,10 @@
  * file is read once and parsed at once, then again from memory when a setting
  * changes, so what it holds shows before Load; Load dispatches that parse. The
  * store sees only a parsed catalog, so a refused or warned file leaves the
- * loaded one in place. Closing keeps every choice, so the backdrop may close it.
+ * loaded one in place. Closing keeps every choice, so the backdrop may close
+ * it; only Auto fit is on again at every open.
  */
-import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CatalogContents } from '../../../@types/CatalogContents';
 import type { CatalogFiles } from '../../../@types/CatalogFiles';
 import type { CatalogImportFieldProblems } from '../../../@types/CatalogImportFieldProblems';
@@ -16,11 +17,14 @@ import type { CatalogImportFields } from '../../../@types/CatalogImportFields';
 import type { CatalogLoadOutcome } from '../../../@types/CatalogLoadOutcome';
 import type { CatalogParse } from '../../../@types/CatalogParse';
 import Button from '../../../../../src/components/common/Button/Button';
+import { catalogBounds } from '../../field/catalogBounds';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
-import { useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import FormField from '../FormField/FormField';
+import { resolveAutoFitBounds } from '../GridBoxPanel/utils/resolveAutoFitBounds';
 import ImportIcon from '../icons/ImportIcon/ImportIcon';
 import SegmentedControl from '../SegmentedControl/SegmentedControl';
+import AutoFitField from './AutoFitField/AutoFitField';
 import CatalogInfo from './CatalogInfo/CatalogInfo';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
@@ -69,6 +73,8 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   // A field's error shows once it has been left or Enter was pressed, never while typing.
   const [checked, setChecked] = useState<readonly (keyof CatalogImportFieldProblems)[]>([]);
   const [slowRead, setSlowRead] = useState(false);
+  const [autoFit, setAutoFit] = useState(true);
+  const autoFitPercent = useAppSelector((s) => s.grid.autoFitPercent);
 
   const packed = files?.kind === 'packed';
   // A packed pair carries its own settings, so its fields are never in the way.
@@ -90,6 +96,18 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   const outcome = shownParse?.outcome ?? null;
   const catalog = outcome !== null && outcome.kind !== 'problem' ? outcome.catalog : null;
   const loadable = current && catalog !== null;
+  // Once per parse, and only while open: it sorts every point (4 s for 8.7 M).
+  const fitBounds = useMemo(
+    () =>
+      open && catalog && catalog.points.count > 0
+        ? resolveAutoFitBounds(
+            catalog.points,
+            catalogBounds(catalog.points.positions),
+            autoFitPercent,
+          )
+        : null,
+    [open, catalog, autoFitPercent],
+  );
 
   const needsRead = open && files !== null && contents === null && !current;
   useEffect(() => {
@@ -193,6 +211,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
       closedby="any"
       onClose={() => {
         setContents(null);
+        setAutoFit(true);
         onOpenChange(false);
       }}
     >
@@ -202,7 +221,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         onSubmit={(e) => {
           e.preventDefault();
           if (!loadable) return;
-          dispatch(userCatalogLoaded(catalog));
+          dispatch(userCatalogLoaded({ catalog, fitBounds: autoFit ? fitBounds : null }));
           dialogRef.current?.close();
         }}
         onKeyDown={(e) => {
@@ -212,8 +231,9 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
             setChecked((c) => [...new Set([...c, ...wrong])]);
             (e.currentTarget.elements.namedItem(wrong[0]!) as HTMLInputElement | null)?.focus();
           }
-          // A radio has no implicit submission; Enter still loads.
-          if ((e.target as HTMLInputElement).type === 'radio') {
+          // A radio or a checkbox has no implicit submission; Enter still loads.
+          const type = (e.target as HTMLInputElement).type;
+          if (type === 'radio' || type === 'checkbox') {
             e.preventDefault();
             e.currentTarget.requestSubmit();
           }
@@ -375,6 +395,8 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                 />
               )}
             </FormField>
+
+            <AutoFitField on={autoFit} onChange={setAutoFit} />
           </div>
 
           {problem && (

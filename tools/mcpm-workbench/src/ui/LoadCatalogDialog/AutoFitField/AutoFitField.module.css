@@ -1,0 +1,25 @@
+.root {
+  grid-column: label-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.label {
+  grid-column: label;
+  color: var(--color-fg-base);
+}
+
+.toggle {
+  composes: pillToggle from '../../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  grid-column: control;
+  justify-self: start;
+  margin: 0;
+}
+
+@container (inline-size < 30rem) {
+  .root {
+    display: flex;
+    gap: var(--space-6);
+  }
+}

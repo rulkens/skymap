@@ -20,6 +20,7 @@ import type { WorkbenchSagaContext } from './sagaContext';
 const TYPED_ARRAY_STATE_PATHS = ['catalog.userCatalog', 'catalog.points', 'histogram.counts'];
 const TYPED_ARRAY_ACTION_PATHS = [
   'payload.points',
+  'payload.catalog.points',
   'payload.weights',
   'payload.counts',
   'payload.densities',

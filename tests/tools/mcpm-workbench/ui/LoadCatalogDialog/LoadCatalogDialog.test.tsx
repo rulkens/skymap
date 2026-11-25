@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CatalogContents } from '../../../../../tools/mcpm-workbench/@types/CatalogContents';
+import { catalogBounds } from '../../../../../tools/mcpm-workbench/src/field/catalogBounds';
+import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
 import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
+import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
 import DataPanel from '../../../../../tools/mcpm-workbench/src/ui/DataPanel/DataPanel';
 import LoadCatalogDialog from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/LoadCatalogDialog';
 import { parseCatalogContents } from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/parseCatalogContents';
@@ -74,9 +77,19 @@ function deferred(): {
 }
 
 function setup(ui: ReactNode) {
-  const store = configureStore({ reducer: rootReducer });
+  const loads: ReturnType<typeof userCatalogLoaded>['payload'][] = [];
+  const record: Middleware = () => (next) => (action) => {
+    if (userCatalogLoaded.match(action as Action))
+      loads.push((action as ReturnType<typeof userCatalogLoaded>).payload);
+    return next(action);
+  };
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefault) =>
+      getDefault({ serializableCheck: false, immutableCheck: false }).concat(record),
+  });
   render(<Provider store={store}>{ui}</Provider>);
-  return { loaded: () => store.getState().catalog.userCatalog ?? null };
+  return { store, loads, loaded: () => store.getState().catalog.userCatalog ?? null };
 }
 
 function Controlled(): ReactNode {
@@ -188,6 +201,36 @@ describe('LoadCatalogDialog', () => {
     expect(screen.getByText(/^Median weight is 20\./)).toBeInTheDocument();
     fireEvent.click(loadButton('Load anyway'));
     expect(loaded()?.fileName).toBe('a.csv');
+  });
+
+  it('loads with the fit of this file while Auto fit is on, none once off, and is on again at the next open', async () => {
+    const first = deferred();
+    const second = deferred();
+    read.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const { store, loads } = setup(<Controlled />);
+    drop(csv('a.csv'));
+    await first.resolve(contents('a.csv', TWO_ROWS));
+    const autoFit = screen.getByRole('checkbox', { name: 'Auto fit', hidden: true });
+    expect(autoFit).toBeChecked();
+    fireEvent.click(loadButton());
+    const points = loads[0]!.catalog.points;
+    expect(loads[0]!.fitBounds).toEqual(
+      resolveAutoFitBounds(
+        points,
+        catalogBounds(points.positions),
+        store.getState().grid.autoFitPercent,
+      ),
+    );
+
+    drop(csv('a.csv'));
+    await second.resolve(contents('a.csv', TWO_ROWS));
+    fireEvent.click(autoFit);
+    fireEvent.click(loadButton());
+    expect(loads[1]!.fitBounds).toBeNull();
+
+    read.mockReturnValueOnce(new Promise(() => {}));
+    drop(csv('a.csv'));
+    expect(autoFit).toBeChecked();
   });
 
   it('opens on a page drop while the Data section is folded', () => {

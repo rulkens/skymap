@@ -31,7 +31,10 @@ const userCatalog: UserCatalog = {
 
 describe('catalogSlice user catalog', () => {
   it('loading a catalog switches every built-in source off and the catalog on', () => {
-    const next = reducer(defaultCatalogSlice, actions.userCatalogLoaded(userCatalog));
+    const next = reducer(
+      defaultCatalogSlice,
+      actions.userCatalogLoaded({ catalog: userCatalog, fitBounds: null }),
+    );
 
     expect(next.userCatalog).toBe(userCatalog);
     expect(next.userCatalogOn).toBe(true);
@@ -39,7 +42,10 @@ describe('catalogSlice user catalog', () => {
   });
 
   it('switching the loaded catalog off keeps it in the slice', () => {
-    const loaded = reducer(defaultCatalogSlice, actions.userCatalogLoaded(userCatalog));
+    const loaded = reducer(
+      defaultCatalogSlice,
+      actions.userCatalogLoaded({ catalog: userCatalog, fitBounds: null }),
+    );
 
     const off = reducer(loaded, actions.setUserCatalogOn(false));
 

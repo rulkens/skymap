@@ -77,7 +77,7 @@ afterEach(() => vi.mocked(triggerDownload).mockClear());
 describe('watchExportSaga', () => {
   it('names the file built into the trace although it was just toggled off', async () => {
     const userFileOut = await exportedUserFile([
-      userCatalogLoaded(userCatalog),
+      userCatalogLoaded({ catalog: userCatalog, fitBounds: null }),
       catalogLoaded({ points, weights, bounds: null, userFile }),
       setUserCatalogOn(false),
     ]);
@@ -88,7 +88,7 @@ describe('watchExportSaga', () => {
   it('names no file when the trace was built without it, although it was just toggled on', async () => {
     const userFileOut = await exportedUserFile([
       catalogLoaded({ points, weights, bounds: null, userFile: null }),
-      userCatalogLoaded(userCatalog),
+      userCatalogLoaded({ catalog: userCatalog, fitBounds: null }),
     ]);
 
     expect(userFileOut).toBeUndefined();

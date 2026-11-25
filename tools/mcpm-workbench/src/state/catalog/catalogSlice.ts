@@ -3,6 +3,7 @@ import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { UserCatalog } from '../../../@types/UserCatalog';
+import type { UserCatalogLoad } from '../../../@types/UserCatalogLoad';
 import type { UserFileProvenance } from '../../../@types/UserFileProvenance';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
@@ -117,9 +118,10 @@ export const catalogSlice = createSlice({
     setWeightMode: (state, action: PayloadAction<CatalogSlice['weightMode']>) => {
       state.weightMode = action.payload;
     },
-    /** Loading a file makes it the only selection; after that everything toggles freely. */
-    userCatalogLoaded: (state, action: PayloadAction<UserCatalog>) => {
-      state.userCatalog = action.payload as Draft<UserCatalog>;
+    /** Loading a file makes it the only selection; after that everything toggles freely.
+     * `fitBounds` is watchCatalogSaga's to apply, beside the load it belongs to. */
+    userCatalogLoaded: (state, action: PayloadAction<UserCatalogLoad>) => {
+      state.userCatalog = action.payload.catalog as Draft<UserCatalog>;
       state.userCatalogOn = true;
       state.sources = [];
     },
