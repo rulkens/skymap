@@ -20,15 +20,15 @@
  * cold paths of the runtime.
  */
 
-import { HUBBLE_DISTANCE_MPC, USE_LCDM_DISTANCES } from './constants';
+import type { Cosmology } from '../../@types/math/Cosmology';
+import { C_KM_S, H0_KM_S_MPC, USE_LCDM_DISTANCES } from './constants';
 
 /**
- * Matter density parameter Ω_m at z = 0 (Planck 2018, TT,TE,EE+lowE+lensing).
- * Paired with `OMEGA_L = 1 - OMEGA_M` to keep the universe spatially flat —
- * the comoving-distance formula above assumes Ω_k = 0.
+ * The app's cosmology. Ω_m at z = 0 is Planck 2018 (TT,TE,EE+lowE+lensing),
+ * paired with Ω_Λ = 1 − Ω_m to keep the universe spatially flat — the
+ * comoving-distance formula above assumes Ω_k = 0.
  */
-const OMEGA_M = 0.315;
-const OMEGA_L = 1 - OMEGA_M;
+const APP_COSMOLOGY: Cosmology = { h0KmSMpc: H0_KM_S_MPC, omegaM: 0.315 };
 
 /**
  * Simpson's rule panel count. Must be even. 64 keeps relative error < 1e-6
@@ -37,9 +37,9 @@ const OMEGA_L = 1 - OMEGA_M;
 const SIMPSON_PANELS = 64;
 
 /** Dimensionless Hubble parameter E(z) = H(z) / H₀ for flat ΛCDM. */
-function eOfZ(z: number): number {
+function eOfZ(z: number, omegaM: number): number {
   const a = 1 + z;
-  return Math.sqrt(OMEGA_M * a * a * a + OMEGA_L);
+  return Math.sqrt(omegaM * a * a * a + (1 - omegaM));
 }
 
 /**
@@ -66,20 +66,25 @@ function eOfZ(z: number): number {
  * position a raw negative radius would produce by mirroring through the
  * origin. This function is a pure z→distance map; the sign convention on
  * the return value is the caller's to interpret.
+ *
+ * `cosmology` defaults to the app's own; the MCPM workbench passes a
+ * visitor's H₀ and Ω_m for a loaded redshift catalog.
  */
-export function redshiftToDistanceMpc(z: number): number {
+export function redshiftToDistanceMpc(z: number, cosmology: Cosmology = APP_COSMOLOGY): number {
+  const { omegaM } = cosmology;
+  const hubbleDistanceMpc = C_KM_S / cosmology.h0KmSMpc;
   if (z === 0) return 0;
-  if (z < 0) return HUBBLE_DISTANCE_MPC * z;
-  if (!USE_LCDM_DISTANCES) return HUBBLE_DISTANCE_MPC * z;
+  if (z < 0) return hubbleDistanceMpc * z;
+  if (!USE_LCDM_DISTANCES) return hubbleDistanceMpc * z;
 
   // Composite Simpson over [0, z] with SIMPSON_PANELS sub-intervals.
   const h = z / SIMPSON_PANELS;
   // Endpoints: weight 1 each.
-  let sum = 1 / eOfZ(0) + 1 / eOfZ(z);
+  let sum = 1 / eOfZ(0, omegaM) + 1 / eOfZ(z, omegaM);
   // Interior points: weight 4 (odd i) or 2 (even i).
   for (let i = 1; i < SIMPSON_PANELS; i++) {
     const weight = i % 2 === 0 ? 2 : 4;
-    sum += weight / eOfZ(i * h);
+    sum += weight / eOfZ(i * h, omegaM);
   }
-  return HUBBLE_DISTANCE_MPC * (h / 3) * sum;
+  return hubbleDistanceMpc * (h / 3) * sum;
 }

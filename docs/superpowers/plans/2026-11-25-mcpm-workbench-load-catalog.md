@@ -220,11 +220,11 @@ concatCatalogPoints(parts: readonly CatalogPoints[]): CatalogPoints
 `type Cosmology = { readonly h0KmSMpc: number; readonly omegaM: number }` (flat: Ω_Λ = 1 − Ω_m).
 Omitted, it behaves exactly as today (H0 70, Ω_m 0.315), so the 17 importing files do not change.
 
-- [ ] Test `an omitted cosmology equals the app's own` (z = 0.1, 1).
-- [ ] Test `doubling H0 halves the distance`.
-- [ ] Test `omegaM 1 matches the Einstein-de Sitter closed form`: `d = (2c/H0)(1 − 1/√(1+z))` at
+- [x] Test `an omitted cosmology equals the app's own` (z = 0.1, 1).
+- [x] Test `doubling H0 halves the distance`.
+- [x] Test `omegaM 1 matches the Einstein-de Sitter closed form`: `d = (2c/H0)(1 − 1/√(1+z))` at
       z = 0.5, relative error < 1e-5.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: The CSV parser
 
