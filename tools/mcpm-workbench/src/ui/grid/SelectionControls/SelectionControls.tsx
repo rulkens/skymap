@@ -29,7 +29,9 @@ import PanelRow from '../../panel/PanelRow/PanelRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
 import { LOG10_DISPLAYED } from '../../panel/data/log10Displayed.constant';
 import SliderRow from '../../panel/SliderRow/SliderRow';
+import SliderRows from '../../panel/SliderRows/SliderRows';
 import { AXES } from '../../panel/data/axes.constant';
+import { AUTO_FIT_SLIDER_FIELDS } from './data/autoFitSliderFields.constant';
 import { centerSliderFor } from './utils/centerSliderFor';
 import { formatAxisSize } from './utils/formatAxisSize';
 import { formatVoxelSizeMpc } from '../../../utils/format/formatVoxelSizeMpc';
@@ -99,16 +101,11 @@ function SelectionControls(): ReactNode {
         />
       ))}
       <SubsectionGroup title="Auto fit">
-        <SliderRow
-          label="fit %"
-          value={grid.autoFitPercent}
-          min={80}
-          max={100}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
-          onChange={(v) => dispatch(setAutoFitPercent(v))}
-          path="grid.autoFitPercent"
+        <SliderRows
+          fields={AUTO_FIT_SLIDER_FIELDS}
+          values={grid}
+          path="grid"
+          onChange={(_, value) => dispatch(setAutoFitPercent(value))}
         />
         {/* Always rendered, so dragging fit % never moves the rows under the pointer. */}
         <PanelRow

@@ -9,12 +9,12 @@ import {
 } from '../../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
-import SliderRow from '../../panel/SliderRow/SliderRow';
+import SliderRows from '../../panel/SliderRows/SliderRows';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
-import { LOG10_DISPLAYED } from '../../panel/data/log10Displayed.constant';
 import { PALETTE_INFO } from '../PaletteRow/data/paletteInfo.constant';
-import { RAYMARCH_SLIDERS } from './data/raymarchSliders.constant';
+import { RAYMARCH_PREVIEW_SLIDER_FIELDS } from './data/raymarchPreviewSliderFields.constant';
+import { RAYMARCH_SLIDER_FIELDS } from './data/raymarchSliderFields.constant';
 
 function RaymarchRows(): ReactNode {
   const dispatch = useAppDispatch();
@@ -43,35 +43,19 @@ function RaymarchRows(): ReactNode {
         info={PALETTE_INFO}
       />
       <SubsectionGroup title="Trace">
-        {RAYMARCH_SLIDERS.map((spec) => (
-          <SliderRow
-            key={spec.key}
-            label={spec.label}
-            value={spec.log ? Math.log10(raymarch[spec.key]) : raymarch[spec.key]}
-            min={spec.min}
-            max={spec.max}
-            step={spec.step}
-            format={spec.format}
-            displayed={spec.log ? LOG10_DISPLAYED : undefined}
-            info={spec.info}
-            onChange={(v) =>
-              dispatch(setRaymarchParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }))
-            }
-            path={`view.raymarch.${spec.key}`}
-          />
-        ))}
+        <SliderRows
+          fields={RAYMARCH_SLIDER_FIELDS}
+          values={raymarch}
+          path="view.raymarch"
+          onChange={(key, value) => dispatch(setRaymarchParam({ key, value }))}
+        />
       </SubsectionGroup>
       <SubsectionGroup title="Preview">
-        <SliderRow
-          label="divisor"
-          value={raymarch.divisor}
-          min={1}
-          max={8}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          info="Marches into a floor(size/divisor) offscreen target and bilinear-upsamples it in, instead of straight into the frame. Fragment cost falls with the square of the divisor; 3 matches the main app's volume row."
-          onChange={(v) => dispatch(setDivisor(v))}
-          path="view.raymarch.divisor"
+        <SliderRows
+          fields={RAYMARCH_PREVIEW_SLIDER_FIELDS}
+          values={raymarch}
+          path="view.raymarch"
+          onChange={(_, value) => dispatch(setDivisor(value))}
         />
       </SubsectionGroup>
     </>

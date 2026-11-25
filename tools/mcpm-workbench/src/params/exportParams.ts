@@ -7,7 +7,7 @@ import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@type
  * MCPM_PARAM_KEYS — McpmParams' field list, derived from a `Record<keyof McpmParams, …>`
  * instead of a hand-spelled array: the sentinel below must cover every `McpmParams` key or TS
  * errors, so a field added to `McpmParams` is a compile error here (and, independently, at
- * ControlsPanel.tsx's `PARAM_SLIDER_SPECS` Record) until it's accounted for — the same
+ * ControlsPanel's keyed `PARAM_SLIDER_FIELDS`) until it's accounted for — the same
  * exhaustiveness `DEFAULT_MCPM_PARAMS` already gets for free. `buildParamsPayload` (below),
  * `emitTraceSidecar`'s `provenance.params`, and `importParams`'s validator all key off the
  * resulting array, so the eight fields can never drift between the sidecar and the save/load

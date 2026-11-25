@@ -24,16 +24,17 @@ import {
 } from '../../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import EyeIcon from '../../../../../../src/components/icons/EyeIcon/EyeIcon';
-import { formatAgentCount } from '../../../utils/format/formatAgentCount';
 import SimulationStatusIcon from '../../sim/SimulationStatusIcon/SimulationStatusIcon';
 import SimulationTip from '../../sim/SimulationTip/SimulationTip';
 import SpiralIcon from '../../icons/SpiralIcon/SpiralIcon';
 import PanelSection from '../../panel/PanelSection/PanelSection';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import Select from '../../panel/Select/Select';
-import SliderRow from '../../panel/SliderRow/SliderRow';
+import SliderRows from '../../panel/SliderRows/SliderRows';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
-import { PARAM_SLIDER_SPECS } from './data/paramSliderSpecs.constant';
+import { AGENT_COUNT_SLIDER_FIELDS } from './data/agentCountSliderFields.constant';
+import { GALAXIES_SLIDER_FIELDS } from './data/galaxiesSliderFields.constant';
+import { PARAM_SLIDER_FIELDS } from './data/paramSliderFields.constant';
 import { RENDERER_ICONS } from './data/rendererIcons.constant';
 import { RENDERER_LABELS } from './data/rendererLabels.constant';
 import { RENDERER_ROWS } from './data/rendererRows.constant';
@@ -117,33 +118,17 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
             </div>
           </PanelRow>
           <SubsectionGroup title="Agents">
-            {MCPM_PARAM_KEYS.map((id) => {
-              const spec = PARAM_SLIDER_SPECS[id];
-              return (
-                <SliderRow
-                  key={id}
-                  label={spec.label}
-                  min={spec.min}
-                  max={spec.max}
-                  step={spec.step}
-                  info={spec.info}
-                  value={sim.params[id]}
-                  onChange={(v) => dispatch(setSimParam({ key: id, value: v }))}
-                  path={`sim.params.${id}`}
-                />
-              );
-            })}
-            <SliderRow
-              label="agent count"
-              min={1_000_000}
-              max={10_000_000}
-              step={100_000}
-              value={sim.agentCount}
-              format={formatAgentCount}
-              displayed={{ fromValue: (v) => v / 1_000_000, toValue: (m) => m * 1_000_000 }}
-              info="Structural: changing it rebuilds the harness and reseeds the swarm."
-              onChange={(v) => dispatch(setAgentCount(v))}
-              path="sim.agentCount"
+            <SliderRows
+              fields={MCPM_PARAM_KEYS.map((key) => PARAM_SLIDER_FIELDS[key])}
+              values={sim.params}
+              path="sim.params"
+              onChange={(key, value) => dispatch(setSimParam({ key, value }))}
+            />
+            <SliderRows
+              fields={AGENT_COUNT_SLIDER_FIELDS}
+              values={sim}
+              path="sim"
+              onChange={(_, value) => dispatch(setAgentCount(value))}
             />
           </SubsectionGroup>
         </PanelSection>
@@ -177,27 +162,13 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           on={view.showGalaxies}
           onChange={(on) => dispatch(setShowGalaxies(on))}
         >
-          <SliderRow
-            label="intensity"
-            value={view.galaxies.intensity}
-            min={0.05}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            info="Brightness of each catalog dot, before its own mass weighting."
-            onChange={(v) => dispatch(setGalaxyIntensity(v))}
-            path="view.galaxies.intensity"
-          />
-          <SliderRow
-            label="point size (px)"
-            value={view.galaxies.pointSizePx}
-            min={0.5}
-            max={8}
-            step={0.5}
-            format={(v) => v.toFixed(1)}
-            info="Screen-space dot radius — constant with distance, so far galaxies stay visible."
-            onChange={(v) => dispatch(setGalaxyPointSize(v))}
-            path="view.galaxies.pointSizePx"
+          <SliderRows
+            fields={GALAXIES_SLIDER_FIELDS}
+            values={view.galaxies}
+            path="view.galaxies"
+            onChange={(key, value) =>
+              dispatch(key === 'intensity' ? setGalaxyIntensity(value) : setGalaxyPointSize(value))
+            }
           />
         </PanelSection>
       </div>
