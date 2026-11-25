@@ -27,8 +27,7 @@ export const VOYAGER_1: LayerBody = {
     kind: 'sampled',
     sampled: {
       id: asSceneBodyId('voyager1'),
-      launchIso: LAUNCH,
-      launchPad: CAPE_CANAVERAL_LC41,
+      launch: { iso: LAUNCH, pad: CAPE_CANAVERAL_LC41 },
     },
   },
   // Both probes keep the high-gain dish on Earth — the real pointing constraint,

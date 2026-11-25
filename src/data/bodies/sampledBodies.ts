@@ -3,7 +3,7 @@
  * instead of orbital elements; ids match `trajectoryRegistry` track ids.
  */
 
-import type { SampledBody } from '../../@types/missions/SampledBody';
+import type { SampledBody } from '../../@types/scene/SampledBody';
 import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
 export const SAMPLED_BODIES: readonly SampledBody[] = APP_BODY_REGISTRY.flatMap((row) =>

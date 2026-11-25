@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SampledBody } from '../../../src/@types/missions/SampledBody';
+import type { SampledBody } from '../../../src/@types/scene/SampledBody';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { SampledTrack } from '../../../src/@types/scene/SampledTrack';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
@@ -20,8 +20,7 @@ const positionAt = (id: string): Vec3 =>
 
 const body: SampledBody = {
   id: asSceneBodyId('voyager1'),
-  launchIso: LAUNCH_ISO,
-  launchPad: { latDeg: 28.5, lonDeg: -80.5 },
+  launch: { iso: LAUNCH_ISO, pad: { latDeg: 28.5, lonDeg: -80.5 } },
 };
 
 // Two samples, 20 000 km from Earth and climbing at 10 km/s.
@@ -53,5 +52,9 @@ describe('withLaunchAscent', () => {
   it('leaves a track that already starts at or before launch alone', () => {
     const early = { ...track, tDays: Float64Array.of(LAUNCH - 1, LAUNCH + 1) };
     expect(withLaunchAscent(body, early, positionAt)).toBe(early);
+  });
+
+  it('returns the track itself for a body with no launch', () => {
+    expect(withLaunchAscent({ id: body.id }, track, positionAt)).toBe(track);
   });
 });

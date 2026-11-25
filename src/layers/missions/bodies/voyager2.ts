@@ -23,8 +23,7 @@ export const VOYAGER_2: LayerBody = {
     kind: 'sampled',
     sampled: {
       id: asSceneBodyId('voyager2'),
-      launchIso: LAUNCH,
-      launchPad: CAPE_CANAVERAL_LC41,
+      launch: { iso: LAUNCH, pad: CAPE_CANAVERAL_LC41 },
     },
   },
   rotation: { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },

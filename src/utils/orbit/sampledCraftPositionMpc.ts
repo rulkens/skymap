@@ -1,6 +1,7 @@
 /**
- * sampledCraftPositionMpc — a sampled craft's world position at `simDays`. On the track from its
- * first sample; before it, it rises from the launch pad (turning with Earth) to that sample, which
+ * sampledCraftPositionMpc — a sampled body's world position at `simDays`. On the track from its
+ * first sample; before it, a body with no launch holds that sample, a launched one rises from the
+ * pad (turning with Earth) to that sample, which
  * an hour later sits ~260° east round Earth: a straight blend would tunnel through the planet, so
  * the Earth-relative radius and great-circle angle are eased separately, each ending on the
  * sample's own radial and along-arc velocity. The radius goes up to a parking height first and
@@ -8,7 +9,7 @@
  * (`bodyPositionMpcAt`) to place Earth and the Sun at other instants without an import cycle.
  */
 
-import type { SampledBody } from '../../@types/missions/SampledBody';
+import type { SampledBody } from '../../@types/scene/SampledBody';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { orientationForBody } from '../../data/bodies/orientationForBody';
@@ -36,8 +37,9 @@ export function sampledCraftPositionMpc(
 ): Vec3 {
   const k = SCALE_UNITS.KM_TO_MPC;
   const t0 = track.tDays[0]!;
-  if (simDays >= t0) {
-    const km = hermiteTrackAt(track, simDays);
+  const { launch } = body;
+  if (simDays >= t0 || !launch) {
+    const km = hermiteTrackAt(track, Math.max(simDays, t0));
     const sun = positionAt('sun', simDays);
     return [sun[0] + km[0] * k, sun[1] + km[1] * k, sun[2] + km[2] * k];
   }
@@ -55,7 +57,7 @@ export function sampledCraftPositionMpc(
   }
 
   const groundKm = EARTH_DATUM_RADIUS_M * 1e-3;
-  const { latDeg, lonDeg } = body.launchPad;
+  const { latDeg, lonDeg } = launch.pad;
   const padDir = rotateVec3ByTightMat3(
     orientationForBody('earth', simDays, NO_POSITIONS),
     surfacePointBodyFixed(latDeg, lonDeg, 1),
@@ -80,7 +82,7 @@ export function sampledCraftPositionMpc(
   // Signed sweep: the long way round when the craft arrives moving back toward the pad.
   const sweep = alongKmS >= 0 ? theta : theta - 2 * Math.PI;
 
-  const launchDays = unixMsToJulianDays(Date.parse(body.launchIso));
+  const launchDays = unixMsToJulianDays(Date.parse(launch.iso));
   const spanS = (t0 - launchDays) * SECONDS_PER_DAY;
   const s = Math.min(Math.max((simDays - launchDays) / (t0 - launchDays), 0), 1);
   const h01 = 3 * s ** 2 - 2 * s ** 3;
