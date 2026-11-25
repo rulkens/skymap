@@ -12,7 +12,6 @@ import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
@@ -56,6 +55,8 @@ import {
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
+import PanelRow from '../PanelRow/PanelRow';
+import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
@@ -167,22 +168,24 @@ function ControlsPanel(): ReactNode {
               the same --border-divider hairline HistogramPlot/CollapsibleSection use,
               and one font-size step smaller than the panel's other buttons so the
               pair reads as secondary to the run/seed/weight toggles it now sits under. */}
-          <div className={styles.simActions}>
-            <Button className={styles.simActionButton} onClick={() => dispatch(resetRequested())}>
-              reset
-            </Button>
-            <Button
-              className={styles.simActionButton}
-              onClick={() => dispatch(clearTraceRequested())}
-            >
-              clear trace
-            </Button>
-          </div>
+          <PanelRow>
+            <div className={styles.simActions}>
+              <Button className={styles.simActionButton} onClick={() => dispatch(resetRequested())}>
+                reset
+              </Button>
+              <Button
+                className={styles.simActionButton}
+                onClick={() => dispatch(clearTraceRequested())}
+              >
+                clear trace
+              </Button>
+            </div>
+          </PanelRow>
           <SliderGroup title="Agents">
             {MCPM_PARAM_KEYS.map((id) => {
               const spec = PARAM_SLIDER_SPECS[id];
               return (
-                <ParamSlider
+                <SliderRow
                   key={id}
                   label={spec.label}
                   min={spec.min}
@@ -195,7 +198,7 @@ function ControlsPanel(): ReactNode {
                 />
               );
             })}
-            <ParamSlider
+            <SliderRow
               label="agent count"
               min={1_000_000}
               max={10_000_000}
@@ -235,7 +238,9 @@ function ControlsPanel(): ReactNode {
               }}
             />
           ))}
-          <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
+          <PanelRow>
+            <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
+          </PanelRow>
         </CollapsibleSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
@@ -270,7 +275,7 @@ function ControlsPanel(): ReactNode {
           />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
-              <ParamSlider
+              <SliderRow
                 key={spec.key}
                 label={spec.label}
                 value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
@@ -289,7 +294,7 @@ function ControlsPanel(): ReactNode {
             ))}
           </SliderGroup>
           <SliderGroup title="Preview">
-            <ParamSlider
+            <SliderRow
               label="divisor"
               value={view.raymarch.divisor}
               min={1}
@@ -310,7 +315,7 @@ function ControlsPanel(): ReactNode {
           headerToggle={view.layers.agents}
           onHeaderToggleChange={toggleLayer('agents')}
         >
-          <ParamSlider
+          <SliderRow
             label="intensity"
             value={view.agents.intensity}
             min={0.05}
@@ -321,7 +326,7 @@ function ControlsPanel(): ReactNode {
             onChange={(v) => dispatch(setAgentIntensity(v))}
             path="view.agents.intensity"
           />
-          <ParamSlider
+          <SliderRow
             label="point size"
             value={view.agents.pointSizePx}
             min={1}
@@ -341,7 +346,7 @@ function ControlsPanel(): ReactNode {
           headerToggle={view.layers.galaxies}
           onHeaderToggleChange={toggleLayer('galaxies')}
         >
-          <ParamSlider
+          <SliderRow
             label="intensity"
             value={view.galaxies.intensity}
             min={0.05}
@@ -352,7 +357,7 @@ function ControlsPanel(): ReactNode {
             onChange={(v) => dispatch(setGalaxyIntensity(v))}
             path="view.galaxies.intensity"
           />
-          <ParamSlider
+          <SliderRow
             label="point size (px)"
             value={view.galaxies.pointSizePx}
             min={0.5}
@@ -382,7 +387,7 @@ function ControlsPanel(): ReactNode {
           />
           <SliderGroup title="Trace">
             {PATHTRACER_SLIDERS.map((spec) => (
-              <ParamSlider
+              <SliderRow
                 key={spec.key}
                 label={spec.label}
                 value={spec.log ? Math.log10(view.pathTracer[spec.key]) : view.pathTracer[spec.key]}
@@ -401,7 +406,7 @@ function ControlsPanel(): ReactNode {
             ))}
           </SliderGroup>
           <SliderGroup title="Preview">
-            <ParamSlider
+            <SliderRow
               label="path tracer divisor"
               value={view.pathTracer.divisor}
               min={1}
@@ -412,7 +417,7 @@ function ControlsPanel(): ReactNode {
               onChange={(v) => dispatch(setPathTracerDivisor(v))}
               path="view.pathTracer.divisor"
             />
-            <ParamSlider
+            <SliderRow
               label="sample cap"
               value={view.pathTracer.sampleCap}
               min={64}
@@ -434,37 +439,41 @@ function ControlsPanel(): ReactNode {
       </div>
       {/* Pinned below the scroll area, always visible (S12). */}
       <div className={styles.footer}>
-        {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
-            both (downloadStem/emitTraceSidecar/exportNpy). Only the export
-            saga's harness closure (Task 8) can actually call readbackTrace,
-            so this button can only request. */}
-        <Button className={styles.actionButton} onClick={() => dispatch(exportNpyRequested())}>
-          download trace
-        </Button>
-        {/* T17 leg 2: same request/saga split, downloading a ready-to-serve
-            `.scfd` through the SAME packing code (packLogTraceVoxels/
-            encodeScalarField) the offline buildRhizomeVolume importer uses. */}
-        <Button className={styles.actionButton} onClick={() => dispatch(exportScfdRequested())}>
-          download .scfd
-        </Button>
-        {/* V3: unlike the two exports above, this runs synchronously right
-            here — exportParams needs no GPU readback, just the live snapshot. */}
-        <Button className={styles.actionButton} onClick={onSaveParams}>
-          save params
-        </Button>
-        {/* The visible control is the Button; the <input> stays off-screen and
-            is only ever driven programmatically. */}
-        <Button className={styles.actionButton} onClick={onLoadParamsClick}>
-          load params
-        </Button>
-        <input
-          ref={paramsFileInputRef}
-          type="file"
-          accept="application/json,.json"
-          aria-label="load params file"
-          style={{ display: 'none' }}
-          onChange={onLoadParamsFile}
-        />
+        <PanelRow>
+          <div className={styles.footerActions}>
+            {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
+                both (downloadStem/emitTraceSidecar/exportNpy). Only the export
+                saga's harness closure (Task 8) can actually call readbackTrace,
+                so this button can only request. */}
+            <Button className={styles.actionButton} onClick={() => dispatch(exportNpyRequested())}>
+              download trace
+            </Button>
+            {/* T17 leg 2: same request/saga split, downloading a ready-to-serve
+                `.scfd` through the SAME packing code (packLogTraceVoxels/
+                encodeScalarField) the offline buildRhizomeVolume importer uses. */}
+            <Button className={styles.actionButton} onClick={() => dispatch(exportScfdRequested())}>
+              download .scfd
+            </Button>
+            {/* V3: unlike the two exports above, this runs synchronously right
+                here — exportParams needs no GPU readback, just the live snapshot. */}
+            <Button className={styles.actionButton} onClick={onSaveParams}>
+              save params
+            </Button>
+            {/* The visible control is the Button; the <input> stays off-screen and
+                is only ever driven programmatically. */}
+            <Button className={styles.actionButton} onClick={onLoadParamsClick}>
+              load params
+            </Button>
+            <input
+              ref={paramsFileInputRef}
+              type="file"
+              accept="application/json,.json"
+              aria-label="load params file"
+              style={{ display: 'none' }}
+              onChange={onLoadParamsFile}
+            />
+          </div>
+        </PanelRow>
       </div>
       {paramsStatus && <div className={styles.paramsStatus}>{paramsStatus}</div>}
     </div>

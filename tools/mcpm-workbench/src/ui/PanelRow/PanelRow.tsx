@@ -1,33 +1,47 @@
 /**
- * PanelRow — the workbench panel's labelled-control row, aligned with the
- * ParamSlider rows (same ⓘ slot, main column and trailing slot). The ⓘ stays
- * outside the `<label>`: a label forwards clicks to its control.
+ * PanelRow — the one row chrome of the workbench panel: content, then an ⓘ
+ * column at the end that every row reserves, so controls end on one line and
+ * labels start on another. Tab order runs control, then its ⓘ. With a label
+ * and children, the label wraps the control; a label alone is a readout.
  */
 import type { ReactNode } from 'react';
 import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './PanelRow.module.css';
 
 export type PanelRowProps = {
-  readonly label: string;
-  readonly info?: string;
-  readonly children: ReactNode;
+  readonly label?: string;
+  readonly info?: ReactNode;
+  /** Names the ⓘ; defaults to `label`. For controls that draw their own label. */
+  readonly infoName?: string;
+  readonly children?: ReactNode;
 };
 
-function PanelRow({ label, info, children }: PanelRowProps): ReactNode {
+function PanelRow({ label, info, infoName = label, children }: PanelRowProps): ReactNode {
+  const labelText = label !== undefined && (
+    <span className={children === undefined ? styles.readout : styles.labelText}>{label}</span>
+  );
   return (
     <div className={styles.root}>
-      {info !== undefined && (
-        <CompactInfoTip label={info} align="start">
-          <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
-            ⓘ
-          </button>
-        </CompactInfoTip>
+      {label !== undefined && children !== undefined ? (
+        <label className={styles.main}>
+          {labelText}
+          {children}
+        </label>
+      ) : (
+        <div className={styles.main}>
+          {labelText}
+          {children}
+        </div>
       )}
-      <label className={styles.main}>
-        <span className={styles.labelText}>{label}</span>
-        {children}
-      </label>
-      <div className={styles.seedSlot} />
+      <div className={styles.infoSlot}>
+        {info !== undefined && (
+          <CompactInfoTip label={info} align="end">
+            <button type="button" className={styles.infoIcon} aria-label={`About ${infoName}`}>
+              ⓘ
+            </button>
+          </CompactInfoTip>
+        )}
+      </div>
     </div>
   );
 }

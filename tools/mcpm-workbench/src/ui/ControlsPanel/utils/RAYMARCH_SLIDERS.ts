@@ -1,6 +1,6 @@
 import type { ViewSlice } from '../../../../@types/ViewSlice';
 
-// 'divisor' gets its own dedicated ParamSlider below (the "Preview" group);
+// 'divisor' gets its own dedicated SliderRow below (the "Preview" group);
 // 'additive'/preview fields aren't slider-driven — excluded the same way
 // PATHTRACER_SLIDERS' own key type excludes its non-slider siblings.
 type RaymarchSliderKey = Exclude<

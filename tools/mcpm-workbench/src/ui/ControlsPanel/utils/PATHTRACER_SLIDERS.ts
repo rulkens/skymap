@@ -1,6 +1,6 @@
 import type { ViewSlice } from '../../../../@types/ViewSlice';
 
-// 'divisor' gets its own dedicated ParamSlider below (the "Preview" group,
+// 'divisor' gets its own dedicated SliderRow below (the "Preview" group,
 // mirroring the raymarch layer's own), not the generic log-mapped physics list.
 type PathTracerSliderKey = Exclude<
   keyof ViewSlice['pathTracer'],

@@ -1,14 +1,11 @@
 /**
- * ToggleRow — a boolean option as a pill row, aligned with the ParamSlider
- * rows above it (same ⓘ slot, main column, 20px trailing spacer). The
- * `<input type="checkbox">` IS the visible pill — same iOS-style sliding
- * thumb as the main app's SettingsPanel rows. The ⓘ stays OUTSIDE the
- * `<label>` — a label forwards clicks, so a tip button inside it would flip
- * the checkbox.
+ * ToggleRow — a boolean option as a pill row in the panel's row chrome. The
+ * `<input type="checkbox">` IS the visible pill, the same sliding thumb as the
+ * main app's SettingsPanel rows.
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import PanelRow from '../PanelRow/PanelRow';
 import styles from './ToggleRow.module.css';
 
 export type ToggleRowProps = {
@@ -27,14 +24,7 @@ export type ToggleRowProps = {
 
 function ToggleRow({ label, on, onChange, info, hint }: ToggleRowProps): ReactNode {
   return (
-    <div className={styles.root}>
-      {info !== undefined && (
-        <CompactInfoTip label={info} align="start">
-          <button type="button" className={styles.infoIcon} aria-label={`About ${label}`}>
-            ⓘ
-          </button>
-        </CompactInfoTip>
-      )}
+    <PanelRow info={info} infoName={label}>
       <label className={styles.main}>
         <span className={cx(styles.labelText, hint !== undefined && styles.labelMuted)}>
           {label}
@@ -51,8 +41,7 @@ function ToggleRow({ label, on, onChange, info, hint }: ToggleRowProps): ReactNo
           onChange={(e) => onChange(e.target.checked)}
         />
       </label>
-      <div className={styles.seedSlot} />
-    </div>
+    </PanelRow>
   );
 }
 

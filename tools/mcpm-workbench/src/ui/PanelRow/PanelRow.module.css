@@ -1,23 +1,44 @@
 .root {
-  composes: root from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
-}
-
-.infoIcon {
-  composes: infoIcon from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
-}
-
-.seedSlot {
-  composes: seedSlot from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .main {
-  composes: main from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
 }
 
+/* Inset by the slider pill's padding and border, so every label starts where
+   the label inside a slider pill does. */
 .labelText {
   composes: label from '../../../../../src/components/common/Slider/Slider.module.css';
+  min-width: 0;
+  padding-left: calc(var(--space-5) + 1px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A readout wraps instead of truncating; it is read, not scanned. */
+.readout {
+  composes: labelText;
+  font-size: var(--font-size-sm);
+  white-space: normal;
+}
+
+.infoSlot {
+  flex: none;
+  width: var(--space-10);
+  display: flex;
+  justify-content: center;
+}
+
+.infoIcon {
+  composes: infoIcon from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
 }

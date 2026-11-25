@@ -11,7 +11,6 @@
  */
 import type { ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { keptCountFor } from '../../field/keptCountFor';
 import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
@@ -29,9 +28,9 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
+import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import { AXES } from './utils/AXES';
-import { dimsReadoutStyle } from './utils/dimsReadoutStyle';
 import { fieldStyle } from './utils/fieldStyle';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { VOXEL_SIZE_MAX_MPC } from './utils/VOXEL_SIZE_MAX_MPC';
@@ -109,7 +108,7 @@ function GridBoxPanel(): ReactNode {
           spacing to the readout/button it controls — same principle as the
           seven-slider wrapper below, applied to this one slider+button pairing. */}
       <div>
-        <ParamSlider
+        <SliderRow
           label="fit %"
           value={grid.autoFitPercent}
           min={80}
@@ -120,26 +119,27 @@ function GridBoxPanel(): ReactNode {
           onChange={(v) => dispatch(setAutoFitPercent(v))}
           path="grid.autoFitPercent"
         />
-        {grid.autoFitPercent < 100 && <div style={dimsReadoutStyle}>evicts {evictedCount} pts</div>}
-        <Button
-          className={styles.autoFitButton}
-          disabled={!catalogBoundsMpc}
-          onClick={() => {
-            if (!catalogBoundsMpc) return;
-            dispatch(
-              fitBoxToCatalog(
-                resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-              ),
-            );
-          }}
-        >
-          auto fit
-        </Button>
+        {grid.autoFitPercent < 100 && <PanelRow label={`evicts ${evictedCount} pts`} />}
+        <PanelRow>
+          <Button
+            className={styles.autoFitButton}
+            disabled={!catalogBoundsMpc}
+            onClick={() => {
+              if (!catalogBoundsMpc) return;
+              dispatch(
+                fitBoxToCatalog(
+                  resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+                ),
+              );
+            }}
+          >
+            auto fit
+          </Button>
+        </PanelRow>
       </div>
-      <div style={dimsReadoutStyle}>
-        {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox ·{' '}
-        {formatBytes(estimatedBytes)}
-      </div>
+      <PanelRow
+        label={`${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox · ${formatBytes(estimatedBytes)}`}
+      />
       <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
         <input
           type="number"
@@ -148,10 +148,10 @@ function GridBoxPanel(): ReactNode {
           onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
         />
       </PanelRow>
-      {/* One wrapper for all seven sliders: consecutive ParamSliders space by their
+      {/* One wrapper for all seven sliders: consecutive SliderRows space by their
           own margin (like every other panel); the root grid's gap would double it. */}
       <div>
-        <ParamSlider
+        <SliderRow
           label="voxel size"
           // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
           // whenever the floor isn't active) rather than the raw manual value — otherwise,
@@ -167,7 +167,7 @@ function GridBoxPanel(): ReactNode {
           path="grid.manualVoxelSizeMpc"
         />
         {AXES.map(({ axis, label }) => (
-          <ParamSlider
+          <SliderRow
             key={`center-${label}`}
             label={`center ${label}`}
             value={grid.manualCenterMpc[axis]}
@@ -181,7 +181,7 @@ function GridBoxPanel(): ReactNode {
           />
         ))}
         {AXES.map(({ axis, label }) => (
-          <ParamSlider
+          <SliderRow
             key={`size-${label}`}
             label={`size ${label}`}
             value={grid.manualSizeMpc[axis]}

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { formatWeight } from '../../field/formatWeight';
 import { setUserCatalogOn } from '../../state/catalog/catalogSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import PanelRow from '../PanelRow/PanelRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import styles from './UserCatalogRow.module.css';
 
@@ -15,12 +16,14 @@ function UserCatalogRow(): ReactNode {
   return (
     <div className={styles.root} title={fileName}>
       <ToggleRow label={fileName} on={on} onChange={(v) => dispatch(setUserCatalogOn(v))} />
-      <p className={styles.detail}>
-        {points.count.toLocaleString()} rows
-        <br />
-        weights {formatWeight(weightStats.min)} – {formatWeight(weightStats.max)}, median{' '}
-        {formatWeight(weightStats.median)}
-      </p>
+      <PanelRow>
+        <p className={styles.detail}>
+          {points.count.toLocaleString()} rows
+          <br />
+          weights {formatWeight(weightStats.min)} – {formatWeight(weightStats.max)}, median{' '}
+          {formatWeight(weightStats.median)}
+        </p>
+      </PanelRow>
     </div>
   );
 }

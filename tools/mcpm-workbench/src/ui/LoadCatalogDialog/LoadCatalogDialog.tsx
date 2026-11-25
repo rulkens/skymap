@@ -14,6 +14,7 @@ import Button from '../../../../../src/components/common/Button/Button';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import { useAppDispatch } from '../../store/hooks';
 import ChoiceGroup from '../ChoiceGroup/ChoiceGroup';
+import PanelRow from '../PanelRow/PanelRow';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
 import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
@@ -139,9 +140,11 @@ function LoadCatalogDialog(): ReactNode {
 
   return (
     <>
-      <Button ref={openerRef} className={styles.openButton} onClick={open}>
-        Load catalog
-      </Button>
+      <PanelRow>
+        <Button ref={openerRef} className={styles.openButton} onClick={open}>
+          Load catalog
+        </Button>
+      </PanelRow>
       <dialog
         ref={dialogRef}
         className={styles.root}

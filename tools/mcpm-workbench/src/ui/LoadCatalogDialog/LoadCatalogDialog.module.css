@@ -1,6 +1,5 @@
 .openButton {
   composes: blockButton from '../../../../../src/components/common/shared.module.css';
-  margin-bottom: var(--space-8);
   font-size: var(--font-size-sm);
 }
 
