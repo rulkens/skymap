@@ -54,10 +54,7 @@ function StatsReadout(): ReactNode {
           </dd>
         </div>
       </dl>
-      <PanelRow
-        infoName="largest grid buffer"
-        info="The largest grid buffer of the box as set, against the largest single buffer this device allows."
-      >
+      <PanelRow infoName="memory used for simulation" info="Memory used for simulation.">
         <GpuBufferMeter
           usedBytes={estimateBoxGridBufferBytes(grid)}
           limitBytes={grid.maxBufferBytes}
