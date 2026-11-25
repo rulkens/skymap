@@ -1,6 +1,82 @@
 /* The padding field's chrome, so it is that field's height. As wide as its
    longest option: a chosen value never clips, and choosing one never resizes
-   the control track every row shares. */
+   the control track every row shares. Its own text settings, so neither the
+   panel's line height nor a section header's capitals reach it: the
+   customizable select inherits them where the plain one did not. Its UA
+   floor of 24px of content would make it taller than the padding field. */
 .root {
   composes: control from '../formControl.module.css';
+  appearance: base-select;
+  align-items: center;
+  min-block-size: 0;
+  line-height: normal;
+  font-weight: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* A rule of its own: a browser without the customizable select drops it whole,
+   and keeps the plain select above. */
+.root::picker(select) {
+  appearance: base-select;
+  margin-block: var(--space-1);
+  padding-block: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  color: var(--color-fg-base);
+}
+
+.root::picker-icon {
+  color: var(--color-fg-tertiary);
+}
+
+/* Select.tsx's button: the chosen option and the hidden copies of every option
+   share one cell, so the widest copy sets the width. */
+.root > button {
+  display: grid;
+}
+
+.face,
+.sizer {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+.icon,
+.root option > span {
+  display: flex;
+}
+
+.root option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  white-space: nowrap;
+}
+
+.root option:checked {
+  color: var(--color-fg);
+  background: var(--surface-control);
+}
+
+@media (hover: hover) {
+  .root option:hover {
+    background: var(--surface-control-hover);
+  }
+}
+
+.root option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
