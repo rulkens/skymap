@@ -1,9 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { RendererId } from '../../../@types/RendererId';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 
 /**
- * defaultViewSlice — raymarch + galaxies on, framing a box a few hundred Mpc across
+ * defaultViewSlice — the raymarch with the galaxy overlay, framing a box a few hundred Mpc across
  * (the sim's own scale, not the runtime's power-of-ten ladder). `inferno`
  * matches the runtime MCPM volume entry's default palette
  * (`src/layers/cosmicWebDensity/sources/mcpm.ts`)
@@ -13,7 +14,8 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
  * also a knob diff. `additive` is the deliberate exception (see ViewSlice).
  */
 export const defaultViewSlice: ViewSlice = {
-  layers: { raymarch: true, agents: false, galaxies: true, pathTracer: false },
+  renderer: 'raymarch',
+  showGalaxies: true,
   galaxies: { intensity: 0.45, pointSizePx: 1 },
   // Reproduces the splat pass's hardcoded look exactly: intensity 1 is the identity
   // multiplier splatBlit.wesl always applied implicitly (no knob existed before this),
@@ -58,7 +60,7 @@ export const defaultViewSlice: ViewSlice = {
     compressive: false,
     trimDensity: 1e-5,
     sampleWeight: 0.01,
-    // Half the raymarch layer's default 3 — the compute-bound path tracer feels the
+    // Half the raymarch's default 3 — the compute-bound path tracer feels the
     // divisor's quadratic win harder, so a lower default still lands interactive.
     divisor: 2,
     // Rationale: ViewSlice.d.ts's sampleCap doc comment.
@@ -72,7 +74,7 @@ export const PITCH_LIMIT = 1.5;
 export const CAMERA_DISTANCE_FLOOR = 1;
 
 // 'divisor' and 'sampleCap' get their own setters (below), sibling-shaped to the
-// raymarch layer's setDivisor — excluded here the same way 'compressive' is.
+// raymarch's setDivisor — excluded here the same way 'compressive' is.
 type PathTracerNumericKey = Exclude<
   keyof ViewSlice['pathTracer'],
   'compressive' | 'divisor' | 'sampleCap' | 'paletteId'
@@ -89,11 +91,11 @@ export const viewSlice = createSlice({
   name: 'view',
   initialState: defaultViewSlice,
   reducers: {
-    setLayerEnabled: (
-      state,
-      action: PayloadAction<{ layer: keyof ViewSlice['layers']; on: boolean }>,
-    ) => {
-      state.layers[action.payload.layer] = action.payload.on;
+    setRenderer: (state, action: PayloadAction<RendererId>) => {
+      state.renderer = action.payload;
+    },
+    setShowGalaxies: (state, action: PayloadAction<boolean>) => {
+      state.showGalaxies = action.payload;
     },
     setGalaxyIntensity: (state, action: PayloadAction<number>) => {
       state.galaxies.intensity = action.payload;
@@ -126,7 +128,7 @@ export const viewSlice = createSlice({
     setRaymarchPaletteId: (state, action: PayloadAction<ScalarFieldPaletteId>) => {
       state.raymarch.paletteId = action.payload;
     },
-    // Mirrors setPathTracerParam — one keyed action over the raymarch layer's four
+    // Mirrors setPathTracerParam — one keyed action over the raymarch's four
     // numeric knobs, rather than a setter per field.
     setRaymarchParam: (
       state,
@@ -171,7 +173,8 @@ export const viewSlice = createSlice({
 });
 
 export const {
-  setLayerEnabled,
+  setRenderer,
+  setShowGalaxies,
   setGalaxyIntensity,
   setGalaxyPointSize,
   setAgentIntensity,

@@ -14,6 +14,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import type { RendererId } from './@types/RendererId';
 import { SETTLE_MS } from './src/render/effectiveVolpathDivisor';
 
 const VIEWPORT = { width: 1280, height: 800 };
@@ -236,16 +237,15 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 }
 
 /**
- * Drive the layer switches to an exact configuration. `check`/`uncheck` and not
- * `click`, so a step states the state it wants rather than a delta off whatever
- * the previous one left behind.
+ * Set the renderer and the galaxy overlay to an exact configuration — the Rendering
+ * section's header dropdown and the Galaxies pill. `check`/`uncheck` and not `click`,
+ * so a step states the state it wants rather than a delta off the previous one.
  */
-async function setLayers(page: Page, layers: Record<string, boolean>): Promise<void> {
-  for (const [title, on] of Object.entries(layers)) {
-    const pill = page.getByRole('checkbox', { name: `Toggle ${title}`, exact: true });
-    if (on) await pill.check();
-    else await pill.uncheck();
-  }
+async function setView(page: Page, renderer: RendererId, galaxies: boolean): Promise<void> {
+  await page.getByRole('combobox', { name: 'Renderer', exact: true }).selectOption(renderer);
+  const pill = page.getByRole('checkbox', { name: 'Toggle Galaxies', exact: true });
+  if (galaxies) await pill.check();
+  else await pill.uncheck();
 }
 
 /** Unfold a PanelSection by its title; a no-op when it is already open, where a
@@ -264,13 +264,11 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
 
 /**
  * The exercise: boot, drive the run/reset/clear-trace commands that rebuild
- * bind groups or clear buffers outside the steady state, then the render
- * layers in every combination that opens a distinct pass set — agents alone,
- * all three, none at all. Layers are switched through each section's header
- * checkbox (PanelSection renders it with `aria-label="Toggle <title>"`).
- * Order matters once: `resize` runs last, with all layers on, so it covers the
- * splat's screen-sized accumulation buffer as well as the graph's own target.
- * Track V's path tracer appends its step here.
+ * bind groups or clear buffers outside the steady state, then each renderer with
+ * and without the galaxy overlay — every distinct pass set (see `setView`).
+ * Order matters once: `resize` runs last and draws both the path tracer and the
+ * splat at a new size, so it covers their screen-sized accumulation buffers as
+ * well as the graph's own target.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -560,11 +558,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
       // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
-      // branch of the march loop at all. Raymarch starts folded; opened here, it stays
-      // open for the two raymarch steps after this one.
+      // branch of the march loop at all. Rendering starts folded; opened here, it stays
+      // open for every step after this one, showing the chosen renderer's rows.
       name: 'toggle:additive',
       run: async (page) => {
-        await openSection(page, 'Raymarch');
+        await openSection(page, 'Rendering');
         const additive = page.getByRole('checkbox', { name: 'additive blend', exact: true });
         await additive.uncheck();
         await settleFrames(page, SETTLE_FRAMES);
@@ -606,74 +604,55 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // Agents joins the two default-on layers: all three passes encode into one frame.
-      name: 'layers:agents-on',
+      // The splat with the galaxy dots over it.
+      name: 'renderer:agents',
       run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await setView(page, 'agents', true);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      // The splat alone over the graph's clear — the only frame that proves the layer
-      // renders without a base layer underneath it.
-      name: 'layers:agents-only',
+      // The splat alone over the graph's clear — the only frame that proves it
+      // renders with nothing else drawn.
+      name: 'renderer:agents-only',
       run: async (page) => {
-        await setLayers(page, { Raymarch: false, Agents: true, Galaxies: false });
+        await setView(page, 'agents', false);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      name: 'layers:all-on',
+      // The raymarch alone, then back with the overlay: the transition out of the
+      // splat is a distinct bind-group/draw-call sequence from settling there at boot.
+      name: 'renderer:raymarch-only',
       run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await setView(page, 'raymarch', false);
+        await settleFrames(page, SETTLE_FRAMES);
+        await setView(page, 'raymarch', true);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      // Nothing but the clear pass: a frame with no draws at all still has to encode.
-      name: 'layers:all-off',
-      run: async (page) => {
-        await setLayers(page, { Raymarch: false, Agents: false, Galaxies: false });
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // Configuration-identical to layers:all-on above — only the TRANSITION out of
-      // layers:all-off is new (a distinct bind-group/draw-call sequence than settling
-      // into the same state from boot).
-      name: 'layers:back-on',
-      run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // Track V's path tracer: off by default, so this is the only step that ever
-      // compiles/dispatches its pass — the compute-heavy layer this probe is most
-      // likely to be the first to notice broke. Left on for the resize step below
-      // too, so its accumulator buffer gets resized exactly like the splat's.
+      // Track V's path tracer: never the default, so this is the only step that ever
+      // compiles/dispatches its pass — the compute-heavy renderer this probe is most
+      // likely to be the first to notice broke. Kept for the resize step below too.
       // NOTE: grid element (f16 vs f32) is chosen from `device.features.has('shader-f16')`
       // in createMcpmHarness, not a UI lever — this probe's headless Chromium always
       // resolves one of the two, and there is no existing step that flips it, so the
       // f16 kernel variant (task-V2A-report.md's open concern) is exercised only when
       // the probe's own GPU adapter happens to support shader-f16.
-      name: 'layers:path-tracer-on',
+      name: 'renderer:path-tracer',
       run: async (page) => {
-        await setLayers(page, { 'Path tracer': true });
+        await setView(page, 'pathTracer', true);
         await settleFrames(page, SETTLE_FRAMES);
         // V3: opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
-        // ensureReducedTex) — the layer's own toggle above doesn't expand the section,
-        // PanelSection unmounts its body while folded (grid:box-preview's own
-        // note above). Named 'path tracer divisor', not 'divisor', to stay distinct
-        // from the raymarch section's own slider of that name — both sections are open
-        // simultaneously from here on, so a shared name would be an ambiguous locator.
-        await openSection(page, 'Path tracer');
+        // ensureReducedTex). Rendering is already open and now shows the path tracer's
+        // rows; its slider keeps its own name, distinct from the raymarch's 'divisor'.
         const divisor = page.getByRole('slider', { name: 'path tracer divisor', exact: true });
         const before = await divisor.getAttribute('aria-valuenow');
         await pressSlider(page, 'path tracer divisor', ['End']);
         const after = await divisor.getAttribute('aria-valuenow');
         if (after === before) {
-          throw new Error('layers:path-tracer-on divisor slider did not move — aim stale');
+          throw new Error('renderer:path-tracer divisor slider did not move — aim stale');
         }
         await settleFrames(page, SETTLE_FRAMES);
         await pressSlider(page, 'path tracer divisor', ['Home']);
@@ -681,12 +660,15 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
-      // and — because every layer is on here — the splat's screen-sized accumulation
-      // buffer, which a stale size would index straight past the end of.
+      // Canvas resize rebuilds the accum target and the blit's `layout:'auto'` bind
+      // group. The path tracer draws at the new size first, then the splat — whose
+      // screen-sized accumulation buffer a stale size would index straight past the
+      // end of — draws there and through the resize back.
       name: 'resize',
       run: async (page) => {
         await page.setViewportSize({ width: 900, height: 620 });
+        await settleFrames(page, SETTLE_FRAMES);
+        await setView(page, 'agents', true);
         await settleFrames(page, SETTLE_FRAMES);
         await page.setViewportSize(VIEWPORT);
         await settleFrames(page, SETTLE_FRAMES);

@@ -18,7 +18,8 @@ export function storeWriteIsDirty(prev: RootState, next: RootState): boolean {
     prev.catalog !== next.catalog ||
     prev.grid !== next.grid ||
     isSimMeaningfullyChanged(prev.sim, next.sim) ||
-    prev.view.layers !== next.view.layers ||
+    prev.view.renderer !== next.view.renderer ||
+    prev.view.showGalaxies !== next.view.showGalaxies ||
     prev.view.galaxies !== next.view.galaxies ||
     prev.view.agents !== next.view.agents ||
     prev.view.camera !== next.view.camera ||

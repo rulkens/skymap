@@ -2,9 +2,9 @@
  * createRenderGraph — the HDR-accumulate → tonemap stage (same shape as
  * tools/flow-workbench's): it owns the shared `rgba16float` accum texture every
  * MCPM layer draws into and the fullscreen tonemap that resolves it to the
- * swap-chain. No layer clears: `clear()` opens the frame, then any subset of
- * `drawTrace` / `drawSplat` / `drawGalaxyOverlay` / `drawVolpath` / `drawBoxPreview`
- * (last, so its wireframe sits over the galaxy dots) loads and blends one/one onto
+ * swap-chain. No layer clears: `clear()` opens the frame, then the chosen renderer
+ * (`drawTrace` / `drawSplat` / `drawVolpath`), `drawGalaxyOverlay` and `drawBoxPreview`
+ * (last, so its wireframe sits over the galaxy dots) load and blend one/one onto
  * it, in that order. A pass constructed but never registered here is silently
  * never opened. `accumView()` is a method, not a field — the texture is rebuilt on
  * resize, so a cached view would dangle.
@@ -59,7 +59,7 @@ export type RenderGraph = {
   resize(width: number, height: number): void;
   /**
    * Black out the accum target. Every frame opens with this, whether or not a layer
-   * follows: with all layers off the tonemap would otherwise resolve last frame's pixels.
+   * follows: with no scene to draw the tonemap would otherwise resolve last frame's pixels.
    */
   clear(encoder: GPUCommandEncoder): void;
   /**

@@ -9,6 +9,7 @@
  * below notices a rebuild landed, to reset per-scene bookkeeping.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
+import type { RendererId } from '../../../@types/RendererId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveGridBox } from '../../field/deriveGridBox';
@@ -63,8 +64,8 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     let rafHandle = 0;
     let lastGridShapeKey = JSON.stringify(gridShapeKeyFor(store.getState()));
     let boxPreviewUntil = 0;
-    // null whenever the path tracer is off — reaching this frame with the layer freshly
-    // turned on always differs from null, so enabling it always resets, per the
+    // Nulled on every renderer change and scene rebuild — entering the path tracer
+    // always differs from null, so it always starts from a fresh accumulation, per the
     // accumulation contract (task-V2A-report.md).
     let lastVolpathKey: string | null = null;
     // Task FLE: the interaction-priority boost trigger — was camera-only (a per-frame
@@ -156,7 +157,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       const needsRender = frameNeedsRender({
         dirty: frameDirty,
         simRunning: h !== null && s.sim.running,
-        pathTracerOn: h !== null && s.view.layers.pathTracer,
+        pathTracerOn: h !== null && s.view.renderer === 'pathTracer',
         pathTracerSampleCount: volpathSampleCount,
         pathTracerSampleCap: s.view.pathTracer.sampleCap,
         holdUntilMs,
@@ -190,72 +191,62 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
 
       const encoder = gpu.device.createCommandEncoder({ label: 'mcpm-workbench-frame' });
       const cam = cameraViewFor(input.getCameraPose(), [canvas.width, canvas.height]);
-      // Independent layers over one clear, back to front. The clear is unconditional:
-      // with every layer off the frame is black, not last frame's pixels.
-      const { layers } = s.view;
+      // One renderer, then the galaxy dots, over one clear. The clear is unconditional:
+      // the empty-catalog scene (no harness) draws nothing and must be black.
       graph.clear(encoder);
-      if (h && layers.raymarch) {
-        // Task FLE: same interaction boost as the path tracer below — coarser divisor
+      if (h) {
+        // Task FLE: every renderer's divisor takes the same interaction boost — coarser
         // while a UI write is fresh, the user's own setting once it settles.
-        const effectiveRaymarchDivisor = effectiveVolpathDivisor(
-          s.view.raymarch.divisor,
-          now - lastInteractionMs,
-        );
-        // T18: previewPacked wants the packed cube, but only while it is still
-        // the pack of THIS stepCount — `watchPreviewPackedSaga` owns disposing a
-        // stale one (spec's "STALE"), so this is a pure read; the fallback IS
-        // the live trace, not a blank frame.
-        if (
-          s.view.raymarch.previewPacked &&
-          graph.hasPreviewTrace() &&
-          s.view.raymarch.previewPackedAtStep === s.sim.stepCount
-        ) {
-          // drawPreviewTrace routes through the same drawTracePass divisor path as
-          // drawTrace (RenderGraph owns both passes symmetrically — task R7) — same
-          // reduced target, same upsample, no special-casing for the packed source.
-          graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
-        } else {
-          graph.drawTrace(encoder, traceViewFor(s, h.box, cam), effectiveRaymarchDivisor);
-        }
-      }
-      if (h && layers.agents) {
-        graph.drawSplat(encoder, {
-          ...cam,
-          sampleWeight: s.view.raymarch.sampleWeight,
-          intensity: s.view.agents.intensity,
-          pointSizePx: s.view.agents.pointSizePx,
-        });
-      }
-      if (h && layers.galaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
-      if (h && layers.pathTracer) {
-        // Task FLE: boost trigger generalized to ANY UI store write (lastInteractionMs,
-        // set by the subscriber above) — was camera-only, a per-frame `cam` JSON
-        // comparison. effectiveVolpathDivisor decays it back to the user's own setting
-        // SETTLE_MS after the last one, same as raymarch's own use above.
-        const effectiveDivisor = effectiveVolpathDivisor(
-          s.view.pathTracer.divisor,
-          now - lastInteractionMs,
-        );
-        // Reset on camera move or pathTracer param change (divisor included, sampleCap
-        // excluded — volpathKeyFor.ts); an explicit reset/clear-trace no longer feeds
-        // this key (watchSimCommandsSaga calls graph.resetVolpath() directly).
-        // Deliberately NOT keyed on sim.stepCount: an earlier version wiped the
-        // accumulator every 16 steps, visible as never converging — the field drifts
-        // slowly enough to ride across steps, and a box change that invalidates the
-        // grid reaches here via a harness rebuild instead (epoch reset, below). Also
-        // NOT keyed on effectiveDivisor: VolpathPass's own accumulator already
-        // resizes/self-resets on that, so keying it here too would just add a
-        // redundant second reset 200ms after every interaction.
-        const volpathKey = JSON.stringify(volpathKeyFor(cam, s.view.pathTracer));
-        if (volpathKey !== lastVolpathKey) {
-          graph.resetVolpath();
-          volpathSampleCount = 0;
-        }
-        lastVolpathKey = volpathKey;
-        graph.drawVolpath(encoder, cam, s.view.pathTracer, effectiveDivisor);
-        volpathSampleCount += 1;
-      } else {
-        lastVolpathKey = null;
+        const sinceInteractionMs = now - lastInteractionMs;
+        const drawRenderer: Readonly<Record<RendererId, () => void>> = {
+          raymarch: () => {
+            const divisor = effectiveVolpathDivisor(s.view.raymarch.divisor, sinceInteractionMs);
+            // T18: previewPacked wants the packed cube, but only while it is still
+            // the pack of THIS stepCount — `watchPreviewPackedSaga` owns disposing a
+            // stale one (spec's "STALE"), so this is a pure read; the fallback IS
+            // the live trace, not a blank frame. Both route through the same
+            // drawTracePass divisor path (task R7).
+            if (
+              s.view.raymarch.previewPacked &&
+              graph.hasPreviewTrace() &&
+              s.view.raymarch.previewPackedAtStep === s.sim.stepCount
+            ) {
+              graph.drawPreviewTrace(encoder, traceViewFor(s, h.box, cam), divisor);
+            } else {
+              graph.drawTrace(encoder, traceViewFor(s, h.box, cam), divisor);
+            }
+          },
+          agents: () =>
+            graph.drawSplat(encoder, {
+              ...cam,
+              sampleWeight: s.view.raymarch.sampleWeight,
+              intensity: s.view.agents.intensity,
+              pointSizePx: s.view.agents.pointSizePx,
+            }),
+          pathTracer: () => {
+            // Reset on entering the path tracer (the subscriber nulls the key on a
+            // renderer change), on camera move or on a pathTracer param change (divisor
+            // included, sampleCap excluded — volpathKeyFor.ts); an explicit
+            // reset/clear-trace calls graph.resetVolpath() directly (watchSimCommandsSaga).
+            // Deliberately NOT keyed on sim.stepCount: an earlier version wiped the
+            // accumulator every 16 steps, visible as never converging — the field drifts
+            // slowly enough to ride across steps, and a box change that invalidates the
+            // grid reaches here via a harness rebuild instead (epoch reset, below). Also
+            // NOT keyed on the effective divisor: VolpathPass's own accumulator already
+            // resizes/self-resets on that.
+            const volpathKey = JSON.stringify(volpathKeyFor(cam, s.view.pathTracer));
+            if (volpathKey !== lastVolpathKey) {
+              graph.resetVolpath();
+              volpathSampleCount = 0;
+            }
+            lastVolpathKey = volpathKey;
+            const divisor = effectiveVolpathDivisor(s.view.pathTracer.divisor, sinceInteractionMs);
+            graph.drawVolpath(encoder, cam, s.view.pathTracer, divisor);
+            volpathSampleCount += 1;
+          },
+        };
+        drawRenderer[s.view.renderer]();
+        if (s.view.showGalaxies) graph.drawGalaxyOverlay(encoder, cam, s.view.galaxies);
       }
       // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
       // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
@@ -304,6 +295,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // Task FLE: one check feeds both render-on-demand's dirty flag AND the
       // interaction-priority boost trigger — the fps-only write is excluded inside
       // storeWriteIsDirty itself, not here, so both stay a single call.
+      if (s.view.renderer !== lastDirtyCheckState.view.renderer) lastVolpathKey = null;
       if (storeWriteIsDirty(lastDirtyCheckState, s)) {
         dirty = true;
         lastInteractionMs = performance.now();

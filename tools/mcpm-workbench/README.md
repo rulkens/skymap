@@ -4,10 +4,10 @@ A WebGPU dev tool that visualises the **MCPM cosmic-web simulation** — the
 constrained-realisation dark-matter density field skymap's volume renderers
 already consume, driven live rather than baked offline. It runs the port of
 Polyphorm's agent-based sim (propagate/decay/histogram compute kernels) over
-a real catalog box, with four render layers (raymarch, agent splat, galaxy
-overlay, path tracer) and `.npy`/`.scfd` export plus a headless comparator
-CLI (`validate/compareTraceCubes.ts`) for validating against a real
-PolyPhy-fork export.
+a real catalog box, drawn by one chosen renderer (raymarch, agent splat or
+path tracer) with an optional galaxy overlay on top, and `.npy`/`.scfd`
+export plus a headless comparator CLI (`validate/compareTraceCubes.ts`) for
+validating against a real PolyPhy-fork export.
 
 This is a sibling dev tool, like `tools/flow-workbench/` and
 `tools/galaxy-renderer/` — its own self-contained Vite + React + TS app, not

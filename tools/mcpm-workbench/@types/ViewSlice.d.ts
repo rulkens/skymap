@@ -1,27 +1,23 @@
 import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/ScalarFieldPaletteId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { RendererId } from './RendererId';
 
 /**
- * ViewSlice — the render layers plus the tool-local orbit camera (the trace
- * pass consumes camera + raymarch params via its own narrow options type, not
- * this one directly — Viewport maps between the two). Preview export is
- * `raymarch.previewPacked` below, not a fifth `layers` entry: it swaps the
- * raymarch layer's own data source rather than adding an independent draw,
- * so its ControlsPanel control lives in the Raymarch section.
+ * ViewSlice — the renderer choice, the galaxy overlay and the tool-local orbit
+ * camera (the trace pass consumes camera + raymarch params via its own narrow
+ * options type, not this one directly — Viewport maps between the two).
+ * Preview export is `raymarch.previewPacked` below, not a renderer: it swaps
+ * the raymarch's own data source rather than adding a draw, so its control
+ * lives in the raymarch's rows.
  */
 export type ViewSlice = {
   /**
-   * Independent layers, NOT a mode picker: any subset may be on, including
-   * none. Viewport composites them additively over a cleared target in
-   * declaration order — raymarch, agents, galaxies, pathTracer.
+   * A mode picker: exactly one renderer draws the field. The path tracer is
+   * never the default — worst case is bounces×512 tracking steps per pixel.
    */
-  readonly layers: {
-    readonly raymarch: boolean;
-    readonly agents: boolean;
-    readonly galaxies: boolean;
-    /** Off by default: worst case is bounces×512 tracking steps per pixel. */
-    readonly pathTracer: boolean;
-  };
+  readonly renderer: RendererId;
+  /** The catalog dots, added on top of whichever renderer is chosen. */
+  readonly showGalaxies: boolean;
   readonly galaxies: {
     readonly intensity: number;
     /** Screen-space dot radius; galaxyPoints.wesl's `radiusPx`. */
@@ -89,8 +85,8 @@ export type ViewSlice = {
   /**
    * The volumetric path tracer's own knobs — field names match `VolpathParams`
    * (volpathPass.ts) verbatim so a slice snapshot passes straight to `draw()`
-   * with no remapping. `trimDensity`/`sampleWeight` duplicate the raymarch
-   * layer's own pair rather than sharing them: both must agree on the
+   * with no remapping. `trimDensity`/`sampleWeight` duplicate the raymarch's
+   * own pair rather than sharing them: both must agree on the
    * trace→density transfer, but are independently tunable here.
    */
   readonly pathTracer: {

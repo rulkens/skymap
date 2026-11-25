@@ -1,15 +1,14 @@
 /**
  * ControlsPanel — the eight McpmParams sliders, run controls, weight/init
- * mode toggles, and the render layers. Every slider writes straight
+ * mode toggles, and the rendering. Every slider writes straight
  * to the sim slice; the harness reads `params` fresh each step, so these
  * are live with no rebuild. Agent count / weight mode / init mode (and the
  * grid box, in DataPanel's Selection) are structural — `watchSceneSaga` watches those actions and rebuilds
  * the harness (debounced). Simulation's header pill runs and pauses the sim;
- * the Raymarch / Agents / Galaxies / Path tracer sections are the four render
- * layers, each switched by its header pill, and any subset may be on.
+ * Rendering's header dropdown picks the one renderer and its rows, and the
+ * Galaxies pill adds the catalog dots on top of it.
  */
 import { useState, type ReactNode } from 'react';
-import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import SubsectionGroup from './SubsectionGroup';
 import ButtonTip from '../ButtonTip/ButtonTip';
@@ -18,38 +17,26 @@ import { setWeightMode } from '../../state/catalog/catalogSlice';
 import { MCPM_PARAM_KEYS } from '../../state/exportParams';
 import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../state/sim/simSlice';
 import {
-  setAdditive,
-  setAgentIntensity,
-  setAgentPointSize,
-  setDivisor,
   setGalaxyIntensity,
   setGalaxyPointSize,
-  setLayerEnabled,
-  setPathTracerCompressive,
-  setPathTracerDivisor,
-  setPathTracerPaletteId,
-  setPathTracerParam,
-  setPathTracerSampleCap,
-  setPreviewPacked,
-  setRaymarchPaletteId,
-  setRaymarchParam,
+  setRenderer,
+  setShowGalaxies,
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import FileActions from '../FileActions/FileActions';
-import PaletteRow from '../PaletteRow/PaletteRow';
-import BounceIcon from '../icons/BounceIcon/BounceIcon';
+import EyeIcon from '../../../../../src/components/icons/EyeIcon/EyeIcon';
 import LoopPlayIcon from '../icons/LoopPlayIcon/LoopPlayIcon';
-import ParticlesIcon from '../icons/ParticlesIcon/ParticlesIcon';
-import RayStepsIcon from '../icons/RayStepsIcon/RayStepsIcon';
 import SpiralIcon from '../icons/SpiralIcon/SpiralIcon';
 import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
+import Select from '../Select/Select';
 import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
-import { PALETTE_INFO } from './utils/PALETTE_INFO';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
-import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
-import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
+import { RENDERER_ICONS } from './utils/RENDERER_ICONS';
+import { RENDERER_LABELS } from './utils/RENDERER_LABELS';
+import { RENDERER_ROWS } from './utils/RENDERER_ROWS';
+import { RENDERERS } from './utils/RENDERERS';
 import styles from './ControlsPanel.module.css';
 
 export type ControlsPanelProps = {
@@ -65,12 +52,9 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
   // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
-  const [raymarchOpen, setRaymarchOpen] = useState(false);
-  const [agentsOpen, setAgentsOpen] = useState(false);
+  const [renderingOpen, setRenderingOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
-  const [pathTracerOpen, setPathTracerOpen] = useState(false);
-  const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
-    dispatch(setLayerEnabled({ layer, on }));
+  const RendererRows = RENDERER_ROWS[view.renderer];
 
   return (
     <aside id={id} className={styles.root} aria-label="Simulation and rendering" inert={collapsed}>
@@ -161,111 +145,34 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           </SubsectionGroup>
         </PanelSection>
 
-        {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
-            picker. Section order is the compositing order Viewport encodes them in. */}
         <PanelSection
-          title="Raymarch"
-          icon={<RayStepsIcon size={12} />}
-          open={raymarchOpen}
-          onToggle={() => setRaymarchOpen((v) => !v)}
-          on={view.layers.raymarch}
-          onChange={toggleLayer('raymarch')}
-        >
-          {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
-          <ToggleRow
-            label="additive blend"
-            on={view.raymarch.additive}
-            info="Adds brightness along each ray, so dense regions show through. Off, nearer structure hides what is behind it, as in Polyphorm."
-            onChange={(on) => dispatch(setAdditive(on))}
-          />
-          {/* T18: on demand, not a mode — watchPreviewPackedSaga packs once on the
-              rising edge and un-checks this itself once the sim steps past that
-              snapshot. */}
-          <ToggleRow
-            label="preview packed export"
-            on={view.raymarch.previewPacked}
-            info="Marches the packed export cube (real packLogTraceVoxels) instead of the live trace — a structure check, not a brightness match. Goes stale and reverts on the next sim step."
-            onChange={(on) => dispatch(setPreviewPacked(on))}
-          />
-          <PaletteRow
-            value={view.raymarch.paletteId}
-            onChange={(id) => dispatch(setRaymarchPaletteId(id))}
-            info={PALETTE_INFO}
-          />
-          <SubsectionGroup title="Trace">
-            {RAYMARCH_SLIDERS.map((spec) => (
-              <SliderRow
-                key={spec.key}
-                label={spec.label}
-                value={spec.log ? Math.log10(view.raymarch[spec.key]) : view.raymarch[spec.key]}
-                min={spec.min}
-                max={spec.max}
-                step={spec.step}
-                format={spec.format}
-                info={spec.info}
-                onChange={(v) =>
-                  dispatch(
-                    setRaymarchParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }),
-                  )
-                }
-                path={`view.raymarch.${spec.key}`}
-              />
-            ))}
-          </SubsectionGroup>
-          <SubsectionGroup title="Preview">
-            <SliderRow
-              label="divisor"
-              value={view.raymarch.divisor}
-              min={1}
-              max={8}
-              step={1}
-              format={(v) => v.toFixed(0)}
-              info="Marches into a floor(size/divisor) offscreen target and bilinear-upsamples it in, instead of straight into the frame. Fragment cost falls with the square of the divisor; 3 matches the main app's volume row."
-              onChange={(v) => dispatch(setDivisor(v))}
-              path="view.raymarch.divisor"
+          title="Rendering"
+          icon={<EyeIcon size={12} />}
+          open={renderingOpen}
+          onToggle={() => setRenderingOpen((v) => !v)}
+          contentKey={view.renderer}
+          control={
+            <Select
+              value={view.renderer}
+              options={RENDERERS}
+              labels={RENDERER_LABELS}
+              icons={RENDERER_ICONS}
+              onChange={(renderer) => dispatch(setRenderer(renderer))}
+              aria-label="Renderer"
             />
-          </SubsectionGroup>
-        </PanelSection>
-
-        <PanelSection
-          title="Agents"
-          icon={<ParticlesIcon size={12} />}
-          open={agentsOpen}
-          onToggle={() => setAgentsOpen((v) => !v)}
-          on={view.layers.agents}
-          onChange={toggleLayer('agents')}
+          }
         >
-          <SliderRow
-            label="intensity"
-            value={view.agents.intensity}
-            min={0.05}
-            max={3}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
-            info="Brightness multiplier on the resolved agent splat."
-            onChange={(v) => dispatch(setAgentIntensity(v))}
-            path="view.agents.intensity"
-          />
-          <SliderRow
-            label="point size"
-            value={view.agents.pointSizePx}
-            min={1}
-            max={8}
-            step={1}
-            format={(v) => v.toFixed(0)}
-            info="Per-agent splat footprint, in whole pixels — the splat compute kernel writes a discrete square, unlike the Galaxies layer's continuously-sized quad."
-            onChange={(v) => dispatch(setAgentPointSize(v))}
-            path="view.agents.pointSizePx"
-          />
+          <RendererRows />
         </PanelSection>
 
+        {/* An overlay on top of whichever renderer is chosen, so its own pill. */}
         <PanelSection
           title="Galaxies"
           icon={<SpiralIcon size={12} />}
           open={galaxiesOpen}
           onToggle={() => setGalaxiesOpen((v) => !v)}
-          on={view.layers.galaxies}
-          onChange={toggleLayer('galaxies')}
+          on={view.showGalaxies}
+          onChange={(on) => dispatch(setShowGalaxies(on))}
         >
           <SliderRow
             label="intensity"
@@ -288,74 +195,6 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
             info="Screen-space dot radius — constant with distance, so far galaxies stay visible."
             onChange={(v) => dispatch(setGalaxyPointSize(v))}
             path="view.galaxies.pointSizePx"
-          />
-        </PanelSection>
-
-        <PanelSection
-          title="Path tracer"
-          icon={<BounceIcon size={12} />}
-          open={pathTracerOpen}
-          onToggle={() => setPathTracerOpen((v) => !v)}
-          on={view.layers.pathTracer}
-          onChange={toggleLayer('pathTracer')}
-        >
-          {/* Off by default: worst case is bounces×512 tracking steps per pixel,
-              far heavier than the raymarch — this is not a layer to leave on
-              while exploring. */}
-          <PaletteRow
-            value={view.pathTracer.paletteId}
-            onChange={(id) => dispatch(setPathTracerPaletteId(id))}
-            info={PALETTE_INFO}
-          />
-          <SubsectionGroup title="Trace">
-            {PATHTRACER_SLIDERS.map((spec) => (
-              <SliderRow
-                key={spec.key}
-                label={spec.label}
-                value={spec.log ? Math.log10(view.pathTracer[spec.key]) : view.pathTracer[spec.key]}
-                min={spec.min}
-                max={spec.max}
-                step={spec.step}
-                format={spec.format}
-                info={spec.info}
-                onChange={(v) =>
-                  dispatch(
-                    setPathTracerParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }),
-                  )
-                }
-                path={`view.pathTracer.${spec.key}`}
-              />
-            ))}
-          </SubsectionGroup>
-          <SubsectionGroup title="Preview">
-            <SliderRow
-              label="path tracer divisor"
-              value={view.pathTracer.divisor}
-              min={1}
-              max={4}
-              step={1}
-              format={(v) => v.toFixed(0)}
-              info="Accumulates into floor(size/divisor), samples/sec up with divisor². Auto-boosts to 4 while the camera moves."
-              onChange={(v) => dispatch(setPathTracerDivisor(v))}
-              path="view.pathTracer.divisor"
-            />
-            <SliderRow
-              label="sample cap"
-              value={view.pathTracer.sampleCap}
-              min={64}
-              max={4096}
-              step={64}
-              format={(v) => v.toFixed(0)}
-              info="Progressive accumulator stops forcing a render past this many samples (Monte Carlo noise falls as 1/sqrt(N)). Raising it while capped resumes accumulation without a reset; lowering it just goes idle sooner."
-              onChange={(v) => dispatch(setPathTracerSampleCap(v))}
-              path="view.pathTracer.sampleCap"
-            />
-          </SubsectionGroup>
-          <ToggleRow
-            label="compressive"
-            on={view.pathTracer.compressive}
-            info="Tonemap each sample before accumulating (the fork's LDR accumulation) instead of averaging linear radiance."
-            onChange={(on) => dispatch(setPathTracerCompressive(on))}
           />
         </PanelSection>
       </div>

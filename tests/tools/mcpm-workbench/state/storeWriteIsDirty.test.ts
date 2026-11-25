@@ -55,10 +55,7 @@ describe('storeWriteIsDirty', () => {
     };
     const next = {
       ...withFps,
-      view: viewSlice.reducer(
-        withFps.view,
-        viewSlice.actions.setLayerEnabled({ layer: 'agents', on: true }),
-      ),
+      view: viewSlice.reducer(withFps.view, viewSlice.actions.setRenderer('agents')),
     };
     expect(storeWriteIsDirty(withFps, next)).toBe(true);
   });

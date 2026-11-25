@@ -6,6 +6,25 @@ import {
 
 const PITCH_LIMIT = 1.5;
 
+describe('viewSlice renderer', () => {
+  it('starts on the raymarch with the galaxy overlay on', () => {
+    expect(defaultViewSlice.renderer).toBe('raymarch');
+    expect(defaultViewSlice.showGalaxies).toBe(true);
+  });
+
+  it('switches renderer without touching the galaxy overlay', () => {
+    const next = viewSlice.reducer(defaultViewSlice, viewSlice.actions.setRenderer('pathTracer'));
+    expect(next.renderer).toBe('pathTracer');
+    expect(next.showGalaxies).toBe(true);
+  });
+
+  it('turns the galaxy overlay off without touching the renderer', () => {
+    const next = viewSlice.reducer(defaultViewSlice, viewSlice.actions.setShowGalaxies(false));
+    expect(next.showGalaxies).toBe(false);
+    expect(next.renderer).toBe('raymarch');
+  });
+});
+
 describe('viewSlice commitCameraPose', () => {
   it('clamps pitch to +/-PITCH_LIMIT when out of range', () => {
     const over = viewSlice.reducer(
