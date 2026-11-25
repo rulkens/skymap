@@ -5,3 +5,13 @@
   composes: blockButton from '../../../../../src/components/common/shared.module.css';
   font-size: var(--font-size-sm);
 }
+
+/* The padding field: the shared form-control chrome at the panel's own text size. */
+.field {
+  composes: control from '../../../../../src/components/common/shared.module.css';
+  inline-size: 8ch;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  cursor: text;
+}

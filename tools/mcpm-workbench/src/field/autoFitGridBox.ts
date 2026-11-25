@@ -1,7 +1,6 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../@types/GridBox';
-
-const ceil8 = (n: number): number => Math.ceil(n / 8) * 8;
+import { ceil8 } from '../utils/ceil8';
 
 /**
  * autoFitGridBox — fits a cubic-voxel simulation grid around a catalog bbox at

@@ -29,8 +29,10 @@ import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
 import { AXES } from './utils/AXES';
-import { fieldStyle } from './utils/fieldStyle';
+import { formatSizeMpc } from './utils/formatSizeMpc';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
+import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
+import { sizeSliderFor } from './utils/sizeSliderFor';
 import { VOXEL_SIZE_MAX_MPC } from './utils/VOXEL_SIZE_MAX_MPC';
 import { VOXEL_SIZE_MIN_MPC } from './utils/VOXEL_SIZE_MIN_MPC';
 import { VOXEL_SIZE_STEP_MPC } from './utils/VOXEL_SIZE_STEP_MPC';
@@ -87,107 +89,87 @@ function GridBoxPanel(): ReactNode {
       : "Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit.";
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 'var(--space-4)',
-        fontFamily: 'var(--font-family-mono)',
-        fontSize: 'var(--font-size-md)',
-        color: 'var(--color-fg-muted)',
-      }}
-    >
-      {/* Group div so the slider's own margin (not the root grid's gap) sets its
-          spacing to the readout/button it controls — same principle as the
-          seven-slider wrapper below, applied to this one slider+button pairing. */}
-      <div>
-        <SliderRow
-          label="fit %"
-          value={grid.autoFitPercent}
-          min={80}
-          max={100}
-          step={1}
-          format={(v) => v.toFixed(0)}
-          info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
-          onChange={(v) => dispatch(setAutoFitPercent(v))}
-          path="grid.autoFitPercent"
-        />
-        {grid.autoFitPercent < 100 && <PanelRow label={`evicts ${evictedCount} pts`} />}
-        <PanelRow>
-          <Button
-            className={styles.autoFitButton}
-            disabled={!catalogBoundsMpc}
-            onClick={() => {
-              if (!catalogBoundsMpc) return;
-              dispatch(
-                fitBoxToCatalog(
-                  resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-                ),
-              );
-            }}
-          >
-            auto fit
-          </Button>
-        </PanelRow>
-      </div>
+    <>
+      <SliderRow
+        label="fit %"
+        value={grid.autoFitPercent}
+        min={80}
+        max={100}
+        step={1}
+        format={(v) => v.toFixed(0)}
+        info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
+        onChange={(v) => dispatch(setAutoFitPercent(v))}
+        path="grid.autoFitPercent"
+      />
+      {grid.autoFitPercent < 100 && <PanelRow label={`evicts ${evictedCount} pts`} />}
+      <PanelRow>
+        <Button
+          className={styles.autoFitButton}
+          disabled={!catalogBoundsMpc}
+          onClick={() => {
+            if (!catalogBoundsMpc) return;
+            dispatch(
+              fitBoxToCatalog(
+                resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+              ),
+            );
+          }}
+        >
+          auto fit
+        </Button>
+      </PanelRow>
       <PanelRow
         label={`${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox · ${formatBytes(estimatedBytes)}`}
       />
       <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
         <input
           type="number"
-          style={fieldStyle}
+          className={styles.field}
           value={grid.paddingMpc}
           onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
         />
       </PanelRow>
-      {/* One wrapper for all seven sliders: consecutive SliderRows space by their
-          own margin (like every other panel); the root grid's gap would double it. */}
-      <div>
+      <SliderRow
+        label="voxel size"
+        // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
+        // whenever the floor isn't active) rather than the raw manual value — otherwise,
+        // below the floor, the pill's number disagreed with the dims readout above and
+        // arrow-key nudges silently ticked a value the display never moved for.
+        value={box.voxelSizeMpc}
+        min={voxelSizeMinMpc}
+        max={VOXEL_SIZE_MAX_MPC}
+        step={VOXEL_SIZE_STEP_MPC}
+        format={(v) => v.toFixed(2)}
+        info={voxelSizeInfo}
+        onChange={(v) => dispatch(setVoxelSizeMpc(v))}
+        path="grid.manualVoxelSizeMpc"
+      />
+      {AXES.map(({ axis, label }) => (
         <SliderRow
-          label="voxel size"
-          // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
-          // whenever the floor isn't active) rather than the raw manual value — otherwise,
-          // below the floor, the pill's number disagreed with the dims readout above and
-          // arrow-key nudges silently ticked a value the display never moved for.
-          value={box.voxelSizeMpc}
-          min={voxelSizeMinMpc}
-          max={VOXEL_SIZE_MAX_MPC}
-          step={VOXEL_SIZE_STEP_MPC}
-          format={(v) => v.toFixed(2)}
-          info={voxelSizeInfo}
-          onChange={(v) => dispatch(setVoxelSizeMpc(v))}
-          path="grid.manualVoxelSizeMpc"
+          key={`center-${label}`}
+          label={`center ${label}`}
+          value={grid.manualCenterMpc[axis]}
+          min={-500}
+          max={500}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          info="Centre of the simulated box (Mpc)."
+          onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
+          path={`grid.manualCenterMpc.${axis}`}
         />
-        {AXES.map(({ axis, label }) => (
-          <SliderRow
-            key={`center-${label}`}
-            label={`center ${label}`}
-            value={grid.manualCenterMpc[axis]}
-            min={-500}
-            max={500}
-            step={1}
-            format={(v) => v.toFixed(0)}
-            info="Centre of the simulated box (Mpc)."
-            onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
-            path={`grid.manualCenterMpc.${axis}`}
-          />
-        ))}
-        {AXES.map(({ axis, label }) => (
-          <SliderRow
-            key={`size-${label}`}
-            label={`size ${label}`}
-            value={grid.manualSizeMpc[axis]}
-            min={10}
-            max={1000}
-            step={5}
-            format={(v) => v.toFixed(0)}
-            info="Extent of the simulated box along this axis (Mpc)."
-            onChange={(v) => dispatch(setManualSizeMpc(withAxis(grid.manualSizeMpc, axis, v)))}
-            path={`grid.manualSizeMpc.${axis}`}
-          />
-        ))}
-      </div>
-    </div>
+      ))}
+      {AXES.map(({ axis, label }) => (
+        <SliderRow
+          key={`size-${label}`}
+          label={`size ${label}`}
+          {...sizeSliderFor(box, axis)}
+          format={formatSizeMpc}
+          info="Extent of the simulated box along this axis (Mpc), in whole 8-voxel blocks."
+          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(box, axis, v)))}
+          path={`grid.manualSizeMpc.${axis}`}
+        />
+      ))}
+    </>
   );
 }
 

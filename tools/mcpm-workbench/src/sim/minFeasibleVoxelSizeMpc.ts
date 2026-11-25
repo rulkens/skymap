@@ -1,7 +1,6 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { ceil8 } from '../utils/ceil8';
 import { bufferBytesForDims } from './planGridBudget';
-
-const ceil8 = (n: number): number => Math.ceil(n / 8) * 8;
 
 function dimsAt(extentMpc: Readonly<Vec3>, voxelSizeMpc: number): Vec3 {
   return [

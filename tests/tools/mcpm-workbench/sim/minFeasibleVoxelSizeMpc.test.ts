@@ -8,8 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { bufferBytesForDims } from '../../../../tools/mcpm-workbench/src/sim/planGridBudget';
 import { minFeasibleVoxelSizeMpc } from '../../../../tools/mcpm-workbench/src/sim/minFeasibleVoxelSizeMpc';
-
-const ceil8 = (n: number): number => Math.ceil(n / 8) * 8;
+import { ceil8 } from '../../../../tools/mcpm-workbench/src/utils/ceil8';
 const dimsAt = (extent: Vec3, voxelSizeMpc: number): Vec3 => [
   ceil8(extent[0] / voxelSizeMpc),
   ceil8(extent[1] / voxelSizeMpc),

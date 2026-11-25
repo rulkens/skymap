@@ -7,11 +7,13 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 
 /**
- * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
- * view (an auto-fit-on-boot box would stretch to the catalog's outliers
- * until the local volume is a sliver of it). `manualVoxelSizeMpc: 0.75` is
- * a deliberate choice, denser than a divisor-1 default's implicit 0.78125
- * Mpc/vox: boot dims come out 272³ (decision record, Q4).
+ * defaultGridSlice — a manual origin-centred cube is the boot view (an
+ * auto-fit-on-boot box would stretch to the catalog's outliers until the
+ * local volume is a sliver of it). `manualVoxelSizeMpc: 0.75` is a deliberate
+ * choice (decision record, Q4). `manualSizeMpc` is a request: 200 Mpc rounds
+ * up to 272³ voxels, a 204 Mpc box, which is what the panel shows. It stays
+ * 200 because `?probe` coarsens this same request to 64³ at 3.125 Mpc/vox
+ * (defaultAppState.ts), the grid its energy band was measured on.
  */
 export const defaultGridSlice: GridSlice = {
   manualVoxelSizeMpc: 0.75,
