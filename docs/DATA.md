@@ -285,6 +285,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
 | Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-sampled-tracks` (`sampledTrack.<id>.bin` + generated `missionEvents.generated.ts`) |
+| 2026 QQ8 track         | `fetch-horizons -- 2026-qq8`                    | `build-sampled-tracks` (`sampledTrack.2026-qq8.bin`; the Voyagers' raw inputs must be on disk too) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 | Live clouds            | `fetch-cloud-inputs` (once; `build-live-clouds` runs it) | `build-live-clouds` (`live/v1/` pointer + yesterday's three dated `earth-clouds-grey-*.webp` tiers; the Action uploads them, no `sync-r2`) |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
