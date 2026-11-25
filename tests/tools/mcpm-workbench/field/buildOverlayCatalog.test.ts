@@ -1,15 +1,11 @@
 /**
  * buildOverlayCatalog — task S16. Same 6-point / 3-in-box fixture as
- * cullPointsToBox.test.ts and renormalizeWeightMass.test.ts's cropping-box
- * case: origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8].
+ * cullPointsToBox.test.ts: origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8].
  */
 import { describe, expect, it } from 'vitest';
 import { buildOverlayCatalog } from '../../../../tools/mcpm-workbench/src/field/buildOverlayCatalog';
 import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/field/cullPointsToBox';
-import {
-  deriveAgentWeights,
-  TOTAL_WEIGHT_MASS,
-} from '../../../../tools/mcpm-workbench/src/field/deriveAgentWeights';
+import { deriveAgentWeights } from '../../../../tools/mcpm-workbench/src/field/deriveAgentWeights';
 import { worldToVoxel } from '../../../../tools/mcpm-workbench/src/field/worldToVoxel';
 import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
@@ -73,9 +69,9 @@ describe('buildOverlayCatalog', () => {
     expect(culled.points.count).toBe(3);
   });
 
-  it('normalizes weights to mean 1 over the RAW set (sum to TOTAL_WEIGHT_MASS across all 6, not just the 3 in-box)', () => {
+  it('normalizes weights to mean 1 over the RAW set (all 6, not just the 3 in-box)', () => {
     const overlay = buildOverlayCatalog(points, weights, box);
-    expect(sum(overlay.weight)).toBeCloseTo(TOTAL_WEIGHT_MASS, 1);
+    expect(sum(overlay.weight) / 6).toBeCloseTo(1, 5);
   });
 
   it('projects an out-of-box point to its own out-of-[0,dims) voxel coordinate rather than dropping it', () => {

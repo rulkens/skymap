@@ -22,7 +22,6 @@ import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?st
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
 import { buildOverlayCatalog } from '../field/buildOverlayCatalog';
 import { cullPointsToBox } from '../field/cullPointsToBox';
-import { renormalizeWeightMass } from '../field/renormalizeWeightMass';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
 import { planGridBudget } from './planGridBudget';
@@ -92,15 +91,9 @@ export async function createMcpmHarness(opts: {
   // data, skymap's doesn't) — cull ONCE, here, before anything downstream sizes a
   // buffer or reads a count, so nDataPoints/agentBufferLength/the histogram
   // normalization all agree with what seedAgents actually seeds.
+  // Survivors keep their pre-cull weights: the port never culls, and rescaling would let a
+  // cropped box re-inflate the points left inside it.
   const culled = cullPointsToBox(opts.points, opts.weights, opts.box);
-  // Fix round 1: cullPointsToBox filters values, it doesn't rescale them — restore the
-  // sum-to-TOTAL_WEIGHT_MASS invariant over the culled population specifically, the one
-  // both the deposit and galaxyOverlayPass's weightScale actually read (see
-  // renormalizeWeightMass's docblock).
-  const seedWeights: AgentWeights = {
-    ...culled.weights,
-    weights: renormalizeWeightMass(culled.weights.weights),
-  };
   // Task S16: the Galaxies overlay previews the RAW loaded set, in-box or not — a data
   // preview, not the sim's readout, so it gets its own voxel-space lanes over
   // `opts.points`/`opts.weights` rather than `culled`'s. Pure CPU-side math; the GPU
@@ -279,7 +272,7 @@ export async function createMcpmHarness(opts: {
   function uploadAgents(mode: AgentInitMode, seed: number): void {
     const seeded = seedAgents({
       points: culled.points,
-      weights: seedWeights,
+      weights: culled.weights,
       box: opts.box,
       agentCount: opts.agentCount,
       mode,

@@ -2,23 +2,16 @@
  * deriveAgentWeights — linear catalog weight W → MCPM agent deposit weight.
  *
  * W is linear and positive (built-ins: stellar mass in 1e12 Msun, see
- * `massWeightFromLog10`). Fork-exact order (spec §6, §15 decision 8), do not
- * reorder: NaN entries take the finite median → `w = log10(1 + max(W, 0))` →
- * divide by mean(w) → scale by `1e6 / n_points`. The `max(W, 0)` clamp guards
- * the domain: a negative sentinel can pass `isFinite`, and `log10` of a value
- * ≤ -1 would poison the whole deposit with NaN. `uniform` mode skips mass but
- * still reports the NaN accounting.
+ * `massWeightFromLog10`). The port's formula, do not reorder: NaN entries take
+ * the finite median → `(1e6 / n) * log10(1 + max(W, 0)) / mean(W)`, mean(W)
+ * of the untransformed weights, not of the logs. The `max(W, 0)` clamp
+ * guards the domain: a negative sentinel can pass `isFinite`, and `log10` of a
+ * value ≤ -1 would poison the whole deposit with NaN. `uniform` mode (not in
+ * the port) gives every point `1e6 / n` but still reports the NaN accounting.
  */
 import type { AgentWeights } from '../../@types/AgentWeights';
 
-/**
- * Every `AgentWeights.weights` this module produces sums to exactly this —
- * regardless of population size — so a consumer of a SUBSET (task S14's
- * `cullPointsToBox`) must re-establish the same total via
- * `renormalizeWeightMass` before anything downstream (the deposit, or
- * `galaxyOverlayPass`'s `weightScale = n/TOTAL_WEIGHT_MASS`) assumes it again.
- */
-export const TOTAL_WEIGHT_MASS = 1e6;
+const DEPOSIT_SCALE = 1e6; // the port's `1.0e6 / data_count` numerator
 
 function median(sorted: readonly number[]): number {
   const mid = sorted.length >> 1;
@@ -46,18 +39,18 @@ export function deriveAgentWeights(
 
   const weights = new Float32Array(n);
   if (degradeToUniform) {
-    weights.fill(1);
-  } else {
-    for (let i = 0; i < n; i++) {
-      const v = log10StellarMass[i]!;
-      const filled = Number.isNaN(v) ? medianLog10Mass : v;
-      weights[i] = Math.log10(1 + Math.max(filled, 0));
-    }
+    weights.fill(DEPOSIT_SCALE / n);
+    return { weights, nanCount, medianLog10Mass };
   }
 
-  let sum = 0;
-  for (let i = 0; i < n; i++) sum += weights[i]!;
-  const scale = TOTAL_WEIGHT_MASS / n / (sum / n);
+  let rawSum = 0;
+  for (let i = 0; i < n; i++) {
+    const v = log10StellarMass[i]!;
+    const filled = Math.max(Number.isNaN(v) ? medianLog10Mass : v, 0);
+    rawSum += filled;
+    weights[i] = Math.log10(1 + filled);
+  }
+  const scale = DEPOSIT_SCALE / n / (rawSum / n);
   for (let i = 0; i < n; i++) weights[i] = weights[i]! * scale;
 
   return { weights, nanCount, medianLog10Mass };

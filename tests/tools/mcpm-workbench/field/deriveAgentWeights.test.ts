@@ -2,17 +2,11 @@
  * deriveAgentWeights — fork-exact transform order + NaN median-fill accounting.
  *
  * Order under test (spec §6, §15 decision 8): NaN → finite median,
- * w = log10(1 + max(W, 0)), divide by mean(w), scale by 1e6/n_points.
+ * w = log10(1 + max(W, 0)), divide by mean(W), scale by 1e6/n_points.
  */
 import { describe, expect, it } from 'vitest';
 import { deriveAgentWeights } from '../../../../tools/mcpm-workbench/src/field/deriveAgentWeights';
 import { massWeightFromLog10 } from '../../../../tools/mcpm-workbench/src/field/massWeightFromLog10';
-
-const mean = (a: Float32Array) => {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) sum += a[i]!;
-  return sum / a.length;
-};
 
 describe('deriveAgentWeights', () => {
   it('NaN masses take the finite median with an even finite count', () => {
@@ -27,10 +21,14 @@ describe('deriveAgentWeights', () => {
     expect(result.nanCount).toBe(2);
   });
 
-  it('weights average 1e6 / n after normalisation', () => {
-    const input = new Float32Array([8, 9, 10, 11, 12]);
-    const result = deriveAgentWeights(input, 'stellarMass');
-    expect(mean(result.weights)).toBeCloseTo(1e6 / input.length, 3);
+  it("matches the port's formula on linear weights", () => {
+    const w = [0.01, 0.1, 1];
+    const meanW = w.reduce((a, b) => a + b, 0) / w.length;
+    const result = deriveAgentWeights(new Float32Array(w), 'stellarMass');
+    w.forEach((wi, i) => {
+      const expected = (1e6 / w.length) * (Math.log10(1 + wi) / meanW);
+      expect(Math.abs(result.weights[i]! / expected - 1)).toBeLessThan(1e-3);
+    });
   });
 
   it('mass weighting separates a 1e8 and a 1e12 Msun galaxy like the port', () => {
@@ -39,7 +37,8 @@ describe('deriveAgentWeights', () => {
     expect(weights[1]! / weights[0]!).toBeGreaterThan(1000);
   });
 
-  it('uniform mode ignores mass entirely', () => {
+  // The port has no uniform mode; it keeps the workbench's own 1e6 total.
+  it('uniform mode still sums to 1e6', () => {
     const input = new Float32Array([8, 500, NaN, -3, 11.7]);
     const result = deriveAgentWeights(input, 'uniform');
     const expected = 1e6 / input.length;

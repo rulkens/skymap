@@ -12,7 +12,7 @@ export type AgentBuffers = {
   readonly x: GPUBuffer;
   readonly y: GPUBuffer;
   readonly z: GPUBuffer;
-  /** Deposit weights (io slot 6): data rows carry deriveAgentWeights' mass term, mean 1e6/nDataPoints. */
+  /** io slot 6. The sim's data rows: deriveAgentWeights' deposit weight; `overlayAgents`: mean 1, display only. */
   readonly weight: GPUBuffer;
   readonly nDataPoints: number;
   readonly count: number;

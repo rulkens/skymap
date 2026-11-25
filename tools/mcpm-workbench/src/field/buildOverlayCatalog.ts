@@ -1,7 +1,6 @@
 import type { AgentWeights } from '../../@types/AgentWeights';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
-import { renormalizeWeightMass } from './renormalizeWeightMass';
 import { worldToVoxel } from './worldToVoxel';
 
 /** Voxel-space lanes for the Galaxies overlay's own draw set — same shape as seedAgents'
@@ -15,12 +14,12 @@ export type OverlayCatalog = {
 };
 
 /**
- * buildOverlayCatalog — voxel positions + mean-1 weights for the Galaxies overlay, over
+ * buildOverlayCatalog — voxel positions + display weights for the Galaxies overlay, over
  * the RAW (pre-cull) `points`. Unlike createMcpmHarness's `cullPointsToBox`, nothing here
  * drops a point outside the box: `worldToVoxel` maps it to a coordinate outside [0, dims),
- * which galaxyPoints.wesl projects like any other (no box test in that shader). `weights`
- * is renormalized over this same RAW population, matching galaxyOverlayPass's
- * `weightScale` numerator (the raw drawn count) rather than the sim's culled one.
+ * which galaxyPoints.wesl projects like any other (no box test in that shader). The
+ * weights are a display scale, mean 1 over this RAW set, which galaxyPoints.wesl reads as
+ * is; the deposit weights' own total depends on the catalog and is no use to it.
  */
 export function buildOverlayCatalog(
   points: CatalogPoints,
@@ -31,7 +30,12 @@ export function buildOverlayCatalog(
   const x = new Float32Array(n);
   const y = new Float32Array(n);
   const z = new Float32Array(n);
+  const weight = new Float32Array(n);
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += weights.weights[i]!;
+  const toMeanOne = sum > 0 ? n / sum : 0;
   for (let i = 0; i < n; i++) {
+    weight[i] = weights.weights[i]! * toMeanOne;
     const v = worldToVoxel(box, [
       points.positions[3 * i]!,
       points.positions[3 * i + 1]!,
@@ -41,5 +45,5 @@ export function buildOverlayCatalog(
     y[i] = v[1];
     z[i] = v[2];
   }
-  return { x, y, z, weight: renormalizeWeightMass(weights.weights) };
+  return { x, y, z, weight };
 }

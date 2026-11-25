@@ -96,18 +96,14 @@ export function createGalaxyOverlayPass(opts: {
     entries: [{ binding: 0, resource: { buffer: camBuffer } }],
   });
 
-  // OverlayParams: [weightScale, intensity, radiusPx] + pad to the 16-byte minimum.
-  // weightScale un-does deriveAgentWeights' mean of TOTAL_WEIGHT_MASS/n, so the shader
-  // sees mean 1; it only changes with a harness rebuild, which recreates this pass, so
-  // only the two live knobs are rewritten per draw.
+  // OverlayParams: [intensity, radiusPx] + pad to the 16-byte minimum. The weight lane is
+  // already mean 1 (buildOverlayCatalog), so no scale rides along.
   const overlayParams = device.createBuffer({
     label: 'mcpm-galaxy-overlay-params',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  // This draws the RAW set (agents.nDataPoints, task S16), so 1e6 here must be the weight
-  // mass OF that same set — buildOverlayCatalog's renormalizeWeightMass is what keeps it so.
-  const overlayF32 = new Float32Array([agents.nDataPoints / 1e6, 0, 0, 0]);
+  const overlayF32 = new Float32Array(4);
 
   const pointBindGroup = device.createBindGroup({
     label: 'mcpm-galaxy-points',
@@ -130,8 +126,8 @@ export function createGalaxyOverlayPass(opts: {
     ): void {
       writeMcpmCamera(camF32, opts.box, view);
       device.queue.writeBuffer(camBuffer, 0, camF32);
-      overlayF32[1] = options.intensity;
-      overlayF32[2] = options.pointSizePx;
+      overlayF32[0] = options.intensity;
+      overlayF32[1] = options.pointSizePx;
       device.queue.writeBuffer(overlayParams, 0, overlayF32);
 
       const pass = encoder.beginRenderPass({
