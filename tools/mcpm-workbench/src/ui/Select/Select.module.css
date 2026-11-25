@@ -8,6 +8,7 @@
   composes: control from '../formControl.module.css';
   appearance: base-select;
   align-items: center;
+  column-gap: var(--space-4);
   min-block-size: 0;
   line-height: normal;
   font-weight: normal;
@@ -19,6 +20,7 @@
    and keeps the plain select above. */
 .root::picker(select) {
   appearance: base-select;
+  inline-size: max-content;
   margin-block: var(--space-1);
   padding-block: var(--space-1);
   border: 1px solid var(--border-default);
@@ -60,7 +62,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
   font: inherit;
   white-space: nowrap;
 }
