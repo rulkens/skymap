@@ -3,7 +3,7 @@
 > **Status.** Draft, 2026-11-25. Owner: Alexander Rulkens. Shape signed off at the refactor-ground
 > checkpoint on 2026-11-24 (encoding C4, explicit flat entries, 2×2-packed RGBA8 atlas, prep as
 > its own PR).
-> **Written against** main at bfff3d7d8. The spike branch
+> **Written against** main at bfff3d7d8; references re-verified at 9e7b682c2. The spike branch
 > `worktree-terrain-horizon-shadow-spike` is evidence only. None of its code lands (§11).
 
 ## 1. Goal and scope
@@ -101,7 +101,8 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
 - **Parallelism:** `worker_threads`, one tile per task. A tile's result depends only on the height
   archives, so the bake resumes by skipping tiles already written.
 - **Output:** `horizon/<z>/<x>/<y>.webp`, or a zero-byte file for a flat tile. The packer
-  (`tools/utils/textures/packSurfaceTileLevels.ts`) turns a zero-byte file into a zero-length entry.
+  (`tools/utils/textures/packSurfaceTileLevels.ts:49`) already sizes entries by `statSync`, so a
+  zero-byte file becomes a zero-length entry with no packer change; a test pins it.
 - **Globe images:** the same tool repacks the whole-globe `horizon` texture kind from the coarse
   C4 tiles (§7). There is no separate globe bake.
 
@@ -112,10 +113,10 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
   - `slotSide` 66 px;
   - `rgba8unorm`;
   - an atlas of 32 × 32 slots (2112², 17.8 MB, the same slot count as height);
-  - `role: 'standalone'`, no level cap;
+  - `role: 'standalone'` (its level cap is its bands' deepest `max`);
   - fetched like height, as an `ImageBitmap` with `colorSpaceConversion: 'none'` and
     `premultiplyAlpha: 'none'` (`fetchHeightTile.ts:29-30`).
-- **Upload:** `copyExternalImageToTexture` only, never canvas `getImageData` (RENDERER.md:68).
+- **Upload:** `copyExternalImageToTexture` only, never canvas `getImageData` (RENDERER.md:69).
 - **Sentinel.** Slot 0 is reserved at atlas creation and filled with byte 0 (−3°), which reads as
   fully lit with the whole sky visible. A lane may reserve slots: a new optional
   `reservedSlots: number` on the lane spec row.
@@ -145,8 +146,10 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
     east/north/up frame.
   - Sun angular radius: Earth and Moon 0.267°, Mars 0.175°, a per-body uniform.
 - **Bindings.** The horizon atlas is the lane row's `binding` (11, the next free slot after
-  `surfaceTileShaderVariants.ts:15-18`), shared by every fragment variant, because horizon is
-  unconditional and is not a `SurfaceEffect`.
+  `surfaceTileShaderVariants.ts:14-18`), listed by every fragment variant, because horizon is
+  unconditional and is not a `SurfaceEffect`. When the body has no horizon lane engaged, the
+  pass binds a 1×1 placeholder holding byte 0, so the draw reads fully lit, as night falls back to
+  Earth's global night map today (`surfaceTilesPass.ts:72-73`).
 
 ## 6. Lighting
 
@@ -158,7 +161,7 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 ```
 
 - **Sun visibility** scales only the direct term. Cloud shadow (Earth) multiplies it as today.
-- **Night lights** keep gating on the datum normal (RENDERER.md:74), untouched.
+- **Night lights** keep gating on the datum normal (RENDERER.md:75), untouched.
 - **Sky visibility** scales the existing ambient term (`BODY_AMBIENT_LIGHT` on tiles; the split-out
   ambient on `texturedBody`). It doesn't change the term's colour.
 
@@ -166,8 +169,11 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 
 `'horizon'` joins `TextureKind` (`src/@types/data/TextureKind.d.ts:16`):
 
-- **Earth:** a row in `earthRenderer.ts:39-50`, forced because that table is total over the kinds.
+- **Earth:** a row in `earthRenderer.ts:39-50` at binding 7 (`earth/fragment.wesl` uses 0–6),
+  forced because that table is total over the kinds.
 - **Moon and Mars:** a row in `texturedBodyRenderer.ts:38-41` (binding 5 is free).
+- **Linear data:** `'horizon'` joins `isLinearTextureKind` (`src/utils/bodyTextures/isLinearTextureKind.ts:26`),
+  the one home for that axis, which gives it the WebP name, the linear decode and `rgba8unorm`.
 - **Registry:** a `kinds.horizon` tier in each body's `bodyTextureRegistry.ts` row.
 
 | Tier | Repacked from | Posts | Packed image |
@@ -203,10 +209,10 @@ Run 2026-11-24.
 
 | # | Prep commit | Bolt-on it removes |
 |---|---|---|
-| 1 | `readTile` returns `TileRead = { kind: 'bytes', bytes } \| { kind: 'empty' } \| { kind: 'missing' } \| { kind: 'failed' }`. The packer writes zero-length entries for zero-byte files. On `'empty'` the stream frees the slot and records residency `'empty'`. | Today not-in-index, a 404 and a timeout all return `null`, and `null` marks the key failed for the session (`createArchiveTileSource.ts:57-83`, `services/engine/subsystems/tileStreamSubsystem.ts:94-95`). |
-| 2 | Lane rows carry `role: 'gates-cut' \| 'standalone'`, `maxLevel?`, `binding` and `reservedSlots?`. `derivePlannerParams`, the renderer's bind group and the pass's draw args read the table (`Record<SurfaceTileProduct, GPUTextureView>`). | Per-product request lines (`derivePlannerParams.ts:41-58`), fixed bindings (`surfaceTileRenderer.ts:86-111`) and named atlas args (`surfaceTilesPass.ts:42-43`). Horizon would be the second copy of night's line. |
+| 1 | `readTile` returns `TileRead = { kind: 'bytes', bytes } \| { kind: 'empty' } \| { kind: 'missing' } \| { kind: 'failed' }`; a zero-length entry reads `'empty'` without a fetch. On `'empty'` the lane records the key as empty and uploads nothing; the planner (`planSurfaceTiles.ts:83-91`) neither touches nor re-requests an empty key, so LRU reclaims the slot it was allocated (no slot-release API is added). | Today not-in-index, a 404 and a timeout all return `null`, and `null` marks the key failed for the session (`createArchiveTileSource.ts:57-83`, `services/engine/subsystems/tileStreamSubsystem.ts:94-95`). |
+| 2 | Lane rows carry `role: 'gates-cut' \| 'standalone'`, `binding` and `reservedSlots?`. A standalone product's level cap is not a row field: it is the deepest `max` of its own request bands, as night's is today (`cutSurfaceTiles.ts:113-116`). `derivePlannerParams`, the renderer's bind group and the pass's draw args read the table (`Record<SurfaceTileProduct, GPUTextureView>`). | Per-product request lines (`derivePlannerParams.ts:41-58`), fixed bindings (`surfaceTileRenderer.ts:86-111`) and named atlas args (`surfaceTilesPass.ts:42-43`). Horizon would be the second copy of night's line. |
 | 3 | One standalone resolver, generalised from `nightOf` (`cutSurfaceTiles.ts:326-338`). `SurfaceCutTile.night` becomes `standalone: Readonly<Record<StandaloneProduct, StandaloneRect>>`, with `StandaloneRect = { atlasUvOrigin, atlasUvScale } \| 'empty' \| null`. | One field and one resolver per product (`SurfaceCutTile.d.ts:31`); horizon would be `horizonOf` beside `nightOf`. |
-| 4 | `composeSurfaceLight` in `lib/`, replacing the three copies of the lighting line (`fragmentBare.wesl:35`, `fragmentEarth.wesl:71`, `earth/fragment.wesl:136`). `texturedBody` splits `AMBIENT` out of `litShade` (`lib/bodyLighting.wesl:34-39`). | Pasting the visibility multiply into four shaders. |
+| 4 | `composeSurfaceLight` in `lib/`, replacing the three copies of the lighting line (`fragmentBare.wesl:36`, `fragmentEarth.wesl:71`, `earth/fragment.wesl:136`). `texturedBody` splits `AMBIENT` out of `litShade` (`lib/bodyLighting.wesl:34-39`; `planet/fragment.wesl:54` keeps calling `litShade`). | Pasting the visibility multiply into four shaders. |
 
 **Growth (plain additions):**
 - the product row, the lane row, the path `EXT` row (`surfaceTilePath.ts:8`);
@@ -215,8 +221,9 @@ Run 2026-11-24.
 - `horizonLookup.wesl`, `horizonRect`;
 - the packer, R2 collection and offline inventory, which are manifest-driven.
 
-**Each prep commit is behaviour-neutral:** shots with shadows absent stay byte-identical, and the
-suite stays green.
+**Each prep commit is behaviour-neutral:** shots match the pre-prep shots within float rounding
+(splitting `albedo * shade` into `direct + ambient` may move a pixel by one step), and the suite
+stays green.
 
 ## 10. Tests
 
