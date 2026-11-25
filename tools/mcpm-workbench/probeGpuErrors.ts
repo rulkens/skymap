@@ -394,7 +394,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         ]);
         const path = await download.path();
         if (!path) throw new Error('params:save-load: download produced no local path');
-        await page.locator('input[type="file"]').setInputFiles(path);
+        await page.getByLabel('load params file').setInputFiles(path);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -478,7 +478,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         preset.gridBox.rotation = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
         const rotatedPath = `${path}.rotated.json`;
         await writeFile(rotatedPath, JSON.stringify(preset));
-        await page.locator('input[type="file"]').setInputFiles(rotatedPath);
+        await page.getByLabel('load params file').setInputFiles(rotatedPath);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
