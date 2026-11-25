@@ -244,7 +244,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   };
 }
 
-describe('cutNoEmpties', () => {
+describe('cutSurfaceTiles', () => {
   it('puts pyramid level 4 at the 8192-wide base texture resolution (about 4892 m per texel)', () => {
     // The ladder's anchor: if the base-width constant were nudged, level 5 would either
     // duplicate the base or skip a doubling, and nothing else in the suite would fail.
@@ -938,7 +938,7 @@ describe('cutNoEmpties', () => {
       // See `planEarthTiles.test.ts`'s identical fixture comment for why
       // 180.5°/5° rather than the seam or equator exactly. Window-membership
       // assertions (`winX0`/`winY0`/`EARTH_TILE_WINDOW_SIDE` wrap) are
-      // dropped: `cutNoEmpties` has no window to be inside of.
+      // dropped: `cutSurfaceTiles` has no window to be inside of.
       const result = cutWithSharedBands(nadirAt(1000, 180.5, 5));
       const xFrac = ({ z, x }: { z: number; x: number }) =>
         x / surfaceTileColumns(z, SURFACE_TILE_PX);
@@ -1243,7 +1243,7 @@ describe('cutNoEmpties', () => {
     // this cancellation (`composeBodySlabMvp` is metres-native, so the
     // w-row never gets Mpc-scale large to begin with) — `viewProjLocal` stays
     // `Float64Array` regardless, as a belt-and-braces contract, and this test
-    // keeps `cutNoEmpties`'s OWN bbox-cull honest against an adversarial
+    // keeps `cutSurfaceTiles`'s OWN bbox-cull honest against an adversarial
     // w-row via the still-live `composeBodyMvp` (used by non-Earth bodies),
     // at Earth-orbit (1 AU) scale, with a deliberately GENERIC (non-axis-
     // aligned) body position, sub-camera direction and camera-up — an
@@ -1314,7 +1314,7 @@ describe('cutNoEmpties', () => {
       return null;
     }
 
-    /** An adversarial-w-row `mvpLocal`, fed straight into `cutNoEmpties`
+    /** An adversarial-w-row `mvpLocal`, fed straight into `cutSurfaceTiles`
      *  with no intermediate narrow — see the describe-block comment for why
      *  this is no longer Earth's own production path but still a real
      *  regression guard on the walk itself. Camera tilted off nadir (toward
@@ -1469,7 +1469,7 @@ describe('cutNoEmpties', () => {
       up[2] * (R + SITE_GROUND_M),
     ];
 
-    /** The pose's `cutNoEmpties` input at a given heading (0 = north, +east). */
+    /** The pose's `cutSurfaceTiles` input at a given heading (0 = north, +east). */
     function poseAtHeading(headingRad: number) {
       const dirH = addScaled(
         [

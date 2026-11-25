@@ -7,7 +7,7 @@ import type { TextureAtlasConfig } from '../../../../../@types/rendering/Texture
  *  and fetcher: all `surfaceTileStream` needs to build that product's lane. */
 export type SurfaceTileLaneSpec = TextureAtlasConfig & {
   /** `gates-cut`: a leaf cannot draw without it, so it is requested only where every
-   *  gating product is baked,. `standalone`: a leaf
+   *  gating product is baked. `standalone`: a leaf
    *  draws without it, so it is requested wherever its own bake exists. */
   readonly role: 'gates-cut' | 'standalone';
   /** The tile pipeline's `@binding` for this product's atlas. */

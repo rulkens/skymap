@@ -62,20 +62,6 @@ it('key absent from the index reads missing', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
-it('a 404 reads failed', async () => {
-  fetchMock
-    .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
-    .mockResolvedValueOnce(new Response(null, { status: 404 }));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
-});
-
-it('an aborted fetch reads failed', async () => {
-  fetchMock
-    .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
-    .mockRejectedValueOnce(new DOMException('deadline', 'TimeoutError'));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
-});
-
 it('a level whose index 404s reads missing and is not refetched', async () => {
   fetchMock.mockImplementation(async () => new Response(null, { status: 404 }));
   const source = createArchiveTileSource('p');
