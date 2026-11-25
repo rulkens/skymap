@@ -80,12 +80,11 @@
     border-inline-start: 1px solid var(--border-default);
   }
 
+  /* The asides dissolve so the pinned footer's sticky box is the scrolling
+     pair, not its own aside: inside an aside that starts below the fold it
+     could never pin. */
   .sidebar {
-    inline-size: auto;
-    max-inline-size: none;
-    display: block;
-    background: none;
-    backdrop-filter: none;
+    display: contents;
   }
 
   .start,
@@ -105,7 +104,9 @@
   .pinnedSticky {
     position: sticky;
     inset-block-end: 0;
-    background: var(--surface-panel);
-    backdrop-filter: blur(var(--blur-panel));
+    z-index: 1;
+    /* The translucent panel surface laid over the page ground: opaque, so
+       scrolled-under rows do not read through. */
+    background: linear-gradient(var(--surface-panel), var(--surface-panel)), var(--color-bg);
   }
 }
