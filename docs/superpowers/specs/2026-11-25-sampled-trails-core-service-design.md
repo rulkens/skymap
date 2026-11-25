@@ -158,12 +158,15 @@ refine, decimate to 1 km, check, write. The Voyager-only steps leave the loop:
 - the launch, flyby and milestone events are written by their own tool,
   `tools/missions/buildMissionEvents.ts`, run by the same npm script.
 
-It writes one file per body. Success: each Voyager file holds the same samples, bit for bit, as
-that craft's track in today's `spacecraftTracks.bin`, and `missionEvents.generated.ts` changes in its header comment at most.
+It writes one file per body. Success: on the same raw fetch, each Voyager file holds the same
+samples, bit for bit, as that craft's track from the builder before the split, and `missionEvents.generated.ts` changes in its header comment at most.
 
 ## 4. What changes on screen
 
 - A Voyager is absent after 2099-12-31.
+- The Voyager tracks are re-baked from a fresh Horizons fetch (the raw vectors were on no disk).
+  Against the shipped file Voyager 1 moves by up to 8.2 km and Voyager 2 by up to 0.13 km; the
+  mission events come out identical.
 - Nothing else: the switch, old links, the Voyager exhibit, trails in normal mode and both tours
   look as before.
 
@@ -196,7 +199,8 @@ trail tint leaving the position; it differed on launch (§3.3).
   the missions Layer (`layerImportBoundary` test).
 - The Voyager exhibit at Jupiter, trails in normal mode, and the trail from the pad shoot the same
   as on main.
-- Each `sampledTrack.<id>.bin` holds the same samples as that track in `spacecraftTracks.bin`.
+- On the same raw fetch, each `sampledTrack.<id>.bin` holds the same samples as that track from
+  the builder before the split.
 - A sampled planet-class body with a track from T0 to T1 is absent from the frame's planets and
   from the captions outside [T0, T1] (unit tests on a fixture; no such body ships yet).
 
