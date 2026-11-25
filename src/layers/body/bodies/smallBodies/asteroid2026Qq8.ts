@@ -16,5 +16,10 @@ export const ASTEROID_2026_QQ8: LayerBody = {
     datumRadiusM: 0.8,
     albedo: [0.3, 0.29, 0.28],
   }),
-  position: { kind: 'sampled', sampled: { id: asSceneBodyId('2026-qq8') } },
+  position: {
+    kind: 'sampled',
+    // Focused outside its window, the clock goes to the closest pass: 536,846 km at 23:40 UTC on
+    // 18 Aug 2026 on this track (Horizons: 537,057 km), rounded to the nearest hour.
+    sampled: { id: asSceneBodyId('2026-qq8'), focusIso: '2026-08-19T00:00:00Z' },
+  },
 };
