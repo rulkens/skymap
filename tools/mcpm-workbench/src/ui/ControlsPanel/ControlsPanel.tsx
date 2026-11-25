@@ -15,7 +15,7 @@ import CollapsibleSection from '../../../../../src/components/common/Collapsible
 import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
 import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
-import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
 import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   clearTraceRequested,
@@ -56,7 +56,6 @@ import {
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
-import Toggle from '../Toggle/Toggle';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
@@ -235,27 +234,7 @@ function ControlsPanel(): ReactNode {
               }}
             />
           ))}
-          <div>
-            <span
-              style={{
-                fontFamily: 'var(--font-family-mono)',
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-fg-label)',
-              }}
-            >
-              tier
-            </span>
-            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-              {TIER_LADDER.map((tier) => (
-                <Toggle
-                  key={tier}
-                  label={tier}
-                  on={catalog.tier === tier}
-                  onToggle={() => dispatch(setCatalogTier(tier))}
-                />
-              ))}
-            </div>
-          </div>
+          <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
         </CollapsibleSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode

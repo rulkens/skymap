@@ -259,7 +259,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: `RenderGraph`'s blit pipeline still uses `layout: 'auto'`** `ready` — the tool's one banned-pattern site.
 - [ ] **mcpm-workbench: `densities` allocated as a full agent lane** `ready` — only `nDataPoints` entries are ever used (~41 MB dead VRAM at 10M agents).
 - [ ] **mcpm-workbench: unit-test `recordHistogramSample`** `ready` — against the CLI's `dataPointHistogram` on a shared fixture; the statistic Phase 3 rests on has no test.
-- [ ] **mcpm-workbench: lift `Toggle.tsx`'s inline pill styling into a shared class** `ready` — `Toggle.tsx` hand-rolls its style inline; compose `pillToggle` (`src/components/SettingsPanel/pillToggle.module.css`) like `ToggleRow.module.css` already does.
 - [ ] **mcpm-workbench: promote `ToggleRow` to `src/components/common/`** `ready` — the galaxy tool hand-rolls the same row in four files.
 - [ ] **mcpm-workbench: `boxLines.wesl` pushes a line endpoint to `z = 2.0`** `ready` — a line-list clips rather than discards, so a half-length line draws when a box corner is behind the eye plane.
 - [ ] **mcpm-workbench: comparator `--bins` is unvalidated** `ready` — an all-out-of-grid `--points` set fails with an unrelated `RangeError` instead of a clear message.
