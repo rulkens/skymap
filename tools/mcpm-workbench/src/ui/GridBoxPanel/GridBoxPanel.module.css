@@ -12,16 +12,3 @@
   inline-size: 8ch;
   cursor: text;
 }
-
-/* Read like a slider's value and ends where theirs do, inside the pill's
-   inset; a fixed slot as wide as "1023.9 MB", so the figure never wraps or
-   nudges its row while a slider drags. */
-.cost {
-  inline-size: 9ch;
-  padding-inline-end: var(--space-5);
-  font-size: var(--font-size-md);
-  font-variant-numeric: tabular-nums;
-  text-align: end;
-  white-space: nowrap;
-  color: var(--color-fg-muted);
-}

@@ -15,7 +15,6 @@ import { deriveGridBox } from '../../field/deriveGridBox';
 import { keptCountFor } from '../../field/keptCountFor';
 import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
 import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
-import { estimateGridBudgetBytes } from '../../sim/planGridBudget';
 import {
   fitBoxToCatalog,
   setAutoFitPercent,
@@ -25,7 +24,6 @@ import {
   setVoxelSizeMpc,
 } from '../../state/grid/gridSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
 import SubsectionGroup from '../ControlsPanel/SubsectionGroup';
 import SliderRow from '../SliderRow/SliderRow';
@@ -46,7 +44,6 @@ function GridBoxPanel(): ReactNode {
   const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
   const catalogPoints = useAppSelector((s) => s.catalog.points);
   const catalogPointCount = useAppSelector((s) => s.catalog.pointCount);
-  const agentCount = useAppSelector((s) => s.sim.agentCount);
   // Display-only: how many catalog points the current slider position would evict on
   // the next Auto fit click. Derived here, not stored — `autoFitPercent` is a one-shot
   // input to that click, with no bearing on the box already showing (gridSlice.ts).
@@ -55,18 +52,6 @@ function GridBoxPanel(): ReactNode {
       ? 0
       : catalogPointCount - keptCountFor(catalogPointCount, grid.autoFitPercent / 100);
   const box = deriveGridBox(grid);
-  // Same total-bytes formula planGridBudget uses to refuse a build (one home,
-  // shared) — no device limits needed here since this is a live estimate, not
-  // a refusal check. `resolvedElement` only changes with hardware capability,
-  // not box/agent-count edits, so this can't go stale mid-drag the way
-  // `grid.byteBudget` (last COMPLETED build) would.
-  // `?? 'f32'` fallback — must stay in sync with the two other copies below and in
-  // deriveGridBox.ts, or this readout disagrees with the box the sim actually builds.
-  const estimatedBytes = estimateGridBudgetBytes(
-    box.dims,
-    agentCount,
-    grid.resolvedElement ?? 'f32',
-  );
   // V2: the live floor for THIS box's extent — same clamp deriveGridBox applies, computed
   // here only to drive the slider's `min` (the readout above already reflects the clamp,
   // since `box` came from deriveGridBox). Static 0.25 fallback pre-init / on a coarse box.
@@ -77,7 +62,7 @@ function GridBoxPanel(): ReactNode {
       ? null
       : minFeasibleVoxelSizeMpc(
           grid.manualSizeMpc,
-          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'], // same fallback contract as above
+          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'], // deriveGridBox's fallback; must match
           grid.maxBufferBytes,
         );
   const liveFloorMpc =
@@ -131,15 +116,6 @@ function GridBoxPanel(): ReactNode {
           path={`grid.manualCenterMpc.${axis}`}
         />
       ))}
-      <PanelRow
-        label="GPU memory"
-        info="The three grids at this voxel count, plus the agent buffers."
-      >
-        {/* Off: a polite live region would speak every step of a size drag. */}
-        <output className={styles.cost} aria-live="off">
-          {formatBytes(estimatedBytes)}
-        </output>
-      </PanelRow>
       <SubsectionGroup title="Auto fit">
         <SliderRow
           label="fit %"

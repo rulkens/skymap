@@ -28,8 +28,8 @@ export function bufferBytesForDims(dims: Vec3, elementBytes: number): number {
 /**
  * estimateGridBudgetBytes — the total-bytes half of `planGridBudget`'s
  * arithmetic (three storage grids + seven agent lanes), pulled out as its
- * own pure function so a live UI estimate (GridBoxPanel's dims/memory
- * readout) can reuse the EXACT formula instead of growing a second,
+ * own pure function so a live UI estimate (Stats' memory readout, via
+ * estimateBoxGpuBytes) can reuse the EXACT formula instead of growing a second,
  * driftable copy of it. No device limits here on purpose — this is a size
  * estimate, not a refusal check; `planGridBudget` is still the one place
  * that decides whether an allocation actually fits.

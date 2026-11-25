@@ -27,8 +27,8 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
  */
 export function deriveGridBox(grid: GridSlice): GridBox {
   if (grid.importedBox) return grid.importedBox;
-  // `?? 'f32'` (pre-first-build fallback) must match GridBoxPanel.tsx's two copies of
-  // this same fallback, or the memory readout and the box the sim actually builds disagree.
+  // `?? 'f32'` (pre-first-build fallback) must match the copies in GridBoxPanel.tsx and
+  // estimateBoxGpuBytes.ts, or the memory readout and the box the sim builds disagree.
   const rawFloorMpc =
     grid.maxBufferBytes === null
       ? 0

@@ -70,7 +70,7 @@ describe('planGridBudget', () => {
   });
 });
 
-// GridBoxPanel's live memory readout reuses this function directly (rather than
+// Stats' live memory readout (estimateBoxGpuBytes) reuses this function directly (rather than
 // re-deriving the formula) so it can't silently drop the agent-lane term the
 // way an earlier version did.
 describe('estimateGridBudgetBytes', () => {
