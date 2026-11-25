@@ -89,13 +89,13 @@ struct VolumeUniforms {
   // derived deadband by taking the max — user can crank trim past
   // contrast's implicit deadband to suppress more, never less.
   trim: f32,
-  // Per-draw frame counter (f32 because the uniform is f32-typed
-  // throughout — the integer monotonicity is what matters, not the
-  // exact value).  Used as a temporal seed for the ray-march jitter
-  // hash so the screen-space dither pattern decorrelates frame-to-
-  // frame instead of staying locked in screen space.  CPU side
-  // wraps at 1e6 to keep the f32 mantissa happy.
-  frame: f32,
+  // Index into the jitter sequence: the engine frame index, so every
+  // view of one frame (all five dome faces) shares a phase.  f32 like
+  // every scalar here; the CPU wraps it at 1e6 to keep the hash input
+  // exact in the f32 mantissa.
+  jitterIndex: f32,
+  // March steps per ray (an integer, exact in f32).
+  steps: f32,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: VolumeUniforms;
@@ -114,7 +114,6 @@ struct VolumeUniforms {
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
-const STEP_COUNT: i32 = 128;
 const SATURATION_THRESHOLD: f32 = 0.99;
 
 struct FsIn {
@@ -200,8 +199,8 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   }
 
   // Fixed-step march from tMin to tMax.  stepLength normalises against
-  // STEP_COUNT so opacity is invariant to changes in the constant.
-  let stepLength = (tMax - tMin) / f32(STEP_COUNT);
+  // the step count so opacity is invariant to it.
+  let stepLength = (tMax - tMin) / uniforms.steps;
   // Jitter the start offset by [0, stepLength) per fragment to break
   // the visible step-grid moiré that would otherwise slide across the
   // cube during camera motion.  Without jitter, the 192 fixed sample
@@ -216,7 +215,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // used instead of the cheaper sin-based hash21 because the latter's
   // diagonal banding is visible as a stationary screen-space pattern.
   //
-  // Temporal seed: offsetting the hash input by frame * irrational
+  // Temporal seed: offsetting the hash input by jitterIndex * irrational
   // constants decorrelates the dither pattern frame-to-frame, so the
   // residual grain looks like film noise rather than a stationary
   // screen-space pattern the eye can latch onto.  Without TAA this
@@ -226,11 +225,11 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // failure mode the user reported.  The constants 7.13 / 13.71 are
   // arbitrary irrationals that don't share factors with anything in
   // the hash mixer.
-  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.frame * 7.13, uniforms.frame * 13.71);
+  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.jitterIndex * 7.13, uniforms.jitterIndex * 13.71);
   let jitter = hash21Hq(jitterSeed) * stepLength;
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
-  for (var stepIndex = 0; stepIndex < STEP_COUNT; stepIndex = stepIndex + 1) {
+  for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
     // local AABB, so 'samplePos' is directly the texture coordinate.
@@ -267,7 +266,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // through the same density yields proportionally more opacity).
     //
     // The original (buggy) formula was 'lut.a * intensity * stepLength
-    // * STEP_COUNT * 0.01', which cancels the '/ STEP_COUNT' inside
+    // * steps * 0.01', which cancels the '/ steps' inside
     // stepLength and ends up with per-step alpha ∝ total path length.
     // That made the contribution amplitude depend on the ray's full
     // extent, so a long ray (camera far from cube) over-saturated the

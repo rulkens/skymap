@@ -11,8 +11,8 @@
  *
  *   - ADDITIVE (`one`/`one` on both channels): emissive light that SUMS
  *     into the HDR target — points, filaments, flow field, horizon shell,
- *     the volume field, structure halos, star points, orbit trails, the
- *     Milky Way star pass, the additive impostor branch. Overlapping
+ *     structure halos, star points, orbit trails, the Milky Way star pass,
+ *     the additive impostor branch. Overlapping
  *     emitters accumulate naturally.
  *   - PREMULTIPLIED OVER (`one`/`one-minus-src-alpha`): anti-aliased
  *     coverage-over-background for glyphs and rings whose fragment already
@@ -37,8 +37,10 @@
  *     so it needs the extra src-alpha multiply. Not this OVER.
  *   - `milkyWayCloudRenderer`'s dust-multiply (`dst`/`zero`) — physical
  *     extinction (`T * dst`), test-pinned. A different algebra entirely.
+ *   - `volumeFieldRenderer`'s weighted additive (`constant`/`one`) — each
+ *     field's march scaled by the pass's blend constant; ADDITIVE at 1.
  *
- * Folding either into a shared "over"/"additive" name would invite a silent
+ * Folding any of them into a shared "over"/"additive" name would invite a silent
  * visual bug, so they stay inline at their single call site.
  *
  * (This file exports two consts — the one-symbol-per-file rule is a `utils/`
@@ -52,8 +54,8 @@
 /**
  * Additive emission: `src + dst` on both colour and alpha. Overlapping
  * emitters sum their light into the HDR target. Used by every emissive
- * world-space pass (points, filaments, flow field, volume field, halos,
- * the Milky Way star pass, ...).
+ * world-space pass (points, filaments, flow field, halos, the Milky Way
+ * star pass, ...).
  */
 export const ADDITIVE_BLEND: GPUBlendState = {
   color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },

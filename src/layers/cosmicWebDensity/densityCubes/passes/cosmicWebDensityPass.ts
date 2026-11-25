@@ -9,6 +9,7 @@ import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityField
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 import { createScalarVolumePass } from '../../../../services/engine/frame/passes/createScalarVolumePass';
 import { deriveCosmicWebDensityLiveness } from '../present/deriveCosmicWebDensityLiveness';
+import { DENSITY_MARCH_STEPS } from '../data/densityMarchSteps';
 
 export function cosmicWebDensityPass(
   runtime: CosmicWebDensityRuntime,
@@ -19,5 +20,6 @@ export function cosmicWebDensityPass(
     fade: 'cosmicWebDensity',
     renderer: runtime.renderer,
     liveness: (state, ctx, fade) => deriveCosmicWebDensityLiveness(runtime, state, ctx, fade),
+    inputs: (state) => ({ jitterIndex: state.frameIndex, steps: DENSITY_MARCH_STEPS, weight: 1 }),
   });
 }

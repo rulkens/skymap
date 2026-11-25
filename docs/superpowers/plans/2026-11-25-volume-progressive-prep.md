@@ -220,8 +220,8 @@ const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
 
 Steps:
 
-- [ ] Add the type file and the `draw`, `ScalarVolumePassRow` and `PassState` changes.
-- [ ] Renderer:
+- [x] Add the type file and the `draw`, `ScalarVolumePassRow` and `PassState` changes.
+- [x] Renderer:
   - Delete `let frame` and its increment (`volumeFieldRenderer.ts:206-212, 384`).
   - Set `UNIFORM_BYTES` to 272. Pack indices 63 and 64 per the table, and zero 65–67 (the
     scratch is reused across fields).
@@ -230,21 +230,21 @@ Steps:
   - Switch the target blend at `:181-186` to `WEIGHTED_ADDITIVE_BLEND`.
   - Rewrite the layout comments at `:63-69` and `:360-381`, and bring the module header (`:1-46`)
     under 10 lines (comments.md, opportunistic rule).
-- [ ] Shader:
+- [x] Shader:
   - Delete `const STEP_COUNT` (`fragment.wesl:117`).
   - The step length and the loop bound read `uniforms.steps` (`:203-204, :233`).
   - The jitter seed reads `uniforms.jitterIndex` (`:229`).
   - Update the field doc (`:91-98`) and the temporal-seed comment (`:216-224`).
   - No other expression changes.
-- [ ] `blendStates.ts` header: drop "the volume field" from the ADDITIVE users (`:14`, `:55`), and
+- [x] `blendStates.ts` header: drop "the volume field" from the ADDITIVE users (`:14`, `:55`), and
       add the weighted additive under "What deliberately does NOT fold in here".
-- [ ] Pass:
+- [x] Pass:
   - `createScalarVolumePass` passes `erased.inputs(state, ctx)` as `draw`'s last argument
     (`createScalarVolumePass.ts:32-42`).
   - `cosmicWebDensityPass` supplies
     `inputs: (state) => ({ jitterIndex: state.frameIndex, steps: DENSITY_MARCH_STEPS, weight: 1 })`.
   - No new test: this is plumbing.
-- [ ] Test file `volumeUniformsLayout.parity.test.ts`, test `VolumeUniforms layout: every field
+- [x] Test file `volumeUniformsLayout.parity.test.ts`, test `VolumeUniforms layout: every field
       the WGSL struct declares lands at its offset`:
   - Lay out `fragment.wesl`'s struct with `weslStructLayout(…, 'VolumeUniforms', 'uniform')`.
   - Drive the real `draw` on a mock device with a distinct sentinel per field (settings, statics,
@@ -252,19 +252,19 @@ Steps:
   - Assert each sentinel sits at its field's offset.
   - Assert the layout size is 272, equal to the uniform buffer's `createBuffer` size and to the
     written scratch's byte length.
-- [ ] Same file, test `vertex.wesl's VolumeUniforms is a prefix of fragment.wesl's`: its fields
+- [x] Same file, test `vertex.wesl's VolumeUniforms is a prefix of fragment.wesl's`: its fields
       equal the fragment struct's first N, by name, type and offset.
-- [ ] `volumeFieldRenderer.test.ts`:
+- [x] `volumeFieldRenderer.test.ts`:
   - `uniformScratch` finds the 68-float scratch, and the fake pass gains `setBlendConstant`.
   - Add `draw packs jitterIndex modulo the wrap`: 1 000 005 packs 5 at index 63.
   - Add `draw sets the blend constant to inputs.weight`: 0.25 gives
     `setBlendConstant({r:.25,g:.25,b:.25,a:.25})`. A missing call is a real bug: WebGPU's default
     blend constant is 0, which erases the volume.
-- [ ] `docsRenderingFacts.test.ts:99-102`: read `DENSITY_MARCH_STEPS` from
+- [x] `docsRenderingFacts.test.ts:99-102`: read `DENSITY_MARCH_STEPS` from
       `src/layers/cosmicWebDensity/densityCubes/data/densityMarchSteps.ts` instead of
       `STEP_COUNT`. The fact text (`packages/website/src/data/docsRenderingFacts.ts:166-170`)
       still says 128.
-- [ ] `npm run typecheck:fast`, `npm test -- volumeField createScalarVolumePass docsRenderingFacts`.
+- [x] `npm run typecheck:fast`, `npm test -- volumeField createScalarVolumePass docsRenderingFacts`.
 - [ ] Controller, after the commit: shoot an inside-the-MCPM-cube pose, mono and dome, on main and
       on this branch (`npm run shot`), and send the pairs to the dash as a check: same structure
       and brightness, grain only. Pixels cannot match exactly, because the jitter phase now

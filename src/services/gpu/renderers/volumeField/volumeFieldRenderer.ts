@@ -1,48 +1,12 @@
 /**
- * VolumeFieldRenderer — multi-field, palette-driven, additive 3D
- * scalar-field volume renderer.  See the spec at
- * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'.
- *
- * Public surface (factory shape, matching D.2 conventions):
- *
- *   - createVolumeFieldRenderer(device, targetFormat, fadeBgl)
- *   - upload(id, cube, statics)     → upload cube to a 3D r16float
- *                                       texture, take the per-cube static
- *                                       config from `statics`, register
- *                                       in the field map
- *   - unload(id)                → drop the texture, unregister
- *   - hasActiveFields(settingsOf)    → true iff any field whose live
- *                                       settings are enabled+intensity>0
- *                                       (or still fading out); used by the
- *                                       renderer's pass to early-out
- *   - draw(pass, camera, settingsOf, fadeOpacityOf)
- *                                    → dispatch one raymarch per active
- *                                       field, additively blended; reads
- *                                       the per-field user tunables each
- *                                       frame from `settingsOf` and
- *                                       re-uploads a field's palette LUT
- *                                       in place when it diverges from
- *                                       what's resident
- *   - destroy()                      → release all GPU resources
- *
- * Per-field state lives in a 'Map<id, FieldEntry>'; each entry owns
- * its own 3D texture, palette LUT texture, bind group, uniform buffer,
- * the cube's matrices, and the per-cube STATIC presentation config
- * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
- * The user-tunable knobs (enabled, intensity, contrast, densityScale,
- * palette, trim, exposure) are NOT mirrored on the entry — they live in
- * the caller's settings and are read per frame in 'draw' via the
- * 'settingsOf' projection, so there is exactly one source of truth.
- * Sharing the pipeline across all fields keeps the layout-'auto' trap
- * from biting: one pipeline → one auto-derived bind-group layout → all
- * bind groups are interchangeable across fields with the same shape.
- *
- * Per-field palettes (rather than one renderer-wide LUT) let two
- * overlapping fields use different colour ramps so the user can
- * visually tell them apart.  When a field's settings palette diverges
- * from 'residentPaletteId', 'draw' rewrites that field's existing 1D
- * texture in place via writeTexture; bind-group texture views stay
- * valid, so a palette change costs one queue write and zero rebinds.
+ * VolumeFieldRenderer — multi-field, palette-driven, additive 3D scalar-field raymarch (spec:
+ * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). Each field owns its 3D
+ * texture, palette LUT, bind groups, uniform buffer, matrices and per-cube statics; the user knobs
+ * are read per frame through `settingsOf`, never mirrored, so the caller's settings stay the one
+ * truth. The jitter index, step count and blend weight arrive per draw as `inputs`: this renderer
+ * holds no frame counter. One shared pipeline means one bind-group layout, so field bind groups
+ * are interchangeable. A palette change rewrites the field's LUT in place (views stay valid: one
+ * queue write, zero rebinds).
  */
 
 import { mat4 } from 'wgpu-matrix';
@@ -58,23 +22,21 @@ import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
 
-// 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
-// + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
-// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) = 256
-// exactly.  The WGSL struct contains mat4x4 (alignment 16), so total
-// must be a multiple of 16 — 256 lands cleanly.  Frame occupies the
-// last scratch slot (scratch[63]); the next per-field uniform will
-// have to bump UNIFORM_BYTES to the next 16-byte boundary (272).
-const UNIFORM_BYTES = 256;
+// 256 B of fields through jitterIndex, plus steps (260 B), rounded up to 16 for a uniform
+// struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
+const UNIFORM_BYTES = 272;
 
-// Temporal-seed wrap-around for the per-draw frame counter.  f32 has
-// 24 bits of mantissa (~16M integers exact), so wrapping at 1e6
-// leaves headroom for the multiply-by-irrational constants in the
-// shader without losing precision in the hash input.  The eye can't
-// detect a 1M-frame repeat at 60fps (~4.6 hours of continuous render).
-const FRAME_WRAP = 1_000_000;
+// f32 has 24 bits of mantissa (~16M integers exact); wrapping at 1e6 leaves headroom for the
+// shader's multiply-by-irrational hash input. `frameIndex` is never wrapped upstream.
+const JITTER_INDEX_WRAP = 1_000_000;
+
+// Each field's march adds in scaled by the pass's blend constant (`inputs.weight`); at 1 this
+// sums exactly as ADDITIVE_BLEND. Single site, so it stays here (blendStates.ts's rule).
+const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
+  color: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
+  alpha: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
+};
 
 const CUBE_CORNERS = new Float32Array([
   0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1,
@@ -181,7 +143,7 @@ export function createVolumeFieldRenderer<Id extends string>(
       targets: [
         {
           format: targetFormat,
-          blend: ADDITIVE_BLEND,
+          blend: WEIGHTED_ADDITIVE_BLEND,
         },
       ],
     },
@@ -205,11 +167,6 @@ export function createVolumeFieldRenderer<Id extends string>(
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<Id, FieldEntry>();
-  // Per-draw frame counter — incremented every draw() and forwarded to
-  // the fragment shader as a temporal seed for the ray-march jitter
-  // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
-  // through the shader's irrational-constant multiplies.
-  let frame = 0;
 
   function uploadCube(cube: ScalarCube): GPUTexture {
     const tex = device.createTexture({
@@ -353,11 +310,14 @@ export function createVolumeFieldRenderer<Id extends string>(
       }
       return false;
     },
-    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf) {
+    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf, inputs) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (256 bytes; mat4 alignment):
+      // WebGPU's default blend constant is 0, which would erase every field.
+      const w = inputs.weight;
+      pass.setBlendConstant({ r: w, g: w, b: w, a: w });
+      // Per-field uniform buffer layout (272 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)
       //  72..75   pxPerRad
@@ -373,15 +333,11 @@ export function createVolumeFieldRenderer<Id extends string>(
       // 240..243  envelopeOuter    (f32; per-cube static, from the entry)
       // 244..247  exposure         (f32; from settingsOf)
       // 248..251  trim             (f32; from settingsOf)
-      // 252..255  frame            (f32; per-draw temporal seed for
-      //                            the shader's jitter hash — wraps
-      //                            at FRAME_WRAP, see top of file)
-      // The byte offsets are fixed; intensity/densityScale/contrast/
-      // exposure/trim come from `settingsOf` per frame, while
-      // contrastCenter and the envelope edges are per-cube static on
-      // the entry.
+      // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
+      // 256..259  steps            (f32; inputs.steps)
+      // 260..271  padding          (uniform struct rounded up to 16)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
-      frame = (frame + 1) % FRAME_WRAP;
+      const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
       for (const [id, e] of fields.entries()) {
         const s = settingsOf(id);
         // Reactive palette: re-upload the LUT in place when the live
@@ -428,7 +384,11 @@ export function createVolumeFieldRenderer<Id extends string>(
         scratch[60] = e.envelopeOuter;
         scratch[61] = s.exposure;
         scratch[62] = s.trim;
-        scratch[63] = frame;
+        scratch[63] = jitterIndex;
+        scratch[64] = inputs.steps;
+        scratch[65] = 0;
+        scratch[66] = 0;
+        scratch[67] = 0;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.

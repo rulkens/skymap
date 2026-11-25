@@ -4,6 +4,7 @@ import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/rende
 import { MCPM_ENTRY } from '../../../../../src/layers/cosmicWebDensity/sources/mcpm';
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
+import type { VolumeFieldDrawInputs } from '../../../../../src/@types/rendering/VolumeFieldDrawInputs';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {
@@ -67,8 +68,11 @@ function makeFakePass() {
     setIndexBuffer: vi.fn(),
     setBindGroup: vi.fn(),
     drawIndexed: vi.fn(),
+    setBlendConstant: vi.fn(),
   } as unknown as GPURenderPassEncoder;
 }
+
+const INPUTS: VolumeFieldDrawInputs = { jitterIndex: 1, steps: 128, weight: 1 };
 
 function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSettings {
   return {
@@ -84,15 +88,15 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
 }
 
 /**
- * Extract the length-64 uniform scratch from the writeBuffer mock.
+ * Extract the length-68 uniform scratch from the writeBuffer mock.
  * The fade write passes a 16-byte ArrayBuffer — we skip it and find
- * only the Float32Array(64) that packs the full per-field uniform.
+ * only the Float32Array(68) that packs the full per-field uniform.
  */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
   const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
     .calls;
   const hit = calls.find(
-    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 64,
+    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 68,
   );
   return hit?.[2] as Float32Array | undefined;
 }
@@ -111,6 +115,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      INPUTS,
     );
     const s = uniformScratch(device);
     expect(s?.[55]).toBeCloseTo(0.9); // intensity
@@ -143,6 +148,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: statics.paletteId }),
       () => 1,
+      INPUTS,
     );
     const s = uniformScratch(device);
     expect(s?.[58]).toBeCloseTo(statics.contrastCenter); // contrastCenter
@@ -170,6 +176,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: MCPM_ENTRY.paletteId }),
       () => 1,
+      INPUTS,
     );
     expect(
       (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
@@ -183,6 +190,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      INPUTS,
     );
     expect(
       (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
@@ -196,6 +204,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      INPUTS,
     );
     expect(
       (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
@@ -218,9 +227,45 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ enabled: true }),
       () => 0,
+      INPUTS,
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
     expect(uniformScratch(device)).toBeUndefined();
+  });
+
+  it('draw packs jitterIndex modulo the wrap', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.draw(
+      makeFakePass(),
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      1000,
+      [0, 0, 5],
+      () => fullSettings(),
+      () => 1,
+      { ...INPUTS, jitterIndex: 1_000_005 },
+    );
+    expect(uniformScratch(device)?.[63]).toBe(5);
+  });
+
+  // WebGPU's default blend constant is 0: a missing call erases the volume.
+  it('draw sets the blend constant to inputs.weight', () => {
+    const r = createVolumeFieldRenderer(mockDevice(), 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      1000,
+      [0, 0, 5],
+      () => fullSettings(),
+      () => 1,
+      { ...INPUTS, weight: 0.25 },
+    );
+    expect(pass.setBlendConstant).toHaveBeenCalledWith({ r: 0.25, g: 0.25, b: 0.25, a: 0.25 });
   });
 });
 
@@ -253,6 +298,7 @@ function fieldsDrawn(r: ReturnType<typeof createVolumeFieldRenderer>): number {
     [0, 0, 5],
     () => fullSettings(),
     () => 1,
+    INPUTS,
   );
   return (pass.drawIndexed as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
 }

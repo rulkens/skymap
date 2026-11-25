@@ -7,6 +7,7 @@
 
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { VolumeFieldLiveness } from '../../rendering/VolumeFieldLiveness';
+import type { VolumeFieldDrawInputs } from '../../rendering/VolumeFieldDrawInputs';
 import type { FadeParam } from '../../animation/FadeParam';
 import type { ShowKey } from '../../animation/ShowKey';
 import type { PassState } from './PassState';
@@ -25,4 +26,6 @@ export type ScalarVolumePassRow<Id extends string, K extends ShowKey = ShowKey> 
     ctx: FrameView,
     ...fade: FadeParam<K, ShowKey>
   ): VolumeFieldLiveness<Id> | null;
+  /** This view's march inputs, read once per draw. */
+  inputs(state: PassState, ctx: FrameView): VolumeFieldDrawInputs;
 } & ([ShowKey] extends [K] ? { readonly fade?: K } : { readonly fade: K });
