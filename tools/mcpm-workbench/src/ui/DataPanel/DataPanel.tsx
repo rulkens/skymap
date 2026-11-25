@@ -51,7 +51,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const grid = useAppSelector((s) => s.grid);
   const [dataOpen, setDataOpen] = useState(true);
   const [selectionOpen, setSelectionOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(true);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [histogramOpen, setHistogramOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
