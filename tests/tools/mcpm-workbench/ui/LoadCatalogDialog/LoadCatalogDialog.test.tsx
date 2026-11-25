@@ -118,11 +118,21 @@ describe('LoadCatalogDialog', () => {
   });
 
   it('opens on a page drop while the Data section is folded', () => {
-    setup(<DataPanel />);
+    setup(<DataPanel id="data" collapsed={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'Data' }));
     expect(screen.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-expanded', 'false');
     drop(csv('a.csv'));
     expect(dialog()).toHaveAttribute('open');
     expect(screen.getByText('a.csv')).toBeInTheDocument();
+  });
+
+  // jsdom ignores `inert`, so the guard is the dialog's place: outside the
+  // collapsed aside's inert subtree.
+  it('opens on a page drop while the data sidebar is collapsed, outside the inert aside', () => {
+    setup(<DataPanel id="data" collapsed />);
+    expect(document.getElementById('data')).toHaveAttribute('inert');
+    drop(csv('a.csv'));
+    expect(dialog()).toHaveAttribute('open');
+    expect(dialog().closest('[inert]')).toBeNull();
   });
 });

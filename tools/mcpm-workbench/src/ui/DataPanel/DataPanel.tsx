@@ -1,8 +1,9 @@
 /**
  * DataPanel — the left sidebar, what goes into the simulation: the tool's
  * title, the catalogs (a loaded file, then the tier over the built-ins it
- * applies to), and pinned below them the stats and histogram. The import dialog is mounted here, at
- * the sidebar root, so its window drop listener lives while Data is folded.
+ * applies to), and pinned below them the stats and histogram. The import dialog is mounted here,
+ * so its window drop listener lives while Data is folded or the sidebar collapsed, and beside the
+ * aside, so it never sits in the collapsed sidebar's `inert` subtree.
  */
 import { useState, type ReactNode } from 'react';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
@@ -26,52 +27,59 @@ import ToggleRow from '../ToggleRow/ToggleRow';
 import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
 import styles from './DataPanel.module.css';
 
-function DataPanel(): ReactNode {
+export type DataPanelProps = {
+  readonly id: string;
+  readonly collapsed: boolean;
+};
+
+function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const catalog = useAppSelector((s) => s.catalog);
   const [dataOpen, setDataOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
-    <aside className={styles.root} aria-label="Data">
-      <header className={styles.header}>
-        <h1 className={styles.title}>MCPM Workbench</h1>
-      </header>
-      <div className={styles.sections}>
-        <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
-          <UserCatalogRow />
-          <PanelRow>
-            <button type="button" className={styles.addRow} onClick={() => setDialogOpen(true)}>
-              <PlusIcon size={12} />
-              Load catalog…
-            </button>
-          </PanelRow>
-          <TierRow tier={catalog.tier} onChange={(t) => dispatch(setCatalogTier(t))} />
-          {WORKBENCH_SOURCES.map((s) => (
-            <ToggleRow
-              key={s}
-              label={APP_SOURCE_REGISTRY[s].label}
-              on={catalog.sources.includes(s)}
-              // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
-              // this tier, but selection must survive a tier switch — mute + hint, never
-              // disable.
-              hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
-              onChange={(on) =>
-                dispatch(setCatalogSources(toggleCatalogSource(catalog.sources, s, on)))
-              }
-            />
-          ))}
-        </PanelSection>
-      </div>
-      <div className={styles.pinned}>
-        <CatalogStatus />
-        <h2 className={styles.heading}>Stats</h2>
-        <StatsReadout />
-        <h2 className={styles.heading}>Histogram</h2>
-        <HistogramDock />
-      </div>
+    <>
+      <aside id={id} className={styles.root} aria-label="Data" inert={collapsed}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>MCPM Workbench</h1>
+        </header>
+        <div className={styles.sections}>
+          <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
+            <UserCatalogRow />
+            <PanelRow>
+              <button type="button" className={styles.addRow} onClick={() => setDialogOpen(true)}>
+                <PlusIcon size={12} />
+                Load catalog…
+              </button>
+            </PanelRow>
+            <TierRow tier={catalog.tier} onChange={(t) => dispatch(setCatalogTier(t))} />
+            {WORKBENCH_SOURCES.map((s) => (
+              <ToggleRow
+                key={s}
+                label={APP_SOURCE_REGISTRY[s].label}
+                on={catalog.sources.includes(s)}
+                // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
+                // this tier, but selection must survive a tier switch — mute + hint, never
+                // disable.
+                hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
+                onChange={(on) =>
+                  dispatch(setCatalogSources(toggleCatalogSource(catalog.sources, s, on)))
+                }
+              />
+            ))}
+          </PanelSection>
+        </div>
+        <div className={styles.pinned}>
+          <CatalogStatus />
+          <h2 className={styles.heading}>Stats</h2>
+          <StatsReadout />
+          <h2 className={styles.heading}>Histogram</h2>
+          <HistogramDock />
+        </div>
+      </aside>
       <LoadCatalogDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-    </aside>
+    </>
   );
 }
 

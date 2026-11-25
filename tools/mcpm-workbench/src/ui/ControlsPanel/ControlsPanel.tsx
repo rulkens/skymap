@@ -47,7 +47,12 @@ import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
 import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
 import styles from './ControlsPanel.module.css';
 
-function ControlsPanel(): ReactNode {
+export type ControlsPanelProps = {
+  readonly id: string;
+  readonly collapsed: boolean;
+};
+
+function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const sim = useAppSelector((s) => s.sim);
   const catalog = useAppSelector((s) => s.catalog);
@@ -64,7 +69,7 @@ function ControlsPanel(): ReactNode {
     dispatch(setLayerEnabled({ layer, on }));
 
   return (
-    <aside className={styles.root} aria-label="Simulation and rendering">
+    <aside id={id} className={styles.root} aria-label="Simulation and rendering" inert={collapsed}>
       <div className={styles.scroll}>
         <PanelSection
           title="Simulation"

@@ -2,10 +2,28 @@
    on the right. App's root is the `workbench` container; under 900px wide the
    pair becomes one right-hand column, data first, because two 340px panels
    leave no viewport. */
-.pair {
-  /* One width for both sidebars, one gutter for every row and heading in them. */
-  --sidebar-inline-size: 340px;
+
+/* On App's root, so the pair and the toggles beside it read one width: each
+   sidebar's, and the narrow column's. One gutter for every row and heading. */
+.frame {
+  --sidebar-inline-size: min(340px, 90vw);
   --sidebar-gutter: calc(var(--space-6) + var(--space-4));
+}
+
+/* A hidden sidebar slides off its edge and its toggle rides along, out faster
+   than in. Translate only, so nothing else moves. */
+.slide {
+  transition: translate var(--duration-base) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    transition: none;
+  }
+}
+
+.pair {
+  composes: slide;
   position: absolute;
   inset: 0;
   display: flex;
@@ -17,8 +35,8 @@
    reaching the viewport's zoom handler. No App-level wrapper carries an ambient
    text style, so the colour and face are set here. */
 .sidebar {
+  composes: slide;
   inline-size: var(--sidebar-inline-size);
-  max-inline-size: 90vw;
   display: flex;
   flex-direction: column;
   background: var(--surface-panel);
@@ -36,6 +54,53 @@
 .end {
   composes: sidebar;
   border-inline-start: 1px solid var(--border-default);
+}
+
+/* Hidden is `inert` on the aside: off screen, out of the tab order and the
+   accessibility tree, still mounted. */
+.start[inert] {
+  translate: -100% 0;
+}
+
+.end[inert] {
+  translate: 100% 0;
+}
+
+/* At the sidebar's top, on its canvas-facing edge. */
+.toggle {
+  composes: slide;
+  position: absolute;
+  inset-block-start: var(--space-8);
+}
+
+.toggleStart {
+  composes: toggle;
+  inset-inline-start: var(--sidebar-inline-size);
+}
+
+.toggleEnd {
+  composes: toggle;
+  inset-inline-end: var(--sidebar-inline-size);
+}
+
+.toggleColumn {
+  composes: toggleEnd;
+  display: none;
+}
+
+.toggleStart[aria-expanded='false'] {
+  translate: calc(-1 * var(--sidebar-inline-size)) 0;
+}
+
+.toggleEnd[aria-expanded='false'] {
+  translate: var(--sidebar-inline-size) 0;
+}
+
+.sidebar[inert],
+.toggle[aria-expanded='false'],
+.pair:has(> .start[inert]):has(> .end[inert]) {
+  transition-duration: var(--duration-fast);
+  transition-timing-function: ease-in;
 }
 
 .sections {
@@ -71,7 +136,6 @@
   .pair {
     inset-inline-start: auto;
     inline-size: var(--sidebar-inline-size);
-    max-inline-size: 90vw;
     display: block;
     overflow-y: auto;
     pointer-events: auto;
@@ -90,6 +154,25 @@
   .start,
   .end {
     border: 0;
+  }
+
+  /* One toggle hides the whole column; a sidebar hidden in the wide layout
+     stays out of the column while the other shows. */
+  .pair:has(> .start[inert]):has(> .end[inert]) {
+    translate: 100% 0;
+  }
+
+  .pair:has(> .sidebar:not([inert])) > .sidebar[inert] {
+    display: none;
+  }
+
+  .toggleStart,
+  .toggleEnd {
+    display: none;
+  }
+
+  .toggleColumn {
+    display: block;
   }
 
   .sections {
