@@ -52,7 +52,7 @@ const ORBITS: SiteShotSettings = {
   hideZoneOfAvoidance: true,
   hideStars: true,
   matte: 'emissive',
-  keepPasses: ['orbit-trails', 'mission-trails'],
+  keepPasses: ['orbit-trails', 'sampled-trails'],
 };
 // Late morning in Copenhagen at midsummer, the time the park's other pictures are taken at.
 const PARK_TIME = 't=2026-06-21T11:00:00Z';

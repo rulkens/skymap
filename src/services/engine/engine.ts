@@ -184,6 +184,7 @@ export function createEngine(
       occlusionMaskRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
+      sampledTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
       // initGpu swaps in the device-aware service. Consumers gate on `.enabled`.
       timingService: createDisabledGpuTimingService(),

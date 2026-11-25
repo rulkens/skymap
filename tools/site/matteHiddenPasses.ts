@@ -31,7 +31,7 @@ export const MATTE_HIDDEN_PASSES: readonly string[] = [
   'constellations',
   'black-hole-marker',
   'orbit-trails',
-  'mission-trails',
+  'sampled-trails',
   'satellite-orbits',
   'satellites',
   'asteroid-orbits',

@@ -20,7 +20,6 @@ const positionAt = (id: string): Vec3 =>
 
 const body: SampledBody = {
   id: asSceneBodyId('voyager1'),
-  trailColor: [1, 1, 1],
   launchIso: LAUNCH_ISO,
   launchPad: { latDeg: 28.5, lonDeg: -80.5 },
 };

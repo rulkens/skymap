@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { missionLabelSource } from '../../../../../src/layers/missions/craft/present/missionLabelSource';
 import { craftPickId } from '../../../../../src/layers/missions/craft/present/craftPickId';
-import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
+import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/craft/data/missionEmphasisDim';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import { missionsPickCode } from '../../../../support/layerPickCodes';

@@ -5,7 +5,6 @@
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
-import { VOYAGER_2_GREEN } from '../../../data/bodies/palette';
 import { CAPE_CANAVERAL_LC41 } from '../craft/data/capeCanaveralLc41';
 import { launchIsoOf } from '../events/utils/launchIsoOf';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
@@ -24,7 +23,6 @@ export const VOYAGER_2: LayerBody = {
     kind: 'sampled',
     sampled: {
       id: asSceneBodyId('voyager2'),
-      trailColor: VOYAGER_2_GREEN,
       launchIso: LAUNCH,
       launchPad: CAPE_CANAVERAL_LC41,
     },
