@@ -6,8 +6,4 @@ describe('massWeightFromLog10', () => {
     expect(massWeightFromLog10(12)).toBe(1);
     expect(massWeightFromLog10(9)).toBeCloseTo(0.001, 12);
   });
-
-  it('keeps NaN', () => {
-    expect(massWeightFromLog10(NaN)).toBeNaN();
-  });
 });

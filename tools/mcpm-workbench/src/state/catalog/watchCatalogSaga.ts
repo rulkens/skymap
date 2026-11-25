@@ -1,13 +1,12 @@
 /**
- * watchCatalogSaga — the single owner of "what points feed the sim" and how
- * much stellar mass to weight them by. Triggers: the catalog-identity
- * writes (sources, tier, the loaded file and its toggle), and
- * `sagaContextRegistered` for the very first load. `takeLatest` cancels an
- * in-flight fetch the instant a newer trigger lands for free — a superseded
- * fetch's `catalogLoaded` never fires, because the generator that would `put`
- * it is already dead. WHERE points
- * come from is `resolveCatalogPointsPlan`, below, pulled out so the decision
- * is unit-testable without a fetch, a DOM `location`, or a running saga.
+ * watchCatalogSaga — the single owner of "what points feed the sim" and their
+ * agent weights. Triggers: the catalog-identity writes (sources, tier, the
+ * loaded file and its toggle), and `sagaContextRegistered` for the very first
+ * load. `takeLatest` cancels an in-flight fetch the instant a newer trigger
+ * lands for free — a superseded fetch's `catalogLoaded` never fires, because
+ * the generator that would `put` it is already dead. WHERE points come from is
+ * `resolveCatalogPointsPlan`, below, pulled out so the decision is
+ * unit-testable without a fetch, a DOM `location`, or a running saga.
  */
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 

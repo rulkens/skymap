@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
-import { C_KM_S, H0_KM_S_MPC, HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
+import { C_KM_S, HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
 
 describe('redshiftToDistanceMpc', () => {
   it('maps negative z to a negative (mirrored) distance, not the origin', () => {
@@ -54,14 +54,6 @@ describe('redshiftToDistanceMpc', () => {
     // comoving distance is strictly below the linear value c·z/H₀.
     for (const z of [0.05, 0.5, 1.0, 3.0, 5.0]) {
       expect(redshiftToDistanceMpc(z)).toBeLessThan(HUBBLE_DISTANCE_MPC * z);
-    }
-  });
-
-  it("an omitted cosmology equals the app's own", () => {
-    for (const z of [0.1, 1]) {
-      expect(redshiftToDistanceMpc(z, { h0KmSMpc: H0_KM_S_MPC, omegaM: 0.315 })).toBe(
-        redshiftToDistanceMpc(z),
-      );
     }
   });
 

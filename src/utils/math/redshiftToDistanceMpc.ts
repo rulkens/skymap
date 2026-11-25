@@ -67,8 +67,8 @@ function eOfZ(z: number, omegaM: number): number {
  * origin. This function is a pure z→distance map; the sign convention on
  * the return value is the caller's to interpret.
  *
- * `cosmology` defaults to the app's own; the MCPM workbench passes a
- * visitor's H₀ and Ω_m for a loaded redshift catalog.
+ * `cosmology` defaults to the app's own; pass one for a catalog measured
+ * against a different H₀ or Ω_m.
  */
 export function redshiftToDistanceMpc(z: number, cosmology: Cosmology = APP_COSMOLOGY): number {
   const { omegaM } = cosmology;

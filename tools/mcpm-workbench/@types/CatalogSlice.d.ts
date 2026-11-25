@@ -11,9 +11,9 @@ import type { UserFileProvenance } from './UserFileProvenance';
  * no-remap pass-through. `nanFillCount / pointCount` is the NaN fraction,
  * computed at the display site rather than stored. `userCatalog` is the
  * visitor's loaded file, kept while `userCatalogOn` toggles it in and out of
- * the run beside `sources`. `catalogBoundsMpc` is cached (not recomputed from positions) so
- * `deriveGridBox` derives the SAME box for Viewport's build and the grid
- * panel's live readout.
+ * the run beside `sources`. `catalogBoundsMpc` is cached (not recomputed from
+ * positions) so `deriveGridBox` derives the SAME box for Viewport's build and
+ * the grid panel's live readout.
  */
 export type CatalogSlice = {
   readonly sources: readonly GalaxyCatalogId[];

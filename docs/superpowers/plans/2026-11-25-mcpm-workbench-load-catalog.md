@@ -237,17 +237,16 @@ Omitted, it behaves exactly as today (H0 70, Ω_m 0.315), so the 17 importing fi
 **Contract:**
 
 ```ts
-export type CatalogFileProblem = {
-  readonly line: number | null;      // 1-based; null for whole-file problems
-  readonly message: string;          // the exact strings below
-};
+// The exact strings below; readCatalogFiles' refusals use it too. (`line` and
+// `skippedLines` were dropped 2026-11-25: nothing read them, the message says "Line N".)
+export type CatalogFileProblem = { readonly kind: 'problem'; readonly message: string };
 
 export type WeightStats = { readonly min: number; readonly median: number; readonly max: number };
 
 parseCsvCatalog(text: string, settings: CatalogImportSettings):
-  | { readonly ok: true; readonly points: CatalogPoints; readonly skippedLines: number;
+  | { readonly kind: 'parsed'; readonly points: CatalogPoints;
       readonly weightStats: WeightStats }          // of the stored weights
-  | { readonly ok: false; readonly problem: CatalogFileProblem }
+  | CatalogFileProblem
 
 // null when the weights look right; otherwise the exact sentence to show.
 weightUnitWarning(stats: WeightStats, weight: CatalogImportSettings['weight']): string | null
@@ -268,7 +267,7 @@ No scale is computed or applied for the user: the file may hold something other 
 **Rules** (the native build's, `Polyphorm/cpplib/dataset.cpp:36-72`, plus the range test):
 
 - A line is data when its first non-blank character is a digit, `-`, `+` or `.`; every other line
-  (header, `#` comment, blank) is skipped and counted.
+  (header, `#` comment, blank) is skipped.
 - Fields are separated by a comma, semicolon, tab or spaces. Columns after the fourth are ignored.
 - An empty field in the first four columns (`10,,20,…`) is refused as a non-finite value (added
   2026-11-25); runs of spaces or tabs and trailing separators are not empty fields.
@@ -294,9 +293,9 @@ No scale is computed or applied for the user: the file may hold something other 
 | RA/Dec format, z < 0 | `Line N: redshift must be 0 or more` |
 | No data lines | `No data rows found` |
 
-- [x] One test per row of the table, named after its condition, asserting `line` and `message`.
+- [x] One test per row of the table, named after its condition, asserting the message.
 - [x] `loads comma, semicolon, tab and space separated rows alike`.
-- [x] `skips a header row, # comments and blank lines and counts them`; `reads CRLF line endings`.
+- [x] `skips a header row, # comments and blank lines`; `reads CRLF line endings`.
 - [x] `ignores columns after the fourth`.
 - [x] `applies the weight scale` (weight 42, scale 0.001 → 0.042).
 - [x] `converts a log10 mass column to linear 1e12 Msun` (12 → 1, 9 → 0.001; a 0 or negative log is accepted).

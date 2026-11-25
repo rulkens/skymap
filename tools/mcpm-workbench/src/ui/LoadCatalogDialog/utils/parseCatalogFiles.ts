@@ -32,7 +32,7 @@ export async function parseCatalogFiles(
   }
 
   const parsed = parseCsvCatalog(await files.file.text(), settings);
-  if (!parsed.ok) return { kind: 'problem', message: parsed.problem.message, showExample: true };
+  if (parsed.kind === 'problem') return { ...parsed, showExample: true };
   const catalog = {
     points: parsed.points,
     fileName: files.file.name,

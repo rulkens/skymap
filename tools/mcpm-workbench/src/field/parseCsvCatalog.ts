@@ -27,13 +27,8 @@ export function parseCsvCatalog(
   text: string,
   settings: CatalogImportSettings,
 ):
-  | {
-      readonly ok: true;
-      readonly points: CatalogPoints;
-      readonly skippedLines: number;
-      readonly weightStats: WeightStats;
-    }
-  | { readonly ok: false; readonly problem: CatalogFileProblem } {
+  | { readonly kind: 'parsed'; readonly points: CatalogPoints; readonly weightStats: WeightStats }
+  | CatalogFileProblem {
   const lines = text.split(/\r?\n/);
   if (lines.at(-1) === '') lines.pop(); // a final newline is not a blank line
 
@@ -44,16 +39,14 @@ export function parseCsvCatalog(
   const positions = new Float32Array(lines.length * 3);
   const weight = new Float32Array(lines.length);
   let count = 0;
-  let skippedLines = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
-    if (!DATA_LINE.test(line)) {
-      skippedLines++;
-      continue;
-    }
-    const refuse = (message: string) =>
-      ({ ok: false, problem: { line: i + 1, message: `Line ${i + 1}: ${message}` } }) as const;
+    if (!DATA_LINE.test(line)) continue;
+    const refuse = (message: string): CatalogFileProblem => ({
+      kind: 'problem',
+      message: `Line ${i + 1}: ${message}`,
+    });
 
     const fields = line.trim().split(FIELD_SEPARATOR);
     while (fields.at(-1) === '') fields.pop(); // trailing separators
@@ -101,13 +94,12 @@ export function parseCsvCatalog(
     count++;
   }
 
-  if (count === 0) return { ok: false, problem: { line: null, message: 'No data rows found' } };
+  if (count === 0) return { kind: 'problem', message: 'No data rows found' };
 
   const keptWeight = weight.slice(0, count);
   return {
-    ok: true,
+    kind: 'parsed',
     points: { positions: positions.slice(0, count * 3), weight: keptWeight, count, sources: [] },
-    skippedLines,
     weightStats: weightStatsFor(keptWeight),
   };
 }

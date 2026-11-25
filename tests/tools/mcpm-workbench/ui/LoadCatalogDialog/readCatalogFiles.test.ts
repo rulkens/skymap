@@ -10,7 +10,7 @@ const file = (name: string, size = 10): File => {
 
 describe('readCatalogFiles', () => {
   it('refuses a file over 400 MB without reading it', () => {
-    expect(readCatalogFiles([file('desi.csv', 401 * 1024 * 1024)])).toEqual({
+    expect(readCatalogFiles([file('desi.csv', 401e6)])).toEqual({
       kind: 'problem',
       message: 'File is larger than 400 MB. Use a smaller sample, or the native build.',
     });

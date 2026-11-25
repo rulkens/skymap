@@ -1,10 +1,9 @@
+import type { CatalogFileProblem } from '../../../../@types/CatalogFileProblem';
 import type { CatalogFiles } from '../../../../@types/CatalogFiles';
 import { MAX_CATALOG_FILE_BYTES } from './MAX_CATALOG_FILE_BYTES';
 
 /** Sorts chosen or dropped files into a loadable set; sizes are checked before anything is read. */
-export function readCatalogFiles(
-  files: readonly File[],
-): CatalogFiles | { readonly kind: 'problem'; readonly message: string } {
+export function readCatalogFiles(files: readonly File[]): CatalogFiles | CatalogFileProblem {
   if (files.some((f) => f.size > MAX_CATALOG_FILE_BYTES)) {
     return {
       kind: 'problem',

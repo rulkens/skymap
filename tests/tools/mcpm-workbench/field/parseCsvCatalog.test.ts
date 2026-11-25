@@ -15,86 +15,68 @@ const LOG: CatalogImportSettings = { ...XYZ, weight: { kind: 'log10MassMsun' } }
 
 function parsed(text: string, settings: CatalogImportSettings) {
   const result = parseCsvCatalog(text, settings);
-  if (!result.ok) throw new Error(`expected ok, got ${result.problem.message}`);
+  if (result.kind === 'problem') throw new Error(`expected parsed, got ${result.message}`);
   return result;
 }
 
 function problem(text: string, settings: CatalogImportSettings) {
   const result = parseCsvCatalog(text, settings);
-  if (result.ok) throw new Error('expected a problem');
-  return result.problem;
+  if (result.kind === 'parsed') throw new Error('expected a problem');
+  return result.message;
 }
 
 describe('parseCsvCatalog problems', () => {
   it('fewer than 4 numbers', () => {
-    expect(problem('1,2,3,1\n1,2,3\n', XYZ)).toEqual({
-      line: 2,
-      message: 'Line 2: expected 4 numbers, found 3',
-    });
+    expect(problem('1,2,3,1\n1,2,3\n', XYZ)).toBe('Line 2: expected 4 numbers, found 3');
   });
 
   // Collapsed separators once read this row as x=10, y=20, z=0.03, w=0.5 without a word.
   it('an empty field between commas', () => {
-    expect(problem('10,,20,0.03,0.5,7\n', XYZ)).toEqual({
-      line: 1,
-      message: 'Line 1: every value must be a finite number',
-    });
+    expect(problem('10,,20,0.03,0.5,7\n', XYZ)).toBe('Line 1: every value must be a finite number');
   });
 
   it('non-finite coordinate', () => {
-    expect(problem('1,abc,3,1\n', XYZ)).toEqual({
-      line: 1,
-      message: 'Line 1: every value must be a finite number',
-    });
+    expect(problem('1,abc,3,1\n', XYZ)).toBe('Line 1: every value must be a finite number');
   });
 
   it('weight × scale ≤ 0 or non-finite', () => {
     const message = 'Line 1: weight must be greater than 0';
-    expect(problem('1,2,3,0\n', XYZ)).toEqual({ line: 1, message });
-    expect(problem('1,2,3,-2\n', XYZ)).toEqual({ line: 1, message });
-    expect(problem('1,2,3,NaN\n', XYZ)).toEqual({ line: 1, message });
+    expect(problem('1,2,3,0\n', XYZ)).toBe(message);
+    expect(problem('1,2,3,-2\n', XYZ)).toBe(message);
+    expect(problem('1,2,3,NaN\n', XYZ)).toBe(message);
   });
 
   // A weight stored as Float32 Infinity made deriveAgentWeights zero every deposit, built-ins too.
   it('a linear mass column read as log₁₀ of mass overflows', () => {
-    expect(problem('1,2,3,1e10\n', LOG)).toEqual({
-      line: 1,
-      message: 'Line 1: weight 1e10 is too large for log₁₀ of mass. Did you mean linear?',
-    });
+    expect(problem('1,2,3,1e10\n', LOG)).toBe(
+      'Line 1: weight 1e10 is too large for log₁₀ of mass. Did you mean linear?',
+    );
   });
 
   it('a linear weight beyond 32-bit float range, either way', () => {
     const message = 'Line 1: weight is outside the range a 32-bit float can hold';
-    expect(problem('1,2,3,1e39\n', XYZ)).toEqual({ line: 1, message });
-    expect(problem('1,2,3,1e-50\n', XYZ)).toEqual({ line: 1, message });
+    expect(problem('1,2,3,1e39\n', XYZ)).toBe(message);
+    expect(problem('1,2,3,1e-50\n', XYZ)).toBe(message);
   });
 
   it('RA/Dec format, Dec outside −90…90', () => {
-    expect(problem('10,120,0.1,1\n', RADEC)).toEqual({
-      line: 1,
-      message: 'Line 1: Dec 120 is outside −90 to 90. Did you mean cartesian?',
-    });
+    expect(problem('10,120,0.1,1\n', RADEC)).toBe(
+      'Line 1: Dec 120 is outside −90 to 90. Did you mean cartesian?',
+    );
   });
 
   it('RA/Dec format, RA outside 0…360', () => {
-    expect(problem('# ra dec z w\n-12.5,10,0.1,1\n', RADEC)).toEqual({
-      line: 2,
-      message: 'Line 2: RA -12.5 is outside 0 to 360. Did you mean cartesian?',
-    });
+    expect(problem('# ra dec z w\n-12.5,10,0.1,1\n', RADEC)).toBe(
+      'Line 2: RA -12.5 is outside 0 to 360. Did you mean cartesian?',
+    );
   });
 
   it('RA/Dec format, z < 0', () => {
-    expect(problem('10,10,-0.01,1\n', RADEC)).toEqual({
-      line: 1,
-      message: 'Line 1: redshift must be 0 or more',
-    });
+    expect(problem('10,10,-0.01,1\n', RADEC)).toBe('Line 1: redshift must be 0 or more');
   });
 
   it('no data lines', () => {
-    expect(problem('x,y,z,w\n# nothing here\n\n', XYZ)).toEqual({
-      line: null,
-      message: 'No data rows found',
-    });
+    expect(problem('x,y,z,w\n# nothing here\n\n', XYZ)).toBe('No data rows found');
   });
 });
 
@@ -119,19 +101,17 @@ describe('parseCsvCatalog', () => {
     expect(Array.from(points.weight)).toEqual([4, 8, 12]);
   });
 
-  it('skips a header row, # comments and blank lines and counts them', () => {
-    const { points, skippedLines } = parsed('x,y,z,w\n# comment\n\n1,2,3,4\n  \n.5,+6,-7,8\n', XYZ);
+  it('skips a header row, # comments and blank lines', () => {
+    const { points } = parsed('x,y,z,w\n# comment\n\n1,2,3,4\n  \n.5,+6,-7,8\n', XYZ);
 
     expect(Array.from(points.positions)).toEqual([1, 2, 3, 0.5, 6, -7]);
-    expect(skippedLines).toBe(4);
   });
 
   it('reads CRLF line endings', () => {
-    const { points, skippedLines } = parsed('x,y,z,w\r\n1,2,3,4\r\n5,6,7,8\r\n', XYZ);
+    const { points } = parsed('x,y,z,w\r\n1,2,3,4\r\n5,6,7,8\r\n', XYZ);
 
     expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7]);
     expect(Array.from(points.weight)).toEqual([4, 8]);
-    expect(skippedLines).toBe(1);
   });
 
   it('ignores columns after the fourth', () => {
