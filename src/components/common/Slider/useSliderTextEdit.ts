@@ -2,7 +2,7 @@
  * useSliderTextEdit — Slider's typed-value mode: Enter commits, Escape cancels,
  * blur commits a valid value and drops an invalid one.
  *
- * The glow (`aria-invalid`) waits for a failed Enter, then tracks the text: shown
+ * The glow (`aria-invalid` and its `reason`) waits for a failed Enter, then tracks the text: shown
  * live it would flash on every legitimate prefix of an in-range value ("1" on the
  * way to "128" when min is 64). A commit snaps to `step`, because integer-stepped
  * consumers (bounces, divisors, whole-pixel sizes) cannot take fractions. With
@@ -12,7 +12,8 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { SliderDisplayed } from '../../../@types/components/SliderDisplayed';
 import type { SliderTextEdit } from '../../../@types/components/SliderTextEdit';
-import { parseTypedNumber } from '../../../utils/input/parseTypedNumber';
+import { checkTypedValue } from '../../../utils/input/checkTypedValue';
+import { typedValueReason } from '../../../utils/input/typedValueReason';
 import { snapToStep } from '../../../utils/math/snapToStep';
 
 export function useSliderTextEdit({
@@ -41,9 +42,8 @@ export function useSliderTextEdit({
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [attempted, setAttempted] = useState(false);
-  const typed = parseTypedNumber(text);
-  const stored = typeof typed !== 'number' ? NaN : displayed ? displayed.toValue(typed) : typed;
-  const valid = stored >= min && stored <= max;
+  const check = checkTypedValue(text, min, max, displayed);
+  const reason = editing && attempted ? typedValueReason(check, min, max, displayed) : undefined;
 
   useLayoutEffect(() => {
     if (editing) {
@@ -60,8 +60,8 @@ export function useSliderTextEdit({
     openRef.current = false;
     // Untouched text is never sent: a shown number need not convert back to the exact
     // stored one, and an off-grid value (an imported box size) must survive Enter unsnapped.
-    if (commit && valid && text !== prefillRef.current && stored !== value) {
-      const next = snapToStep(stored, min, max, step);
+    if (commit && check.kind === 'valid' && text !== prefillRef.current && check.value !== value) {
+      const next = snapToStep(check.value, min, max, step);
       if (next !== value) onChange(next);
     }
     refocusRef.current = refocus;
@@ -70,6 +70,7 @@ export function useSliderTextEdit({
 
   return {
     editing,
+    reason,
     start: () => {
       openRef.current = true;
       // String() is the shortest text that parses back to the same double, so no digit the format rounds away is lost.
@@ -81,14 +82,14 @@ export function useSliderTextEdit({
     input: {
       ref: inputRef,
       value: text,
-      'aria-invalid': attempted && !valid ? true : undefined,
+      'aria-invalid': reason ? true : undefined,
       onChange: (e) => setText(e.target.value),
       onKeyDown: (e) => {
         if (e.key !== 'Enter' && e.key !== 'Escape') return;
         e.preventDefault();
         e.stopPropagation();
         if (e.key === 'Escape') finish(false, true);
-        else if (valid) finish(true, true);
+        else if (check.kind === 'valid') finish(true, true);
         else setAttempted(true);
       },
       onBlur: () => finish(true, false),

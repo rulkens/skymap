@@ -5,11 +5,12 @@
  * and the keys are ours, and the fill's CSS transition makes a key nudge glide
  * (`.dragging` drops it so a drag tracks the pointer). A drag maps clientX across
  * the full padded width to [min, max], snapped to `step`. Right-click or Enter
- * swaps the value for a text box in the same box (useSliderTextEdit); the drag
- * is primary-button only, so a right press never moves the value.
+ * swaps the value for a text box in the same box (useSliderTextEdit), and a failed
+ * Enter says why in a tip above it; the drag is primary-button only.
  */
 
 import {
+  useCallback,
   useId,
   useRef,
   useState,
@@ -54,6 +55,12 @@ function Slider({
   const rectRef = useRef<DOMRect | null>(null);
   const [dragging, setDragging] = useState(false);
   const labelId = useId();
+  const reasonId = useId();
+  // Per instance, like InfoTip's: a shared anchor name would bind every tip to the last pill.
+  const anchorName = `--slider-${labelId.replace(/[^a-zA-Z0-9]/g, '')}`;
+  // The reason opens in the top layer: the pill clips its children, and the sidebars
+  // around it are glass and scroll boxes that would re-base or clip a fixed tip.
+  const openAsPopover = useCallback((el: HTMLDivElement | null) => el?.showPopover(), []);
   const edit = useSliderTextEdit({
     value,
     min,
@@ -168,6 +175,7 @@ function Slider({
         disabled && styles.disabled,
       )}
       {...semantics}
+      style={edit.reason ? { anchorName } : undefined}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
@@ -187,10 +195,23 @@ function Slider({
           autoComplete="off"
           spellCheck={false}
           aria-labelledby={labelId}
+          aria-describedby={edit.reason ? reasonId : undefined}
           {...edit.input}
         />
       ) : (
         <span className={styles.value}>{display}</span>
+      )}
+      {edit.reason && (
+        <div
+          ref={openAsPopover}
+          id={reasonId}
+          role="alert"
+          popover="manual"
+          className={styles.reason}
+          style={{ positionAnchor: anchorName }}
+        >
+          {edit.reason}
+        </div>
       )}
     </div>
   );
