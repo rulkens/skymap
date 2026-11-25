@@ -29,19 +29,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 22px 0 40px;
+  padding: var(--space-10) 0 40px;
   display: grid;
   /* minmax(0, …): a long loaded file name truncates instead of widening the column. */
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-}
-
-/* The side padding sits on each section's header and body (CollapsibleSection's
-   two children), not here, so the header's divider runs edge to edge. No grid
-   gap: the header's own 14px bottom margin already spaces a collapsed one. */
-.scroll > div > div {
-  box-sizing: border-box; /* the header is width: 100% */
-  padding-inline: 22px;
 }
 
 /* download trace / download .scfd — pinned below .scroll (S12), always visible
@@ -50,7 +42,7 @@
    --border-divider hairline the Simulation section's own divider uses. */
 .footer {
   flex: none;
-  padding: var(--space-4) 22px 0;
+  padding: var(--space-4) var(--space-10) 0;
   border-top: 1px solid var(--border-divider);
   background: var(--surface-panel);
 }
@@ -71,7 +63,7 @@
    download buttons around. */
 .paramsStatus {
   flex: none;
-  padding: var(--space-2) 22px var(--space-4);
+  padding: var(--space-2) var(--space-10) var(--space-4);
   font-size: var(--font-size-sm);
   color: var(--color-fg-muted);
   background: var(--surface-panel);

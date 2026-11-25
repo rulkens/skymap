@@ -11,7 +11,6 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
-import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
 import SubsectionGroup from './SubsectionGroup';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
@@ -55,6 +54,7 @@ import {
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
 import PaletteRow from '../PaletteRow/PaletteRow';
+import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
@@ -73,7 +73,7 @@ function ControlsPanel(): ReactNode {
   const sim = useAppSelector((s) => s.sim);
   const catalog = useAppSelector((s) => s.catalog);
   const view = useAppSelector((s) => s.view);
-  // No open/close slice for the workbench's panel sections yet — CollapsibleSection
+  // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
   const [dataOpen, setDataOpen] = useState(true);
@@ -140,12 +140,13 @@ function ControlsPanel(): ReactNode {
   return (
     <div className={styles.root}>
       <div className={styles.scroll}>
-        <CollapsibleSection
+        <PanelSection
           title="Simulation"
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
-          headerToggle={sim.running}
-          onHeaderToggleChange={(on) => dispatch(setRunning(on))}
+          on={sim.running}
+          onChange={(on) => dispatch(setRunning(on))}
+          toggleLabel="running"
         >
           <ToggleRow
             label="seed around data"
@@ -161,8 +162,8 @@ function ControlsPanel(): ReactNode {
           />
           {/* reset / clear trace: momentary commands, not state — `state/commands.ts`
               actions a saga (Task 7) takes. Divided from the toggle rows above with
-              the same --border-divider hairline HistogramPlot/CollapsibleSection use,
-              and one font-size step smaller than the panel's other buttons so the
+              the same --border-divider hairline the section headers use, and one
+              font-size step smaller than the panel's other buttons so the
               pair reads as secondary to the run/seed/weight toggles it now sits under. */}
           <PanelRow>
             <div className={styles.simActions}>
@@ -206,17 +207,17 @@ function ControlsPanel(): ReactNode {
               path="sim.agentCount"
             />
           </SubsectionGroup>
-        </CollapsibleSection>
+        </PanelSection>
 
-        <CollapsibleSection
+        <PanelSection
           title="Selection"
           open={gridBoxOpen}
           onToggle={() => setGridBoxOpen((v) => !v)}
         >
           <GridBoxPanel />
-        </CollapsibleSection>
+        </PanelSection>
 
-        <CollapsibleSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
+        <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
           <LoadCatalogDialog />
           <UserCatalogRow />
           {WORKBENCH_SOURCES.map((s) => (
@@ -237,16 +238,16 @@ function ControlsPanel(): ReactNode {
           <PanelRow>
             <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
           </PanelRow>
-        </CollapsibleSection>
+        </PanelSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
             picker. Section order is the compositing order Viewport encodes them in. */}
-        <CollapsibleSection
+        <PanelSection
           title="Raymarch"
           open={raymarchOpen}
           onToggle={() => setRaymarchOpen((v) => !v)}
-          headerToggle={view.layers.raymarch}
-          onHeaderToggleChange={toggleLayer('raymarch')}
+          on={view.layers.raymarch}
+          onChange={toggleLayer('raymarch')}
         >
           {/* Additive off is fork parity: per-slab 'over', opaque a few voxels in. */}
           <ToggleRow
@@ -302,14 +303,14 @@ function ControlsPanel(): ReactNode {
               path="view.raymarch.divisor"
             />
           </SubsectionGroup>
-        </CollapsibleSection>
+        </PanelSection>
 
-        <CollapsibleSection
+        <PanelSection
           title="Agents"
           open={agentsOpen}
           onToggle={() => setAgentsOpen((v) => !v)}
-          headerToggle={view.layers.agents}
-          onHeaderToggleChange={toggleLayer('agents')}
+          on={view.layers.agents}
+          onChange={toggleLayer('agents')}
         >
           <SliderRow
             label="intensity"
@@ -333,14 +334,14 @@ function ControlsPanel(): ReactNode {
             onChange={(v) => dispatch(setAgentPointSize(v))}
             path="view.agents.pointSizePx"
           />
-        </CollapsibleSection>
+        </PanelSection>
 
-        <CollapsibleSection
+        <PanelSection
           title="Galaxies"
           open={galaxiesOpen}
           onToggle={() => setGalaxiesOpen((v) => !v)}
-          headerToggle={view.layers.galaxies}
-          onHeaderToggleChange={toggleLayer('galaxies')}
+          on={view.layers.galaxies}
+          onChange={toggleLayer('galaxies')}
         >
           <SliderRow
             label="intensity"
@@ -364,14 +365,14 @@ function ControlsPanel(): ReactNode {
             onChange={(v) => dispatch(setGalaxyPointSize(v))}
             path="view.galaxies.pointSizePx"
           />
-        </CollapsibleSection>
+        </PanelSection>
 
-        <CollapsibleSection
+        <PanelSection
           title="Path tracer"
           open={pathTracerOpen}
           onToggle={() => setPathTracerOpen((v) => !v)}
-          headerToggle={view.layers.pathTracer}
-          onHeaderToggleChange={toggleLayer('pathTracer')}
+          on={view.layers.pathTracer}
+          onChange={toggleLayer('pathTracer')}
         >
           {/* Off by default: worst case is bounces×512 tracking steps per pixel,
               far heavier than the raymarch — this is not a layer to leave on
@@ -431,7 +432,7 @@ function ControlsPanel(): ReactNode {
             info="Tonemap each sample before accumulating (the fork's LDR accumulation) instead of averaging linear radiance."
             onChange={(on) => dispatch(setPathTracerCompressive(on))}
           />
-        </CollapsibleSection>
+        </PanelSection>
       </div>
       {/* Pinned below the scroll area, always visible (S12). */}
       <div className={styles.footer}>

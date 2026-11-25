@@ -260,7 +260,7 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
  * bind groups or clear buffers outside the steady state, then the render
  * layers in every combination that opens a distinct pass set — agents alone,
  * all three, none at all. Layers are switched through each section's header
- * checkbox (CollapsibleSection renders it with `aria-label="Toggle <title>"`).
+ * checkbox (PanelSection renders it with `aria-label="Toggle <title>"`).
  * Order matters once: `resize` runs last, with all layers on, so it covers the
  * splat's screen-sized accumulation buffer as well as the graph's own target.
  * Track V's path tracer appends its step here.
@@ -295,14 +295,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // both branches of that guard get exercised here.
       name: 'toggle:pause',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'Toggle Simulation', exact: true }).uncheck();
+        await page.getByRole('checkbox', { name: 'running', exact: true }).uncheck();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
       name: 'toggle:resume',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'Toggle Simulation', exact: true }).check();
+        await page.getByRole('checkbox', { name: 'running', exact: true }).check();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
@@ -485,8 +485,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
-      // one, so this is the only render layer none of the other gates exercise. The "Grid
-      // box" CollapsibleSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
+      // one, so this is the only render layer none of the other gates exercise. The
+      // "Selection" PanelSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
       // true, since 14e095c75) — no fold click needed; a click here would instead TOGGLE
       // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
       // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
@@ -654,7 +654,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         await settleFrames(page, SETTLE_FRAMES);
         // V3: opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
         // ensureReducedTex) — the layer's own toggle above doesn't expand the section,
-        // CollapsibleSection unmounts its body while folded (grid:box-preview's own
+        // PanelSection unmounts its body while folded (grid:box-preview's own
         // note above). Named 'path tracer divisor', not 'divisor', to stay distinct
         // from the raymarch section's own slider of that name — both sections are open
         // simultaneously from here on, so a shared name would be an ambiguous locator.

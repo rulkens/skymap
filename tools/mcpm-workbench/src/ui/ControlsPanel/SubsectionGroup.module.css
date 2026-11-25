@@ -1,8 +1,7 @@
-/* The 22px is the section body's side padding (ControlsPanel.module.css
-   `.scroll > div > div`): the negative margin cancels it so the rule spans the
-   sidebar, the padding puts the label and rows back where they were. */
+/* The negative margin cancels PanelSection's body gutter so the rule spans the
+   sidebar; the padding puts the label and rows back on the gutter. */
 .root {
-  margin: 14px -22px 0;
-  padding: 10px 22px 0;
+  margin: var(--space-7) calc(-1 * var(--section-gutter)) 0;
+  padding: var(--space-5) var(--section-gutter) 0;
   border-top: 1px solid var(--border-default);
 }
