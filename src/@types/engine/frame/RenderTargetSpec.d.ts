@@ -80,4 +80,7 @@ export type RenderTargetSpec = {
    * track it.
    */
   allocateWhen?: (state: EngineState, isAllocated: boolean) => boolean;
+  /** Keep contents across frames: one texture per view id, cleared on (re)allocation and whenever
+   *  the drawing step's planner value says `restart`. Rejected at construction with `depth` or `layers`. */
+  retained?: true;
 };

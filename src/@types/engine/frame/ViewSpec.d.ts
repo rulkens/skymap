@@ -13,7 +13,8 @@ import type { ViewKind } from './ViewKind';
 export type ViewSpec = {
   /** This view's name, minted by whoever builds the spec — `'canvas'` for the
    *  main view, `'<capture key>:<face>'` for a cubemap face. `FrameView.id`
-   *  copies it; `timingSlotForView` is the one place that reads it. */
+   *  copies it; `timingSlotForView` reads it, and it keys a retained render-target row's
+   *  per-view texture (`RenderTargets.viewOf(id, viewId)`). */
   readonly id: string;
   /** View right | up | forward as columns, in the camera's right | up | forward basis. */
   readonly rotation: Readonly<Mat3>;

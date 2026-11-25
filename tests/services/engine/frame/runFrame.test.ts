@@ -196,7 +196,7 @@ function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
     visibilityEntries: [],
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     gpu: {
-      renderTargets: { reconcile: vi.fn() },
+      renderTargets: { reconcile: vi.fn(), reconcileViews: vi.fn() },
       compositor: {},
       label3DRenderer: { setLabels: vi.fn() },
     },

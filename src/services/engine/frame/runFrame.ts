@@ -194,6 +194,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
       : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
+  // View ids exist only now, after `reconcile`: retained rows keep a texture per view id.
+  snapshot.renderTargets.reconcileViews(
+    state,
+    views.map((view) => view.id),
+  );
   // Next pass's size gates measure against this frame's views.
   state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 

@@ -82,6 +82,7 @@ import { OCCLUSION_MASK_DOWNSCALE } from '../../data/rendering/occlusionMaskDown
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
+import { clearValueOf } from '../../utils/gpu/clearValueOf';
 import { filmStreakOn } from '../../utils/film/filmStreakOn';
 import { filmVeilOn } from '../../utils/film/filmVeilOn';
 
@@ -258,6 +259,13 @@ export function createRenderTargets(
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
+  // A retained row keeps its contents across frames, so each view draws into its own texture.
+  const retainedSpecs = offscreenSpecs.filter((s) => s.retained);
+  for (const spec of retainedSpecs) {
+    if (spec.depth !== null || (spec.layers ?? 1) > 1) {
+      throw new Error(`renderTargets: retained target '${spec.id}' cannot carry depth or layers`);
+    }
+  }
 
   // Per-row allocation state, keyed by spec id. `destroy()` clears every map
   // so a stale `viewOf` / `depthViewOf` fails loudly instead of handing back a
@@ -284,6 +292,8 @@ export function createRenderTargets(
   // width directly — test doubles for `RenderTargets` stub textures without
   // real dimensions (see `renderTargets.test.ts`'s `mockDevice`).
   const sizes = new Map<string, Size>();
+  // A retained row's per-view textures: row id -> view id. The row holds no row-level texture.
+  const retained = new Map<string, Map<string, { texture: GPUTexture; view: GPUTextureView }>>();
 
   // A `{ sample }` step's stand-in when nothing has cleared its source yet
   // this frame — outside the spec table (no `reconcile` entry, no resize) so
@@ -385,13 +395,52 @@ export function createRenderTargets(
     }
   }
 
+  /** (Re)allocate one view's texture of a retained row and queue its clear: its contents are new. */
+  function allocateRetained(
+    spec: RenderTargetSpec,
+    viewId: string,
+    state: EngineState,
+    clears: { view: GPUTextureView; clearValue: GPUColor }[],
+  ): void {
+    const { width, height } = sizes.get(spec.id)!;
+    const perView = retained.get(spec.id) ?? new Map();
+    retained.set(spec.id, perView);
+    perView.get(viewId)?.texture.destroy();
+    const texture = device.createTexture({
+      label: `render-target-${spec.id}@${viewId}`,
+      format: spec.format,
+      dimension: '2d',
+      size: { width, height, depthOrArrayLayers: 1 },
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const view = texture.createView();
+    perView.set(viewId, { texture, view });
+    clears.push({ view, clearValue: clearValueOf(spec, state) });
+  }
+
+  /** One encoder for every clear a call queued, submitted at once (as the far-depth clear is). */
+  function submitClears(clears: readonly { view: GPUTextureView; clearValue: GPUColor }[]): void {
+    if (clears.length === 0) return;
+    const encoder = device.createCommandEncoder();
+    for (const { view, clearValue } of clears) {
+      encoder
+        .beginRenderPass({
+          colorAttachments: [{ view, clearValue, loadOp: 'clear', storeOp: 'store' }],
+        })
+        .end();
+    }
+    device.queue.submit([encoder.finish()]);
+  }
+
   /**
    * Drop one row's textures + views. Every map is cleared together with the
    * size record, so the row misses the held-size comparison on the frame its
    * `allocateWhen` turns true again and reallocates through the normal path.
    */
   function release(id: string): void {
-    if (!textures.has(id) && !depthTextures.has(id)) return;
+    if (!sizes.has(id)) return;
+    for (const { texture } of retained.get(id)?.values() ?? []) texture.destroy();
+    retained.delete(id);
     textures.get(id)?.destroy();
     depthTextures.get(id)?.destroy();
     textures.delete(id);
@@ -410,6 +459,7 @@ export function createRenderTargets(
   // surviving texture is the one every consumer's `viewOf` already resolves.
   // (`reducedTargetSize` is the shared sizing rule; see its docblock.)
   function reconcile(s: EngineState, canvas: Size): void {
+    const clears: { view: GPUTextureView; clearValue: GPUColor }[] = [];
     for (const spec of offscreenSpecs) {
       // A row that declares `allocateWhen` holds VRAM only while its
       // condition does — same per-frame seam as a moved size, so entering
@@ -431,8 +481,33 @@ export function createRenderTargets(
         : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
+      if (spec.retained) {
+        sizes.set(spec.id, { width, height });
+        for (const viewId of [...(retained.get(spec.id)?.keys() ?? [])]) {
+          allocateRetained(spec, viewId, s, clears);
+        }
+        continue;
+      }
       allocate(spec, width, height);
     }
+    submitClears(clears);
+  }
+
+  function reconcileViews(s: EngineState, viewIds: readonly string[]): void {
+    const clears: { view: GPUTextureView; clearValue: GPUColor }[] = [];
+    for (const spec of retainedSpecs) {
+      if (!sizes.has(spec.id)) continue; // released by its `allocateWhen`
+      const perView = retained.get(spec.id);
+      for (const [viewId, { texture }] of perView ?? []) {
+        if (viewIds.includes(viewId)) continue;
+        texture.destroy();
+        perView!.delete(viewId);
+      }
+      for (const viewId of viewIds) {
+        if (!retained.get(spec.id)?.has(viewId)) allocateRetained(spec, viewId, s, clears);
+      }
+    }
+    submitClears(clears);
   }
 
   // Boot takes the same path a frame does: nothing is allocated yet, so every
@@ -461,7 +536,17 @@ export function createRenderTargets(
       }
       return size;
     },
-    viewOf(id: string): GPUTextureView {
+    viewOf(id: string, viewId?: string): GPUTextureView {
+      if (retainedSpecs.some((spec) => spec.id === id)) {
+        if (viewId === undefined) {
+          throw new Error(`renderTargets: retained target '${id}' needs a view id`);
+        }
+        const perView = retained.get(id)?.get(viewId);
+        if (!perView) {
+          throw new Error(`renderTargets: no view '${viewId}' of retained target '${id}'`);
+        }
+        return perView.view;
+      }
       const view = views.get(id);
       if (!view) {
         // Covers 'swap' (per-frame, executor-resolved), unknown ids, and
@@ -503,13 +588,18 @@ export function createRenderTargets(
       return farDepthTextureView;
     },
     reconcile,
+    reconcileViews,
     setSwapFormat(next: GPUTextureFormat): void {
       specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
     },
     destroy(): void {
       for (const texture of textures.values()) texture.destroy();
       for (const texture of depthTextures.values()) texture.destroy();
+      for (const perView of retained.values()) {
+        for (const { texture } of perView.values()) texture.destroy();
+      }
       farDepthTexture.destroy();
+      retained.clear();
       textures.clear();
       views.clear();
       cubeViews.clear();

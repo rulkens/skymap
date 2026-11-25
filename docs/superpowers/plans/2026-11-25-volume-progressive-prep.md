@@ -134,8 +134,9 @@ Steps:
 - [x] `npm run typecheck:fast`, then
       `npm test -- blackHoleLensingUniformsLayout atmosphereUniformsLayout surfaceTileLayout asteroidPoints sceneCamera`.
 
-**Done when:** no struct-layout parser remains outside `tests/helpers/wesl/`, and the five tests
-pass with their assertions untouched.
+**Done when:** the five listed tests lay their structs out with the shared helper and pass with
+their assertions untouched. Other private layout parsers (the packed mcpm-workbench layouts,
+`starUniformsLayout`, `starCutLayout`, `labelRecord`, `packIsmMapFluidConstants`) are out of scope.
 
 ---
 
@@ -375,26 +376,26 @@ reconcileViews(state: EngineState, viewIds: readonly string[]): void;
 
 Steps:
 
-- [ ] Types, then `renderTargets.ts`. The retained maps sit beside the existing ones
+- [x] Types, then `renderTargets.ts`. The retained maps sit beside the existing ones
       (`:267-286`) and are cleared by `release` / `destroy` (`:393-404`, `:509-520`).
-- [ ] Test `a retained row keeps one texture per view id across frames`: reconcile, then
+- [x] Test `a retained row keeps one texture per view id across frames`: reconcile, then
       `reconcileViews(['canvas'])` twice.
   - Exactly one `createTexture` carries the retained row's label.
   - `viewOf(id, 'canvas')` returns the same object both times.
   - A non-retained row's texture count is unchanged by `reconcileViews`.
-- [ ] Test `a view id absent from a frame frees its retained texture`: call with `['a','b']`,
+- [x] Test `a view id absent from a frame frees its retained texture`: call with `['a','b']`,
       then `['a']`.
   - b's texture is destroyed, and `viewOf(id, 'b')` throws.
   - a's texture is neither destroyed nor replaced.
-- [ ] Test `a fresh retained texture is cleared to the row's clear value`: the mock encoder records
+- [x] Test `a fresh retained texture is cleared to the row's clear value`: the mock encoder records
       a `beginRenderPass` on the new view with `loadOp: 'clear'` and the row's `clearValue`, and
       the encoder is submitted.
-- [ ] Test `a resize reallocates every view's retained texture at the new size, cleared`: two
+- [x] Test `a resize reallocates every view's retained texture at the new size, cleared`: two
       view ids, then a new canvas size.
   - Both old textures are destroyed.
   - The new textures have the new size, and each gets a clear pass.
-- [ ] Test `viewOf on a retained row throws without a view id`.
-- [ ] `npm run typecheck:fast`, `npm test -- renderTargets runFrame executeFrame createUpsamplePass`.
+- [x] Test `viewOf on a retained row throws without a view id`.
+- [x] `npm run typecheck:fast`, `npm test -- renderTargets runFrame executeFrame createUpsamplePass`.
 
 **Done when:** no shipped row is retained, so the frame allocates what it did before, and
 `reconcileViews` finds nothing to do.

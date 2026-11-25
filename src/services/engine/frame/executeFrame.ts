@@ -117,7 +117,7 @@ import { cpuSpans } from '../../../utils/perf/cpuSpans';
  */
 function viewFor(id: string, ctx: FrameView, swapView: GPUTextureView): GPUTextureView {
   if (id === 'swap') return ctx.output ?? swapView;
-  return ctx.snapshot.renderTargets.viewOf(id);
+  return ctx.snapshot.renderTargets.viewOf(id, ctx.id);
 }
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
