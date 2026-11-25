@@ -5,19 +5,18 @@
 .header {
   flex: none;
   padding-block: var(--space-8) var(--space-3);
-  padding-inline: calc(var(--space-6) + var(--space-4));
+  padding-inline: var(--sidebar-gutter);
   user-select: none;
 }
 
-/* Raw white, not a --color-fg token: the app's one display-serif headline
-   treatment, as on Splash and the galaxy tool. */
+/* No token is 32px; twice the largest one keeps the display-serif headline size. */
 .title {
   margin: 0;
   font-family: var(--font-family-display);
-  font-size: 32px;
+  font-size: calc(var(--font-size-input) * 2);
   font-weight: 600;
-  letter-spacing: 0.4px;
-  color: #ffffff;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-fg);
 }
 
 .sections {
