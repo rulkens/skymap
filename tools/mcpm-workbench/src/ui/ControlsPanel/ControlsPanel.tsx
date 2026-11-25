@@ -213,7 +213,7 @@ function ControlsPanel(): ReactNode {
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Grid box"
+          title="Selection"
           open={gridBoxOpen}
           onToggle={() => setGridBoxOpen((v) => !v)}
         >
