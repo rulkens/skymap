@@ -1,14 +1,14 @@
 /**
  * SimulationStatusIcon — the Simulation section's icon as a status cue: its arrow
- * turns while the sim runs and it warns on a low frame rate. It selects the zone,
- * not the rate, so it re-renders only when the zone or the run state changes.
+ * turns while the sim runs and its colour follows the frame-rate zone. It
+ * re-renders only when the zone or the run state changes, never per sample.
  * Paused, it takes the section's own (dimmed) colour.
  */
-import { useEffect, useRef, type ReactNode } from 'react';
-import type { FrameRateZone } from '../../../@types/FrameRateZone';
+import type { ReactNode } from 'react';
+import { selectSimRunning } from '../../state/sim/selectSimRunning';
 import { useAppSelector } from '../../store/hooks';
 import LoopPlayIcon from '../icons/LoopPlayIcon/LoopPlayIcon';
-import { frameRateZone } from './utils/frameRateZone';
+import { useFrameRateZone } from './useFrameRateZone';
 import styles from './SimulationStatusIcon.module.css';
 
 type Props = {
@@ -16,14 +16,8 @@ type Props = {
 };
 
 function SimulationStatusIcon({ size }: Props): ReactNode {
-  // The zone on screen, which the next rate is judged against for the hysteresis.
-  const shown = useRef<FrameRateZone>('normal');
-  // A lost device stops the frame loop but leaves `sim.running` set.
-  const running = useAppSelector((s) => s.sim.running && !s.view.deviceLost);
-  const zone = useAppSelector((s) => frameRateZone(shown.current, s.view.fps, running));
-  useEffect(() => {
-    shown.current = zone;
-  }, [zone]);
+  const running = useAppSelector(selectSimRunning);
+  const zone = useFrameRateZone();
 
   return (
     <span className={styles.root} data-zone={zone} data-running={running || undefined}>

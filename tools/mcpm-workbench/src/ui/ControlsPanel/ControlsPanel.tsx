@@ -24,8 +24,9 @@ import {
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import EyeIcon from '../../../../../src/components/icons/EyeIcon/EyeIcon';
-import SimulationFrameRate from '../SimulationFrameRate/SimulationFrameRate';
+import { formatAgentCount } from '../formatAgentCount';
 import SimulationStatusIcon from '../SimulationStatusIcon/SimulationStatusIcon';
+import SimulationTip from '../SimulationTip/SimulationTip';
 import SpiralIcon from '../icons/SpiralIcon/SpiralIcon';
 import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
@@ -62,7 +63,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
         <PanelSection
           title="Simulation"
           icon={<SimulationStatusIcon size={12} />}
-          iconTip={<SimulationFrameRate />}
+          iconTip={<SimulationTip />}
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
           on={sim.running}
@@ -138,7 +139,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
               max={10_000_000}
               step={100_000}
               value={sim.agentCount}
-              format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
+              format={formatAgentCount}
               displayed={{ fromValue: (v) => v / 1_000_000, toValue: (m) => m * 1_000_000 }}
               info="Structural: changing it rebuilds the harness and reseeds the swarm."
               onChange={(v) => dispatch(setAgentCount(v))}

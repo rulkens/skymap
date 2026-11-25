@@ -107,6 +107,7 @@ function PanelSection({
           className={styles.fold}
           onClick={onToggle}
           aria-expanded={open}
+          aria-label={iconTip === undefined ? undefined : title}
           aria-describedby={iconTip === undefined ? undefined : tipId}
         >
           <span className={styles.chevron}>
@@ -116,7 +117,8 @@ function PanelSection({
             {iconTip === undefined ? (
               icon
             ) : (
-              // Hidden so the tip stays out of the button's name; the description still reads it.
+              // Chrome lets a describedby target back into the name-from-content even under
+              // aria-hidden, so the button above is named by aria-label instead.
               <span className={styles.iconTip} aria-hidden>
                 <CompactInfoTip
                   label={
