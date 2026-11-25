@@ -191,7 +191,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
       : viewSpecs.map((spec) => deriveView(snapshot, cam, spec, state.previousViews.get(spec.id)));
-  // Identity kept: in mono `canvas === views[0]`, which renderFrame's one-submit batching relies on.
   // `vp` is minted fresh per derivation (`computeViewProj`), so holding it needs no copy.
   state.previousViews = new Map(
     [canvas, ...views].map((view) => [

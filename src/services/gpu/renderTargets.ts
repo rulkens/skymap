@@ -261,7 +261,6 @@ export function createRenderTargets(
   const offscreenSpecs = specs.filter((s) => s.id !== 'swap');
   // A retained row keeps its contents across frames, so each view draws into its own texture.
   const retainedSpecs = offscreenSpecs.filter((s) => s.retained);
-  // A state-driven reallocation would clear the texture without its planner learning of it.
   for (const spec of retainedSpecs) {
     const stateDriven =
       typeof spec.scale === 'function' ||
@@ -429,12 +428,8 @@ export function createRenderTargets(
   function submitClears(clears: readonly GPURenderPassColorAttachment[]): void {
     if (clears.length === 0) return;
     const encoder = device.createCommandEncoder();
-    for (const { view, clearValue } of clears) {
-      encoder
-        .beginRenderPass({
-          colorAttachments: [{ view, clearValue, loadOp: 'clear', storeOp: 'store' }],
-        })
-        .end();
+    for (const attachment of clears) {
+      encoder.beginRenderPass({ colorAttachments: [attachment] }).end();
     }
     device.queue.submit([encoder.finish()]);
   }
@@ -446,8 +441,6 @@ export function createRenderTargets(
    */
   function release(id: string): void {
     if (!sizes.has(id)) return;
-    for (const { texture } of retained.get(id)?.values() ?? []) texture.destroy();
-    retained.delete(id);
     textures.get(id)?.destroy();
     depthTextures.get(id)?.destroy();
     textures.delete(id);
@@ -503,7 +496,6 @@ export function createRenderTargets(
   function reconcileViews(s: EngineState, viewIds: readonly string[]): void {
     const clears: GPURenderPassColorAttachment[] = [];
     for (const spec of retainedSpecs) {
-      if (!sizes.has(spec.id)) continue; // released by its `allocateWhen`
       const perView = retained.get(spec.id);
       for (const [viewId, { texture }] of perView ?? []) {
         if (viewIds.includes(viewId)) continue;

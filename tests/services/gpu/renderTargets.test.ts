@@ -752,7 +752,6 @@ describe('createRenderTargets: a retained row', () => {
     expect(clearedViews).toEqual([targets.viewOf('accum', 'a'), targets.viewOf('accum', 'b')]);
   });
 
-  // A state-driven reallocation would clear the texture behind its planner's back.
   it('construction rejects a retained row with a state-driven size or allocation', () => {
     const state = stateWithDivisor(MW_DIVISOR);
     for (const extra of [
