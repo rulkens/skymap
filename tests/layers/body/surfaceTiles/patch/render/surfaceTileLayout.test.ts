@@ -113,6 +113,7 @@ function fieldForExpr(expr: string): string {
   if (/^heightSlotOrigin\[[01]\]/.test(expr)) return 'heightSlotOrigin';
   if (/^edgeCoarser\b/.test(expr)) return 'edgeCoarser';
   if (/^heightCells\b/.test(expr)) return 'heightCells';
+  if (/^horizonRect\[[0-3]\]$/.test(expr)) return 'horizonRect';
   if (/^vp\[/.test(expr)) return 'vp';
   const orientationIndex = expr.match(/^orientation\[(\d+)\]/);
   if (orientationIndex) {
@@ -181,12 +182,12 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   });
 
   // Pinned as absolute numbers, not derived: a vec2<u32> declared BEFORE the
-  // vec4s still parses and still packs, but pads the record past 96 bytes
+  // vec4s still parses and still packs, but pads the record past 112 bytes
   // (spec §7's field-order note), and the derived check above would follow it.
-  it('the record is 96 bytes with its scalar head pinned (the rects and height words are pinned lane by lane below)', () => {
+  it('the record is 112 bytes with its scalar head pinned (the rects and height words are pinned lane by lane below)', () => {
     const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
-    expect(PATCH_INSTANCE_BYTES).toBe(96);
-    expect(structSize).toBe(96);
+    expect(PATCH_INSTANCE_BYTES).toBe(112);
+    expect(structSize).toBe(112);
     const firstOffset = (field: string) =>
       Math.min(...writes.filter((w) => w.field === field).map((w) => w.offset));
     expect(firstOffset('originRelEyeM')).toBe(0);
@@ -210,6 +211,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
       heightSlotOrigin: [129, 258],
       edgeCoarser: 0b1011,
       heightCells: 32,
+      horizonRect: [0.21, 0.43, 0.65, 0.87],
     });
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
     expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
@@ -227,6 +229,10 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(view.getUint32(84, true)).toBe(258); // heightSlotOriginY
     expect(view.getUint32(88, true)).toBe(0b1011); // edgeCoarser
     expect(view.getUint32(92, true)).toBe(32); // heightCells
+    expect(view.getFloat32(96, true)).toBeCloseTo(0.21); // horizonUvOriginX
+    expect(view.getFloat32(100, true)).toBeCloseTo(0.43); // horizonUvOriginY
+    expect(view.getFloat32(104, true)).toBeCloseTo(0.65); // horizonUvScaleX
+    expect(view.getFloat32(108, true)).toBeCloseTo(0.87); // horizonUvScaleY
   });
 });
 

@@ -219,8 +219,8 @@ Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `
 `standalone.horizon` maps: a rect → itself; `'empty'` or `null` → slot 0's rect (the sentinel).
 The vertex stage forwards it as one more `@interpolate(flat)` varying at the next free location.
 
-- [ ] Layout test: stride 112, `horizonRect` at 96, the existing per-field offsets unchanged.
-- [ ] Implement; tests and typecheck pass; neutrality: a shot of `copernicus` with the horizon lane
+- [x] Layout test: stride 112, `horizonRect` at 96, the existing per-field offsets unchanged.
+- [x] Implement; tests and typecheck pass; neutrality: a shot of `copernicus` with the horizon lane
       disengaged (no `builtFrom.horizon`) matches main. Commit.
 
 ---
