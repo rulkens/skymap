@@ -4,6 +4,12 @@
   grid-template-columns: subgrid;
   row-gap: var(--space-2);
   align-items: baseline;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* The same dim as a disabled Button. */
+.inactive {
+  opacity: 0.45;
 }
 
 .label {
@@ -16,9 +22,23 @@
   min-inline-size: 0;
 }
 
+/* Every text the line can show sits in one cell; the hidden ones hold its height. */
+.line {
+  display: grid;
+  min-block-size: 1lh;
+}
+
+.line > * {
+  grid-area: 1 / 1;
+}
+
 .hint {
   margin: 0;
   color: var(--color-fg-tertiary);
+}
+
+.hint[data-shown='false'] {
+  visibility: hidden;
 }
 
 /* A bar as well as the colour, so the error does not rest on colour alone. */
@@ -27,4 +47,10 @@
   padding-inline-start: var(--space-5);
   border-inline-start: 2px solid var(--tool-status-bad);
   color: var(--color-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
 }

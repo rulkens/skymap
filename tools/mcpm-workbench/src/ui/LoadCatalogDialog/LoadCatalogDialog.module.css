@@ -1,11 +1,15 @@
-/* One height for every control in a row; SegmentedControl reads it too. */
+/* A fixed size, so no choice, error or warning ever moves the dialog, its
+   header or its footer: what does not fit scrolls in the body. The height holds
+   the form with a problem and its example; on a short screen it is the screen.
+   One control height for every row; SegmentedControl reads it too. */
 .root {
   --control-block-size: calc(2 * var(--space-8));
+  --inset: var(--space-12);
   container-type: inline-size;
   inline-size: min(36rem, 100vw - 2 * var(--corner-offset));
-  max-block-size: calc(100dvh - 2 * var(--corner-offset));
+  block-size: min(40rem, 100dvh - 2 * var(--corner-offset));
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-2xl);
   background: var(--surface-card-strong);
@@ -15,6 +19,16 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-base);
+  /* Drawn in the top layer, but it inherits from where it is mounted: the
+     sidebar pair passes clicks through to the canvas. */
+  pointer-events: auto;
+}
+
+/* A phone gets a sheet: the screen's height less the corner inset. */
+@media (width < 38rem) {
+  .root {
+    block-size: calc(100dvh - 2 * var(--corner-offset));
+  }
 }
 
 .root::backdrop {
@@ -44,55 +58,31 @@
   }
 }
 
-/* The one track definition: every FormField takes these columns through subgrid.
-   12ch holds "Weight scale", so hiding that row does not shift the controls. */
+/* Header, body, footer; only the body scrolls. */
 .form {
   display: grid;
-  grid-template-columns:
-    [label-start] minmax(12ch, max-content)
-    [label-end control-start] minmax(0, 1fr)
-    [control-end];
-  column-gap: var(--space-8);
-  row-gap: var(--space-12);
-  padding: var(--space-12);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
 }
 
-/* Narrow: both columns fall on one track, so each label sits above its control. */
-@container (inline-size < 30rem) {
-  .form {
-    grid-template-columns: [label-start control-start] minmax(0, 1fr) [label-end control-end];
-    padding: var(--space-8);
-  }
-}
-
+/* Each region owns its inset, so the dividers run border to border. */
 .header,
-.fields,
+.body,
 .footer {
-  grid-column: label-start / control-end;
-  display: grid;
+  padding-inline: var(--inset);
 }
 
 .header {
+  display: grid;
   row-gap: var(--space-2);
-}
-
-.fields {
-  grid-template-columns: subgrid;
-  row-gap: var(--space-8);
-}
-
-.footer {
-  row-gap: var(--space-8);
+  padding-block: var(--space-8);
+  border-block-end: 1px solid var(--border-divider);
 }
 
 .title {
+  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
   margin: 0;
-  font: inherit;
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  color: var(--color-fg);
+  color: var(--color-fg-tertiary);
 }
 
 .note {
@@ -100,10 +90,92 @@
   color: var(--color-fg-tertiary);
 }
 
+/* The one track definition: every FormField takes these columns through subgrid.
+   12ch holds "Weight scale". The warning sits on the last row, at the body's
+   end above the footer. */
+.body {
+  display: grid;
+  grid-template-columns:
+    [label-start] minmax(12ch, max-content)
+    [label-end control-start] minmax(0, 1fr)
+    [control-end];
+  grid-template-rows: auto 1fr auto;
+  column-gap: var(--space-8);
+  row-gap: var(--space-8);
+  padding-block: var(--space-10);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Narrow: both columns fall on one track, so each label sits above its control. */
+@container (inline-size < 30rem) {
+  .root {
+    --inset: var(--space-8);
+  }
+
+  .body {
+    grid-template-columns: [label-start control-start] minmax(0, 1fr) [label-end control-end];
+  }
+}
+
+.fields,
+.issue {
+  grid-column: label-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
+  row-gap: var(--space-8);
+}
+
+/* Added content opens to its height instead of appearing at once. */
+.issue,
+.warning {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition:
+    block-size var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard);
+}
+
+@starting-style {
+  .issue,
+  .warning {
+    block-size: 0;
+    opacity: 0;
+  }
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+  border-block-start: 1px solid var(--border-divider);
+}
+
 .button,
 .number {
   box-sizing: border-box;
   block-size: var(--control-block-size);
+}
+
+.load {
+  composes: button;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.loadLabels {
+  display: grid;
+}
+
+.loadLabels > * {
+  grid-area: 1 / 1;
+}
+
+.loadLabels > [data-shown='false'] {
+  visibility: hidden;
 }
 
 @media (pointer: coarse) {
@@ -115,30 +187,42 @@
 
 .file {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-4) var(--space-6);
+  gap: var(--space-6);
 }
 
-.fileName {
+.fileStatus {
+  display: flex;
   flex: 1 1 0;
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   color: var(--color-fg);
 }
 
 .formats {
-  composes: fileName;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--color-fg-tertiary);
+}
+
+.nameStart {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nameEnd {
+  flex: none;
 }
 
 .problem {
   composes: error from '../FormField/FormField.module.css';
-  flex-basis: 100%;
+  grid-column: control;
 }
 
 .warning {
   composes: error from '../FormField/FormField.module.css';
+  grid-column: label-start / control-end;
+  grid-row: 3;
   border-inline-start-color: var(--tool-status-warn);
 }
 
@@ -192,16 +276,9 @@
   border-color: var(--tool-status-bad);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-4);
-}
-
 .reading {
   flex: 1 1 auto;
+  min-inline-size: 0;
   margin: 0;
   color: var(--color-fg-muted);
   animation: pulse 1.2s ease-in-out infinite alternate;
@@ -215,7 +292,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .root,
-  .root::backdrop {
+  .root::backdrop,
+  .issue,
+  .warning {
     transition: none;
   }
 

@@ -391,7 +391,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | x, y, z help | `Positions in Mpc. One galaxy per row.` |
 | RA/Dec help | `RA and Dec in degrees. Does not open in the native Polyphorm build.` |
 | Weight choice label, options | `Weight is` · `linear` · `log₁₀ mass` |
-| Weight help, linear (under the scale) | `Built-in catalogs use stellar mass in 10¹² M☉.` |
+| Weight help, linear | `Built-in catalogs use stellar mass in 10¹² M☉.` |
 | Weight help, log | `Converted to stellar mass in 10¹² M☉. Does not open in the native Polyphorm build.` |
 | Confirm after a warning | `Load anyway` |
 | Scale label, hint | `Weight scale` · `0.001 turns 10⁹ M☉ into 10¹² M☉.` |
