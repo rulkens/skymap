@@ -153,6 +153,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Asteroid collisional families (Nesvorný PDS catalogue, ~150k members)** `needs-design` — a `Colour by: family` mode; in 3D a family reads as a tinted torus, not a clump. → [details](backlog/2026-11-12-asteroid-collisional-families.md)
 - [ ] **Kuiper belt Layer (MPC orbit type 10: TNOs, scattered disk, centaurs)** `needs-design` — reuses the asteroids' MPCORB parse, `.astb` and Kepler compute + dot draw, shared without a cross-Layer import. → [details](backlog/2026-11-13-kuiper-belt-layer.md)
 - [ ] **Near-lossless WebP for mesh normal/metal-rough atlases** `ready` — ~40% smaller at 1.3° p99; all meshes rebaked. → [details](backlog/2026-11-03-mesh-atlas-near-lossless.md)
+- [ ] **Mesh bodies in terrain shadow** `blocked` — follow-up PR to terrain horizon shadows: rovers read the horizon at their anchor, paired with self-shading. → [details](backlog/2026-11-25-mesh-bodies-in-terrain-shadow.md)
 - [ ] **Self-shadowing for mesh bodies** `needs-design` — night-side sunward slopes light up (Bennu's patch). → [details](backlog/2026-11-03-mesh-body-self-shadowing.md)
 - [ ] **JWST mesh body** `blocked` — needs an L2 position driver first; mesh (A) chosen, full resolution. → [details](backlog/2026-09-19-jwst-mesh-body.md)
 - [ ] **Consolidate the two runtime mesh formats: `.shell` and SKMH `.mesh`** `needs-design` — `.shell` (#755) kept f16 plus frame/centre header fields that SKMH v3 lacks (glTF now bakes to SKMH); decide whether SKMH can carry them as optional fields.
