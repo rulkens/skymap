@@ -7,6 +7,7 @@
  * aside, so it never sits in the collapsed sidebar's `inert` subtree.
  */
 import { useState, type ReactNode } from 'react';
+import skymapIconUrl from '../../../../../public/favicon.svg';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import PlusIcon from '../../../../../src/components/icons/PlusIcon/PlusIcon';
 import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
@@ -45,7 +46,10 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
     <>
       <aside id={id} className={styles.root} aria-label="Data" inert={collapsed}>
         <header className={styles.header}>
-          <h1 className={styles.title}>MCPM Workbench</h1>
+          <h1 className={styles.title}>
+            <img className={styles.icon} src={skymapIconUrl} alt="" aria-hidden />
+            MCPM Workbench
+          </h1>
         </header>
         <div className={styles.sections}>
           <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>

@@ -17,6 +17,17 @@
   font-weight: 600;
   letter-spacing: var(--letter-spacing-tight);
   color: var(--color-fg);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+/* Skymap's own icon (the favicon), one cap high on the baseline: the tile spans
+   the capitals, so icon and name read as one lockup and the line box keeps its height. */
+.icon {
+  flex: none;
+  block-size: 1cap;
+  inline-size: 1cap;
 }
 
 .sections {
