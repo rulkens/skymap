@@ -405,7 +405,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     },
     {
       // F2.5: rotate-ring drag — the last handle family with no automated coverage.
-      // Rotation has no ParamSlider readout the way F1.6's translate arrow does, so the
+      // Rotation has no SliderRow readout the way F1.6's translate arrow does, so the
       // self-check reads the ACTUAL applied rotation via a real save-params round trip
       // (the same download+parse 'gizmo:rotated-box' below uses), before vs after the
       // drag — the F1.6 lesson: a step that can silently degrade to an inert orbit-drag
@@ -493,7 +493,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // one, so this is the only render layer none of the other gates exercise. The
       // "Selection" PanelSection starts folded (its body unmounted), so this step opens
       // it and leaves it open for 'gizmo:hover-drag' below (same slider group).
-      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
+      // SelectionControls's "voxel size" SliderRow is deriveGridBox's one resolution lever,
       // regardless of how the box's center/size got set. Its accessible name is distinct
       // from the raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
       // role="slider" with a different name, so no probe selector or screen-reader name
@@ -534,7 +534,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         // that would silently degrade to an inert orbit-drag if the boot box,
         // camera, viewport, or gizmoArrowLengthMpc's constant ever drift. The +Y translate
         // handle writes grid.manualCenterMpc[1], surfaced live by the already-open
-        // GridBoxPanel's "center y" ParamSlider (role="slider", aria-valuenow) —
+        // SelectionControls's "center y" SliderRow (role="slider", aria-valuenow) —
         // reading it before/after is how the aim was empirically verified during
         // development (0 -> 4.920103375067377); asserting it here keeps that proof
         // running instead of relying on the drag being silently correct forever.

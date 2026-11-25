@@ -5,7 +5,7 @@ import { MAX_CATALOG_FILE_BYTES } from '../data/maxCatalogFileBytes.constant';
 const TEXT_TABLE = /\.(csv|tsv|txt|dat)$/i;
 
 /** Sorts chosen or dropped files into a loadable set; sizes are checked before anything is read. */
-export function readCatalogFiles(files: readonly File[]): CatalogFiles | CatalogFileProblem {
+export function classifyCatalogFiles(files: readonly File[]): CatalogFiles | CatalogFileProblem {
   if (files.some((f) => f.size > MAX_CATALOG_FILE_BYTES)) {
     return {
       kind: 'problem',

@@ -1,5 +1,5 @@
 /**
- * HistogramDock — the convergence readout (HistogramPlot + its jittered-
+ * HistogramReadout — the convergence readout (HistogramPlot + its jittered-
  * sampling toggle), in the data sidebar's pinned block so it stays visible
  * while the sections scroll.
  */
@@ -10,7 +10,7 @@ import HistogramPlot from '../HistogramPlot/HistogramPlot';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import styles from './HistogramReadout.module.css';
 
-function HistogramDock(): ReactNode {
+function HistogramReadout(): ReactNode {
   const dispatch = useAppDispatch();
   const sampleRandomly = useAppSelector((s) => s.histogram.sampleRandomly);
 
@@ -29,4 +29,4 @@ function HistogramDock(): ReactNode {
   );
 }
 
-export default HistogramDock;
+export default HistogramReadout;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readCatalogFiles } from '../../../../../../../tools/mcpm-workbench/src/ui/catalog/LoadCatalogDialog/utils/classifyCatalogFiles';
+import { classifyCatalogFiles } from '../../../../../../../tools/mcpm-workbench/src/ui/catalog/LoadCatalogDialog/utils/classifyCatalogFiles';
 
 const file = (name: string, size = 10): File => {
   const f = new File(['x'], name);
@@ -8,9 +8,9 @@ const file = (name: string, size = 10): File => {
   return f;
 };
 
-describe('readCatalogFiles', () => {
+describe('classifyCatalogFiles', () => {
   it('refuses a file over 400 MB without reading it', () => {
-    expect(readCatalogFiles([file('desi.csv', 401e6)])).toEqual({
+    expect(classifyCatalogFiles([file('desi.csv', 401e6)])).toEqual({
       kind: 'problem',
       message: 'File is larger than 400 MB. Use a smaller sample, or the native build.',
     });
@@ -19,13 +19,13 @@ describe('readCatalogFiles', () => {
   it('pairs a .bin with its metadata in either order', () => {
     const bin = file('run.bin');
     const metadata = file('run_metadata.txt');
-    expect(readCatalogFiles([metadata, bin])).toEqual({ kind: 'packed', bin, metadata });
+    expect(classifyCatalogFiles([metadata, bin])).toEqual({ kind: 'packed', bin, metadata });
   });
 
   it('reads a lone .csv, .tsv, .txt or .dat as a catalog', () => {
     for (const name of ['a.csv', 'b.tsv', 'c.txt', 'D.DAT']) {
       const table = file(name);
-      expect(readCatalogFiles([table])).toEqual({ kind: 'csv', file: table });
+      expect(classifyCatalogFiles([table])).toEqual({ kind: 'csv', file: table });
     }
   });
 
@@ -35,9 +35,9 @@ describe('readCatalogFiles', () => {
       kind: 'problem',
       message: 'Choose a .csv file, or a .bin with its _metadata.txt',
     };
-    expect(readCatalogFiles([file('run.bin')])).toEqual(wrongType);
-    expect(readCatalogFiles([file('run.bin'), file('run.dat')])).toEqual(wrongType);
-    expect(readCatalogFiles([file('a.txt'), file('b.txt')])).toEqual(wrongType);
-    expect(readCatalogFiles([file('run.json')])).toEqual(wrongType);
+    expect(classifyCatalogFiles([file('run.bin')])).toEqual(wrongType);
+    expect(classifyCatalogFiles([file('run.bin'), file('run.dat')])).toEqual(wrongType);
+    expect(classifyCatalogFiles([file('a.txt'), file('b.txt')])).toEqual(wrongType);
+    expect(classifyCatalogFiles([file('run.json')])).toEqual(wrongType);
   });
 });

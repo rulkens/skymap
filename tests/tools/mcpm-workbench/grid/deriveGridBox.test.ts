@@ -1,5 +1,5 @@
 /**
- * deriveGridBox — the ONE box-derivation Viewport's build and GridBoxPanel's
+ * deriveGridBox — the ONE box-derivation Viewport's build and SelectionControls's
  * dims readout must never disagree on. Derivation is always the manual path
  * (S13.5: "auto fit" is a one-shot action that writes manualCenterMpc/
  * manualSizeMpc, not a persistent mode this function branches on) — covers

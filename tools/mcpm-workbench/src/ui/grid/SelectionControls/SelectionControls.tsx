@@ -1,5 +1,5 @@
 /**
- * GridBoxPanel — grid-box configuration. Both modes share ONE voxel size:
+ * SelectionControls — the Selection box's controls. Both modes share ONE voxel size:
  * Viewport and this panel's size sliders both call `deriveGridBox`, so they
  * can't disagree. This panel holds no catalog data, so Auto fit reads the
  * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
@@ -42,7 +42,7 @@ import { voxelSizeSliderFor } from './utils/voxelSizeSliderFor';
 import { withAxis } from './utils/withAxis';
 import styles from './SelectionControls.module.css';
 
-function GridBoxPanel(): ReactNode {
+function SelectionControls(): ReactNode {
   const dispatch = useAppDispatch();
   const grid = useAppSelector((s) => s.grid);
   const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
@@ -167,4 +167,4 @@ function GridBoxPanel(): ReactNode {
   );
 }
 
-export default GridBoxPanel;
+export default SelectionControls;

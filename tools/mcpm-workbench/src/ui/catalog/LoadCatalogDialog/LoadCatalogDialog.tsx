@@ -31,7 +31,7 @@ import { FORMAT_CHOICES } from './data/formatChoices.constant';
 import { importFieldProblems } from './utils/importFieldProblems';
 import { importSettingsFrom } from './utils/importSettingsFrom';
 import { NAME_END_CHARS } from './data/nameEndChars.constant';
-import { readCatalogFiles } from './utils/classifyCatalogFiles';
+import { classifyCatalogFiles } from './utils/classifyCatalogFiles';
 import { REPARSE_DELAY_MS } from './data/reparseDelayMs.constant';
 import { SLOW_READ_MS } from './data/slowReadMs.constant';
 import { WEIGHT_CHOICES } from './data/weightChoices.constant';
@@ -149,7 +149,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   };
 
   const choose = (chosen: readonly File[]): void => {
-    const result = readCatalogFiles(chosen);
+    const result = classifyCatalogFiles(chosen);
     const refused = result.kind === 'problem';
     setFiles(refused ? null : result);
     setRefusal(refused ? result.message : null);
@@ -255,7 +255,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                   {/* One line either way, the name cut in the middle so its end shows. */}
                   <span id={fileStatusId} className={styles.fileStatus}>
                     {filesName === null ? (
-                      // What readCatalogFiles accepts.
+                      // What classifyCatalogFiles accepts.
                       <span className={styles.formats}>.csv, or .bin + _metadata.txt</span>
                     ) : (
                       <>

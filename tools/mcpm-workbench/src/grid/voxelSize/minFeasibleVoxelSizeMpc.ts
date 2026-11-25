@@ -48,7 +48,7 @@ const GROWTH_ITERATIONS = 64;
  * already confirmed fits, and returns that value, never an unverified guess.
  *
  * Returns `Infinity`, not a throw, when NO voxel size fits (`maxBufferBytes`
- * below the 8³-voxel floor itself) — this runs from GridBoxPanel's render
+ * below the 8³-voxel floor itself) — this runs from SelectionControls's render
  * path; voxelSizeFloorMpc maps it to "no floor".
  *
  * `pinned` holds one axis at a fixed voxel count whatever the voxel size (its

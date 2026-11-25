@@ -22,8 +22,8 @@ import {
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import CatalogStatus from '../../catalog/CatalogStatus/CatalogStatus';
-import GridBoxPanel from '../../grid/SelectionControls/SelectionControls';
-import HistogramDock from '../../sim/HistogramReadout/HistogramReadout';
+import SelectionControls from '../../grid/SelectionControls/SelectionControls';
+import HistogramReadout from '../../sim/HistogramReadout/HistogramReadout';
 import DatabaseIcon from '../../icons/DatabaseIcon/DatabaseIcon';
 import GaugeIcon from '../../icons/GaugeIcon/GaugeIcon';
 import HistogramIcon from '../../icons/HistogramIcon/HistogramIcon';
@@ -116,7 +116,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             onToggle={() => setSelectionOpen((v) => !v)}
             summary={formatSelectionSummary(deriveGridBox(grid).sizeMpc)}
           >
-            <GridBoxPanel />
+            <SelectionControls />
           </PanelSection>
         </div>
         <div className={styles.pinned}>
@@ -136,7 +136,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             open={histogramOpen}
             onToggle={() => setHistogramOpen((v) => !v)}
           >
-            <HistogramDock />
+            <HistogramReadout />
           </PanelSection>
         </div>
       </aside>
