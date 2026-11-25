@@ -1,8 +1,8 @@
 /**
  * Auto fit on load — the dialog previews `fittedGrid(grid, fitBounds)` and Load
- * hands the same bounds to watchCatalogSaga, which fits the box beside
- * `catalogLoaded`. Two scene triggers that far apart would build the sim twice,
- * so the real scene saga runs here with `initGpu` counted as the build.
+ * hands the same bounds to watchCatalogSaga, which fits the box and frames the
+ * camera beside `catalogLoaded`. Two scene triggers that far apart would build
+ * the sim twice, so the real scene saga runs here with `initGpu` counted as the build.
  */
 import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
@@ -16,6 +16,7 @@ import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state
 import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
 import { fittedGrid } from '../../../../../tools/mcpm-workbench/src/state/grid/fittedGrid';
 import { fitBoxToCatalog } from '../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
+import { framingCameraPose } from '../../../../../tools/mcpm-workbench/src/state/view/framingCameraPose';
 import { watchSceneSaga } from '../../../../../tools/mcpm-workbench/src/state/scene/watchSceneSaga';
 import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
 import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
@@ -63,7 +64,7 @@ afterEach(() => {
 });
 
 describe('auto fit on load', () => {
-  it('stores the box the dialog previewed, with one fit and one build', async () => {
+  it('stores the box the dialog previewed and frames it, with one fit and one build', async () => {
     const { store, fits } = setup();
     const before = store.getState().grid;
     const fitBounds = resolveAutoFitBounds(
@@ -81,9 +82,12 @@ describe('auto fit on load', () => {
     expect(deriveGridBox(previewed).centerMpc).not.toEqual(deriveGridBox(before).centerMpc);
     expect(fits()).toHaveLength(1);
     expect(initGpu).toHaveBeenCalledTimes(1);
+    const { camera } = store.getState().view;
+    expect(camera.targetMpc).toEqual(deriveGridBox(previewed).centerMpc);
+    expect(camera).toEqual(framingCameraPose(deriveGridBox(previewed)));
   });
 
-  it('leaves the grid slice untouched with auto fit off', async () => {
+  it('leaves the grid slice untouched with auto fit off, and frames the file', async () => {
     const { store, fits } = setup();
     const before = store.getState().grid;
 
@@ -93,5 +97,9 @@ describe('auto fit on load', () => {
     expect(store.getState().grid).toBe(before);
     expect(fits()).toHaveLength(0);
     expect(initGpu).toHaveBeenCalledTimes(1);
+    // The file spans 300…340, −10…30, −60…−20 Mpc.
+    expect(store.getState().view.camera).toEqual(
+      framingCameraPose({ centerMpc: [320, 10, -40], sizeMpc: [40, 40, 40] }),
+    );
   });
 });
