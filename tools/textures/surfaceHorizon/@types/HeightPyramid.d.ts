@@ -4,7 +4,6 @@
  *  subtree, which is what lets the march stop early. */
 export type HeightPyramid = {
   readonly radiusM: number;
-  readonly maxLevel: number;
   heightAt(z: number, lonRad: number, latRad: number): number;
   subtreeMaxM(z: number, x: number, y: number): number;
 };

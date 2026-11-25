@@ -28,6 +28,9 @@ export function bakeHorizonTile(
   const side = 2 * HORIZON_POSTS_PER_TILE;
   const stepRad = heightLatticeStepDeg(z) * DEG;
   const ceilingM = marchCeilingM(pyramid, z, x, y);
+  if (!Number.isFinite(ceilingM)) {
+    throw new Error(`bakeHorizonTile: march ceiling ${ceilingM} for tile ${z}/${x}/${y}`);
+  }
   const rgba = new Uint8Array(side * side * 4);
   let maxDeg = Number.NEGATIVE_INFINITY;
   for (let j = 0; j < HORIZON_POSTS_PER_TILE; j++) {

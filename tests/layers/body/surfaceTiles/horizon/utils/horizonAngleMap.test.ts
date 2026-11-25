@@ -32,6 +32,11 @@ describe('horizonTexelOf', () => {
     expect(horizonTexelOf(13)).toEqual({ dx: 1, dy: 1, channel: 1 });
   });
 
+  it('sector 4 starts the east texel and sector 8 the south one, both in R', () => {
+    expect(horizonTexelOf(4)).toEqual({ dx: 1, dy: 0, channel: 0 });
+    expect(horizonTexelOf(8)).toEqual({ dx: 0, dy: 1, channel: 0 });
+  });
+
   it('gives each of the 16 sectors its own texel channel', () => {
     const slots = new Set<string>();
     for (let sector = 0; sector < 16; sector++) {

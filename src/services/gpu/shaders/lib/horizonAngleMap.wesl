@@ -7,8 +7,8 @@ const HORIZON_KNEE_DEG: f32 = 27.0;
 const HORIZON_KNEE_BYTE: f32 = 204.0;
 const HORIZON_MAX_DEG: f32 = 90.0;
 
-// unorm·255 is the byte. A filtered read lands between bytes, which is safe:
-// the map is continuous at the knee.
+// unorm·255 is the byte. Read texels with textureLoad and decode each post before
+// interpolating (spec §5): a sampler would blend sectors across the 2×2 packing.
 fn horizonAngleOfUnorm(unorm: f32) -> f32 {
   let byte = unorm * 255.0;
   let fine = HORIZON_MIN_DEG + byte / HORIZON_KNEE_BYTE * (HORIZON_KNEE_DEG - HORIZON_MIN_DEG);

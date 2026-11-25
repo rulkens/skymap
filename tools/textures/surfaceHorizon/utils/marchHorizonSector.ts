@@ -1,7 +1,11 @@
 import type { HeightPyramid } from '../@types/HeightPyramid';
 import { HORIZON_ANGLE_MAP } from '../../../../src/layers/body/surfaceTiles/horizon/data/horizonAngleMap';
 import { heightLatticeStepDeg } from '../../../utils/textures/heightLatticeStepDeg';
-import { HORIZON_MARCH_COARSEST_LEVEL, HORIZON_MARCH_STEP_DIVISOR } from '../data/horizonMarch';
+import {
+  HORIZON_MARCH_COARSEST_LEVEL,
+  HORIZON_MARCH_MAX_ARC_RAD,
+  HORIZON_MARCH_STEP_DIVISOR,
+} from '../data/horizonMarch';
 import { curvatureDropM } from './curvatureDropM';
 
 const DEG = Math.PI / 180;
@@ -26,6 +30,11 @@ export function marchHorizonSector(
   const { radiusM } = pyramid;
   const postM = heightLatticeStepDeg(z) * DEG * radiusM;
   const originM = pyramid.heightAt(z, lonRad, latRad);
+  if (!Number.isFinite(originM)) {
+    throw new Error(
+      `marchHorizonSector: height ${originM} at z${z} post (${lonRad / DEG}°, ${latRad / DEG}°)`,
+    );
+  }
   const [sinLon, cosLon] = [Math.sin(lonRad), Math.cos(lonRad)];
   const [sinLat, cosLat] = [Math.sin(latRad), Math.cos(latRad)];
   const [sinAz, cosAz] = [Math.sin(azimuthRad), Math.cos(azimuthRad)];
@@ -37,7 +46,8 @@ export function marchHorizonSector(
   ] as const;
 
   let best = FLOOR_TAN;
-  for (let d = postM; ; ) {
+  const maxArcM = HORIZON_MARCH_MAX_ARC_RAD * radiusM;
+  for (let d = postM; d <= maxArcM; ) {
     const dropM = curvatureDropM(d, radiusM);
     // Nothing farther can beat `best`: (ceiling − origin − drop)/d only falls with d.
     if ((ceilingM - originM - dropM) / d < best) break;

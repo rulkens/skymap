@@ -102,7 +102,6 @@ fn horizonAngleOfUnorm(v: f32) -> f32 // radians, from a texel channel read as u
  *  ancestor; `subtreeMaxM` from the height header bounds the march's early exit. */
 export type HeightPyramid = {
   readonly radiusM: number;
-  readonly maxLevel: number;
   heightAt(z: number, lonRad: number, latRad: number): number;
   subtreeMaxM(z: number, x: number, y: number): number;
 };

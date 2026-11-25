@@ -95,7 +95,7 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
     `tools/spikes/horizonShadow/`).
   - Drop with planet curvature, d²/2R.
   - Stop once nothing can rise above the current maximum, bounded by the `subtreeMaxM` of the z3
-    ancestor (the height header).
+    ancestor and its neighbours, all columns of a polar row (the height header).
   - Mars's missing z8–9 levels make the far field step from z10 straight to z7. That is
     deliberate.
 - **Parallelism:** `worker_threads`, one tile per task. A tile's result depends only on the height

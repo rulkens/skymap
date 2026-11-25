@@ -1,6 +1,7 @@
-/** The coarsest height level every body bakes: the march never reads, nor bounds, above it. */
 export const HORIZON_MARCH_COARSEST_LEVEL = 3;
 
-/** A step is a 24th of the distance marched so far (and never under one post), so the far
- *  field takes few, coarse reads. The spike's value, matched against March 32/64. */
+// Steps are a 24th of the distance so far, never under a post: the spike's value.
 export const HORIZON_MARCH_STEP_DIVISOR = 24;
+
+// The arc `marchCeilingM`'s z3 ring surely covers (≥ 31° where a polar row starts); real marches end by ~12°.
+export const HORIZON_MARCH_MAX_ARC_RAD = (30 * Math.PI) / 180;
