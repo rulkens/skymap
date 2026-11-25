@@ -1,9 +1,9 @@
 /**
  * ControlsPanel — the eight McpmParams sliders, run controls, weight/init
- * mode toggles, and the embedded GridBoxPanel. Every slider writes straight
+ * mode toggles, and the render layers. Every slider writes straight
  * to the sim slice; the harness reads `params` fresh each step, so these
- * are live with no rebuild. Agent count / weight mode / init mode / grid
- * box are structural — `watchSceneSaga` watches those actions and rebuilds
+ * are live with no rebuild. Agent count / weight mode / init mode (and the
+ * grid box, in DataPanel's Selection) are structural — `watchSceneSaga` watches those actions and rebuilds
  * the harness (debounced). Simulation's header pill runs and pauses the sim;
  * the Raymarch / Agents / Galaxies / Path tracer sections are the four render
  * layers, each switched by its header pill, and any subset may be on.
@@ -40,7 +40,6 @@ import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
-import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import { PALETTE_INFO } from './utils/PALETTE_INFO';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
 import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
@@ -60,7 +59,6 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
   // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
-  const [gridBoxOpen, setGridBoxOpen] = useState(true);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
@@ -138,14 +136,6 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
               path="sim.agentCount"
             />
           </SubsectionGroup>
-        </PanelSection>
-
-        <PanelSection
-          title="Selection"
-          open={gridBoxOpen}
-          onToggle={() => setGridBoxOpen((v) => !v)}
-        >
-          <GridBoxPanel />
         </PanelSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode

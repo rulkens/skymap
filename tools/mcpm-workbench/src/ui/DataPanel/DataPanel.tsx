@@ -1,7 +1,8 @@
 /**
  * DataPanel — the left sidebar, what goes into the simulation: the tool's
  * title, the catalogs (a loaded file, then the tier over the built-ins it
- * applies to), and pinned below them the stats and histogram. The import dialog is mounted here,
+ * applies to), the Selection box that cuts the simulated part out of them,
+ * and pinned below them the stats and histogram. The import dialog is mounted here,
  * so its window drop listener lives while Data is folded or the sidebar collapsed, and beside the
  * aside, so it never sits in the collapsed sidebar's `inert` subtree.
  */
@@ -17,6 +18,7 @@ import {
 } from '../../state/catalog/catalogSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
+import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
 import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
 import PanelRow from '../PanelRow/PanelRow';
@@ -36,6 +38,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const catalog = useAppSelector((s) => s.catalog);
   const [dataOpen, setDataOpen] = useState(true);
+  const [selectionOpen, setSelectionOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -68,6 +71,13 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
                 }
               />
             ))}
+          </PanelSection>
+          <PanelSection
+            title="Selection"
+            open={selectionOpen}
+            onToggle={() => setSelectionOpen((v) => !v)}
+          >
+            <GridBoxPanel />
           </PanelSection>
         </div>
         <div className={styles.pinned}>

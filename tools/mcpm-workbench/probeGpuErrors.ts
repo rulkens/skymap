@@ -486,8 +486,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this is the only render layer none of the other gates exercise. The
-      // "Selection" PanelSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
-      // true, since 14e095c75) — no fold click needed; a click here would instead TOGGLE
+      // "Selection" PanelSection defaults OPEN (DataPanel.tsx's `selectionOpen` starts
+      // true) — no fold click needed; a click here would instead TOGGLE
       // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
       // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
       // regardless of how the box's center/size got set. Its accessible name is distinct
