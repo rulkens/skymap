@@ -17,7 +17,7 @@ import { selectTimeState } from '../../../../state/time/selectors';
 import { selectMissionCraft, selectMissionSpeed } from '../../state/missions/selectors';
 import { setMissionCraft, stepMissionSpeed } from '../../state/missions/slice';
 import { pause, setSimDays, stepToEvent } from '../../../../state/time/timeSlice';
-import { MISSION_SPEEDS } from '../data/missionSpeeds';
+import { MISSION_SPEEDS } from '../../../../data/exhibits/timeline/missionSpeeds';
 import { deriveSimDays } from '../../../../utils/time/deriveSimDays';
 import { formatMissionSpeed } from '../utils/formatMissionSpeed';
 import { formatSimRate } from '../../../../utils/time/formatSimRate';

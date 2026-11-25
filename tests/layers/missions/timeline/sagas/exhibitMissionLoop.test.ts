@@ -8,7 +8,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { voyagerMissions } from '../../../../../src/layers/missions/exhibits/voyagerMissions/voyagerMissions';
-import { MISSION_SPEEDS } from '../../../../../src/layers/missions/timeline/data/missionSpeeds';
+import { MISSION_SPEEDS } from '../../../../../src/data/exhibits/timeline/missionSpeeds';
 import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/missionEvents.generated';
 import { exhibitBodySaga } from '../../../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../../../src/layers/missions/exhibits/timeline/playMission';

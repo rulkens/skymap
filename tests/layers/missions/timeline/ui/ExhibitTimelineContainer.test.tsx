@@ -16,7 +16,7 @@ import {
   setMissionCraft,
   stepMissionSpeed,
 } from '../../../../../src/layers/missions/state/missions/slice';
-import { MISSION_SPEEDS } from '../../../../../src/layers/missions/timeline/data/missionSpeeds';
+import { MISSION_SPEEDS } from '../../../../../src/data/exhibits/timeline/missionSpeeds';
 import { playMission } from '../../../../../src/layers/missions/exhibits/timeline/playMission';
 import {
   pause,

@@ -2,7 +2,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { MISSION_SPEEDS } from '../../timeline/data/missionSpeeds';
+import { MISSION_SPEEDS } from '../../../../data/exhibits/timeline/missionSpeeds';
 import { initialState } from './initialState';
 
 export const missionsSlice = createSlice({
