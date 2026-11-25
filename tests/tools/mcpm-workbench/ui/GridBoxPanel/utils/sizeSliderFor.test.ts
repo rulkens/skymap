@@ -8,6 +8,7 @@ import type { Vec4 } from '../../../../../../src/@types/math/Vec4';
 import type { GridSlice } from '../../../../../../tools/mcpm-workbench/@types/GridSlice';
 import { deriveGridBox } from '../../../../../../tools/mcpm-workbench/src/field/deriveGridBox';
 import { defaultGridSlice } from '../../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
+import { sizeAfterSliderEdit } from '../../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from '../../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/sizeSliderFor';
 
 const AXES = [0, 1, 2] as const;
@@ -49,6 +50,26 @@ describe('sizeSliderFor', () => {
     const box = deriveGridBox(defaultGridSlice);
     expect(box.dims).toEqual([272, 272, 272]);
     for (const axis of AXES) expect(sizeSliderFor(box, axis).value).toBe(204);
+  });
+
+  it('keeps its value inside its range, on the step lattice, for boxes wider than the usual top end', () => {
+    // On a 64 MiB device, End on size x lands past the top end: the voxel floor coarsens the box.
+    const small: GridSlice = { ...defaultGridSlice, maxBufferBytes: 64 * 1024 ** 2 };
+    const atEnd: GridSlice = {
+      ...small,
+      manualSizeMpc: sizeAfterSliderEdit(small, 0, sizeSliderFor(deriveGridBox(small), 0).max),
+    };
+    const wide: GridSlice[] = [{ ...defaultGridSlice, manualSizeMpc: [1500, 1200, 300] }, atEnd];
+    for (const grid of wide) {
+      const box = deriveGridBox(grid);
+      for (const axis of AXES) {
+        const slider = sizeSliderFor(box, axis);
+        expect(slider.max).toBeGreaterThanOrEqual(slider.value);
+        const blocks = (slider.max - slider.min) / slider.step;
+        expect(blocks).toBeCloseTo(Math.round(blocks), 9);
+      }
+    }
+    expect(sizeSliderFor(deriveGridBox(wide[0]!), 0).max).toBeCloseTo(1500, 9);
   });
 
   it('shows an imported box at its own size, off the 8-voxel lattice', () => {
