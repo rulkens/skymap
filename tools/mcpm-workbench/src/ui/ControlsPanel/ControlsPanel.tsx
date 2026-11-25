@@ -36,6 +36,11 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import FileActions from '../FileActions/FileActions';
 import PaletteRow from '../PaletteRow/PaletteRow';
+import BounceIcon from '../icons/BounceIcon/BounceIcon';
+import LoopPlayIcon from '../icons/LoopPlayIcon/LoopPlayIcon';
+import ParticlesIcon from '../icons/ParticlesIcon/ParticlesIcon';
+import RayStepsIcon from '../icons/RayStepsIcon/RayStepsIcon';
+import SpiralIcon from '../icons/SpiralIcon/SpiralIcon';
 import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
@@ -71,6 +76,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
       <div className={styles.scroll}>
         <PanelSection
           title="Simulation"
+          icon={<LoopPlayIcon size={12} />}
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
           on={sim.running}
@@ -142,6 +148,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
             picker. Section order is the compositing order Viewport encodes them in. */}
         <PanelSection
           title="Raymarch"
+          icon={<RayStepsIcon size={12} />}
           open={raymarchOpen}
           onToggle={() => setRaymarchOpen((v) => !v)}
           on={view.layers.raymarch}
@@ -205,6 +212,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
 
         <PanelSection
           title="Agents"
+          icon={<ParticlesIcon size={12} />}
           open={agentsOpen}
           onToggle={() => setAgentsOpen((v) => !v)}
           on={view.layers.agents}
@@ -236,6 +244,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
 
         <PanelSection
           title="Galaxies"
+          icon={<SpiralIcon size={12} />}
           open={galaxiesOpen}
           onToggle={() => setGalaxiesOpen((v) => !v)}
           on={view.layers.galaxies}
@@ -267,6 +276,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
 
         <PanelSection
           title="Path tracer"
+          icon={<BounceIcon size={12} />}
           open={pathTracerOpen}
           onToggle={() => setPathTracerOpen((v) => !v)}
           on={view.layers.pathTracer}

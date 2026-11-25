@@ -41,17 +41,25 @@
   outline-offset: -2px;
 }
 
-/* Brighter than the shared section header's dim, so an off section's ghost
-   title reads as off. */
-.title {
+/* The icon on the content edge, the name after it, one colour for both:
+   brighter than the shared section header's dim, so an off section's ghost
+   label reads as off. */
+.label {
   grid-column: content-start / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   min-width: 0;
-  text-box: trim-both cap alphabetic;
   color: var(--color-fg-tertiary);
 }
 
-.header:has(.toggle:not(:checked)) .title {
+.header:has(.toggle:not(:checked)) .label {
   color: var(--color-fg-ghost);
+}
+
+.title {
+  min-width: 0;
+  text-box: trim-both cap alphabetic;
 }
 
 /* Hung in the gutter so the title keeps the content edge; its box spans the

@@ -1,8 +1,8 @@
 /**
  * PanelSection — one foldable section of a workbench sidebar: a full-width
  * divider, a header that folds the body, and an optional on/off pill on the
- * row toggles' edge; an off section dims its title. The pill sits beside the
- * fold button, never inside it, so the two stay separately focusable.
+ * row toggles' edge; an off section dims its icon and title. The pill sits
+ * beside the fold button, never inside it, so the two stay separately focusable.
  * Controlled: the caller owns `open`.
  */
 import type { ReactNode } from 'react';
@@ -11,6 +11,8 @@ import styles from './PanelSection.module.css';
 
 export type PanelSectionProps = {
   readonly title: string;
+  /** Says what the section is; drawn ahead of the title, in its colour. */
+  readonly icon: ReactNode;
   readonly open: boolean;
   readonly onToggle: () => void;
   /** The header pill's state; omit for a section without one. */
@@ -23,6 +25,7 @@ export type PanelSectionProps = {
 
 function PanelSection({
   title,
+  icon,
   open,
   onToggle,
   on,
@@ -37,7 +40,10 @@ function PanelSection({
           <span className={styles.chevron}>
             <ChevronRightIcon size={10} />
           </span>
-          <span className={styles.title}>{title}</span>
+          <span className={styles.label}>
+            {icon}
+            <span className={styles.title}>{title}</span>
+          </span>
         </button>
         {on !== undefined && onChange && (
           <input

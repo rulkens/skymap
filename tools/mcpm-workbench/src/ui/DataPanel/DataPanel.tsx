@@ -22,6 +22,10 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
+import DatabaseIcon from '../icons/DatabaseIcon/DatabaseIcon';
+import GaugeIcon from '../icons/GaugeIcon/GaugeIcon';
+import HistogramIcon from '../icons/HistogramIcon/HistogramIcon';
+import MarqueeIcon from '../icons/MarqueeIcon/MarqueeIcon';
 import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
 import PanelRow from '../PanelRow/PanelRow';
 import PanelSection from '../PanelSection/PanelSection';
@@ -55,7 +59,12 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
           </h1>
         </header>
         <div className={styles.sections}>
-          <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
+          <PanelSection
+            title="Data"
+            icon={<DatabaseIcon size={12} />}
+            open={dataOpen}
+            onToggle={() => setDataOpen((v) => !v)}
+          >
             <UserCatalogRow />
             <PanelRow>
               <button type="button" className={styles.addRow} onClick={() => setDialogOpen(true)}>
@@ -81,6 +90,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
           </PanelSection>
           <PanelSection
             title="Selection"
+            icon={<MarqueeIcon size={12} />}
             open={selectionOpen}
             onToggle={() => setSelectionOpen((v) => !v)}
           >
@@ -89,11 +99,17 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
         </div>
         <div className={styles.pinned}>
           <CatalogStatus />
-          <PanelSection title="Stats" open={statsOpen} onToggle={() => setStatsOpen((v) => !v)}>
+          <PanelSection
+            title="Stats"
+            icon={<GaugeIcon size={12} />}
+            open={statsOpen}
+            onToggle={() => setStatsOpen((v) => !v)}
+          >
             <StatsReadout />
           </PanelSection>
           <PanelSection
             title="Histogram"
+            icon={<HistogramIcon size={12} />}
             open={histogramOpen}
             onToggle={() => setHistogramOpen((v) => !v)}
           >
