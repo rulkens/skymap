@@ -1,12 +1,14 @@
 /**
  * GpuBufferMeter — the largest grid buffer of the box as set, against the largest
- * single buffer the device allows (WebGPU reports no total memory). The zone shows
- * in the bar, the text colour and the percentage, so it never rests on colour.
- * Before the limit is known the bar is empty and the text a dash, in the same
- * fixed-width slots, so nothing moves between states or while a size drags.
+ * single buffer the device allows (WebGPU reports no total memory). A read-only
+ * gauge with "used / limit" inside at the start, so the text never moves as the
+ * fill grows; the zone tints the fill, and the fill's length past the threshold
+ * marks and the two numbers say the same without colour. Before the limit is
+ * known the gauge is empty and the text a dash.
  */
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { formatBytePair } from './utils/formatBytePair';
+import { GPU_BUFFER_ZONE_FROM } from './utils/GPU_BUFFER_ZONE_FROM';
 import { gpuBufferReading } from './utils/gpuBufferReading';
 import styles from './GpuBufferMeter.module.css';
 
@@ -18,29 +20,27 @@ type Props = {
 function GpuBufferMeter({ usedBytes, limitBytes }: Props): ReactNode {
   const reading = gpuBufferReading(usedBytes, limitBytes);
   const pair = reading && limitBytes !== null ? formatBytePair(usedBytes, limitBytes) : null;
+  const geometry = {
+    '--fill': reading?.fill ?? 0,
+    '--warn-from': GPU_BUFFER_ZONE_FROM.warn,
+    '--bad-from': GPU_BUFFER_ZONE_FROM.bad,
+  } as CSSProperties;
 
   return (
-    <div className={styles.root} data-zone={reading?.zone}>
-      <div
-        className={styles.track}
-        role="meter"
-        aria-label="Largest grid buffer"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={reading ? Math.min(100, reading.percent) : 0}
-        aria-valuetext={
-          reading
-            ? `${pair}, ${reading.percent}% of the device limit`
-            : 'Device limit not known yet'
-        }
-      >
-        <div className={styles.fill} style={{ inlineSize: `${(reading?.fill ?? 0) * 100}%` }} />
-      </div>
-      <span className={styles.pair} aria-hidden="true">
+    <div
+      className={styles.root}
+      data-zone={reading?.zone}
+      style={geometry}
+      role="meter"
+      aria-label="Largest grid buffer"
+      aria-valuemin={0}
+      aria-valuemax={1}
+      aria-valuenow={reading?.fill ?? 0}
+      aria-valuetext={pair ? `${pair} used of the device limit` : 'Device limit not known yet'}
+    >
+      <div className={styles.fill} />
+      <span className={styles.value} aria-hidden="true">
         {pair ?? '—'}
-      </span>
-      <span className={styles.percent} aria-hidden="true">
-        {reading ? `${reading.percent}%` : ''}
       </span>
     </div>
   );

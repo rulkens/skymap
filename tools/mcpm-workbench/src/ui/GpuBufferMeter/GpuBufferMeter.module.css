@@ -1,14 +1,18 @@
-/* Bar, then the two numbers in fixed-width slots, so a value of any length
-   (or the dash before the device limit is known) never moves the bar. */
+/* A flat gauge, kept apart from the slider pills on purpose: lower, squarer,
+   no control border or surface, marks at the zone thresholds, small readout
+   type at the start (a pill's value sits at its end), and no hover, focus or
+   pointer. The text stays in the body colour: 4.5:1 or more over the tinted
+   fill and the bare track in every zone. */
 .root {
   --zone-color: var(--color-fg-tertiary);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 14ch 4ch;
-  column-gap: var(--space-4);
-  align-items: center;
-  font-size: var(--font-size-sm);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  position: relative;
+  display: flex;
+  min-inline-size: 0;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
 }
 
 .root[data-zone='warn'] {
@@ -19,29 +23,43 @@
   --zone-color: var(--tool-status-bad);
 }
 
-.track {
-  block-size: var(--space-3);
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-}
-
+/* Scaled, not resized, so a size slider's drag animates no layout. */
 .fill {
-  block-size: 100%;
-  background: var(--zone-color);
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--zone-color) 35%, transparent);
+  transform: scaleX(var(--fill));
+  transform-origin: left;
   transition:
-    inline-size var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard),
     background var(--duration-color) var(--ease-standard);
 }
 
-.pair,
-.percent {
-  text-align: end;
-  color: var(--color-fg-base);
+/* The thresholds, each in the colour of the zone it opens. */
+.root::before,
+.root::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  border-inline-start: 1px solid;
 }
 
-.root:is([data-zone='warn'], [data-zone='bad']) :is(.pair, .percent) {
-  color: var(--zone-color);
+.root::before {
+  inset-inline-start: calc(var(--warn-from) * 100%);
+  border-color: var(--tool-status-warn);
+}
+
+.root::after {
+  inset-inline-start: calc(var(--bad-from) * 100%);
+  border-color: var(--tool-status-bad);
+}
+
+.value {
+  position: relative;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-base);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
