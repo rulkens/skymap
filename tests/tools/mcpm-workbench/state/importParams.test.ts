@@ -151,7 +151,7 @@ describe('importParams', () => {
     preset.sources = [1, 3];
 
     expect(() => importParams(JSON.stringify(preset))).toThrow(
-      'importParams: "sources" holds numeric source codes from before source ids — re-export the preset from the current workbench',
+      '"sources" holds numeric source codes from before source ids; re-export the preset from the current workbench.',
     );
   });
 
@@ -220,8 +220,8 @@ describe('importParams', () => {
     expect(() => importParams(JSON.stringify(preset))).toThrow(/multiple/i);
   });
 
-  it('rejects malformed JSON with a readable error, not a crash', () => {
-    expect(() => importParams('{not json')).toThrow();
+  it('rejects malformed JSON with a plain message, not a crash', () => {
+    expect(() => importParams('{not json')).toThrow(/^Not valid JSON\.$/);
   });
 
   it('rejects a payload missing a required field', () => {

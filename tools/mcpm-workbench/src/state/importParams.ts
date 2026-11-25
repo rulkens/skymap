@@ -25,18 +25,20 @@ export type ImportedParams = {
 // box straight to the sim (autoFitGridBox's cubic-voxel invariant, T7).
 const VOXEL_SPREAD_LIMIT = 0.005;
 
-function fail(reason: string): never {
-  throw new Error(`importParams: ${reason}`);
+// Each message is shown to the user as is (FileActions), so it is plain copy
+// naming the offending field as it is spelled in the file.
+function fail(message: string): never {
+  throw new Error(message);
 }
 
-function asRecord(value: unknown, field: string): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null) fail(`"${field}" must be an object`);
+function asRecord(value: unknown, message: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) fail(message);
   return value as Record<string, unknown>;
 }
 
 function num(obj: Record<string, unknown>, field: string): number {
   const v = obj[field];
-  if (typeof v !== 'number' || !Number.isFinite(v)) fail(`"${field}" must be a finite number`);
+  if (typeof v !== 'number' || !Number.isFinite(v)) fail(`"${field}" must be a finite number.`);
   return v as number;
 }
 
@@ -47,7 +49,7 @@ function vec3(obj: Record<string, unknown>, field: string): Vec3 {
     v.length !== 3 ||
     v.some((n) => typeof n !== 'number' || !Number.isFinite(n))
   ) {
-    fail(`"${field}" must be an array of 3 finite numbers`);
+    fail(`"${field}" must be an array of 3 finite numbers.`);
   }
   return v as Vec3;
 }
@@ -70,12 +72,12 @@ function vec4(obj: Record<string, unknown>, field: string): Vec4 {
     v.length !== 4 ||
     v.some((n) => typeof n !== 'number' || !Number.isFinite(n))
   ) {
-    fail(`"${field}" must be an array of 4 finite numbers`);
+    fail(`"${field}" must be an array of 4 finite numbers.`);
   }
   const [x, y, z, w] = v as Vec4;
   const magnitude = Math.sqrt(x * x + y * y + z * z + w * w);
   if (Math.abs(magnitude - 1) > QUAT_MAGNITUDE_TOLERANCE) {
-    fail(`"${field}" must be a unit quaternion — magnitude ${magnitude.toFixed(4)} is not ≈ 1`);
+    fail(`"${field}" must be a unit quaternion; its magnitude is ${magnitude.toFixed(4)}, not 1.`);
   }
   return v as Vec4;
 }
@@ -90,16 +92,16 @@ function optionalSourceList(
 ): readonly GalaxyCatalogId[] | undefined {
   const v = obj[field];
   if (v === undefined) return undefined;
-  if (!Array.isArray(v)) fail(`"${field}" must be an array of source ids`);
+  if (!Array.isArray(v)) fail(`"${field}" must be an array of source ids.`);
   if (v.length > 0 && v.every((id) => typeof id === 'number')) {
     fail(
-      `"${field}" holds numeric source codes from before source ids — re-export the preset from the current workbench`,
+      `"${field}" holds numeric source codes from before source ids; re-export the preset from the current workbench.`,
     );
   }
   const known = new Set<GalaxyCatalogId>(WORKBENCH_SOURCES);
   for (const id of v) {
     if (typeof id !== 'string' || !known.has(id as GalaxyCatalogId)) {
-      fail(`"${field}" contains unknown source id ${JSON.stringify(id)}`);
+      fail(`"${field}" contains unknown source id ${JSON.stringify(id)}.`);
     }
   }
   return v as GalaxyCatalogId[];
@@ -116,42 +118,44 @@ export function importParams(json: string): ImportedParams {
   try {
     raw = JSON.parse(json);
   } catch {
-    fail('not valid JSON');
+    fail('Not valid JSON.');
   }
-  const root = asRecord(raw, 'root');
+  const root = asRecord(raw, 'Not a params file: expected a JSON object.');
   if (root.format !== MCPM_PARAMS_FORMAT) {
-    fail(`unrecognized format "${String(root.format)}" — expected "${MCPM_PARAMS_FORMAT}"`);
+    fail(`Not a params file: format "${String(root.format)}", expected "${MCPM_PARAMS_FORMAT}".`);
   }
   if (root.version !== MCPM_PARAMS_VERSION) {
-    fail(`unsupported version ${String(root.version)} — expected ${MCPM_PARAMS_VERSION}`);
+    fail(
+      `Unsupported version ${String(root.version)}; this workbench reads version ${MCPM_PARAMS_VERSION}.`,
+    );
   }
 
-  const p = asRecord(root.params, 'params');
+  const p = asRecord(root.params, '"params" must be an object.');
   const params = {} as Record<keyof McpmParams, number>;
   for (const key of MCPM_PARAM_KEYS) params[key] = num(p, key);
 
   const agentCount = num(root, 'agentCount');
   const initMode = root.initMode;
   if (initMode !== 'aroundData' && initMode !== 'uniform') {
-    fail('"initMode" must be "aroundData" or "uniform"');
+    fail('"initMode" must be "aroundData" or "uniform".');
   }
 
   const sources = optionalSourceList(root, 'sources');
 
-  const g = asRecord(root.gridBox, 'gridBox');
+  const g = asRecord(root.gridBox, '"gridBox" must be an object.');
   const centerMpc = vec3(g, 'centerMpc');
   const sizeMpc = vec3(g, 'sizeMpc');
   const dims = vec3(g, 'dims');
   const voxelSizeMpc = num(g, 'voxelSizeMpc');
   const rotation = vec4(g, 'rotation');
-  if (dims.some((d) => d <= 0)) fail('"gridBox.dims" must be positive on every axis');
+  if (dims.some((d) => d <= 0)) fail('"gridBox.dims" must be positive on every axis.');
   // encodeStep.ts's decay-pass dispatch computes box.dims[i] / DECAY_WG_EDGE with no
   // bounds tail — a dims value that isn't an exact multiple silently truncates the
   // dispatch (the trailing voxels never decay-clear), so this must fail HERE rather
   // than reach the sim. autoFitGridBox's own ceil8() is what guarantees this for every
   // box it constructs; a hand-edited preset has no such guarantee.
   if (dims.some((d) => !Number.isInteger(d) || d % DECAY_WG_EDGE !== 0)) {
-    fail(`"gridBox.dims" must be positive integer multiples of ${DECAY_WG_EDGE}`);
+    fail(`"gridBox.dims" must be positive integer multiples of ${DECAY_WG_EDGE}.`);
   }
 
   const impliedVoxelSizes: Vec3 = [
@@ -164,8 +168,8 @@ export function importParams(json: string): ImportedParams {
   const spread = (Math.max(...allVoxelSizes) - Math.min(...allVoxelSizes)) / mean;
   if (spread > VOXEL_SPREAD_LIMIT) {
     fail(
-      `gridBox voxels are not cubic — spread ${(spread * 100).toFixed(2)}% exceeds the ` +
-        `${(VOXEL_SPREAD_LIMIT * 100).toFixed(1)}% limit`,
+      `The grid box's voxels are not cubic: their sizes spread ${(spread * 100).toFixed(2)}%, ` +
+        `over the ${(VOXEL_SPREAD_LIMIT * 100).toFixed(1)}% limit.`,
     );
   }
 

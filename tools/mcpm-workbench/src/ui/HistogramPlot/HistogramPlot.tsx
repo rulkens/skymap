@@ -5,7 +5,7 @@
  * `atomicMax(1e5 * density)` marker, not a count, so it surfaces only in the
  * 'M' readout. Bars and labels are DOM on one grid (subgrid rows), so they
  * cannot drift apart; the canvas draws only the line, redrawn when the
- * histogram changes.
+ * histogram changes or its box resizes, so it never stays stretched.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
@@ -24,13 +24,14 @@ function HistogramPlot(): ReactNode {
   const readoutLines = readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints);
   const fractions = barFractions(histogram.counts);
 
+  // The observer's first callback, on observe, is the draw for this sample.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    drawHistoryLine(
-      canvas,
-      histogram.history.map((sample) => sample.meanLogTraceAtPoints),
-    );
+    const history = histogram.history.map((sample) => sample.meanLogTraceAtPoints);
+    const observer = new ResizeObserver(() => drawHistoryLine(canvas, history));
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, [histogram]);
 
   return (

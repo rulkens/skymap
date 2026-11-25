@@ -79,9 +79,14 @@
   border-block-end: 1px solid var(--border-divider);
 }
 
+/* The sidebars' section-title look. Not `composes: sectionHeader`: its dim
+   colour lands after this file's and won, so the title read as a hint. */
 .title {
-  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
   margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
   color: var(--color-fg-tertiary);
 }
 
