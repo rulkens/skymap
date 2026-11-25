@@ -1,9 +1,10 @@
 /**
- * StatsReadout — the diagnostic readout the spec requires AT ALL TIMES: point
- * count, NaN-fill count and fraction, resolved GridElement, summed byte budget,
- * step counter, fps. The NaN fraction is the one number that says what a
- * median-filled fit stands on (spec §6), so it sits in the data sidebar's
- * pinned block, never behind a fold. fps is Viewport's own throttled push.
+ * StatsReadout — the run at a glance, in the data sidebar's pinned block, never
+ * behind a fold: the galaxies loaded (before the box keeps those inside it),
+ * how far the fit has run, whether it runs smoothly, and the grid's GPU memory.
+ * A row without a usable weight gets the median (spec §6); zero is the normal
+ * case, so that count shows only when there is some, in the warning colour, after
+ * the galaxies value: a slot that is always there, so nothing moves.
  */
 import type { ReactNode } from 'react';
 import { useAppSelector } from '../../store/hooks';
@@ -11,29 +12,38 @@ import { formatBytes } from '../formatBytes';
 import styles from './StatsReadout.module.css';
 
 function StatsReadout(): ReactNode {
-  const catalog = useAppSelector((s) => s.catalog);
-  const grid = useAppSelector((s) => s.grid);
+  const pointCount = useAppSelector((s) => s.catalog.pointCount);
+  const nanFillCount = useAppSelector((s) => s.catalog.nanFillCount);
+  const byteBudget = useAppSelector((s) => s.grid.byteBudget);
   const stepCount = useAppSelector((s) => s.sim.stepCount);
   const fps = useAppSelector((s) => s.view.fps);
 
-  const nanFraction = catalog.pointCount > 0 ? catalog.nanFillCount / catalog.pointCount : 0;
-  const stats: readonly (readonly [string, string])[] = [
-    ['points', catalog.pointCount.toLocaleString()],
-    ['NaN fill', `${catalog.nanFillCount.toLocaleString()} (${(nanFraction * 100).toFixed(1)}%)`],
-    ['element', grid.resolvedElement ?? '—'],
-    ['budget', grid.byteBudget ? formatBytes(grid.byteBudget.totalBytes) : '—'],
-    ['step', stepCount.toLocaleString()],
-    ['fps', fps === 0 ? '—' : String(fps)],
-  ];
-
   return (
     <dl className={styles.root}>
-      {stats.map(([label, value]) => (
-        <div key={label} className={styles.stat}>
-          <dt className={styles.label}>{label}</dt>
-          <dd className={styles.value}>{value}</dd>
-        </div>
-      ))}
+      <div className={styles.cell}>
+        <dt className={styles.label}>galaxies</dt>
+        <dd className={styles.value}>{pointCount.toLocaleString()}</dd>
+        {nanFillCount > 0 && (
+          <dd
+            className={styles.warn}
+            title="Rows without a usable weight, filled with the median weight"
+          >
+            {nanFillCount.toLocaleString()} NaN
+          </dd>
+        )}
+      </div>
+      <div className={styles.cell}>
+        <dt className={styles.label}>step</dt>
+        <dd className={styles.value}>{stepCount.toLocaleString()}</dd>
+      </div>
+      <div className={styles.cell}>
+        <dt className={styles.label}>frame rate</dt>
+        <dd className={styles.value}>{fps === 0 ? '—' : `${fps} fps`}</dd>
+      </div>
+      <div className={styles.cell}>
+        <dt className={styles.label}>GPU memory</dt>
+        <dd className={styles.value}>{byteBudget ? formatBytes(byteBudget.totalBytes) : '—'}</dd>
+      </div>
     </dl>
   );
 }

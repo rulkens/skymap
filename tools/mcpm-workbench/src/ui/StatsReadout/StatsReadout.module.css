@@ -1,25 +1,48 @@
+/* Two equal columns of cells between the content edges; a cell is a dim label
+   line over its value, and the value line holds the cell's optional warning
+   after the value, so a warning appearing never moves anything. */
 .root {
-  composes: row from '../panelGrid.module.css';
-  row-gap: var(--space-2);
+  grid-column: content-start / control-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--panel-column-gap);
   margin: 0;
 }
 
-.stat {
-  composes: row from '../panelGrid.module.css';
+.cell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'label label'
+    'value warn';
+  column-gap: var(--space-4);
+  align-items: baseline;
 }
 
 .label {
-  composes: labelText from '../PanelRow/PanelRow.module.css';
-  grid-column: label;
+  grid-area: label;
+  font-size: var(--font-size-sm);
   color: var(--color-fg-tertiary);
 }
 
 .value {
-  grid-column: control;
-  justify-self: end;
+  grid-area: value;
   margin: 0;
   font-size: var(--font-size-md);
   font-variant-numeric: tabular-nums;
   color: var(--color-fg-base);
+  white-space: nowrap;
+}
+
+.warn {
+  grid-area: warn;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--tool-status-warn);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
