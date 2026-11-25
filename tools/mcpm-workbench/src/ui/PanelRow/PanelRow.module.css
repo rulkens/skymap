@@ -46,4 +46,31 @@
 
 .infoIcon {
   composes: infoIcon from '../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  transition:
+    color var(--duration-color) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard);
+}
+
+/* Pointing at or focusing into a row lights its ⓘ to the body text; the ⓘ's
+   own hover and focus go one step brighter. */
+@media (hover: hover) {
+  .root:hover .infoIcon {
+    opacity: 1;
+    color: var(--color-fg-base);
+  }
+}
+
+.root:focus-within .infoIcon {
+  opacity: 1;
+  color: var(--color-fg-base);
+}
+
+.root .infoIcon:is(:hover, :focus-visible) {
+  color: var(--color-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infoIcon {
+    transition: none;
+  }
 }
