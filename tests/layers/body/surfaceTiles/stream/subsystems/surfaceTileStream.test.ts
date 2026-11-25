@@ -351,6 +351,31 @@ describe('surfaceTileStream residency', () => {
     expect(stream.residency.residentSlot(albedo(0))).not.toBeNull();
   });
 
+  it('names a key read empty as empty: not failed, not resident, kept past eviction', async () => {
+    // Bug caught: an empty read memoised as failed, uploaded as a bitmap, or
+    // forgotten when LRU reclaims its slot and so fetched again.
+    const stream = await streamWithManifest();
+    vi.mocked(fetchSurfaceTileBitmap).mockResolvedValueOnce('empty');
+    stream.apply(requesting([albedo(0)], ENGAGE_EARTH));
+    await tick();
+
+    expect(stream.residency.isEmpty(albedo(0))).toBe(true);
+    expect(stream.residency.hasFailed(albedo(0))).toBe(false);
+    expect(stream.residency.residentSlot(albedo(0))).toBeNull();
+
+    vi.mocked(fetchSurfaceTileBitmap).mockImplementation(async () => bitmap());
+    const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
+    stream.apply(
+      requesting(
+        Array.from({ length: SLOT_COUNT }, (_, i) => albedo((i % side) + 1, Math.floor(i / side))),
+      ),
+    );
+    await tick();
+    // A full atlas's worth of new keys all allocated: the empty key's slot was reclaimed.
+    expect(stream.debugStats().droppedAllocations).toBe(0);
+    expect(stream.residency.isEmpty(albedo(0))).toBe(true);
+  });
+
   it('lands a height tile in the height atlas, resolved against its own slot geometry', async () => {
     const stream = await engagedWith([height(0)]);
 

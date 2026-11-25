@@ -53,6 +53,7 @@ describe('surfaceTilePlanner', () => {
       residentSlot: () => null,
       isInFlight: () => false,
       hasFailed: () => false,
+      isEmpty: () => false,
       inFlightCount: () => 0,
       engagedBodyId: () => null,
     };

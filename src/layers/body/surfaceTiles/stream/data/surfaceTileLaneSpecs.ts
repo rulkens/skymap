@@ -18,7 +18,8 @@ import { fetchHeightTile } from '../load/fetchHeightTile';
 
 const fetchImageryPayload: SurfaceTileLaneSpec['fetch'] = async (tile, source) => {
   const bitmap = await fetchSurfaceTileBitmap(tile, source);
-  return bitmap === null ? null : { bitmap, subtreeRangeM: null, gridCodes: null };
+  if (bitmap === null || bitmap === 'empty') return bitmap;
+  return { bitmap, subtreeRangeM: null, gridCodes: null };
 };
 
 export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>> = {
@@ -38,7 +39,7 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
     format: 'rgba8unorm',
     fetch: async (tile, source) => {
       const image = await fetchHeightTile(tile, source);
-      if (image === null) return null;
+      if (image === null || image === 'empty') return image;
       return {
         bitmap: image.bitmap,
         subtreeRangeM: [image.subtreeMinM, image.subtreeMaxM],

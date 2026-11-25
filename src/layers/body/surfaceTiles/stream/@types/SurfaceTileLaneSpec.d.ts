@@ -6,8 +6,9 @@ import type { TextureAtlasConfig } from '../../../../../@types/rendering/Texture
 /** SurfaceTileLaneSpec — one product's atlas (handed straight to `TextureAtlas`)
  *  and fetcher: all `surfaceTileStream` needs to build that product's lane. */
 export type SurfaceTileLaneSpec = TextureAtlasConfig & {
+  /** `'empty'` is a stored-empty tile, passed through; `null` is missing or failed. */
   readonly fetch: (
     tile: SurfaceTileId,
     source: SurfaceTileSource,
-  ) => Promise<SurfaceTilePayload | null>;
+  ) => Promise<SurfaceTilePayload | 'empty' | null>;
 };

@@ -82,6 +82,8 @@ export function planSurfaceTiles(
   let misses = 0;
   for (const request of demand.requests) {
     const { tile } = request;
+    // Stored empty: an answer, not a miss. Untouched, its slot ages out of the LRU.
+    if (own && residency.isEmpty(tile)) continue;
     const landed = residentSlot(tile) !== null;
     if (!landed) misses++;
     // Before touching: a touched failed tile keeps its LRU stamp fresh forever,

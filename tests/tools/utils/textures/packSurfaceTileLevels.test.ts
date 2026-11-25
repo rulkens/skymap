@@ -58,6 +58,16 @@ it('is deterministic: a second pack produces identical bytes', () => {
   files.forEach((f, i) => expect(read(f).equals(first[i]!)).toBe(true));
 });
 
+it('a zero-byte tile file packs as a zero-length entry', () => {
+  // Bug caught: a flat tile dropped from the index reads missing (a session-long
+  // failure) instead of empty.
+  const flat = `${PREFIX}/albedo/2/1/1.webp`;
+  writeFileSync(join(dir, flat), '');
+  packSurfaceTileLevels(dir, PREFIX, [...PATHS, flat].sort());
+  const index = decodeSurfaceTileArchiveIndex(read(surfaceTileArchivePath(PREFIX, 'albedo', 2)));
+  expect(findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(1, 1))?.length).toBe(0);
+});
+
 it('deletes a stale higher-numbered part left by an earlier, larger pack', () => {
   const stale = join(dir, surfaceTileArchivePath(PREFIX, 'height', 3, 1));
   writeFileSync(stale, 'old');

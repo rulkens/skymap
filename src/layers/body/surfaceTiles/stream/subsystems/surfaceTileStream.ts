@@ -99,13 +99,19 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
   function createLane(spec: SurfaceTileLaneSpec): SurfaceTileLane {
     const resident = new Map<string, ResidentSurfaceTile>();
     const pendingLevelOf = new Map<string, number>();
-    const stream = createTileStreamSubsystem<SurfaceTilePayload, TextureAtlas>({
+    const empty = new Set<string>();
+    // An 'empty' payload is never uploaded (`onResult` stops first), but one landing
+    // after `destroy` still reaches `release`.
+    const stream = createTileStreamSubsystem<SurfaceTilePayload | 'empty', TextureAtlas>({
       slots: new TextureAtlas(device, spec),
       requestRender,
       concurrency: SURFACE_TILE_CONCURRENCY,
-      upload: (laneAtlas, slotIdx, payload) =>
-        uploadBitmapToAtlas(laneAtlas, slotIdx, payload.bitmap),
-      release: (payload) => closeBitmap(payload.bitmap),
+      upload: (laneAtlas, slotIdx, payload) => {
+        if (payload !== 'empty') uploadBitmapToAtlas(laneAtlas, slotIdx, payload.bitmap);
+      },
+      release: (payload) => {
+        if (payload !== 'empty') closeBitmap(payload.bitmap);
+      },
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     // A queued fetch dropped on eviction never reports back, so its pending row goes here.
@@ -113,7 +119,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       resident.delete(key);
       pendingLevelOf.delete(key);
     });
-    return { stream, resident, pendingLevelOf };
+    return { stream, resident, pendingLevelOf, empty };
   }
 
   /** A lane for each product the plan requests over (`derivePlannerParams`
@@ -184,6 +190,11 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
         onResult: (payload) => {
           lane.pendingLevelOf.delete(key);
           if (payload === null) return;
+          // Nothing uploaded and never touched again, so LRU reclaims the slot.
+          if (payload === 'empty') {
+            lane.empty.add(key);
+            return;
+          }
           // Resolved from the key now, not carried: the slot may have been
           // recycled mid-flight. `upload` closes the bitmap either way.
           const slot = lane.stream.upload(key, payload);
@@ -228,6 +239,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     },
     hasFailed: (tile) =>
       engaged?.lanes[tile.product]?.stream.isFailed(surfaceTilePath(tile, engaged.prefix)) ?? false,
+    isEmpty: (tile) =>
+      engaged?.lanes[tile.product]?.empty.has(surfaceTilePath(tile, engaged.prefix)) ?? false,
     inFlightCount: () => engagedLanes().reduce((sum, lane) => sum + lane.stream.inFlightCount(), 0),
     engagedBodyId: () => engaged?.bodyId ?? null,
   };

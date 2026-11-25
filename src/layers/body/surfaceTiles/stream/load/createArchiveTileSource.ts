@@ -1,6 +1,7 @@
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
 import type { SurfaceTileArchiveIndex } from '../../archive/@types/SurfaceTileArchiveIndex';
 import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
+import type { TileRead } from '../@types/TileRead';
 import { decodeSurfaceTileArchiveIndex } from '../../archive/utils/decodeSurfaceTileArchiveIndex';
 import { findSurfaceTileArchiveEntry } from '../../archive/utils/findSurfaceTileArchiveEntry';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
@@ -17,7 +18,7 @@ const FETCH_DEADLINE_MS = 10_000;
  * tile archives spec).
  *
  * A missing tile or a missing level index is the normal case (both imagery
- * sources are land-oriented), so it returns `null` quietly. A part answering
+ * sources are land-oriented), so it reads `'missing'` quietly. A part answering
  * 200 means the edge ignored Range and sent the whole pack: warn once, skip.
  */
 export function createArchiveTileSource(prefix: string): SurfaceTileSource {
@@ -54,12 +55,14 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
   }
 
   return {
-    async readTile(tile: SurfaceTileId): Promise<Uint8Array<ArrayBuffer> | null> {
+    async readTile(tile: SurfaceTileId): Promise<TileRead> {
       try {
         const index = await indexOf(tile);
-        if (!index) return null;
+        if (!index) return { kind: 'missing' };
         const entry = findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y));
-        if (!entry) return null;
+        if (!entry) return { kind: 'missing' };
+        // Answered without a fetch: `bytes=o-(o-1)` is not a valid Range.
+        if (entry.length === 0) return { kind: 'empty' };
         const url = dataUrl(
           `images/${surfaceTileArchivePath(prefix, tile.product, tile.z, entry.part)}`,
         );
@@ -74,12 +77,12 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
             warnedNoRange = true;
             console.warn(`surface tiles: ${url} ignored Range (200); tiles will not load`);
           }
-          return null;
+          return { kind: 'failed' };
         }
         const bytes = new Uint8Array(await res.arrayBuffer());
-        return bytes.byteLength === entry.length ? bytes : null;
+        return bytes.byteLength === entry.length ? { kind: 'bytes', bytes } : { kind: 'failed' };
       } catch {
-        return null;
+        return { kind: 'failed' };
       }
     },
   };
