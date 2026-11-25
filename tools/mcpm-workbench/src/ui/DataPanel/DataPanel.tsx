@@ -35,7 +35,6 @@ function DataPanel(): ReactNode {
   return (
     <aside className={styles.root} aria-label="Data">
       <header className={styles.header}>
-        <p className={styles.eyebrow}>SKYMAP · WEBGPU</p>
         <h1 className={styles.title}>MCPM Workbench</h1>
       </header>
       <div className={styles.sections}>

@@ -4,23 +4,15 @@
 
 .header {
   flex: none;
-  padding-block: var(--space-10) var(--space-2);
+  padding-block: var(--space-8) var(--space-3);
   padding-inline: calc(var(--space-6) + var(--space-4));
   user-select: none;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  letter-spacing: 3px;
-  color: var(--color-fg-dim);
 }
 
 /* Raw white, not a --color-fg token: the app's one display-serif headline
    treatment, as on Splash and the galaxy tool. */
 .title {
-  margin: var(--space-1) 0 0;
+  margin: 0;
   font-family: var(--font-family-display);
   font-size: 32px;
   font-weight: 600;
