@@ -311,13 +311,13 @@ re-created engine resets both, because the Layer's planner closure is re-created
 
 Steps:
 
-- [ ] Delete the closure `frameIndex` and its increment. `:90`, `:94` and `:104` read
+- [x] Delete the closure `frameIndex` and its increment. `:90`, `:94` and `:104` read
       `state.frameIndex`. Update the `:35` comment, which moves to the reads. `plannedFrame` stays
       in the closure: it is the cadence anchor, not a counter.
-- [ ] `frame.test.ts`: every `plan` call gets its own `frameIndex`. `STATE` (`:81`) becomes a
+- [x] `frame.test.ts`: every `plan` call gets its own `frameIndex`. `STATE` (`:81`) becomes a
       per-call value with a counter the test advances. The cadence tests must still see a plan
       every `STAR_PLAN_INTERVAL_FRAMES` calls. No new test.
-- [ ] `npm run typecheck:fast`, `npm test -- starCatalog`.
+- [x] `npm run typecheck:fast`, `npm test -- starCatalog`.
 
 **Done when:** the planner holds no frame counter, and its cadence and LRU clock are unchanged
 frame for frame.
