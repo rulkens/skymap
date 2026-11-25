@@ -1,7 +1,7 @@
 /**
- * trailDrawsAt — which pieces of a craft's trail to draw at `simDays`. One trail shows at a
- * time: the Sun trail up to the craft, or, where `nearPlanets` asks and the craft is inside a
- * stay, that planet's piece up to the craft. The two are different pictures of the same
+ * trailDrawsAt — which pieces of a sampled body's trail to draw at `simDays`. One trail shows at a
+ * time: the Sun trail up to the body, or, where `nearPlanets` asks and the body is inside a
+ * stay, that planet's piece up to the body. The two are different pictures of the same
  * stretch (the planet moves), so they swap by a short cross-fade after the entry and after the
  * exit: the blend is additive, so the weights sum to one line. The planet's piece starts
  * loose at the reach boundary, so it fades to nothing toward that start.
@@ -17,7 +17,7 @@ import { TRAIL_ENTRY_FADE_REACH, TRAIL_STAY_FADE } from '../../data/bodies/sampl
 
 function drawTo(piece: SampledTrailGeometry, t: number, weight: number, fadeMaxMpc = 0): TrailDraw {
   const k = countAtOrBefore(piece.tDays, t);
-  // Past the last vertex the craft is held on it: no head segment to draw.
+  // Past the last vertex the body is held on it: no head segment to draw.
   const head = k < piece.tDays.length;
   return { piece, segmentCount: k - 1, head, weight, fadeMaxMpc };
 }

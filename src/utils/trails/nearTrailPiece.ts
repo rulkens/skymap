@@ -1,5 +1,5 @@
 /**
- * nearTrailPiece — the stretch of a craft's trail inside a planet's reach, drawn about that
+ * nearTrailPiece — the stretch of a sampled body's trail inside a planet's reach, drawn about that
  * planet. The relative track is built first and tessellated after: cutting the Sun-frame line
  * and subtracting the planet afterwards would keep the planet's orbital curvature (hundreds of
  * km of sag per step) in the line.
@@ -30,15 +30,15 @@ export function nearTrailPiece(
   const posKm = new Float64Array(3 * times.length);
   const velKmS = new Float32Array(3 * times.length);
   times.forEach((t, i) => {
-    const craftPos = hermiteTrackAt(track, t);
-    const craftVel = hermiteTrackVelAt(track, t);
+    const bodyPos = hermiteTrackAt(track, t);
+    const bodyVel = hermiteTrackVelAt(track, t);
     const sun = positionAt('sun', t);
-    const body = positionAt(centreId, t);
-    const bodyVel = bodyVelocityKmS(centreId, t, positionAt);
+    const centre = positionAt(centreId, t);
+    const centreVel = bodyVelocityKmS(centreId, t, positionAt);
     for (let k = 0; k < 3; k++) {
       // The track is Sun-centred, so the centre's offset from the Sun is what comes off.
-      posKm[3 * i + k] = craftPos[k]! - (body[k]! - sun[k]!) / SCALE_UNITS.KM_TO_MPC;
-      velKmS[3 * i + k] = craftVel[k]! - bodyVel[k]!;
+      posKm[3 * i + k] = bodyPos[k]! - (centre[k]! - sun[k]!) / SCALE_UNITS.KM_TO_MPC;
+      velKmS[3 * i + k] = bodyVel[k]! - centreVel[k]!;
     }
   });
 

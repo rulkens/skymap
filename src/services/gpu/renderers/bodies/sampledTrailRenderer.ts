@@ -17,8 +17,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { SampledTrail } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrail';
 import type { SampledTrailGeometry } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrailGeometry';
-import vsCode from '../../shaders/sampledTrail/vertex.wesl?static';
-import fsCode from '../../shaders/sampledTrail/fragment.wesl?static';
+import vsCode from '../../shaders/bodies/sampledTrail/vertex.wesl?static';
+import fsCode from '../../shaders/bodies/sampledTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { buildSampledTrails } from '../../../../utils/trails/buildSampledTrails';
@@ -138,6 +138,7 @@ export function createSampledTrailRenderer(
   const eyeMpc = new Float64Array(3);
   let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
   let slot = 0;
+  let warnedFull = false;
 
   function ensureTracks(version: number, ids: readonly SceneBodyId[]): readonly SampledTrail[] {
     if (version === uploadedVersion) return tracks;
@@ -210,7 +211,14 @@ export function createSampledTrailRenderer(
     fadeRadiusMpc: number,
   ): void {
     const first = firstVertex.get(piece);
-    if (vertexBuffer === null || bindGroup === null || first === undefined || slot >= MAX_TRAILS) {
+    if (vertexBuffer === null || bindGroup === null || first === undefined) return;
+    if (slot >= MAX_TRAILS) {
+      if (!warnedFull) {
+        warnedFull = true;
+        console.warn(
+          `sampledTrailRenderer: more than ${MAX_TRAILS} trail draws in one view; the rest are skipped`,
+        );
+      }
       return;
     }
     const o = TRAIL_UNIFORM_OFFSETS;

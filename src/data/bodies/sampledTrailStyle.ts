@@ -10,5 +10,5 @@ export const SAMPLED_TRAIL_MAX_SAG_KM = 10;
 /** Cross-fade length after entry and after exit, as a fraction of the stay. */
 export const TRAIL_STAY_FADE = 0.15;
 
-/** A planet's piece fades to nothing toward where the craft entered, over this fraction of the reach. */
+/** A planet's piece fades to nothing toward where the body entered, over this fraction of the reach. */
 export const TRAIL_ENTRY_FADE_REACH = 0.5;

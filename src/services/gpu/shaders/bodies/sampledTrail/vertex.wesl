@@ -4,9 +4,9 @@
 // small remainders carry f32 rounding. The vp is rebased about the camera and
 // emits near-plane clip units (near0OverlayVpF32), so it consumes that eye-relative Mpc.
 
-import package::sampledTrail::io::TrailSegment;
-import package::sampledTrail::io::TrailUniforms;
-import package::sampledTrail::io::VSOut;
+import package::bodies::sampledTrail::io::TrailSegment;
+import package::bodies::sampledTrail::io::TrailUniforms;
+import package::bodies::sampledTrail::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
 
 @group(0) @binding(2) var<uniform> uniforms: TrailUniforms;

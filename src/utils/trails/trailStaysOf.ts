@@ -1,9 +1,9 @@
 /**
- * trailStaysOf — the intervals in which a sampled craft is within each centre's reach.
- * Each centre is walked on its own clock: the step is the time the craft could not cross the
+ * trailStaysOf — the intervals in which a sampled body is within each centre's reach.
+ * Each centre is walked on its own clock: the step is the time the body could not cross the
  * gap to the reach boundary in (floored at `MIN_STEP_DAYS`), so far-off stretches cost almost
  * nothing. Each crossing is then bisected to `CROSSING_TOLERANCE_DAYS`. A pass shorter than
- * `MIN_STEP_DAYS` can be missed. The craft's world position is the Sun's plus the Sun-centred
+ * `MIN_STEP_DAYS` can be missed. The body's world position is the Sun's plus the Sun-centred
  * track, so nothing here assumes the Sun sits at the origin.
  */
 
@@ -17,7 +17,7 @@ import type { TrailStay } from '../../@types/rendering/sampledTrailRenderer/Trai
 
 const MIN_STEP_DAYS = 0.25;
 const CROSSING_TOLERANCE_DAYS = 0.001;
-// Craft heliocentric speed plus the fastest planet, bounded generously: the fastest closing speed.
+// The body's heliocentric speed plus the fastest planet, bounded generously: the fastest closing speed.
 const V_MAX_KM_S = 100;
 
 export function trailStaysOf(
@@ -34,11 +34,11 @@ export function trailStaysOf(
 
   function distanceKm(centre: TrailCentre, t: number): number {
     const sun = positionAt('sun', t);
-    const craft = hermiteTrackAt(track, t);
-    const body = positionAt(centre.id, t);
+    const bodyKm = hermiteTrackAt(track, t);
+    const centreMpc = positionAt(centre.id, t);
     let sq = 0;
     for (let k = 0; k < 3; k++) {
-      const d = sun[k]! + craft[k]! * kmToMpc - body[k]!;
+      const d = sun[k]! + bodyKm[k]! * kmToMpc - centreMpc[k]!;
       sq += d * d;
     }
     return Math.sqrt(sq) / kmToMpc;

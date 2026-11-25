@@ -198,7 +198,8 @@ export type EngineGpuHandles = {
   orbitTrailRenderer: OrbitTrailRenderer | null;
   /**
    * The trails of bodies on sampled tracks (`state.sampledTrailGroups`), into the same depthless
-   * HDR target as the orbit trails. One uniform slot per draw, at most `MAX_TRAILS` per frame.
+   * HDR target as the orbit trails. One uniform slot per draw, at most `MAX_TRAILS` per pass draw
+   * (per view): the slots reset at each `beginFrame`.
    */
   sampledTrailRenderer: SampledTrailRenderer | null;
   /**

@@ -1,8 +1,8 @@
 // sampledTrail/fragment.wesl — soft-edged additive stroke, hidden where a
 // resolved body or sampled terrain stands between the eye and the trail point.
 
-import package::sampledTrail::io::TrailUniforms;
-import package::sampledTrail::io::VSOut;
+import package::bodies::sampledTrail::io::TrailUniforms;
+import package::bodies::sampledTrail::io::VSOut;
 import package::lib::trailOcclusion::trailClearance;
 
 @group(0) @binding(2) var<uniform> uniforms: TrailUniforms;

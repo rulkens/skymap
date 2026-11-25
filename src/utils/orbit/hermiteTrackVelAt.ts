@@ -1,7 +1,7 @@
 /**
  * hermiteTrackVelAt — the derivative of the cubic Hermite `hermiteTrackAt` evaluates, in km/s.
  * The same basis differentiated, so position and velocity agree exactly at every node; past the
- * last sample the craft is held, so its velocity is the last sample's.
+ * last sample the body is held, so its velocity is the last sample's.
  */
 
 import type { SampledTrack } from '../../@types/scene/SampledTrack';

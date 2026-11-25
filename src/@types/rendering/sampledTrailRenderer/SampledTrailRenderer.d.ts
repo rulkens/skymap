@@ -2,7 +2,7 @@
  * SampledTrailRenderer — additive screen-space trails for bodies on sampled tracks,
  * into the depthless HDR target. Geometry is built and uploaded once per
  * track-store version (`ensureTracks`); each frame is `beginFrame` then one
- * `drawTrail` per piece drawn (`trailDrawsAt`), at most `MAX_TRAILS` per frame.
+ * `drawTrail` per piece drawn (`trailDrawsAt`), at most `MAX_TRAILS` per `beginFrame` (per view).
  */
 
 import type { Vec3 } from '../../math/Vec3';

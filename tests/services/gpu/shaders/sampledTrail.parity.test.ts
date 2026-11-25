@@ -14,7 +14,7 @@ import {
 } from '../../../../src/services/gpu/renderers/bodies/sampledTrailRenderer';
 
 const io = readFileSync(
-  join(process.cwd(), 'src/services/gpu/shaders/sampledTrail/io.wesl'),
+  join(process.cwd(), 'src/services/gpu/shaders/bodies/sampledTrail/io.wesl'),
   'utf-8',
 );
 

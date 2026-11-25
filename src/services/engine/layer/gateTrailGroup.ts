@@ -6,6 +6,7 @@
 
 import type { ShowKey } from '../../../@types/animation/ShowKey';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { GatedTrailGroup } from '../../../@types/engine/frame/GatedTrailGroup';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
 import { viewBandOf } from '../presentation/viewBandOf';
@@ -13,7 +14,7 @@ import { viewBandOf } from '../presentation/viewBandOf';
 export function gateTrailGroup<G extends { readonly show: ShowKey }>(
   group: G,
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
-): G & { fade(view: FrameView): number } {
+): GatedTrailGroup<G> {
   return {
     ...group,
     // A trail group's show entry has no items, so its handed value is one number:
