@@ -7,7 +7,7 @@ import type { SurfaceTileBodyId } from '../../../../src/layers/body/surfaceTiles
 import { tierToTexturePx } from '../../../../src/utils/math/tierToTexturePx';
 import type { HorizonTile } from '../@types/HorizonTile';
 import { HORIZON_GLOBE_LEVELS } from '../data/horizonGlobeLevels';
-import { horizonTilePath } from './horizonTilePath';
+import { surfaceTilePath } from '../../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { readHorizonTileFile } from './readHorizonTileFile';
 import { repackGlobeHorizon } from './repackGlobeHorizon';
 
@@ -28,7 +28,10 @@ export async function writeGlobeHorizon(
     const paths = new Map<string, string>();
     for (let y = 0; y < columns / 2; y++) {
       for (let x = 0; x < columns; x++) {
-        paths.set(`${x}/${y}`, join(imagesDir, horizonTilePath(prefix, level, x, y)));
+        paths.set(
+          `${x}/${y}`,
+          join(imagesDir, surfaceTilePath({ product: 'horizon', z: level, x, y }, prefix)),
+        );
       }
     }
     if (![...paths.values()].every((path) => existsSync(path))) continue;

@@ -11,6 +11,7 @@
  * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
 
+import { HORIZON_POSTS_PER_TILE } from '../../horizon/data/horizonAngleMap';
 import { HEIGHT_POSTS_PER_TILE } from './heightTileFormat';
 
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
@@ -46,6 +47,13 @@ export const NIGHT_TILE_ATLAS_SIDE = 4096;
 
 /** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
  *  layout: the renderer's slot→texel packing reads it. */
+/** A horizon tile is 33 × 33 posts of 2 × 2 texels each (`horizonAngleMap.ts`). */
+export const HORIZON_TILE_PX = 2 * HORIZON_POSTS_PER_TILE;
+
+/** Physical edge of the HORIZON atlas: 32 x 32 slots of 66 px, 17.8 MB, the same slot count
+ *  as height. Slot 0 is the lit sentinel, so 1023 hold tiles. */
+export const HORIZON_TILE_ATLAS_SIDE = 32 * HORIZON_TILE_PX;
+
 export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than

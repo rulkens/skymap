@@ -74,6 +74,16 @@ export function createSurfaceTileRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
+  // A body with no horizon lane still binds the horizon atlas: one zero texel reads as the
+  // lit sentinel everywhere. WebGPU zero-initialises, so no write.
+  const horizonStandIn = device.createTexture({
+    label: 'surface-tile-horizon-stand-in',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const horizonStandInView = horizonStandIn.createView();
+
   const indices = surfacePatchIndices(resolution);
   const indexCount = indices.length;
   const indexBuffer = device.createBuffer({
@@ -358,6 +368,7 @@ export function createSurfaceTileRenderer(
 
   function destroy(): void {
     patchBuffer?.destroy();
+    horizonStandIn.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
   }
@@ -365,6 +376,7 @@ export function createSurfaceTileRenderer(
   const renderer: SurfaceTileRenderer = {
     label: 'surfaceTileRenderer',
     draw,
+    horizonStandInView,
     destroy,
   };
   renderer satisfies Renderer;

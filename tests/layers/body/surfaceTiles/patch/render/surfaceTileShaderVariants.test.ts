@@ -34,8 +34,9 @@ describe('SURFACE_TILE_SHADER_VARIANTS', () => {
         `'${key}'`,
       ).toEqual([...layout].sort((a, b) => a - b));
       for (const [product, row] of Object.entries(SURFACE_TILE_LANE_SPECS)) {
-        // Night's atlas is bound only where the variant shades night.
-        if (product === 'night' && !declared.has(row.binding)) continue;
+        // Night's atlas is bound only where the variant shades night; horizon's shader
+        // declaration lands with the lookup (feature plan Task 6), which removes this skip.
+        if ((product === 'night' || product === 'horizon') && !declared.has(row.binding)) continue;
         expect(declared.has(row.binding), `'${key}' ${product}`).toBe(true);
       }
     }

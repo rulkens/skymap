@@ -11,10 +11,13 @@ import {
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   NIGHT_TILE_ATLAS_SIDE,
+  HORIZON_TILE_ATLAS_SIDE,
+  HORIZON_TILE_PX,
 } from '../../format/data/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { fetchSurfaceTileBitmap } from '../load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../load/fetchHeightTile';
+import { fetchHorizonTile } from '../load/fetchHorizonTile';
 
 const fetchImageryPayload: SurfaceTileLaneSpec['fetch'] = async (tile, source) => {
   const bitmap = await fetchSurfaceTileBitmap(tile, source);
@@ -59,5 +62,22 @@ export const SURFACE_TILE_LANE_SPECS = {
     slotSide: SURFACE_TILE_PX,
     format: 'rgba8unorm-srgb',
     fetch: fetchImageryPayload,
+  },
+  horizon: {
+    label: 'surface-tiles-horizon',
+    role: 'standalone',
+    binding: 11,
+    atlasSide: HORIZON_TILE_ATLAS_SIDE,
+    slotSide: HORIZON_TILE_PX,
+    // Angle bytes, never `-srgb`. Slot 0 is the lit sentinel (byte 0 everywhere, so a
+    // missing tile reads as fully lit); WebGPU zero-initialises textures and the pool never
+    // hands slot 0 out, so nothing needs to write it.
+    format: 'rgba8unorm',
+    reservedSlots: 1,
+    fetch: async (tile, source) => {
+      const bitmap = await fetchHorizonTile(tile, source);
+      if (bitmap === null || bitmap === 'empty') return bitmap;
+      return { bitmap, subtreeRangeM: null, gridCodes: null };
+    },
   },
 } satisfies Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>>;

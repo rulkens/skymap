@@ -94,6 +94,9 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         height: surfaceTiles.stream.getAtlasView('height')!,
         night:
           surfaceTiles.stream.getAtlasView('night') ?? effectInputs.nightLights?.view ?? albedoView,
+        horizon:
+          surfaceTiles.stream.getAtlasView('horizon') ??
+          runtime.surfaceTileRenderer.horizonStandInView,
       };
       runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,

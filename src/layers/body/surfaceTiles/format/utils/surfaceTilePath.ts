@@ -4,8 +4,14 @@ import type { SurfaceTileProduct } from '../@types/SurfaceTileProduct';
 /** On-disk extension per product: `albedo` is a lossy WebP (alpha doubles as
  *  the land mask, so JPEG can't carry it); `height` is a lossless Terrain-RGB
  *  WebP with an `SHGT` header chunk (`heightTileFormat.ts`); `night` is a
- *  lossy WebP of city lights. */
-const EXT: Record<SurfaceTileProduct, string> = { albedo: 'webp', height: 'webp', night: 'webp' };
+ *  lossy WebP of city lights; `horizon` is a lossless 66² WebP of packed horizon
+ *  angles (`horizonAngleMap.ts`), zero bytes where the tile is flat. */
+const EXT: Record<SurfaceTileProduct, string> = {
+  albedo: 'webp',
+  height: 'webp',
+  night: 'webp',
+  horizon: 'webp',
+};
 
 /**
  * surfaceTilePath — the single home for a virtual-texture tile's loose path:

@@ -195,8 +195,8 @@ Rules:
 Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `getImageData`);
 `'empty'` reads come from PR A's path untouched.
 
-- [ ] Test `the horizon lane's slot 0 holds the lit sentinel and is never allocated`.
-- [ ] Implement; targeted tests and typecheck pass. Commit.
+- [x] Test `the horizon lane's slot 0 holds the lit sentinel and is never allocated`.
+- [x] Implement; targeted tests and typecheck pass. Commit.
 
 ---
 

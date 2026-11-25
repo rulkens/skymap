@@ -76,6 +76,9 @@ import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
+/** The products this tool bakes: `horizon` derives from height in its own tool. */
+const BAKED_PRODUCTS = SURFACE_TILE_PRODUCTS.filter((product) => product !== 'horizon');
+
 /** Default band for a caller that doesn't clamp — degenerates
  *  `candidateTileIndices` back to the whole grid at every level. */
 const WHOLE_GLOBE_BANDS: readonly SurfaceTileBand[] = [
@@ -463,7 +466,7 @@ export async function bakeAll(
   body: Pick<SurfaceBodyBake, 'tileRoot' | 'tilePrefix'>,
   bands: readonly SurfaceBakeBand[],
   outDir: string,
-  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(SURFACE_TILE_PRODUCTS),
+  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(BAKED_PRODUCTS),
 ): Promise<void> {
   const { tileRoot, tilePrefix } = body;
   const tilePx = SURFACE_TILE_PX;
@@ -644,9 +647,9 @@ function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   const idx = argv.indexOf('--product');
   if (idx < 0) return undefined;
   const value = argv[idx + 1];
-  if (!(SURFACE_TILE_PRODUCTS as readonly (string | undefined)[]).includes(value)) {
+  if (!(BAKED_PRODUCTS as readonly (string | undefined)[]).includes(value)) {
     throw new Error(
-      `buildSurfaceTiles: --product must be one of ${SURFACE_TILE_PRODUCTS.map((p) => `'${p}'`).join(', ')}, got '${value}'`,
+      `buildSurfaceTiles: --product must be one of ${BAKED_PRODUCTS.map((p) => `'${p}'`).join(', ')}, got '${value}'`,
     );
   }
   return value as SurfaceTileProduct;
@@ -672,7 +675,7 @@ async function main(): Promise<void> {
     '--pack-only': 'bool',
   });
   const product = productFlag(argv);
-  const products = new Set<SurfaceTileProduct>(product ? [product] : SURFACE_TILE_PRODUCTS);
+  const products = new Set<SurfaceTileProduct>(product ? [product] : BAKED_PRODUCTS);
   const bodyId = bodyFlag(argv);
   const body = SURFACE_BODY_BAKES[bodyId];
   if (packOnly) {

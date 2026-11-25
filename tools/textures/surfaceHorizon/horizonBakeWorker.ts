@@ -4,7 +4,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import type { HorizonBakeTask } from './@types/HorizonBakeTask';
 import type { HorizonBakeWorkerData } from './@types/HorizonBakeWorkerData';
 import { bakeHorizonTileResolved } from './utils/bakeHorizonTileResolved';
-import { horizonTilePath } from './utils/horizonTilePath';
+import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { readHeightPyramid } from './utils/readHeightPyramid';
 import { writeHorizonTile } from './utils/writeHorizonTile';
 
@@ -19,7 +19,10 @@ parentPort!.on('message', async ({ z, x, y }: HorizonBakeTask) => {
   try {
     pyramid.trim(MAX_CACHED_TILES);
     const tile = await bakeHorizonTileResolved(pyramid, z, x, y);
-    await writeHorizonTile(join(imagesDir, horizonTilePath(prefix, z, x, y)), tile);
+    await writeHorizonTile(
+      join(imagesDir, surfaceTilePath({ product: 'horizon', z, x, y }, prefix)),
+      tile,
+    );
     parentPort!.postMessage({ kind: tile.kind });
   } catch (error) {
     parentPort!.postMessage({ error: `${z}/${x}/${y}: ${(error as Error).stack}` });

@@ -27,7 +27,7 @@ import type { HorizonBakeReply } from './@types/HorizonBakeReply';
 import type { HorizonBakeTask } from './@types/HorizonBakeTask';
 import type { HorizonBakeWorkerData } from './@types/HorizonBakeWorkerData';
 import { HORIZON_BODY_RADIUS_M } from './data/horizonBodyRadiusM';
-import { horizonTilePath } from './utils/horizonTilePath';
+import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { horizonTilesOfBand } from './utils/horizonTilesOfBand';
 import { writeGlobeHorizon } from './utils/writeGlobeHorizon';
 
@@ -125,7 +125,8 @@ async function main(): Promise<void> {
     horizonTilesOfBand(indexLines, prefix, band, manifest.tilePx),
   );
   const pending = tasks.filter(
-    ({ z, x, y }) => !existsSync(join(IMAGES_DIR, horizonTilePath(prefix, z, x, y))),
+    ({ z, x, y }) =>
+      !existsSync(join(IMAGES_DIR, surfaceTilePath({ product: 'horizon', z, x, y }, prefix))),
   );
   process.stderr.write(
     `bakeSurfaceHorizon: ${bodyId}, ${bands.length} band(s), ${tasks.length} tiles (${pending.length} to bake) on ${workerCount} worker(s)\n`,
@@ -140,7 +141,7 @@ async function main(): Promise<void> {
   const horizonLines = [
     ...new Set([
       ...indexLines.filter((line) => line.startsWith(`${prefix}/horizon/`)),
-      ...tasks.map(({ z, x, y }) => horizonTilePath(prefix, z, x, y)),
+      ...tasks.map(({ z, x, y }) => surfaceTilePath({ product: 'horizon', z, x, y }, prefix)),
     ]),
   ].sort();
   const sorted = [...new Set([...indexLines, ...horizonLines])].sort();

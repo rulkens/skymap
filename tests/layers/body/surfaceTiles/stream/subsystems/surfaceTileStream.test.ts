@@ -22,6 +22,9 @@ vi.mock(
 vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile', () => ({
   fetchHeightTile: vi.fn(),
 }));
+vi.mock('../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHorizonTile', () => ({
+  fetchHorizonTile: vi.fn(),
+}));
 
 import type { SurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTilePlan } from '../../../../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan';
@@ -33,6 +36,7 @@ import { IDLE_SURFACE_TILE_PLAN } from '../../../../../../src/layers/body/surfac
 import { fetchSurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile';
+import { fetchHorizonTile } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHorizonTile';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { derivePlannerParams } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTiles/format/utils/isSurfaceTileBodyId';
@@ -44,6 +48,8 @@ import {
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   NIGHT_TILE_ATLAS_SIDE,
+  HORIZON_TILE_ATLAS_SIDE,
+  HORIZON_TILE_PX,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import {
   HEIGHT_GRID_BYTES,
@@ -312,6 +318,44 @@ describe('surfaceTileStream lanes', () => {
     const stream = await engagedOn({ ...manifest, bands: [...manifest.bands, shallowNight] });
     expect(stream.getAtlasView('albedo')).not.toBeNull();
     expect(stream.getAtlasView('night')).toBeNull();
+  });
+});
+
+describe('surfaceTileStream horizon lane', () => {
+  it("the horizon lane's slot 0 holds the lit sentinel and is never allocated", async () => {
+    // Bug caught: a real tile landing in slot 0, so every missing or flat tile would read
+    // that tile's shadows instead of the fully lit sentinel.
+    const manifest = manifestOf(PREFIX, ['albedo', 'height', 'horizon']);
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(manifest);
+    vi.mocked(fetchHorizonTile).mockImplementation(async () => bitmap());
+    const stream = createSurfaceTileStream({ device: stubDevice(), requestRender: () => {} });
+    stream.apply(plan({ wantManifest: EARTH }));
+    await tick();
+
+    const slotCount = (HORIZON_TILE_ATLAS_SIDE / HORIZON_TILE_PX) ** 2;
+    const tiles: SurfaceTileId[] = Array.from({ length: slotCount }, (_, x) => ({
+      product: 'horizon',
+      z: MIN_TILE_LEVEL,
+      x,
+      y: 0,
+    }));
+    stream.apply(
+      plan({
+        verdict: ENGAGE_EARTH,
+        params: derivePlannerParams(manifest, BASE_LEVEL),
+        requests: tiles.map((tile, i) => ({ tile, screenPx: slotCount - i })),
+      }),
+    );
+    for (let i = 0; i < slotCount && stream.residency.inFlightCount() > 0; i++) await tick();
+
+    const landed = tiles
+      .map((tile) => stream.residency.residentSlot(tile))
+      .filter((resolved) => resolved !== null);
+    // The sentinel takes one slot, so a full request leaves exactly one tile without.
+    expect(landed).toHaveLength(slotCount - 1);
+    expect(
+      landed.some(({ atlasUvOrigin }) => atlasUvOrigin[0] === 0 && atlasUvOrigin[1] === 0),
+    ).toBe(false);
   });
 });
 
