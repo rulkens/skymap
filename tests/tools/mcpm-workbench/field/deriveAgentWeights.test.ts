@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { deriveAgentWeights } from '../../../../tools/mcpm-workbench/src/field/deriveAgentWeights';
+import { massWeightFromLog10 } from '../../../../tools/mcpm-workbench/src/field/massWeightFromLog10';
 
 const mean = (a: Float32Array) => {
   let sum = 0;
@@ -30,6 +31,12 @@ describe('deriveAgentWeights', () => {
     const input = new Float32Array([8, 9, 10, 11, 12]);
     const result = deriveAgentWeights(input, 'stellarMass');
     expect(mean(result.weights)).toBeCloseTo(1e6 / input.length, 3);
+  });
+
+  it('mass weighting separates a 1e8 and a 1e12 Msun galaxy like the port', () => {
+    const input = new Float32Array([8, 12].map(massWeightFromLog10));
+    const { weights } = deriveAgentWeights(input, 'stellarMass');
+    expect(weights[1]! / weights[0]!).toBeGreaterThan(1000);
   });
 
   it('uniform mode ignores mass entirely', () => {

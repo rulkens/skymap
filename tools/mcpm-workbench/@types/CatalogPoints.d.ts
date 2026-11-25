@@ -7,7 +7,8 @@ import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/G
 export type CatalogPoints = {
   /** Interleaved xyz, Mpc, observer-centred equatorial-cartesian. */
   readonly positions: Float32Array;
-  readonly log10StellarMass: Float32Array; // NaN where absent
+  /** Linear, positive weight (built-ins: stellar mass in 1e12 Msun), despite the name; NaN where absent. */
+  readonly log10StellarMass: Float32Array;
   readonly count: number;
   readonly sources: readonly GalaxyCatalogId[];
 };

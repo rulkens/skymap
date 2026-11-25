@@ -1,12 +1,13 @@
 /**
- * deriveAgentWeights — catalog stellar mass → MCPM agent deposit weight.
+ * deriveAgentWeights — linear catalog weight W → MCPM agent deposit weight.
  *
- * Fork-exact order (spec §6, §15 decision 8), do not reorder: NaN entries take
- * the finite median → `w = log10(1 + max(W, 0))` → divide by mean(w) → scale
- * by `1e6 / n_points`. The `max(W, 0)` clamp guards the domain — a catalog
- * sentinel can pass `isFinite` yet be far outside the ~8–12 range real masses
- * take, and `log10` of a value ≤ -1 there would poison the whole deposit with
- * NaN. `uniform` mode skips mass but still reports the NaN accounting.
+ * W is linear and positive (built-ins: stellar mass in 1e12 Msun, see
+ * `massWeightFromLog10`). Fork-exact order (spec §6, §15 decision 8), do not
+ * reorder: NaN entries take the finite median → `w = log10(1 + max(W, 0))` →
+ * divide by mean(w) → scale by `1e6 / n_points`. The `max(W, 0)` clamp guards
+ * the domain: a negative sentinel can pass `isFinite`, and `log10` of a value
+ * ≤ -1 would poison the whole deposit with NaN. `uniform` mode skips mass but
+ * still reports the NaN accounting.
  */
 import type { AgentWeights } from '../../@types/AgentWeights';
 

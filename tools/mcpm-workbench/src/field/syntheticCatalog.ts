@@ -10,13 +10,14 @@ import type { CatalogPoints } from '../../@types/CatalogPoints';
 import { gaussian } from '../../../../src/utils/random/gaussian';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { uniformInSphere } from '../../../../src/utils/random/uniformInSphere';
+import { massWeightFromLog10 } from './massWeightFromLog10';
 
 const SEED = 20260818;
 const CLUSTER_COUNT = 6;
 const POINTS_PER_CLUSTER = 700; // total ~4200 — "a few thousand" per spec §11
 const CLUSTER_CENTER_SPREAD_MPC = 80;
 const CLUSTER_SIGMA_MPC = 12;
-const MEAN_LOG10_MASS = 10; // catalogs' real masses run ~8-12 (see deriveAgentWeights)
+const MEAN_LOG10_MASS = 10; // catalogs' real log10(M/Msun) run ~8-12
 const LOG10_MASS_SIGMA = 0.6;
 // Exercises the HUD's NaN-fill path (spec §6) without degrading `weightMode:
 // 'stellarMass'` to uniform (deriveAgentWeights only degrades on an EMPTY
@@ -37,7 +38,9 @@ export function syntheticCatalog(): CatalogPoints {
       positions[3 * i + 1] = center[1] + gaussian(rng) * CLUSTER_SIGMA_MPC;
       positions[3 * i + 2] = center[2] + gaussian(rng) * CLUSTER_SIGMA_MPC;
       log10StellarMass[i] =
-        i % NAN_MASS_STRIDE === 0 ? NaN : MEAN_LOG10_MASS + gaussian(rng) * LOG10_MASS_SIGMA;
+        i % NAN_MASS_STRIDE === 0
+          ? NaN
+          : massWeightFromLog10(MEAN_LOG10_MASS + gaussian(rng) * LOG10_MASS_SIGMA);
     }
   }
 

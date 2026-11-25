@@ -1,6 +1,7 @@
 /**
  * loadCatalogPoints — fetch skymap's v9 galaxy catalogs over the runtime
- * boot seams and merge into flat position/mass arrays for the sim.
+ * boot seams and merge into flat position/weight arrays for the sim (log-mass
+ * converted to the port's linear weight on the way in).
  *
  * Mirrors `galaxyCatalogFetcher`'s manifest → tier-filename → dataUrl →
  * fetchWithProgress → decode chain (the excluded-tier short-circuit
@@ -22,6 +23,7 @@ import {
   decodeGalaxyCatalog,
   emptyGalaxyCatalog,
 } from '../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
+import { massWeightFromLog10 } from './massWeightFromLog10';
 
 async function fetchSourceCatalog(source: GalaxyCatalogId, tier: Tier): Promise<GalaxyCatalog> {
   if (tierTarget(source, tier) === 0) return emptyGalaxyCatalog();
@@ -45,7 +47,9 @@ export async function loadCatalogPoints(
   let offset = 0;
   for (const catalog of catalogs) {
     positions.set(catalog.positions, offset * 3);
-    log10StellarMass.set(catalog.log10StellarMass, offset);
+    for (let i = 0; i < catalog.count; i++) {
+      log10StellarMass[offset + i] = massWeightFromLog10(catalog.log10StellarMass[i]!);
+    }
     offset += catalog.count;
   }
 
