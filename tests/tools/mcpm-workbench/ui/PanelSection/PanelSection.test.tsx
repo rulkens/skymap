@@ -36,6 +36,17 @@ afterEach(() => {
   delete (Element.prototype as Partial<Element>).getAnimations;
 });
 
+describe('PanelSection icon tip', () => {
+  it('describes the fold button and stays out of its name', () => {
+    render(
+      <PanelSection title="Stats" icon={null} iconTip="60 fps" open onToggle={() => {}}>
+        <span />
+      </PanelSection>,
+    );
+    expect(screen.getByRole('button', { name: 'Stats', description: '60 fps' })).toBeDefined();
+  });
+});
+
 describe('PanelSection fold-up', () => {
   it('unmounts at once when no transition runs', async () => {
     render(<Harness />);

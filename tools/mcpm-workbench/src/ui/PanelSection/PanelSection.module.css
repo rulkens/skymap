@@ -58,6 +58,25 @@
   color: var(--color-fg-ghost);
 }
 
+.iconTip {
+  display: contents;
+}
+
+/* The tip sits inside the caps header; it reads as a tip, not a title. */
+.tipText {
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* The fold button takes focus, not the icon, so its focus shows the icon's tip. */
+@media (hover: hover) {
+  .fold:focus-visible [role='tooltip'] {
+    opacity: 1;
+  }
+}
+
 .title {
   min-width: 0;
   text-box: trim-both cap alphabetic;

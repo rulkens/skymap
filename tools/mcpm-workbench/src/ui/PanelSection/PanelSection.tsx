@@ -8,7 +8,8 @@
  * Controlled: the caller owns `open`. A folded body is unmounted (the probe and the
  * per-frame Stats and Histogram rely on it), but only once its fold-up has run.
  */
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import ChevronRightIcon from '../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import styles from './PanelSection.module.css';
 
@@ -16,6 +17,8 @@ export type PanelSectionProps = {
   readonly title: string;
   /** Says what the section is; drawn ahead of the title, in its colour. */
   readonly icon: ReactNode;
+  /** A tip on the icon, shown on its hover and the fold button's focus; it describes the button. */
+  readonly iconTip?: ReactNode;
   readonly open: boolean;
   readonly onToggle: () => void;
   /** The header pill's state; omit for a section without one. */
@@ -35,6 +38,7 @@ export type PanelSectionProps = {
 function PanelSection({
   title,
   icon,
+  iconTip,
   open,
   onToggle,
   on,
@@ -46,6 +50,7 @@ function PanelSection({
   children,
 }: PanelSectionProps): ReactNode {
   const bodyRef = useRef<HTMLDivElement>(null);
+  const tipId = useId();
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
   const closing = mounted && !open;
@@ -97,12 +102,35 @@ function PanelSection({
   return (
     <section className={styles.root}>
       <div className={styles.header}>
-        <button type="button" className={styles.fold} onClick={onToggle} aria-expanded={open}>
+        <button
+          type="button"
+          className={styles.fold}
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-describedby={iconTip === undefined ? undefined : tipId}
+        >
           <span className={styles.chevron}>
             <ChevronRightIcon size={10} />
           </span>
           <span className={styles.label}>
-            {icon}
+            {iconTip === undefined ? (
+              icon
+            ) : (
+              // Hidden so the tip stays out of the button's name; the description still reads it.
+              <span className={styles.iconTip} aria-hidden>
+                <CompactInfoTip
+                  label={
+                    <span id={tipId} className={styles.tipText}>
+                      {iconTip}
+                    </span>
+                  }
+                  placement="bottom"
+                  align="start"
+                >
+                  {icon}
+                </CompactInfoTip>
+              </span>
+            )}
             <span className={styles.title}>{title}</span>
             {!open && summary !== undefined && (
               <span className={styles.summary} aria-hidden>

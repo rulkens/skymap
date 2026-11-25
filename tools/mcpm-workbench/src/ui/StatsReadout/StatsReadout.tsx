@@ -12,6 +12,7 @@ import { estimateBoxGpuBytes } from '../../sim/estimateBoxGpuBytes';
 import { estimateBoxGridBufferBytes } from '../../sim/estimateBoxGridBufferBytes';
 import { useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
+import { formatFps } from '../formatFps';
 import GpuBufferMeter from '../GpuBufferMeter/GpuBufferMeter';
 import PanelRow from '../PanelRow/PanelRow';
 import styles from './StatsReadout.module.css';
@@ -45,7 +46,7 @@ function StatsReadout(): ReactNode {
         </div>
         <div className={styles.cell}>
           <dt className={styles.label}>frame rate</dt>
-          <dd className={styles.value}>{fps === 0 ? '—' : `${fps} fps`}</dd>
+          <dd className={styles.value}>{fps === 0 ? '—' : formatFps(fps)}</dd>
         </div>
         <div className={styles.cell}>
           <dt className={styles.label}>GPU memory</dt>

@@ -24,6 +24,7 @@ import {
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import EyeIcon from '../../../../../src/components/icons/EyeIcon/EyeIcon';
+import SimulationFrameRate from '../SimulationFrameRate/SimulationFrameRate';
 import SimulationStatusIcon from '../SimulationStatusIcon/SimulationStatusIcon';
 import SpiralIcon from '../icons/SpiralIcon/SpiralIcon';
 import PanelSection from '../PanelSection/PanelSection';
@@ -61,6 +62,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
         <PanelSection
           title="Simulation"
           icon={<SimulationStatusIcon size={12} />}
+          iconTip={<SimulationFrameRate />}
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
           on={sim.running}
