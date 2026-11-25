@@ -1,15 +1,15 @@
 /**
- * writeSpacecraftTracks — serialise tracks to the `spacecraftTracks.bin` layout:
+ * writeSampledTracks — serialise tracks to the SCTK layout (`sampledTrack.<id>.bin`):
  * `SCTK`, u32 version 1, u32 track count, a table of (u32 idLen, UTF-8 id padded to 4, u32 n),
  * then, from the next 8-byte boundary, each track's f64 tDays, f64 posKm (3n), f32 velKmS (3n),
  * the block padded to 8 so every f64 column stays 8-aligned for typed-array views.
- * `parseSpacecraftTracks` is the reader.
+ * `parseSampledTracks` is the reader.
  */
 import type { SampledTrack } from '../../../src/@types/scene/SampledTrack';
 
 const align = (n: number, to: number): number => Math.ceil(n / to) * to;
 
-export function writeSpacecraftTracks(tracks: readonly SampledTrack[]): Uint8Array {
+export function writeSampledTracks(tracks: readonly SampledTrack[]): Uint8Array {
   const ids = tracks.map((t) => new TextEncoder().encode(t.id));
   let tableEnd = 12;
   for (const id of ids) tableEnd += 4 + align(id.length, 4) + 4;

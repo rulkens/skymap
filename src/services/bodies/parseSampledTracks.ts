@@ -1,22 +1,22 @@
 /**
- * parseSpacecraftTracks — read `spacecraftTracks.bin` (layout in `writeSpacecraftTracks`). The
+ * parseSampledTracks — read an SCTK file (layout in `writeSampledTracks`). The
  * tracks are views into `buf`, not copies: the writer 8-aligns every f64 column, which is what
  * lets `Float64Array` view them in place.
  */
-import type { SampledTrack } from '../../../../@types/scene/SampledTrack';
+import type { SampledTrack } from '../../@types/scene/SampledTrack';
 
 const align = (n: number, to: number): number => Math.ceil(n / to) * to;
 
-export function parseSpacecraftTracks(buf: ArrayBuffer): SampledTrack[] {
+export function parseSampledTracks(buf: ArrayBuffer): SampledTrack[] {
   const view = new DataView(buf);
   const need = (end: number): void => {
-    if (end > buf.byteLength) throw new Error('parseSpacecraftTracks: truncated');
+    if (end > buf.byteLength) throw new Error('parseSampledTracks: truncated');
   };
   need(12);
   const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
-  if (magic !== 'SCTK') throw new Error(`parseSpacecraftTracks: bad magic "${magic}"`);
+  if (magic !== 'SCTK') throw new Error(`parseSampledTracks: bad magic "${magic}"`);
   const version = view.getUint32(4, true);
-  if (version !== 1) throw new Error(`parseSpacecraftTracks: unsupported version ${version}`);
+  if (version !== 1) throw new Error(`parseSampledTracks: unsupported version ${version}`);
 
   const count = view.getUint32(8, true);
   const table: { id: string; n: number }[] = [];

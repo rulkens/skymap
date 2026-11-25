@@ -89,10 +89,10 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: true,
   },
   {
-    // Voyager 1/2 Horizons tracks (tools/bodies/buildSpacecraftTracks.ts).
-    label: 'spacecraft-tracks',
+    // One Horizons track per sampled body (tools/bodies/buildSampledTracks.ts).
+    label: 'sampled-tracks',
     dir: null,
-    fileName: /^spacecraftTracks\.bin$/,
+    fileName: /^sampledTrack\.[^.]+\.bin$/,
     transport: 'wrangler',
     // Unmeasured.
     gzipOnWire: false,

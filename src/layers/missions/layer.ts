@@ -10,7 +10,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { missionsLayerSettings } from './state/slices';
 import { missionsVisibility } from './visibility';
-import { loadSpacecraftTracksSaga } from './trails/sagas/loadSpacecraftTracksSaga';
+import { loadSampledTracksSaga } from '../../services/bodies/loadSampledTracksSaga';
 import { create } from './create';
 import { destroy } from './destroy';
 import { missionMeshesPass } from './craft/passes/missionMeshesPass';
@@ -20,6 +20,7 @@ import { MISSION_CRAFT_IDS } from './craft/present/missionCraftIds';
 import { missionLabelSource } from './craft/present/missionLabelSource';
 import { emphasisDim } from './craft/utils/emphasisDim';
 import { MISSION_TRAIL_ROWS } from './trails/data/missionTrailRows';
+import { MISSION_TRACK_IDS } from './trails/data/missionTrackIds';
 import { craftSelectionRow } from './selection/craftSelectionRow';
 import { missionsSelectionKinds } from './selection/kinds';
 import { craftSearch } from './craft/present/craftSearch';
@@ -37,7 +38,7 @@ export const missionsLayer = defineLayer({
   sources: MISSIONS_SOURCE_ROWS,
   settings: missionsLayerSettings,
   visibility: missionsVisibility,
-  sagas: [loadSpacecraftTracksSaga],
+  sagas: [loadSampledTracksSaga(MISSION_TRACK_IDS)],
   exhibits: missionsLayerExhibits,
   create,
   destroy,
