@@ -364,7 +364,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 - Use the native `<dialog>` element with `showModal()`: focus trap, Escape and focus return come with it.
 - One entry point: the button and the page drop both hand `File[]` to `readCatalogFiles`, which returns
   `{ kind: 'csv'; file }`, `{ kind: 'packed'; bin; metadata }` or a problem
-  (`Choose a text table, or a .bin + _metadata.txt`). A file over `MAX_CATALOG_FILE_BYTES` is
+  (`Choose a .csv file, or a .bin with its _metadata.txt`). A file over `MAX_CATALOG_FILE_BYTES` is
   refused before reading. The `import.meta.env.DEV` gate at `App.tsx:31` and `:61` is removed.
 - A packed pair shows no format or scale fields (its weights are already scaled); it loads through
   `loadPackedCatalog` as today.
@@ -388,7 +388,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Button, dialog title, confirm | `Load catalog` |
 | Cancel | `Cancel` |
 | Under the title | `Read in this browser. The file is not uploaded.` |
-| File control, formats beside it until a file is chosen | `Choose file…` · `Text table, or .bin + .txt` |
+| File control, formats beside it until a file is chosen | `Choose file…` · `.csv, or .bin + _metadata.txt` (`.tsv`, `.txt`, `.dat` also read) |
 | Format options | `x, y, z, weight` · `RA, Dec, redshift, weight` |
 | x, y, z help | `Positions in Mpc. One galaxy per row.` |
 | RA/Dec help | `RA and Dec in degrees. Does not open in the native Polyphorm build.` |

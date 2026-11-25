@@ -29,17 +29,16 @@ uploaded. Dropping the file on the page does the same. The loaded file becomes
 a row in the Data list, switched on, with every built-in catalog switched off;
 after that they toggle freely and can run together.
 
-- **Text table, `x, y, z, weight`**: positions in Mpc, equatorial cartesian,
-  observer at the origin. The native Polyphorm build reads the same file.
-- **Text table, `RA, Dec, redshift, weight`**: RA and Dec in degrees.
-  Redshifts become line-of-sight comoving distances under flat ΛCDM with your
-  H0 and Ωm, the same conversion Skymap's catalogs use; the dialog starts at the
-  app's values, H0 = 70 km/s/Mpc and Ωm = 0.315. Workbench only: the native
-  build does not read it.
+- **CSV, `x, y, z, weight`**: positions in Mpc, equatorial cartesian, observer
+  at the origin. The native Polyphorm build reads the same file.
+- **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshifts become
+  line-of-sight comoving distances under flat ΛCDM with your H0 and Ωm, the same
+  conversion Skymap's catalogs use; the dialog starts at the app's values, H0 =
+  70 km/s/Mpc and Ωm = 0.315. Workbench only: the native build does not read it.
 - **Packed `.bin` + `_metadata.txt`**: the Polyphorm fork's own catalog pair,
   loaded as is. A `.txt` chosen with a `.bin` is read as its metadata.
 
-A text table is a `.csv`, `.tsv`, `.txt` or `.dat` file, one galaxy per line.
+A `.csv`, one galaxy per line; `.tsv`, `.txt` and `.dat` files are read too.
 Each file has one separator, taken from its first data line: commas or
 semicolons, else tabs, else spaces; an empty field between commas or tabs is
 refused. A line that does not start with a number (header, `#` comment, blank)

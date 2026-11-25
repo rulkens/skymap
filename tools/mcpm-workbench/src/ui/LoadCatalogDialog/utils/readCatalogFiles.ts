@@ -18,5 +18,5 @@ export function readCatalogFiles(files: readonly File[]): CatalogFiles | Catalog
   const [table] = files.filter((f) => TEXT_TABLE.test(f.name));
   if (files.length === 1 && table) return { kind: 'csv', file: table };
   if (files.length === 2 && bin && metadata) return { kind: 'packed', bin, metadata };
-  return { kind: 'problem', message: 'Choose a text table, or a .bin + _metadata.txt' };
+  return { kind: 'problem', message: 'Choose a .csv file, or a .bin with its _metadata.txt' };
 }

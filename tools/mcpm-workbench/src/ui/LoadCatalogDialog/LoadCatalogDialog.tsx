@@ -143,7 +143,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   const onSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (reading) return;
-    if (!files) return choose([]); // shows the "Choose a text table…" problem
+    if (!files) return choose([]); // shows the "Choose a .csv file…" problem
     const wrong = Object.keys(problems) as (keyof CatalogImportFieldProblems)[];
     if (wrong.length > 0) {
       setChecked((c) => [...new Set([...c, ...wrong])]);
@@ -227,7 +227,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                   <span id={fileStatusId} className={styles.fileStatus}>
                     {filesName === null ? (
                       // What readCatalogFiles accepts.
-                      <span className={styles.formats}>Text table, or .bin + .txt</span>
+                      <span className={styles.formats}>.csv, or .bin + _metadata.txt</span>
                     ) : (
                       <>
                         <span className={styles.nameStart}>
