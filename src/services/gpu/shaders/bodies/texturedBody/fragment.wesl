@@ -52,8 +52,7 @@ import package::lib::bodyLighting::bodyDirectShade;
 import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
-import package::lib::horizonLookup::horizonSunVisibility;
-import package::lib::horizonLookup::horizonSkyVisibility;
+import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 
 @group(0) @binding(0) var<uniform> uniforms: TexturedBodyUniforms;
@@ -129,8 +128,11 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   // globe and tiles read the same values at the hand-off. A zero rect (no map) reads lit.
   let horizonUv = vec2<f32>(fract(uv.x), 1.0 - uv.y);
   let sunAngles = localSunAngles(surfaceNormal, uniforms.sunDirLocal);
+  let horizon = horizonVisibility(
+    horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
+  );
   let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio)
-    * horizonSunVisibility(horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad);
+    * horizon.x;
   let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
   // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
   let viewDir = -rayDir;
@@ -140,7 +142,7 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
     albedo * bodyDirectShade(shadingNormal, uniforms.sunDirLocal) * limb,
     albedo * AMBIENT * limb,
     sunVis,
-    horizonSkyVisibility(horizonTexture, uniforms.horizonRect, horizonUv),
+    horizon.y,
   );
 
   var out: FSOut;

@@ -3,9 +3,9 @@
 // both read the same values where the cut starts. Spec §5–§7. 'rect' is in POST uv:
 // (rect.xy + uv · rect.zw) · posts is the post coordinate, which 'horizonPostRect.ts' makes
 // true of a tile's corner-inclusive 33 posts; the globe's posts wrap in longitude. A zero rect
-// means "no horizon data": both lookups skip the map and read fully lit, the look without it.
+// means "no horizon data": the lookup skips the map and reads fully lit, the look without it.
 
-import package::lib::horizonAngleMap::horizonAngleOfUnorm;
+import package::lib::horizonAngleMap::horizonAnglesOfUnorm;
 import package::lib::horizonAngleMap::HORIZON_SECTORS;
 import package::lib::math::TAU;
 
@@ -33,84 +33,70 @@ fn horizonSectorTexel(sector: u32) -> vec3<u32> {
   return vec3<u32>((sector >> 2u) & 1u, (sector >> 3u) & 1u, sector & 3u);
 }
 
-// The texel block of 'post', offset by 'blockTexel'. Longitude wraps (the globe; a no-op inside
-// a tile slot). Latitude clamps by POST, never by texel: the globe has no south-pole row, and a
-// texel clamp would land both block rows on one, reading sectors 0–7 as 8–15.
-fn horizonTexel(atlas: texture_2d<f32>, post: vec2<u32>, blockTexel: vec2<u32>) -> vec4<f32> {
+// One post's 16 sector angles (rad), one load per block texel: column x + 2y holds texel (x, y).
+// Longitude wraps (the globe; a no-op inside a tile slot). Latitude clamps by POST, never by
+// texel: the globe has no south-pole row, and a texel clamp would land both block rows on one,
+// reading sectors 0–7 as 8–15.
+fn horizonPostAngles(atlas: texture_2d<f32>, post: vec2<u32>) -> mat4x4<f32> {
   let size = textureDimensions(atlas);
   let posts = max(size / 2u, vec2<u32>(1u));
-  let clamped = vec2<u32>(post.x % posts.x, min(post.y, posts.y - 1u));
-  return textureLoad(atlas, min(clamped * 2u + blockTexel, size - 1u), 0);
+  let block = vec2<u32>(post.x % posts.x, min(post.y, posts.y - 1u)) * 2u;
+  let last = size - 1u;
+  return mat4x4<f32>(
+    horizonAnglesOfUnorm(textureLoad(atlas, min(block, last), 0)),
+    horizonAnglesOfUnorm(textureLoad(atlas, min(block + vec2<u32>(1u, 0u), last), 0)),
+    horizonAnglesOfUnorm(textureLoad(atlas, min(block + vec2<u32>(0u, 1u), last), 0)),
+    horizonAnglesOfUnorm(textureLoad(atlas, min(block + vec2<u32>(1u, 1u), last), 0)),
+  );
 }
 
-// Horizon angle (rad) at one post toward 'sector' (fractional; sector k sits at k · 22.5°).
-// Each sector is decoded before blending: the angle map has a knee.
-fn horizonAngleAtPost(atlas: texture_2d<f32>, post: vec2<u32>, sector: f32) -> f32 {
-  let lower = horizonSectorTexel(u32(floor(sector)) % u32(HORIZON_SECTORS));
-  let upper = horizonSectorTexel((u32(floor(sector)) + 1u) % u32(HORIZON_SECTORS));
-  let below = horizonTexel(atlas, post, lower.xy)[lower.z];
-  let above = horizonTexel(atlas, post, upper.xy)[upper.z];
-  return mix(horizonAngleOfUnorm(below), horizonAngleOfUnorm(above), fract(sector));
+// The angle of the sector whose texel is 'texel' ('horizonSectorTexel').
+fn horizonSectorAngle(angles: mat4x4<f32>, texel: vec3<u32>) -> f32 {
+  return angles[texel.x + 2u * texel.y][texel.z];
 }
 
-// Visible fraction of the sun's disc at this point, 0..1.
-fn horizonSunVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
-                        sunAzimuthRad: f32, sunElevationRad: f32, sunRadiusRad: f32) -> f32 {
+// cos²(h) ≈ 1 + c.x·h² + c.y·h⁴ + c.z·h⁶: a minimax fit over [0, π/2], within 8.2e-4, and
+// exactly 1 at h = 0, so open ground still reads 1; it stands in for a cos per sector.
+const COS_SQUARED_FIT: vec3<f32> = vec3<f32>(-0.99312801, 0.31585450, -0.03150899);
+
+fn horizonOpenness(angles: vec4<f32>) -> vec4<f32> {
+  let open = max(angles, vec4<f32>(0.0));
+  let squared = open * open;
+  return 1.0 + squared * (COS_SQUARED_FIT.x + squared * (COS_SQUARED_FIT.y + squared * COS_SQUARED_FIT.z));
+}
+
+// Mean over a post's sectors of cos²(max(h, 0)).
+fn horizonSkyAtPost(angles: mat4x4<f32>) -> f32 {
+  let total = horizonOpenness(angles[0]) + horizonOpenness(angles[1])
+    + horizonOpenness(angles[2]) + horizonOpenness(angles[3]);
+  return dot(total, vec4<f32>(1.0 / HORIZON_SECTORS));
+}
+
+// Visible fraction of the sun's disc (x) and the sky-view factor on a horizontal surface (y),
+// both 0..1, from one load per texel of the four posts around 'uv'. One post is live at a
+// time: holding all four decoded and blending them before the sun's pick tripled the pass.
+fn horizonVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
+                     sunAzimuthRad: f32, sunElevationRad: f32, sunRadiusRad: f32) -> vec2<f32> {
   if (rect.z == 0.0) {
-    return 1.0;
+    return vec2<f32>(1.0);
   }
   let cell = horizonCellAt(atlas, rect, uv);
   let sector = fract(sunAzimuthRad / TAU) * HORIZON_SECTORS;
-  let north = mix(
-    horizonAngleAtPost(atlas, cell.corner, sector),
-    horizonAngleAtPost(atlas, cell.corner + vec2<u32>(1u, 0u), sector),
-    cell.weights.x,
-  );
-  let south = mix(
-    horizonAngleAtPost(atlas, cell.corner + vec2<u32>(0u, 1u), sector),
-    horizonAngleAtPost(atlas, cell.corner + vec2<u32>(1u, 1u), sector),
-    cell.weights.x,
-  );
-  let horizon = mix(north, south, cell.weights.y);
-  return smoothstep(-sunRadiusRad, sunRadiusRad, sunElevationRad - horizon);
-}
-
-fn skyOpenness(horizonUnorm: vec4<f32>) -> f32 {
-  let horizonRad = vec4<f32>(
-    horizonAngleOfUnorm(horizonUnorm.x),
-    horizonAngleOfUnorm(horizonUnorm.y),
-    horizonAngleOfUnorm(horizonUnorm.z),
-    horizonAngleOfUnorm(horizonUnorm.w),
-  );
-  let openCos = cos(max(horizonRad, vec4<f32>(0.0)));
-  return dot(openCos * openCos, vec4<f32>(1.0));
-}
-
-fn horizonSkyAtPost(atlas: texture_2d<f32>, post: vec2<u32>) -> f32 {
-  let sum = skyOpenness(horizonTexel(atlas, post, vec2<u32>(0u, 0u)))
-    + skyOpenness(horizonTexel(atlas, post, vec2<u32>(1u, 0u)))
-    + skyOpenness(horizonTexel(atlas, post, vec2<u32>(0u, 1u)))
-    + skyOpenness(horizonTexel(atlas, post, vec2<u32>(1u, 1u)));
-  return sum / HORIZON_SECTORS;
-}
-
-// Sky-view factor on a horizontal surface: mean over sectors of cos²(max(h, 0)).
-fn horizonSkyVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>) -> f32 {
-  if (rect.z == 0.0) {
-    return 1.0;
+  let lower = horizonSectorTexel(u32(floor(sector)) % u32(HORIZON_SECTORS));
+  let upper = horizonSectorTexel((u32(floor(sector)) + 1u) % u32(HORIZON_SECTORS));
+  var horizon = 0.0;
+  var sky = 0.0;
+  for (var corner = 0u; corner < 4u; corner++) {
+    let offset = vec2<u32>(corner & 1u, corner >> 1u);
+    let axisWeights = mix(1.0 - cell.weights, cell.weights, vec2<f32>(offset));
+    let weight = axisWeights.x * axisWeights.y;
+    let angles = horizonPostAngles(atlas, cell.corner + offset);
+    let sunward = mix(horizonSectorAngle(angles, lower), horizonSectorAngle(angles, upper), fract(sector));
+    horizon += weight * sunward;
+    sky += weight * horizonSkyAtPost(angles);
   }
-  let cell = horizonCellAt(atlas, rect, uv);
-  let north = mix(
-    horizonSkyAtPost(atlas, cell.corner),
-    horizonSkyAtPost(atlas, cell.corner + vec2<u32>(1u, 0u)),
-    cell.weights.x,
-  );
-  let south = mix(
-    horizonSkyAtPost(atlas, cell.corner + vec2<u32>(0u, 1u)),
-    horizonSkyAtPost(atlas, cell.corner + vec2<u32>(1u, 1u)),
-    cell.weights.x,
-  );
-  return mix(north, south, cell.weights.y);
+  let sun = smoothstep(-sunRadiusRad, sunRadiusRad, sunElevationRad - horizon);
+  return vec2<f32>(sun, sky);
 }
 
 // Sun azimuth (clockwise from north) and elevation in the local east/north/up frame of `up`.

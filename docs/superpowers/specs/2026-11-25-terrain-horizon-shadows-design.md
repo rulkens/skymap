@@ -134,14 +134,14 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
 - **Shader contract** (`src/services/gpu/shaders/lib/horizonLookup.wesl`):
 
   ```wgsl
-  // Visible fraction of the sun's disc at this point: 0..1.
-  fn horizonSunVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
-                          sunAzimuthRad: f32, sunElevationRad: f32, sunRadiusRad: f32) -> f32
-  // Sky-view factor on a horizontal surface: mean over sectors of cos²(max(h, 0)).
-  fn horizonSkyVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>) -> f32
+  // x: visible fraction of the sun's disc at this point, 0..1.
+  // y: sky-view factor on a horizontal surface, the mean over sectors of cos²(max(h, 0)).
+  fn horizonVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
+                       sunAzimuthRad: f32, sunElevationRad: f32, sunRadiusRad: f32) -> vec2<f32>
   ```
 
-  - Reads use `textureLoad` with manual bilinear over the four surrounding posts. Each post is
+  - Reads use `textureLoad` with manual bilinear over the four surrounding posts, one load per
+    texel of each post's 2×2 block (16 per fragment), shared by sun and sky. Each post is
     decoded to angles before interpolating: the map has a knee, so filtering bytes is wrong.
   - The sun's azimuth and elevation come from the sun direction in the fragment's local
     east/north/up frame.

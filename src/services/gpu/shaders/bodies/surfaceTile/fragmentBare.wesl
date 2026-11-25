@@ -11,8 +11,7 @@ import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
-import package::lib::horizonLookup::horizonSunVisibility;
-import package::lib::horizonLookup::horizonSkyVisibility;
+import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
@@ -42,12 +41,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let direct = pbrDirect(shadingNormal, viewDir, sunDir, baseAlbedo, roughness, vec3<f32>(uniforms.f0));
   // The datum normal, not the shaded one: the bake measured angles from the sphere's up.
   let sunAngles = localSunAngles(in.normalLocal, sunDir);
-  let sunVisibility = horizonSunVisibility(
+  let horizon = horizonVisibility(
     horizonAtlas, in.horizonRect, in.uv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
   );
-  let skyVisibility = horizonSkyVisibility(horizonAtlas, in.horizonRect, in.uv);
   let colour = composeSurfaceLight(
-    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, sunVisibility, skyVisibility,
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, horizon.x, horizon.y,
   );
 
   return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, uniforms.debugLodOverlay), 1.0);

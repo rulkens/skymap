@@ -12,8 +12,7 @@ import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
-import package::lib::horizonLookup::horizonSunVisibility;
-import package::lib::horizonLookup::horizonSkyVisibility;
+import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
@@ -76,12 +75,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // The datum normal, not the shaded one: the bake measured angles from the sphere's up.
   let sunAngles = localSunAngles(geometricNormal, sunDir);
-  let sunVisibility = horizonSunVisibility(
+  let horizon = horizonVisibility(
     horizonAtlas, in.horizonRect, in.uv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
   );
-  let skyVisibility = horizonSkyVisibility(horizonAtlas, in.horizonRect, in.uv);
   let colour = composeSurfaceLight(
-    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, sunVisibility, skyVisibility,
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, horizon.x, horizon.y,
   );
 
   // Both samples are unconditional: 'textureSample' needs uniform control

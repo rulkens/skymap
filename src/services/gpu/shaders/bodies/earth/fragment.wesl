@@ -68,8 +68,7 @@ import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::nightLights::nightLights;
 import package::lib::normalMap::perturbNormal;
-import package::lib::horizonLookup::horizonSunVisibility;
-import package::lib::horizonLookup::horizonSkyVisibility;
+import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
@@ -144,12 +143,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let equirectUv = dirToEquirectUv(surfacePos);
   let horizonUv = vec2<f32>(equirectUv.x, 1.0 - equirectUv.y);
   let sunAngles = localSunAngles(surfacePos, sunDir);
-  let sunVisibility = horizonSunVisibility(
+  let horizon = horizonVisibility(
     horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
   );
-  let skyVisibility = horizonSkyVisibility(horizonTexture, uniforms.horizonRect, horizonUv);
   let colour = composeSurfaceLight(
-    direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, sunVisibility, skyVisibility,
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, horizon.x, horizon.y,
   );
 
   // City lights are EMISSIVE -- added to the lit colour, never multiplied through
