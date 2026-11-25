@@ -1,5 +1,5 @@
-import { median } from '../../../utils/perf/median';
 import type { WeightStats } from '../../@types/WeightStats';
+import { quantileOf } from '../utils/quantileOf';
 
 /** Smallest, median and largest of a loaded catalog's stored weights. */
 export function weightStatsFor(weight: Float32Array): WeightStats {
@@ -9,5 +9,5 @@ export function weightStatsFor(weight: Float32Array): WeightStats {
     if (w < min) min = w;
     if (w > max) max = w;
   }
-  return { min, median: median(Array.from(weight)), max };
+  return { min, median: quantileOf(Float64Array.from(weight), 0.5), max };
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogImportSettings } from '../../../../tools/mcpm-workbench/@types/CatalogImportSettings';
-import { parseCsvCatalog } from '../../../../tools/mcpm-workbench/src/field/parseCsvCatalog';
+import type { CsvColumns } from '../../../../tools/mcpm-workbench/@types/CsvColumns';
+import { catalogFromCsvColumns } from '../../../../tools/mcpm-workbench/src/field/catalogFromCsvColumns';
+import { createCsvColumnReader } from '../../../../tools/mcpm-workbench/src/field/createCsvColumnReader';
 import { redshiftToDistanceMpc } from '../../../../src/utils/math/redshiftToDistanceMpc';
 
 const XYZ: CatalogImportSettings = {
@@ -13,19 +15,32 @@ const RADEC: CatalogImportSettings = {
 };
 const LOG: CatalogImportSettings = { ...XYZ, weight: { kind: 'log10MassMsun' } };
 
+// The text in chunks cut at `cuts` (byte offsets), as a file streams in.
+function columnsOf(text: string, cuts: readonly number[] = []): CsvColumns {
+  const bytes = new TextEncoder().encode(text);
+  const reader = createCsvColumnReader(bytes.length);
+  const ends = [...cuts, bytes.length];
+  ends.reduce((from, to) => (reader.push(bytes.subarray(from, to)), to), 0);
+  return reader.finish();
+}
+
+function parse(text: string, settings: CatalogImportSettings) {
+  return catalogFromCsvColumns(columnsOf(text), settings);
+}
+
 function parsed(text: string, settings: CatalogImportSettings) {
-  const result = parseCsvCatalog(text, settings);
+  const result = parse(text, settings);
   if (result.kind === 'problem') throw new Error(`expected parsed, got ${result.message}`);
   return result;
 }
 
 function problem(text: string, settings: CatalogImportSettings) {
-  const result = parseCsvCatalog(text, settings);
+  const result = parse(text, settings);
   if (result.kind === 'parsed') throw new Error('expected a problem');
   return result.message;
 }
 
-describe('parseCsvCatalog problems', () => {
+describe('catalogFromCsvColumns problems', () => {
   it('fewer than 4 numbers', () => {
     expect(problem('1,2,3,1\n1,2,3\n', XYZ)).toBe('Line 2: expected 4 numbers, found 3');
   });
@@ -97,9 +112,26 @@ describe('parseCsvCatalog problems', () => {
   it('no data lines', () => {
     expect(problem('x,y,z,w\n# nothing here\n\n', XYZ)).toBe('No data rows found');
   });
+
+  // The text is read before any setting applies, yet the first bad line in the file still wins.
+  it('the first bad line wins, whether the text or a setting refuses it', () => {
+    expect(problem('10,120,0.1,1\n1,abc,3,1\n', RADEC)).toBe(
+      'Line 1: Dec 120 is outside −90 to 90. Did you mean cartesian?',
+    );
+    expect(problem('1,abc,3,1\n10,120,0.1,1\n', RADEC)).toBe(
+      'Line 1: every value must be a finite number',
+    );
+  });
+
+  // Read as float32 first, this Dec would round to 90 and load.
+  it('tests ranges on the value as written, not as stored', () => {
+    expect(problem('10,90.000001,0.1,1\n', RADEC)).toBe(
+      'Line 1: Dec 90.000001 is outside −90 to 90. Did you mean cartesian?',
+    );
+  });
 });
 
-describe('parseCsvCatalog', () => {
+describe('catalogFromCsvColumns', () => {
   it('loads comma, semicolon, tab and space separated files alike', () => {
     const files = [
       '1,2,3,4\n5;6;7;8\n9, 10 ,11 , 12,\n',
@@ -165,6 +197,32 @@ describe('parseCsvCatalog', () => {
     expect(p[3]).toBeCloseTo(0, 3);
     expect(p[4]).toBeCloseTo(0, 3);
     expect(p[5]).toBeCloseTo(d, 3);
+  });
+
+  it('reads a line led by a non-breaking space or a byte order mark', () => {
+    const { points } = parsed('\u00a01,2,3,4\n\ufeff5,6,7,8\n', XYZ);
+
+    expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7]);
+  });
+
+  it('reads the same however the file is cut into chunks', () => {
+    const text = '# ra dec z w\r\n10,20,0.1,1\r\n30,40,0.2,2\r\n10,abc,0.1,1\r\n5,6\r\n7,8,9,1';
+    const whole = catalogFromCsvColumns(columnsOf(text), XYZ);
+    const bytes = new TextEncoder().encode(text).length;
+    for (let a = 0; a <= bytes; a++) {
+      for (let b = a; b <= bytes; b += 7) {
+        expect(catalogFromCsvColumns(columnsOf(text, [a, b]), XYZ)).toEqual(whole);
+      }
+    }
+  });
+
+  it('derives again under new settings from the same columns', () => {
+    const text = '10,20,0.1,12\n30,40,0.2,11\n';
+    const columns = columnsOf(text);
+
+    catalogFromCsvColumns(columns, RADEC);
+    expect(catalogFromCsvColumns(columns, LOG)).toEqual(parse(text, LOG));
+    expect(catalogFromCsvColumns(columns, RADEC)).toEqual(parse(text, RADEC));
   });
 
   it('uses the given H0', () => {

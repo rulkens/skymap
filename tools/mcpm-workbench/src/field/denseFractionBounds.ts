@@ -1,4 +1,6 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { quantileOf } from '../utils/quantileOf';
+import { selectKth } from '../utils/selectKth';
 import { keptCountFor } from './keptCountFor';
 
 /**
@@ -9,9 +11,9 @@ import { keptCountFor } from './keptCountFor';
  * coplanar — falls back to scale 1 rather than dividing by zero). `null` on
  * an empty catalog, matching `catalogBounds`'s own "nothing to bound" case.
  *
- * Single pass over the points to fold min/max: the only O(n log n) step is
- * sorting the rank values themselves, to find the `keptCount`-th smallest as
- * the eviction threshold — no prefix arrays, no sorted index array. Points
+ * Single pass over the points to fold min/max; the quartiles and the
+ * `keptCount`-th smallest rank (the eviction threshold) are selected in O(n),
+ * not sorted — no prefix arrays, no sorted index array. Points
  * EXACTLY tied at the threshold rank are all kept (the predecessor prefix-cut
  * dropped ties past `keptCount`); duplicates can't widen bounds, so this only
  * matters on measure-zero cross-axis float ties.
@@ -32,10 +34,9 @@ export function denseFractionBounds(
   const center: Vec3 = [0, 0, 0];
   const scale: Vec3 = [1, 1, 1];
   for (let axis = 0; axis < 3; axis++) {
-    // A typed array sorts numerically without a comparator, and 5× faster than with one.
-    const sorted = axisValues(axis).sort();
-    center[axis] = quantileSorted(sorted, 0.5);
-    const iqr = quantileSorted(sorted, 0.75) - quantileSorted(sorted, 0.25);
+    const values = axisValues(axis);
+    center[axis] = quantileOf(values, 0.5);
+    const iqr = quantileOf(values, 0.75) - quantileOf(values, 0.25);
     scale[axis] = iqr === 0 ? 1 : iqr;
   }
 
@@ -48,7 +49,7 @@ export function denseFractionBounds(
   }
 
   const keptCount = keptCountFor(count, fraction);
-  const thresholdRank = Float64Array.from(ranks).sort()[keptCount - 1]!;
+  const thresholdRank = selectKth(Float64Array.from(ranks), keptCount - 1);
 
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];
@@ -65,15 +66,4 @@ export function denseFractionBounds(
     if (z > max[2]) max[2] = z;
   }
   return { min, max };
-}
-
-// Type-7 (R/NumPy default) linear-interpolation quantile over an already-sorted array.
-function quantileSorted(sorted: Float64Array, q: number): number {
-  const n = sorted.length;
-  if (n === 1) return sorted[0]!;
-  const r = q * (n - 1);
-  const lo = Math.floor(r);
-  const frac = r - lo;
-  if (frac === 0) return sorted[lo]!;
-  return sorted[lo]! + frac * (sorted[lo + 1]! - sorted[lo]!);
 }
