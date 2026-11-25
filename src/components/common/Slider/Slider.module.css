@@ -135,38 +135,6 @@
   text-align: end;
 }
 
-/*
- * Why the typed value is invalid: CompactInfoTip's surface, opened from code as a
- * top-layer popover and anchored above the pill's end, over the number's side
- * without covering it; flips below when there is no room above. Browsers without
- * anchor positioning show the popover's default centred box instead.
- */
-.reason {
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-xl);
-  background: var(--surface-card-strong);
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
-  box-shadow: var(--shadow-card);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-lg);
-  line-height: var(--line-height-tight);
-  color: var(--color-fg-muted);
-  pointer-events: none;
-}
-
-@supports (anchor-name: --x) {
-  .reason {
-    inset: auto;
-    bottom: anchor(top);
-    right: anchor(right);
-    margin-block-end: var(--space-2);
-    position-try-fallbacks: flip-block;
-  }
-}
-
 .disabled {
   cursor: default;
   opacity: 0.5;

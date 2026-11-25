@@ -28,6 +28,7 @@ import PanelRow from '../PanelRow/PanelRow';
 import SubsectionGroup from '../ControlsPanel/SubsectionGroup';
 import SliderRow from '../SliderRow/SliderRow';
 import { AXES } from './utils/AXES';
+import { centerSliderFor } from './utils/centerSliderFor';
 import { formatAxisSize } from './utils/formatAxisSize';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
@@ -94,10 +95,7 @@ function GridBoxPanel(): ReactNode {
         <SliderRow
           key={`center-${label}`}
           label={`center ${label}`}
-          value={grid.manualCenterMpc[axis]}
-          min={-500}
-          max={500}
-          step={1}
+          {...centerSliderFor(grid, catalogBoundsMpc, axis)}
           format={(v) => `${v.toFixed(0)} Mpc`}
           info="Centre of the simulated box along this axis."
           onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
