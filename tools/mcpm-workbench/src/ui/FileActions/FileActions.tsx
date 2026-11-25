@@ -23,6 +23,7 @@ import FilamentIcon from '../icons/FilamentIcon/FilamentIcon';
 import FloppyIcon from '../icons/FloppyIcon/FloppyIcon';
 import FolderOpenIcon from '../icons/FolderOpenIcon/FolderOpenIcon';
 import styles from './FileActions.module.css';
+import { PARAMS_FILE_EXTENSION } from './utils/PARAMS_FILE_EXTENSION';
 
 const ICON_SIZE = 12;
 
@@ -43,7 +44,11 @@ function FileActions(): ReactNode {
       gridBox: deriveGridBox(s.grid),
       sources: s.catalog.sources,
     });
-    triggerDownload(`${downloadStem(new Date())}-params.json`, json, 'application/json');
+    triggerDownload(
+      `${downloadStem(new Date())}${PARAMS_FILE_EXTENSION}`,
+      json,
+      'application/json',
+    );
     setParamsError(null);
   };
 
@@ -119,7 +124,7 @@ function FileActions(): ReactNode {
         </span>
         <div className={styles.pair}>
           <ButtonTip
-            tip="Saves the simulation sliders, agent count, seeding, grid box and built-in catalogs as .json; not the seed, tier, weighting or view."
+            tip="Saves the simulation sliders, agent count, seeding, grid box and built-in catalogs as .mcpm.json; not the seed, tier, weighting or view."
             align="center"
           >
             {(describedBy) => (
@@ -135,7 +140,7 @@ function FileActions(): ReactNode {
             )}
           </ButtonTip>
           <ButtonTip
-            tip="Loads a saved params file: simulation sliders, agent count, seeding, grid box and, if saved, the built-in catalogs."
+            tip="Loads a saved .mcpm.json params file: simulation sliders, agent count, seeding, grid box and, if saved, the built-in catalogs."
             align="end"
           >
             {(describedBy) => (
