@@ -93,7 +93,7 @@ Geometry is built for the bodies some group names, once per track-store version,
 | `MissionTrailGeometry`, `MissionTrailFrame`, `CraftTrail` | `SampledTrailGeometry`, `SampledTrailFrame`, `SampledTrail` |
 | `buildMissionTrails`, `missionTrailStyle` | `buildSampledTrails`, `sampledTrailStyle` |
 | `MISSION_TRAIL_WIDTH_PX`, `MISSION_TRAIL_MAX_SAG_KM` | `SAMPLED_TRAIL_WIDTH_PX`, `SAMPLED_TRAIL_MAX_SAG_KM` |
-| shaders `shaders/bodies/missionTrail/`, GPU labels `mission-trail-*` | `shaders/sampledTrail/`, `sampled-trail-*` |
+| shaders `shaders/bodies/missionTrail/`, GPU labels `mission-trail-*` | `shaders/bodies/sampledTrail/`, `sampled-trail-*` |
 | `spacecraftTracks.bin`, family `spacecraft-tracks` | `sampledTrack.<id>.bin` (one per body), `sampled-tracks` |
 | `loadSpacecraftTracksSaga`, `parseSpacecraftTracks`, `writeSpacecraftTracks` | `loadSampledTracksSaga(ids)` (core helper; a Layer lists it in its `sagas`), `parseSampledTracks`, `writeSampledTracks` |
 | `tools/bodies/buildSpacecraftTracks.ts`, `npm run build-spacecraft-tracks` | `tools/bodies/buildSampledTracks.ts`, `npm run build-sampled-tracks` |

@@ -22,7 +22,7 @@ fix their `package::` imports and the `?static` import paths by hand.
 ## Task 1: Layers can hand sampled-trail rows to core
 
 **Files:** `src/@types/engine/layer/SampledTrailGroup.d.ts` (new), `SampledTrailRow.d.ts` (new),
-`src/@types/engine/frame/GatedSampledTrailGroup.d.ts` (new), `LayerGuides.d.ts`, `Layer.d.ts`
+`src/@types/engine/frame/GatedTrailGroup.d.ts` (new, generic; replaces `GatedOrbitTrailGroup`), `LayerGuides.d.ts`, `Layer.d.ts`
 (doc at :90-96), `LayerInstance.d.ts`, `src/services/engine/layer/instantiateLayer.ts`,
 `src/services/engine/layer/gateOrbitTrailGroup.ts`, `src/services/engine/phases/createLayers.ts`,
 `src/@types/engine/EngineState.d.ts`, `src/services/engine/engine.ts` (:267), `PassState.d.ts`,
@@ -42,11 +42,11 @@ export type SampledTrailGroup = {
   dim?(state: PassState, id: SceneBodyId): number;
 };
 export type SampledTrailRow = { readonly id: SceneBodyId; readonly color: Vec3 };
-export type GatedSampledTrailGroup = SampledTrailGroup & { fade(view: FrameView): number };
+export type GatedTrailGroup<G> = G & { fade(view: FrameView): number };
 ```
 
 `LayerGuides.sampledTrails?: SampledTrailGroup`; `EngineState.sampledTrailGroups: readonly
-GatedSampledTrailGroup[]`, composed exactly as `orbitTrailGroups` (`createLayers.ts:206-208`) and
+GatedTrailGroup<SampledTrailGroup>[]`, composed exactly as `orbitTrailGroups` (`createLayers.ts:206-208`) and
 exposed on `PassState`.
 
 - [ ] `gateOrbitTrailGroup` binds a show key to a fade and nothing else: rename it `gateTrailGroup`,
@@ -82,7 +82,7 @@ mirror under `tests/layers/missions/trails/` and `tests/services/gpu/shaders/mis
 | `MISSION_EMPHASIS_DIM`, `utils/emphasisDim.ts` | stay in missions: `craft/data/missionEmphasisDim.ts`, `craft/utils/emphasisDim.ts` |
 | `data/trailCentres.ts` | `src/data/bodies/trailCentres.ts` |
 | `passes/missionTrailsPass.ts` | `src/services/engine/frame/passes/sampledTrailsPass.ts`, a plain `ContentPass` named `'sampled-trails'` in `CONTENT_PASSES` |
-| shaders `bodies/missionTrail/` | `src/services/gpu/shaders/sampledTrail/`; GPU labels `sampled-trail-*` |
+| shaders `bodies/missionTrail/` | `src/services/gpu/shaders/bodies/sampledTrail/`; GPU labels `sampled-trail-*` |
 | `missionCamera/utils/hermiteTrackVelAt.ts` | `src/utils/orbit/hermiteTrackVelAt.ts` |
 
 **Contract:**
@@ -261,7 +261,7 @@ export type SampledBody = {
 **Deliverables**
 
 - [ ] `LayerGuides.sampledTrails`, `SampledTrailGroup`, `SampledTrailRow`, `state.sampledTrailGroups`.
-- [ ] Core pass `'sampled-trails'`, `state.gpu.sampledTrailRenderer`, shaders under `shaders/sampledTrail/`.
+- [ ] Core pass `'sampled-trails'`, `state.gpu.sampledTrailRenderer`, shaders under `shaders/bodies/sampledTrail/`.
 - [ ] `loadSampledTracksSaga(ids)`, `parseSampledTracks`, `sampledTrack.<id>.bin` per Voyager,
       `npm run build-sampled-tracks`, `tools/missions/buildMissionEvents.ts`.
 - [ ] `SampledBody` under `src/@types/scene/` with an optional `launch`; `bodyPresent`.
