@@ -13,8 +13,7 @@ import type { ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { keptCountFor } from '../../field/keptCountFor';
-import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
-import { minFeasibleVoxelSizeMpc } from '../../sim/minFeasibleVoxelSizeMpc';
+import { voxelSizeFloorMpc } from '../../field/voxelSizeFloorMpc';
 import {
   fitBoxToCatalog,
   setAutoFitPercent,
@@ -53,21 +52,8 @@ function GridBoxPanel(): ReactNode {
       ? 0
       : catalogPointCount - keptCountFor(catalogPointCount, grid.autoFitPercent / 100);
   const box = deriveGridBox(grid);
-  // V2: the live floor for THIS box's extent — same clamp deriveGridBox applies, computed
-  // here only to drive the slider's `min` (the readout above already reflects the clamp,
-  // since `box` came from deriveGridBox). Static 0.25 fallback pre-init / on a coarse box.
-  // Fix round 1: `Infinity` (no voxel size fits — see minFeasibleVoxelSizeMpc's doc comment)
-  // is treated as "no usable floor" too, same as null, so it never becomes the slider's min.
-  const rawLiveFloorMpc =
-    grid.maxBufferBytes === null
-      ? null
-      : minFeasibleVoxelSizeMpc(
-          grid.manualSizeMpc,
-          BYTES_PER_ELEMENT[grid.resolvedElement ?? 'f32'], // deriveGridBox's fallback; must match
-          grid.maxBufferBytes,
-        );
-  const liveFloorMpc =
-    rawLiveFloorMpc !== null && Number.isFinite(rawLiveFloorMpc) ? rawLiveFloorMpc : null;
+  // The floor deriveGridBox clamps to, here only as the voxel slider's `min`.
+  const liveFloorMpc = voxelSizeFloorMpc(grid);
   const voxelSizeMinMpc =
     liveFloorMpc === null || liveFloorMpc < VOXEL_SIZE_MIN_MPC ? VOXEL_SIZE_MIN_MPC : liveFloorMpc;
   const voxelSizeInfo =
@@ -99,7 +85,7 @@ function GridBoxPanel(): ReactNode {
           {...sizeSliderFor(box, axis)}
           format={(v) => formatAxisSize(v, box.dims[axis])}
           info="Extent of the box along this axis: voxels × voxel size, in whole 8-voxel blocks."
-          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(box, axis, v)))}
+          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(grid, axis, v)))}
           path={`grid.manualSizeMpc.${axis}`}
         />
       ))}
