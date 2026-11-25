@@ -2,6 +2,8 @@ import type { CatalogFileProblem } from '../../../../@types/CatalogFileProblem';
 import type { CatalogFiles } from '../../../../@types/CatalogFiles';
 import { MAX_CATALOG_FILE_BYTES } from './MAX_CATALOG_FILE_BYTES';
 
+const TEXT_TABLE = /\.(csv|tsv|txt|dat)$/i;
+
 /** Sorts chosen or dropped files into a loadable set; sizes are checked before anything is read. */
 export function readCatalogFiles(files: readonly File[]): CatalogFiles | CatalogFileProblem {
   if (files.some((f) => f.size > MAX_CATALOG_FILE_BYTES)) {
@@ -11,10 +13,10 @@ export function readCatalogFiles(files: readonly File[]): CatalogFiles | Catalog
     };
   }
   const named = (ext: string) => files.filter((f) => f.name.toLowerCase().endsWith(ext));
-  const [csv] = named('.csv');
   const [bin] = named('.bin');
   const [metadata] = named('.txt');
-  if (files.length === 1 && csv) return { kind: 'csv', file: csv };
+  const [table] = files.filter((f) => TEXT_TABLE.test(f.name));
+  if (files.length === 1 && table) return { kind: 'csv', file: table };
   if (files.length === 2 && bin && metadata) return { kind: 'packed', bin, metadata };
-  return { kind: 'problem', message: 'Choose a .csv file, or a .bin with its _metadata.txt' };
+  return { kind: 'problem', message: 'Choose a text table, or a .bin + _metadata.txt' };
 }

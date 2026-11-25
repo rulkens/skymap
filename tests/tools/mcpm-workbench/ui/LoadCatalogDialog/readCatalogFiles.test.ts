@@ -22,7 +22,22 @@ describe('readCatalogFiles', () => {
     expect(readCatalogFiles([metadata, bin])).toEqual({ kind: 'packed', bin, metadata });
   });
 
+  it('reads a lone .csv, .tsv, .txt or .dat as a text table', () => {
+    for (const name of ['a.csv', 'b.tsv', 'c.txt', 'D.DAT']) {
+      const table = file(name);
+      expect(readCatalogFiles([table])).toEqual({ kind: 'csv', file: table });
+    }
+  });
+
+  // A .txt beside a .bin is its metadata, never a table of its own.
   it('refuses a .bin without its metadata', () => {
-    expect(readCatalogFiles([file('run.bin')]).kind).toBe('problem');
+    const wrongType = {
+      kind: 'problem',
+      message: 'Choose a text table, or a .bin + _metadata.txt',
+    };
+    expect(readCatalogFiles([file('run.bin')])).toEqual(wrongType);
+    expect(readCatalogFiles([file('run.bin'), file('run.dat')])).toEqual(wrongType);
+    expect(readCatalogFiles([file('a.txt'), file('b.txt')])).toEqual(wrongType);
+    expect(readCatalogFiles([file('run.json')])).toEqual(wrongType);
   });
 });

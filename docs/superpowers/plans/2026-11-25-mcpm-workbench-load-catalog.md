@@ -55,6 +55,7 @@ Asked for by the owner while the tasks ran, so they are in scope, not creep:
 - The workbench has its own panel section component.
 - Modern CSS, with no workarounds.
 - Auto fit keeps 97% by default.
+- A lone `.txt`, `.tsv` or `.dat` loads like a `.csv`; a `.txt` with a `.bin` stays its metadata.
 
 ## Ground preparation
 
@@ -86,7 +87,7 @@ removes the exclusivity the union was protecting, so no hand-kept invariant rema
 1. **A file in the wrong format is chosen.** x,y,z read as RA/Dec must fail the range test with a hint,
    never load as garbage (Task 5 tests).
 2. **A header row, `#` comments, blank lines, CRLF endings, semicolons or tabs.** All load, as in the
-   native build (Task 5 tests).
+   native build (Task 5 tests). A line separated differently from the first data line is refused.
 3. **A failed load.** The catalog that was loaded before stays loaded and selected (Task 6 behaviour;
    parse happens before any dispatch).
 4. **Built-ins and a file on together.** Weights share one scale after Task 1; the merged set is
@@ -288,9 +289,10 @@ No scale is computed or applied for the user: the file may hold something other 
 
 - A line is data when its first non-blank character is a digit, `-`, `+` or `.`; every other line
   (header, `#` comment, blank) is skipped.
-- Fields are separated by a comma, semicolon, tab or spaces. Columns after the fourth are ignored.
-- An empty field in the first four columns (`10,,20,…`) is refused as a non-finite value (added
-  2026-11-25); runs of spaces or tabs and trailing separators are not empty fields.
+- One separator per file, taken from its first data line: comma or semicolon, else tab, else runs of
+  spaces or tabs. Columns after the fourth are ignored.
+- An empty field in the first four columns (`10,,20,…`, or two tabs in a tab file) is refused as a
+  non-finite value (added 2026-11-25); runs of spaces and trailing separators are not empty fields.
 - The first problem ends the parse; nothing partial is returned.
 - `cartesianMpc`: columns are x, y, z in Mpc, used as written.
 - `raDecRedshift`: RA and Dec in degrees, redshift z; position =
@@ -362,7 +364,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 - Use the native `<dialog>` element with `showModal()`: focus trap, Escape and focus return come with it.
 - One entry point: the button and the page drop both hand `File[]` to `readCatalogFiles`, which returns
   `{ kind: 'csv'; file }`, `{ kind: 'packed'; bin; metadata }` or a problem
-  (`Choose a .csv file, or a .bin with its _metadata.txt`). A file over `MAX_CATALOG_FILE_BYTES` is
+  (`Choose a text table, or a .bin + _metadata.txt`). A file over `MAX_CATALOG_FILE_BYTES` is
   refused before reading. The `import.meta.env.DEV` gate at `App.tsx:31` and `:61` is removed.
 - A packed pair shows no format or scale fields (its weights are already scaled); it loads through
   `loadPackedCatalog` as today.
@@ -386,7 +388,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Button, dialog title, confirm | `Load catalog` |
 | Cancel | `Cancel` |
 | Under the title | `Read in this browser. The file is not uploaded.` |
-| File control, formats beside it until a file is chosen | `Choose file…` · `.csv, or .bin + _metadata.txt` |
+| File control, formats beside it until a file is chosen | `Choose file…` · `Text table, or .bin + .txt` |
 | Format options | `x, y, z, weight` · `RA, Dec, redshift, weight` |
 | x, y, z help | `Positions in Mpc. One galaxy per row.` |
 | RA/Dec help | `RA and Dec in degrees. Does not open in the native Polyphorm build.` |

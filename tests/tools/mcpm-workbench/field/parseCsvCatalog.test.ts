@@ -35,6 +35,18 @@ describe('parseCsvCatalog problems', () => {
     expect(problem('10,,20,0.03,0.5,7\n', XYZ)).toBe('Line 1: every value must be a finite number');
   });
 
+  // Collapsing the two tabs read y as 3 and the weight as 5.
+  it('an empty field between tabs', () => {
+    expect(problem('1\t\t3\t4\t5\n', XYZ)).toBe('Line 1: every value must be a finite number');
+  });
+
+  it('a line separated differently from the first data line', () => {
+    expect(problem('# x y z w\n1,2,3,4\n5\t6\t7\t8\n', XYZ)).toBe(
+      'Line 3: expected 4 numbers, found 1',
+    );
+    expect(problem('1 2 3 4\n5,6,7,8\n', XYZ)).toBe('Line 2: expected 4 numbers, found 1');
+  });
+
   it('non-finite coordinate', () => {
     expect(problem('1,abc,3,1\n', XYZ)).toBe('Line 1: every value must be a finite number');
   });
@@ -81,24 +93,18 @@ describe('parseCsvCatalog problems', () => {
 });
 
 describe('parseCsvCatalog', () => {
-  it('loads comma, semicolon, tab and space separated rows alike', () => {
-    const { points } = parsed(
-      '1,2,3,4\n5;6;7;8\n9\t10\t11\t12\n13  14 15 16\n17, 18, 19, 20\n',
-      XYZ,
-    );
+  it('loads comma, semicolon, tab and space separated files alike', () => {
+    const files = [
+      '1,2,3,4\n5;6;7;8\n9, 10 ,11 , 12,\n',
+      '1\t2\t3\t4\n5 \t 6\t7\t8\t\n\t9\t10\t11\t12\n',
+      '1 2 3 4\n  5   6\t7 \t 8  \n9 10 11 12\n',
+    ];
+    for (const text of files) {
+      const { points } = parsed(text, XYZ);
 
-    expect(points.count).toBe(5);
-    expect(Array.from(points.positions)).toEqual([
-      1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17, 18, 19,
-    ]);
-    expect(Array.from(points.weight)).toEqual([4, 8, 12, 16, 20]);
-  });
-
-  it('reads runs of spaces or tabs as one separator, and allows trailing separators', () => {
-    const { points } = parsed('1\t\t2   3 \t4\t\n5 , 6 ,7, 8,\n9;10;11;12;;  \n', XYZ);
-
-    expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7, 9, 10, 11]);
-    expect(Array.from(points.weight)).toEqual([4, 8, 12]);
+      expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7, 9, 10, 11]);
+      expect(Array.from(points.weight)).toEqual([4, 8, 12]);
+    }
   });
 
   it('skips a header row, # comments and blank lines', () => {
