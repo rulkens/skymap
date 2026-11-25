@@ -1,0 +1,64 @@
+.root {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-lg);
+  background: var(--surface-control);
+}
+
+.segment {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  color: var(--color-fg-tertiary);
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    background var(--duration-color) var(--ease-standard),
+    color var(--duration-color) var(--ease-standard);
+}
+
+@media (hover: hover) {
+  .segment:hover:not(:has(:checked)) {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    color: var(--color-fg-base);
+  }
+}
+
+/* Accent-tinted so the chosen fill keeps 3:1 against the track (WCAG 1.4.11). */
+.segment:has(:checked) {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  color: var(--color-fg);
+}
+
+/* The radio has no look of its own: it lies over the whole segment, so the
+   segment is its hit area and its focus ring. */
+.radio {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border-radius: inherit;
+  appearance: none;
+  cursor: pointer;
+}
+
+.radio:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .root {
+    min-block-size: var(--touch-target);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}

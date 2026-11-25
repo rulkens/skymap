@@ -4,20 +4,33 @@
  * sidebar root, never in a foldable body, because it also owns the window drop
  * listener: a file dropped anywhere opens it with that file chosen. Files are read
  * and parsed in the page; the store sees only a parsed catalog, so a refused
- * or warned load leaves the loaded one in place.
+ * or warned load leaves the loaded one in place. Closing keeps every choice,
+ * which is why a click on the backdrop may close it.
  */
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import type { CatalogFiles } from '../../../@types/CatalogFiles';
-import type { CatalogImportSettings } from '../../../@types/CatalogImportSettings';
+import type { CatalogImportFieldProblems } from '../../../@types/CatalogImportFieldProblems';
+import type { CatalogImportFields } from '../../../@types/CatalogImportFields';
 import type { CatalogLoadOutcome } from '../../../@types/CatalogLoadOutcome';
 import type { UserCatalog } from '../../../@types/UserCatalog';
 import Button from '../../../../../src/components/common/Button/Button';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import { useAppDispatch } from '../../store/hooks';
-import ChoiceGroup from '../ChoiceGroup/ChoiceGroup';
+import FormField from '../FormField/FormField';
+import SegmentedControl from '../SegmentedControl/SegmentedControl';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
 import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
+import { importFieldProblems } from './utils/importFieldProblems';
+import { importSettingsFrom } from './utils/importSettingsFrom';
 import { parseCatalogFiles } from './utils/parseCatalogFiles';
 import { readCatalogFiles } from './utils/readCatalogFiles';
 import { SLOW_READ_MS } from './utils/SLOW_READ_MS';
@@ -32,25 +45,43 @@ export type LoadCatalogDialogProps = {
 function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): ReactNode {
   const dispatch = useAppDispatch();
   const titleId = useId();
+  const noteId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const chooseRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Bumped by every new read, choice and close: a read whose id is stale is dropped.
+  const readId = useRef(0);
 
   const [files, setFiles] = useState<CatalogFiles | null>(null);
-  const [formatKind, setFormatKind] =
-    useState<CatalogImportSettings['format']['kind']>('cartesianMpc');
-  const [h0, setH0] = useState('70');
-  const [omegaM, setOmegaM] = useState('0.315');
-  const [weightKind, setWeightKind] = useState<CatalogImportSettings['weight']['kind']>('linear');
-  const [scale, setScale] = useState('1');
+  const [fields, setFields] = useState<CatalogImportFields>({
+    formatKind: 'cartesianMpc',
+    weightKind: 'linear',
+    h0: '70',
+    omegaM: '0.315',
+    scale: '1',
+  });
+  // A field's error shows once it has been left or a load was tried, never while typing.
+  const [checked, setChecked] = useState<readonly (keyof CatalogImportFieldProblems)[]>([]);
   const [outcome, setOutcome] = useState<Exclude<CatalogLoadOutcome, { kind: 'ready' }> | null>(
     null,
   );
   const [reading, setReading] = useState(false);
   const [slowRead, setSlowRead] = useState(false);
 
+  const problems = importFieldProblems(fields);
+  const shown = (field: keyof CatalogImportFieldProblems): string | undefined =>
+    checked.includes(field) ? problems[field] : undefined;
+  const check = (field: keyof CatalogImportFieldProblems) => (): void =>
+    setChecked((c) => (c.includes(field) ? c : [...c, field]));
+
+  const cancelRead = (): void => {
+    readId.current += 1;
+    setReading(false);
+    setSlowRead(false);
+  };
+
   const choose = (chosen: readonly File[]): void => {
+    cancelRead();
     const result = readCatalogFiles(chosen);
     if (result.kind === 'problem') {
       setFiles(null);
@@ -61,54 +92,40 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     }
   };
 
+  const onDrop = useEffectEvent((e: DragEvent): void => {
+    e.preventDefault();
+    const dropped = Array.from(e.dataTransfer?.files ?? []);
+    if (dropped.length === 0) return;
+    choose(dropped);
+    onOpenChange(true);
+  });
+
   useEffect(() => {
     const allowDrop = (e: DragEvent): void => e.preventDefault();
-    const onDrop = (e: DragEvent): void => {
-      e.preventDefault();
-      const dropped = Array.from(e.dataTransfer?.files ?? []);
-      if (dropped.length === 0) return;
-      choose(dropped);
-      onOpenChange(true);
-    };
     window.addEventListener('dragover', allowDrop);
     window.addEventListener('drop', onDrop);
     return () => {
       window.removeEventListener('dragover', allowDrop);
       window.removeEventListener('drop', onDrop);
     };
-  }, [onOpenChange]);
+  }, []);
 
-  // Focus returns to the opener on close natively (the dialog's focus restore).
+  // Before the files effect, so a dropped file's Load button takes focus from
+  // the first control that showModal() focuses.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      chooseRef.current?.focus();
-    } else if (!open && dialog.open) dialog.close();
+    if (open && !dialog.open) dialog.showModal();
+    else if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  // Once files are chosen, Enter is one key away from loading them.
   useEffect(() => {
     if (files) confirmRef.current?.focus();
   }, [files]);
 
-  const edited =
-    <T,>(set: (value: T) => void) =>
-    (value: T): void => {
-      set(value);
-      setOutcome(null);
-    };
-
-  const settings: CatalogImportSettings = {
-    format:
-      formatKind === 'cartesianMpc'
-        ? { kind: 'cartesianMpc' }
-        : { kind: 'raDecRedshift', h0KmSMpc: Number(h0), omegaM: Number(omegaM) },
-    weight:
-      weightKind === 'linear'
-        ? { kind: 'linear', scale: Number(scale) }
-        : { kind: 'log10MassMsun' },
+  const edit = (patch: Partial<CatalogImportFields>): void => {
+    setFields((f) => ({ ...f, ...patch }));
+    setOutcome(null);
   };
 
   const load = (catalog: UserCatalog): void => {
@@ -117,182 +134,227 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     dialogRef.current?.close();
   };
 
-  const onSubmit = (e: FormEvent): void => {
+  const onSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    if (!files || reading) return;
+    if (reading) return;
+    if (!files) return choose([]); // shows the "Choose a .csv file…" problem
+    const wrong = Object.keys(problems) as (keyof CatalogImportFieldProblems)[];
+    if (wrong.length > 0) {
+      setChecked((c) => [...new Set([...c, ...wrong])]);
+      (e.currentTarget.elements.namedItem(wrong[0]!) as HTMLInputElement | null)?.focus();
+      return;
+    }
     if (outcome?.kind === 'warning') return load(outcome.catalog);
+    readId.current += 1;
+    const id = readId.current;
+    const current = (): boolean => id === readId.current;
     setReading(true);
-    const slow = setTimeout(() => setSlowRead(true), SLOW_READ_MS);
-    parseCatalogFiles(files, settings)
+    const slow = setTimeout(() => current() && setSlowRead(true), SLOW_READ_MS);
+    parseCatalogFiles(files, importSettingsFrom(fields))
       .then((result) => {
-        if (!dialogRef.current?.open) return; // cancelled while reading
+        if (!current()) return;
         if (result.kind === 'ready') load(result.catalog);
         else setOutcome(result);
       })
-      .catch((err: unknown) =>
-        setOutcome({ kind: 'problem', message: (err as Error).message, showExample: false }),
-      )
+      .catch((err: unknown) => {
+        if (current())
+          setOutcome({ kind: 'problem', message: (err as Error).message, showExample: false });
+      })
       .finally(() => {
         clearTimeout(slow);
+        if (!current()) return;
         setReading(false);
         setSlowRead(false);
       });
   };
 
   const filesName = files ? catalogFilesName(files) : null;
-  const status =
-    slowRead && filesName
-      ? `Reading ${filesName}…`
-      : outcome?.kind === 'warning'
-        ? outcome.message
-        : '';
+  const formatChoice = FORMAT_CHOICES.find((c) => c.value === fields.formatKind)!;
+  const weightChoice = WEIGHT_CHOICES.find((c) => c.value === fields.weightKind)!;
 
   return (
     <dialog
       ref={dialogRef}
       className={styles.root}
       aria-labelledby={titleId}
-      onClose={() => onOpenChange(false)}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) e.currentTarget.close(); // the backdrop
+      aria-describedby={noteId}
+      closedby="any"
+      onClose={() => {
+        cancelRead();
+        onOpenChange(false);
       }}
     >
       <form
         className={styles.form}
+        noValidate
         onSubmit={onSubmit}
         onKeyDown={(e) => {
-          const target = e.target as HTMLInputElement;
-          if (e.key === 'Enter' && target.type === 'radio') {
+          // A radio has no implicit submission; Enter still loads.
+          if (e.key === 'Enter' && (e.target as HTMLInputElement).type === 'radio') {
             e.preventDefault();
             e.currentTarget.requestSubmit();
           }
         }}
       >
-        <header>
+        <header className={styles.header}>
           <h2 id={titleId} className={styles.title}>
             Load catalog
           </h2>
-          <p className={styles.hint}>Read in this browser. The file is not uploaded.</p>
+          <p id={noteId} className={styles.note}>
+            Read in this browser. The file is not uploaded.
+          </p>
         </header>
 
-        <div className={styles.fileRow}>
-          <Button
-            ref={chooseRef}
-            className={styles.button}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Choose file
-          </Button>
-          {filesName && (
-            <span className={styles.fileName} title={filesName}>
-              {filesName}
-            </span>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.bin,.txt"
-            multiple
-            hidden
-            onChange={(e) => {
-              const chosen = Array.from(e.target.files ?? []);
-              e.target.value = ''; // so choosing the same file again still fires
-              if (chosen.length > 0) choose(chosen);
-            }}
-          />
-        </div>
-
-        {/* Under the file and above the column choice: the two things a problem points at. */}
-        {outcome?.kind === 'problem' && (
-          <div className={styles.problem}>
-            <p role="alert" className={styles.message}>
-              {outcome.message}
-            </p>
-            {outcome.showExample && (
-              <div className={styles.example}>
-                <span className={styles.label}>Example</span>
-                <pre className={styles.exampleRows}>{CATALOG_EXAMPLES[formatKind].join('\n')}</pre>
+        <div className={styles.fields}>
+          <FormField label="File">
+            {(ids) => (
+              <div id={ids.control} className={styles.file}>
+                <Button className={styles.button} onClick={() => fileInputRef.current?.click()}>
+                  Choose file
+                </Button>
+                {filesName && <span className={styles.fileName}>{filesName}</span>}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.bin,.txt"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const chosen = Array.from(e.target.files ?? []);
+                    e.target.value = ''; // so choosing the same file again still fires
+                    if (chosen.length > 0) choose(chosen);
+                  }}
+                />
+                {outcome?.kind === 'problem' && (
+                  <p role="alert" className={styles.problem}>
+                    {outcome.message}
+                  </p>
+                )}
               </div>
             )}
-          </div>
-        )}
+          </FormField>
 
-        {files?.kind !== 'packed' && (
-          <>
-            <ChoiceGroup
-              legend="Columns"
-              options={FORMAT_CHOICES}
-              value={formatKind}
-              onChange={edited(setFormatKind)}
-              hint={FORMAT_CHOICES.find((c) => c.value === formatKind)!.hint}
-            >
-              {formatKind === 'raDecRedshift' && (
-                <div className={styles.fields}>
-                  <label className={styles.field}>
-                    <span className={styles.label}>H0 (km/s/Mpc)</span>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      min="1"
-                      required
-                      value={h0}
-                      onChange={(e) => edited(setH0)(e.target.value)}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.label}>Ωm</span>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      min="0"
-                      max="1"
-                      required
-                      value={omegaM}
-                      onChange={(e) => edited(setOmegaM)(e.target.value)}
-                    />
-                  </label>
-                  <p className={styles.hint}>Flat ΛCDM.</p>
-                </div>
+          {outcome?.kind === 'problem' && outcome.showExample && (
+            <FormField label="Example">
+              {(ids) => (
+                <pre id={ids.control} className={styles.example}>
+                  {CATALOG_EXAMPLES[fields.formatKind].join('\n')}
+                </pre>
               )}
-            </ChoiceGroup>
+            </FormField>
+          )}
 
-            <ChoiceGroup
-              legend="Weight is"
-              options={WEIGHT_CHOICES}
-              value={weightKind}
-              onChange={edited(setWeightKind)}
-              hint={WEIGHT_CHOICES.find((c) => c.value === weightKind)!.hint}
-            >
-              {weightKind === 'linear' && (
-                <div className={styles.fields}>
-                  <label className={styles.field}>
-                    <span className={styles.label}>Weight scale</span>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      required
-                      value={scale}
-                      onChange={(e) => edited(setScale)(e.target.value)}
-                    />
-                    <span className={styles.hint}>
-                      Multiplies the weight column. 0.001 turns 10⁹{'\u00a0'}M☉ into 10¹²
-                      {'\u00a0'}M☉.
-                    </span>
-                  </label>
-                </div>
+          {files?.kind !== 'packed' && (
+            <>
+              <FormField label="Columns" hint={formatChoice.hint}>
+                {(ids) => (
+                  <SegmentedControl
+                    options={FORMAT_CHOICES}
+                    value={fields.formatKind}
+                    onChange={(formatKind) => edit({ formatKind })}
+                    labelledBy={ids.label}
+                    describedBy={ids.hint}
+                  />
+                )}
+              </FormField>
+
+              {fields.formatKind === 'raDecRedshift' && (
+                <FormField label="Flat ΛCDM" error={shown('h0') ?? shown('omegaM')}>
+                  {(ids) => (
+                    <div
+                      id={ids.control}
+                      role="group"
+                      aria-labelledby={ids.label}
+                      className={styles.inline}
+                    >
+                      <label className={styles.inlineField}>
+                        H0 (km/s/Mpc)
+                        <input
+                          name="h0"
+                          className={styles.number}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          aria-invalid={shown('h0') !== undefined}
+                          aria-describedby={ids.hint}
+                          value={fields.h0}
+                          onChange={(e) => edit({ h0: e.target.value })}
+                          onBlur={check('h0')}
+                        />
+                      </label>
+                      <label className={styles.inlineField}>
+                        Ωm
+                        <input
+                          name="omegaM"
+                          className={styles.number}
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          aria-invalid={shown('omegaM') !== undefined}
+                          aria-describedby={ids.hint}
+                          value={fields.omegaM}
+                          onChange={(e) => edit({ omegaM: e.target.value })}
+                          onBlur={check('omegaM')}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </FormField>
               )}
-            </ChoiceGroup>
-          </>
-        )}
+
+              <FormField
+                label="Weight is"
+                hint={fields.weightKind === 'linear' ? undefined : weightChoice.hint}
+              >
+                {(ids) => (
+                  <SegmentedControl
+                    options={WEIGHT_CHOICES}
+                    value={fields.weightKind}
+                    onChange={(weightKind) => edit({ weightKind })}
+                    labelledBy={ids.label}
+                    describedBy={ids.hint}
+                  />
+                )}
+              </FormField>
+
+              {/* The linear choice's help rides under the scale it explains. */}
+              {fields.weightKind === 'linear' && (
+                <FormField
+                  label="Weight scale"
+                  error={shown('scale')}
+                  hint={`${weightChoice.hint} 0.001 turns 10⁹\u00a0M☉ into 10¹²\u00a0M☉.`}
+                >
+                  {(ids) => (
+                    <input
+                      id={ids.control}
+                      name="scale"
+                      className={styles.number}
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      aria-invalid={shown('scale') !== undefined}
+                      aria-describedby={ids.hint}
+                      value={fields.scale}
+                      onChange={(e) => edit({ scale: e.target.value })}
+                      onBlur={check('scale')}
+                    />
+                  )}
+                </FormField>
+              )}
+            </>
+          )}
+        </div>
 
         <footer className={styles.footer}>
-          <p role="status" className={slowRead ? styles.reading : styles.warning}>
-            {status}
-          </p>
+          {outcome?.kind === 'warning' && (
+            <p role="status" className={styles.warning}>
+              {outcome.message}
+            </p>
+          )}
           <div className={styles.actions}>
+            <p role="status" className={styles.reading}>
+              {slowRead && filesName ? `Reading ${filesName}…` : ''}
+            </p>
             <Button className={styles.button} onClick={() => dialogRef.current?.close()}>
               Cancel
             </Button>
@@ -301,7 +363,6 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
               type="submit"
               variant="primary"
               className={styles.button}
-              disabled={!files || reading}
               aria-busy={reading}
             >
               {outcome?.kind === 'warning' ? 'Load anyway' : 'Load catalog'}
