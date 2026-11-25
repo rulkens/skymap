@@ -1,0 +1,48 @@
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { GridBox } from './GridBox';
+import type { GridElement } from './GridElement';
+
+/**
+ * GridSlice — the grid-box CONFIG (what the panel edits) plus the last
+ * RESOLVED build's element; `resolvedElement` is null until
+ * the first successful build (the resolved box itself is re-derived from the
+ * manual/imported fields via `deriveGridBox`, not stored). The manual path
+ * (center + size
+ * + a directly-stored `manualVoxelSizeMpc`) is the only resolution lever — a
+ * physical Mpc size, not a scale factor, so resolution stays stable under
+ * resize/refit (grid-voxel-size-currency decision, Q1/Q2).
+ *
+ * `importedBox` (V3): `deriveGridBox` returns it VERBATIM when set, so a
+ * loaded preset reloads bit-identical; every setter representing a grid
+ * edit (including `fitBoxToCatalog`) clears it back to null.
+ *
+ * `manualRotation` (F2.5) mirrors center/size's manual-path shape:
+ * `deriveGridBox` writes it into the derived box (`autoFitGridBox` always
+ * returns identity), and `installImportedBox` syncs it from a loaded preset
+ * so a drag on a loaded rotated box doesn't snap back to identity.
+ *
+ * `maxBufferBytes` (V2), the device's real allocation ceiling, clamps
+ * `manualVoxelSizeMpc` up in `deriveGridBox`; set only by
+ * `setMaxBufferBytes`, which — like `setResolvedGrid` — does NOT clear
+ * `importedBox`.
+ *
+ * `autoFitPercent` — like `paddingMpc`, a one-shot input baked in at the
+ * NEXT "auto fit" click, not a live modifier of the box already showing:
+ * excluded from `gridShapeOf` and `SCENE_REBUILD_TRIGGERS` for the same
+ * reason. 100 is the full-catalog-bounds fit; the default 97 drops stray
+ * outliers that would stretch the box into a slow, mostly empty run.
+ */
+export type GridSlice = {
+  readonly manualVoxelSizeMpc: number;
+  readonly paddingMpc: number;
+  readonly manualCenterMpc: Vec3;
+  readonly manualSizeMpc: Vec3;
+  readonly manualRotation: Readonly<Vec4>;
+  readonly importedBox: GridBox | null;
+  readonly resolvedElement: GridElement | null;
+  readonly maxBufferBytes: number | null;
+  /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
+   * L∞-farthest-from-median fringe (see `denseFractionBounds`). */
+  readonly autoFitPercent: number;
+};

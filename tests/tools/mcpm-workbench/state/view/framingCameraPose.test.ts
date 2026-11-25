@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/field/deriveGridBox';
+import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import { defaultGridSlice } from '../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 import { framingCameraPose } from '../../../../../tools/mcpm-workbench/src/state/view/framingCameraPose';
 import { defaultViewSlice } from '../../../../../tools/mcpm-workbench/src/state/view/viewSlice';

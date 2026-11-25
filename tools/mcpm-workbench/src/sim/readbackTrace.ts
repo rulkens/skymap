@@ -1,6 +1,6 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
-import type { TraceReadback } from '../../@types/TraceReadback';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
+import type { TraceReadback } from '../../@types/sim/TraceReadback';
 import { BYTES_PER_ELEMENT } from './createGridBuffers';
 
 /**

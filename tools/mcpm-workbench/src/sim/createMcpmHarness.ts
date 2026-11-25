@@ -7,24 +7,24 @@
  * the deposit ping-pong needs two bind groups that differ only in which
  * physical buffer sits at slot 0.
  */
-import type { AgentInitMode } from '../../@types/AgentInitMode';
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
-import type { HistogramReadback } from '../../@types/HistogramReadback';
-import type { McpmHarness } from '../../@types/McpmHarness';
-import type { McpmParams } from '../../@types/McpmParams';
+import type { AgentInitMode } from '../../@types/sim/AgentInitMode';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
+import type { HistogramReadback } from '../../@types/sim/HistogramReadback';
+import type { McpmHarness } from '../../@types/sim/McpmHarness';
+import type { McpmParams } from '../../@types/sim/McpmParams';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
-import { buildOverlayCatalog } from '../field/buildOverlayCatalog';
-import { cullPointsToBox } from '../field/cullPointsToBox';
+import { buildOverlayCatalog } from '../catalog/buildOverlayCatalog';
+import { cullPointsToBox } from '../catalog/cullPointsToBox';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
-import { planGridBudget } from './planGridBudget';
+import { planGridBudget } from './memory/planGridBudget';
 import { readbackHistogram } from './readbackHistogram';
 import { readbackTrace } from './readbackTrace';
 import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';

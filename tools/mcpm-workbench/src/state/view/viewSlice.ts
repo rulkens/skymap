@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { RendererId } from '../../../@types/RendererId';
-import type { ViewSlice } from '../../../@types/ViewSlice';
+import type { RendererId } from '../../../@types/view/RendererId';
+import type { ViewSlice } from '../../../@types/view/ViewSlice';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 
 /**

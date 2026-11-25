@@ -1,12 +1,12 @@
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
-import type { McpmParams } from '../../@types/McpmParams';
-import type { UserFileProvenance } from '../../@types/UserFileProvenance';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { McpmParams } from '../../@types/sim/McpmParams';
+import type { UserFileProvenance } from '../../@types/catalog/UserFileProvenance';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
-import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
-import { buildParamsPayload } from '../state/exportParams';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
+import { buildParamsPayload } from '../params/exportParams';
 
 // Local time with a numeric (no-colon) UTC offset — "+0200", matching the
 // spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so

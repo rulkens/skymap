@@ -11,7 +11,7 @@ import { takeLeading, call, put, select, getContext } from 'typed-redux-saga';
 
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
-import { HISTOGRAM_INTERVAL_STEPS } from './HISTOGRAM_INTERVAL_STEPS';
+import { HISTOGRAM_INTERVAL_STEPS } from './histogramIntervalSteps.constant';
 import { incrementStep } from '../sim/simSlice';
 import { recordHistogramSample } from './histogramSlice';
 

@@ -1,0 +1,12 @@
+.muted {
+  color: var(--color-fg-muted);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+}
+
+.toggle {
+  composes: pillToggle from '../../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  margin: 0;
+}

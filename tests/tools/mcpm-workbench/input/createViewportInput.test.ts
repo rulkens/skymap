@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import type { ViewSlice } from '../../../../tools/mcpm-workbench/@types/ViewSlice';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import type { ViewSlice } from '../../../../tools/mcpm-workbench/@types/view/ViewSlice';
 import { createViewportInput } from '../../../../tools/mcpm-workbench/src/input/createViewportInput';
 import { gizmoArrowLengthMpc } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
 import { createWorkbenchStore } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
 import type { PreloadedState } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
-import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
+import { defaultAppState } from '../../../../tools/mcpm-workbench/src/store/defaultAppState';
 import { commitCameraPose } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 
 /**

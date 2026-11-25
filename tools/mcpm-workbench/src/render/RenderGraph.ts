@@ -9,20 +9,20 @@
  * never opened. `accumView()` is a method, not a field — the texture is rebuilt on
  * resize, so a cached view would dangle.
  */
-import type { AgentBuffers } from '../../@types/AgentBuffers';
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
-import type { GridBox } from '../../@types/GridBox';
-import { createBoxPreviewPass, type BoxPreviewPass } from './boxPreviewPass';
-import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './galaxyOverlayPass';
-import { createGalaxyOverlayPass } from './galaxyOverlayPass';
+import type { AgentBuffers } from '../../@types/sim/AgentBuffers';
+import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
+import type { GridBox } from '../../@types/grid/GridBox';
+import { createBoxPreviewPass, type BoxPreviewPass } from './passes/boxPreviewPass';
+import type { GalaxyOverlayOptions, GalaxyOverlayPass } from './passes/galaxyOverlayPass';
+import { createGalaxyOverlayPass } from './passes/galaxyOverlayPass';
 import { reducedTraceSize } from './reducedTraceSize';
-import type { SplatPass, SplatView } from './splatPass';
-import { createSplatPass } from './splatPass';
-import type { TracePass, TraceSource, TraceView } from './tracePass';
-import { createTracePass } from './tracePass';
-import type { VolpathParams, VolpathPass } from './volpathPass';
-import { createVolpathPass } from './volpathPass';
-import type { McpmCameraView } from './writeMcpmCamera';
+import type { SplatPass, SplatView } from './passes/splatPass';
+import { createSplatPass } from './passes/splatPass';
+import type { TracePass, TraceSource, TraceView } from './passes/tracePass';
+import { createTracePass } from './passes/tracePass';
+import type { VolpathParams, VolpathPass } from './passes/volpathPass';
+import { createVolpathPass } from './passes/volpathPass';
+import type { McpmCameraView } from './camera/writeMcpmCamera';
 import blitWgsl from './shaders/blit.wesl?static';
 import mcpmVertexWgsl from '../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
 import traceUpsampleWgsl from '../../../../src/services/gpu/shaders/mcpm/traceUpsample.wesl?static';

@@ -1,7 +1,7 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { ViewSlice } from '../../@types/ViewSlice';
+import type { ViewSlice } from '../../@types/view/ViewSlice';
 import { gizmoArrowLengthMpc } from '../gizmo/gizmoArrowLengthMpc';
-import { cameraViewFor } from '../render/cameraViewFor';
+import { cameraViewFor } from '../render/camera/cameraViewFor';
 
 /** Translate-arrow length for `box`, from the SAME camera formula boxPreviewPass draws
  *  against — pick and draw must agree or grabbing an arrow will miss where it's drawn. */

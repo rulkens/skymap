@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { SimSlice } from '../../../@types/SimSlice';
-import type { AgentInitMode } from '../../../@types/AgentInitMode';
-import type { McpmParams } from '../../../@types/McpmParams';
+import type { SimSlice } from '../../../@types/sim/SimSlice';
+import type { AgentInitMode } from '../../../@types/sim/AgentInitMode';
+import type { McpmParams } from '../../../@types/sim/McpmParams';
 import { AGENT_COUNT_STEP } from '../../sim/seedAgents';
 
 /** 1M–10M, in the same 100k unit `seedAgents`/`encodeStep`'s dispatch truncation enforces. */

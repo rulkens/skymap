@@ -1,6 +1,6 @@
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { McpmHarness } from '../../@types/McpmHarness';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { McpmHarness } from '../../@types/sim/McpmHarness';
 import type { RenderGraph } from './RenderGraph';
 
 /**

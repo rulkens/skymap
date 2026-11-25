@@ -1,4 +1,4 @@
-import type { McpmHarness } from '../../../@types/McpmHarness';
+import type { McpmHarness } from '../../../@types/sim/McpmHarness';
 import type { RenderResources } from '../../render/renderResources';
 
 /**

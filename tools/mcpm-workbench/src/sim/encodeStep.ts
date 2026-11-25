@@ -1,5 +1,5 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { McpmParams } from '../../@types/McpmParams';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { McpmParams } from '../../@types/sim/McpmParams';
 import { UNIFORM_BYTES } from './createGridBuffers';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Ray } from '../../../../tools/mcpm-workbench/@types/Ray';
+import type { Ray } from '../../../../tools/mcpm-workbench/@types/gizmo/Ray';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { dragRotate } from '../../../../tools/mcpm-workbench/src/gizmo/dragRotate';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';

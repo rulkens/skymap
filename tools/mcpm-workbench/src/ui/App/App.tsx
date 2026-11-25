@@ -10,12 +10,12 @@
 import { useId, useMemo, useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { createWorkbenchStore } from '../../store/createWorkbenchStore';
-import { defaultAppState } from '../../state/defaultAppState';
-import ControlsPanel from '../ControlsPanel/ControlsPanel';
-import DataPanel from '../DataPanel/DataPanel';
-import DeviceLostToast from '../DeviceLostToast/DeviceLostToast';
-import FileActions from '../FileActions/FileActions';
-import SidebarToggle from '../SidebarToggle/SidebarToggle';
+import { defaultAppState } from '../../store/defaultAppState';
+import ControlsPanel from '../sidebars/ControlsPanel/ControlsPanel';
+import DataPanel from '../sidebars/DataPanel/DataPanel';
+import DeviceLostToast from '../sim/DeviceLostToast/DeviceLostToast';
+import FileActions from '../export/FileActions/FileActions';
+import SidebarToggle from '../sidebars/SidebarToggle/SidebarToggle';
 import Viewport from '../Viewport/Viewport';
 import styles from './App.module.css';
 

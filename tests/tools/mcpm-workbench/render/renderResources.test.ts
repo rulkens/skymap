@@ -4,8 +4,8 @@ import {
   disposeScene,
 } from '../../../../tools/mcpm-workbench/src/render/renderResources';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
-import type { McpmHarness } from '../../../../tools/mcpm-workbench/@types/McpmHarness';
+import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { McpmHarness } from '../../../../tools/mcpm-workbench/@types/sim/McpmHarness';
 import type { RenderGraph } from '../../../../tools/mcpm-workbench/src/render/RenderGraph';
 
 function stubResources() {

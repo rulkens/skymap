@@ -5,5 +5,5 @@
  * the row that no longer violates.
  */
 export const TYPE_FILES_MULTI_EXPORT: ReadonlySet<string> = new Set([
-  'tools/mcpm-workbench/@types/HistogramSlice.d.ts',
+  'tools/mcpm-workbench/@types/sim/HistogramSlice.d.ts',
 ]);

@@ -1,4 +1,4 @@
-import type { TraceReadback } from '../../@types/TraceReadback';
+import type { TraceReadback } from '../../@types/sim/TraceReadback';
 import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 
 /**

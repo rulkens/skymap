@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { CameraBasis } from '../render/cameraBasis';
-import type { Ray } from '../../@types/Ray';
+import type { CameraBasis } from '../render/camera/cameraBasis';
+import type { Ray } from '../../@types/gizmo/Ray';
 
 /**
  * screenToRay — world-space pick ray through an NDC point, from the

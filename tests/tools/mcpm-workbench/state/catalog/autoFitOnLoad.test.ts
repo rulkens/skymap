@@ -8,9 +8,9 @@ import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
 import { all } from 'typed-redux-saga';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/UserCatalog';
-import { catalogBounds } from '../../../../../tools/mcpm-workbench/src/field/catalogBounds';
-import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/field/deriveGridBox';
+import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
+import { catalogBounds } from '../../../../../tools/mcpm-workbench/src/catalog/catalogBounds';
+import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import { createRenderResources } from '../../../../../tools/mcpm-workbench/src/render/renderResources';
 import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
 import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
@@ -19,7 +19,7 @@ import { fitBoxToCatalog } from '../../../../../tools/mcpm-workbench/src/state/g
 import { framingCameraPose } from '../../../../../tools/mcpm-workbench/src/state/view/framingCameraPose';
 import { watchSceneSaga } from '../../../../../tools/mcpm-workbench/src/state/scene/watchSceneSaga';
 import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
-import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
+import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/grid/autoFit/resolveAutoFitBounds';
 import { initGpu } from '../../../../../src/services/gpu/device';
 
 // A build that never finishes: each call is one build started.

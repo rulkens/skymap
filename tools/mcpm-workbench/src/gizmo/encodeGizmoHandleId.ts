@@ -1,4 +1,4 @@
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
+import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
 
 /**
  * encodeGizmoHandleId — flattens a GizmoHandleId to a single int for the boxPreviewPass GPU

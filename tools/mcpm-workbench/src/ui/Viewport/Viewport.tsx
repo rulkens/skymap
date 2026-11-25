@@ -9,26 +9,26 @@
  * below notices a rebuild landed, to reset per-scene bookkeeping.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { RendererId } from '../../../@types/RendererId';
+import type { RendererId } from '../../../@types/view/RendererId';
 import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import { deriveGridBox } from '../../field/deriveGridBox';
+import { deriveGridBox } from '../../grid/deriveGridBox';
 import { createViewportInput } from '../../input/createViewportInput';
-import { cameraViewFor } from '../../render/cameraViewFor';
+import { cameraViewFor } from '../../render/camera/cameraViewFor';
 import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpathDivisor';
 import { createRenderResources, disposeScene } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
-import { gridShapeKeyFor } from '../../state/gridShapeKeyFor';
+import { gridShapeKeyFor } from '../../state/grid/gridShapeKeyFor';
 import { incrementStep } from '../../state/sim/simSlice';
 import { setFps } from '../../state/view/viewSlice';
-import { storeWriteIsDirty } from '../../state/storeWriteIsDirty';
+import { storeWriteIsDirty } from '../../store/storeWriteIsDirty';
 import type { RegisterSagaContext, WorkbenchStore } from '../../store/types';
-import { frameNeedsRender } from '../frameNeedsRender';
-import { BOX_PREVIEW_MS } from './utils/BOX_PREVIEW_MS';
-import { canvasStyle } from './utils/canvasStyle';
-import { CONTRAST } from './utils/CONTRAST';
-import { EXPOSURE } from './utils/EXPOSURE';
-import { FPS_PUSH_INTERVAL_MS } from './utils/FPS_PUSH_INTERVAL_MS';
+import { frameNeedsRender } from './utils/frameNeedsRender';
+import { BOX_PREVIEW_MS } from './data/boxPreviewMs.constant';
+import { canvasStyle } from './data/canvasStyle.constant';
+import { CONTRAST } from './data/contrast.constant';
+import { EXPOSURE } from './data/exposure.constant';
+import { FPS_PUSH_INTERVAL_MS } from './data/fpsPushIntervalMs.constant';
 import { traceViewFor } from './utils/traceViewFor';
 
 /**

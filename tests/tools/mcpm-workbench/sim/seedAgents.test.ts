@@ -5,11 +5,11 @@
  * origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8].
  */
 import { describe, expect, it } from 'vitest';
-import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/field/cullPointsToBox';
+import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/catalog/cullPointsToBox';
 import { seedAgents, AGENT_COUNT_STEP } from '../../../../tools/mcpm-workbench/src/sim/seedAgents';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
-import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 
 const box: GridBox = {
   centerMpc: [0, 0, 0],

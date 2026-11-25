@@ -6,9 +6,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
 import { runSaga, stdChannel } from 'redux-saga';
-import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { McpmHarness } from '../../../../../tools/mcpm-workbench/@types/McpmHarness';
-import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/UserCatalog';
+import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { McpmHarness } from '../../../../../tools/mcpm-workbench/@types/sim/McpmHarness';
+import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
 import type { RenderResources } from '../../../../../tools/mcpm-workbench/src/render/renderResources';
 import {
   catalogLoaded,

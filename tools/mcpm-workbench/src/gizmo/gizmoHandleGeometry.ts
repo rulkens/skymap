@@ -1,9 +1,9 @@
-import type { GizmoHandleGeometry } from '../../@types/GizmoHandleGeometry';
-import type { GridBox } from '../../@types/GridBox';
-import type { Handle } from '../../@types/Handle';
-import type { RingHandle } from '../../@types/RingHandle';
+import type { GizmoHandleGeometry } from '../../@types/gizmo/GizmoHandleGeometry';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { Handle } from '../../@types/gizmo/Handle';
+import type { RingHandle } from '../../@types/gizmo/RingHandle';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 
 /** World-space pick tolerance, as a fraction of min(halfExtentMpc) — sized off the box itself,
  *  not screen-space-constant. Resize handles only; translate arrows rebase onto their own

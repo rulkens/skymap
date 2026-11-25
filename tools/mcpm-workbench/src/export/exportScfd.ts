@@ -1,10 +1,10 @@
-import type { GridBox } from '../../@types/GridBox';
+import type { GridBox } from '../../@types/grid/GridBox';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
 import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
-import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 
 /**
  * exportScfd — `packLogTraceVoxels` → `encodeScalarField`, the SAME packing

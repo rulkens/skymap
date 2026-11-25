@@ -1,5 +1,5 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
 
 // Single-sourced here: planGridBudget's preflight and encodeStep's uniform write
 // must agree with these byte-for-byte or the preflight greenlights an allocation

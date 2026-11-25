@@ -14,7 +14,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import type { RendererId } from './@types/RendererId';
+import type { RendererId } from './@types/view/RendererId';
 import { SETTLE_MS } from './src/render/effectiveVolpathDivisor';
 
 const VIEWPORT = { width: 1280, height: 800 };

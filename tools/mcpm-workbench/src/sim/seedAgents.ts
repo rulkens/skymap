@@ -1,9 +1,9 @@
-import type { AgentInitMode } from '../../@types/AgentInitMode';
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
+import type { AgentInitMode } from '../../@types/sim/AgentInitMode';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
+import type { GridBox } from '../../@types/grid/GridBox';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
-import { worldToVoxel } from '../field/worldToVoxel';
+import { worldToVoxel } from '../grid/box/worldToVoxel';
 
 /**
  * The fork's UI offers agents in millions; the dispatch quantum is 100k —

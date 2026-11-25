@@ -1,9 +1,9 @@
 import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
-import { voxelSizeFittingMemory } from '../../field/voxelSizeFittingMemory';
-import type { AutoFitRequest } from '../../../@types/AutoFitRequest';
-import type { GridSlice } from '../../../@types/GridSlice';
-import type { GridBox } from '../../../@types/GridBox';
-import type { GridElement } from '../../../@types/GridElement';
+import { voxelSizeFittingMemory } from '../../grid/voxelSize/voxelSizeFittingMemory';
+import type { AutoFitRequest } from '../../../@types/grid/AutoFitRequest';
+import type { GridSlice } from '../../../@types/grid/GridSlice';
+import type { GridBox } from '../../../@types/grid/GridBox';
+import type { GridElement } from '../../../@types/grid/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 

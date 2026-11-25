@@ -1,10 +1,10 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
-import type { AgentWeights } from '../../../@types/AgentWeights';
-import type { CatalogPoints } from '../../../@types/CatalogPoints';
-import type { CatalogSlice } from '../../../@types/CatalogSlice';
-import type { UserCatalog } from '../../../@types/UserCatalog';
-import type { UserCatalogLoad } from '../../../@types/UserCatalogLoad';
-import type { UserFileProvenance } from '../../../@types/UserFileProvenance';
+import type { AgentWeights } from '../../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../../@types/catalog/CatalogPoints';
+import type { CatalogSlice } from '../../../@types/catalog/CatalogSlice';
+import type { UserCatalog } from '../../../@types/catalog/UserCatalog';
+import type { UserCatalogLoad } from '../../../@types/catalog/UserCatalogLoad';
+import type { UserFileProvenance } from '../../../@types/catalog/UserFileProvenance';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 

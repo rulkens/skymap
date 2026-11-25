@@ -1,5 +1,5 @@
-import type { GridElement } from '../../@types/GridElement';
-import type { TraceReadback } from '../../@types/TraceReadback';
+import type { GridElement } from '../../@types/grid/GridElement';
+import type { TraceReadback } from '../../@types/sim/TraceReadback';
 import { writeNpy } from '../../../parsers/npyWriter';
 import { xFastestToCOrder } from './xFastestToCOrder';
 

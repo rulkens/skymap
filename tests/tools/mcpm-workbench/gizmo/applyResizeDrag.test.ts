@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import {
   applyResizeDrag,
   MIN_SIZE_MPC,

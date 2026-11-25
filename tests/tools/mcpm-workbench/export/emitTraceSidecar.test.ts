@@ -8,12 +8,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { parsePolyphyTraceSidecar } from '../../../../tools/parsers/polyphyTraceSidecar';
-import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/field/autoFitGridBox';
+import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/grid/autoFit/autoFitGridBox';
 import { emitTraceSidecar } from '../../../../tools/mcpm-workbench/src/export/emitTraceSidecar';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
-import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/McpmParams';
+import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/sim/McpmParams';
 
 const PARAMS: McpmParams = {
   senseSpreadDeg: 20,

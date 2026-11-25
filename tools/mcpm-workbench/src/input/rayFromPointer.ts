@@ -1,8 +1,8 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { Ray } from '../../@types/Ray';
-import type { ViewSlice } from '../../@types/ViewSlice';
-import { cameraBasis } from '../render/cameraBasis';
-import { cameraViewFor } from '../render/cameraViewFor';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { Ray } from '../../@types/gizmo/Ray';
+import type { ViewSlice } from '../../@types/view/ViewSlice';
+import { cameraBasis } from '../render/camera/cameraBasis';
+import { cameraViewFor } from '../render/camera/cameraViewFor';
 import { screenToRay } from '../gizmo/screenToRay';
 
 // cameraBasis only reads `.rotation` off its GridBox param — fabricated zeros elsewhere,

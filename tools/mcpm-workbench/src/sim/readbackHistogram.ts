@@ -1,4 +1,4 @@
-import type { HistogramReadback } from '../../@types/HistogramReadback';
+import type { HistogramReadback } from '../../@types/sim/HistogramReadback';
 import { HISTOGRAM_BINS } from './createGridBuffers';
 
 // histogram.wesl's `histogramCounts` buffer: HISTOGRAM_BINS fork bins/max-marker, plus one

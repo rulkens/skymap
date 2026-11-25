@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
 import { exportScfd } from '../../../../tools/mcpm-workbench/src/export/exportScfd';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 
 describe('exportScfd', () => {
   it('writes the box rotation into the header, not identity', () => {

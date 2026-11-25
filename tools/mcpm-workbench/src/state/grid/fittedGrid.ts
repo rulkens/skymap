@@ -1,6 +1,6 @@
-import type { GridSlice } from '../../../@types/GridSlice';
-import type { SimLaneCounts } from '../../../@types/SimLaneCounts';
-import type { UserCatalogLoad } from '../../../@types/UserCatalogLoad';
+import type { GridSlice } from '../../../@types/grid/GridSlice';
+import type { SimLaneCounts } from '../../../@types/sim/SimLaneCounts';
+import type { UserCatalogLoad } from '../../../@types/catalog/UserCatalogLoad';
 import { fitBoxToCatalog, gridSlice } from './gridSlice';
 
 /**

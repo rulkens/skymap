@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { cameraBasis } from '../../../../tools/mcpm-workbench/src/render/cameraBasis';
+import { cameraBasis } from '../../../../tools/mcpm-workbench/src/render/camera/cameraBasis';
 import { screenToRay } from '../../../../tools/mcpm-workbench/src/gizmo/screenToRay';
 import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';

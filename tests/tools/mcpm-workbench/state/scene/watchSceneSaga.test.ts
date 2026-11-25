@@ -13,8 +13,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
-import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/GridBox';
-import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/gridShapeOf';
+import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/grid/gridShapeOf';
 import {
   catalogLoaded,
   setWeightMode,

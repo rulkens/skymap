@@ -21,10 +21,10 @@ import {
 
 import { initGpu } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import { deriveAgentWeights } from '../../field/deriveAgentWeights';
-import { deriveGridBox } from '../../field/deriveGridBox';
+import { deriveAgentWeights } from '../../catalog/weights/deriveAgentWeights';
+import { deriveGridBox } from '../../grid/deriveGridBox';
 import { disposeScene } from '../../render/renderResources';
-import { bufferLimitBytes } from '../../sim/bufferLimitBytes';
+import { bufferLimitBytes } from '../../sim/memory/bufferLimitBytes';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
@@ -48,7 +48,7 @@ import { resetHistogram } from '../histogram/histogramSlice';
 import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../sim/simSlice';
 import { setPreviewPacked } from '../view/viewSlice';
 import { acceptBuiltHarness } from './acceptBuiltHarness';
-import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
+import { REBUILD_DEBOUNCE_MS } from './rebuildDebounceMs.constant';
 import { watchDeviceLoss } from './watchDeviceLoss';
 
 // Same shape as Viewport's old acquireGpu — the propagate kernel's compute

@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { GridBox } from '../../@types/GridBox';
+import type { GridBox } from '../../@types/grid/GridBox';
 
 /** applyTranslateDrag — new `centerMpc = box.centerMpc + axisDir * deltaMpc` (spec §5's "Drag
  *  math"). Pure and rotation-agnostic: `axisDir` carries whatever axis F1 (UNIT_AXES) or F2

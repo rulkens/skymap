@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { HistogramSlice } from '../../../@types/HistogramSlice';
+import type { HistogramSlice } from '../../../@types/sim/HistogramSlice';
 import { HISTOGRAM_BINS } from '../../sim/createGridBuffers';
 import { meanLogTraceAtPoints } from '../../sim/meanLogTraceAtPoints';
 

@@ -8,8 +8,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
-import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/UserCatalog';
+import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
 
 const userPoints: CatalogPoints = {
   positions: new Float32Array([1, 2, 3]),

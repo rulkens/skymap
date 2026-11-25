@@ -1,6 +1,6 @@
-import type { GridBox } from '../../../@types/GridBox';
-import type { ViewSlice } from '../../../@types/ViewSlice';
-import { deriveGridBox } from '../../field/deriveGridBox';
+import type { GridBox } from '../../../@types/grid/GridBox';
+import type { ViewSlice } from '../../../@types/view/ViewSlice';
+import { deriveGridBox } from '../../grid/deriveGridBox';
 import { defaultGridSlice } from '../grid/gridSlice';
 import { defaultViewSlice } from './viewSlice';
 

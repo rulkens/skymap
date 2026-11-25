@@ -1,0 +1,11 @@
+/* The sidebars' form-control chrome, shared by the padding field and every
+   dropdown so they are one height and one look in any row. One line of content
+   box: a native select is border-box with its own inner padding, an input is not. */
+.control {
+  composes: control from '../../../../../src/components/common/shared.module.css';
+  box-sizing: content-box;
+  block-size: 1lh;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+}

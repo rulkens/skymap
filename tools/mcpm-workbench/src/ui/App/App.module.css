@@ -1,15 +1,15 @@
 /* The container the sidebars' narrow layout queries (sidebar.module.css). */
 .root {
-  composes: frame from '../sidebar.module.css';
+  composes: frame from '../sidebars/sidebar.module.css';
   position: fixed;
   inset: 0;
   container: workbench / inline-size;
 }
 
 .sidebars {
-  composes: pair from '../sidebar.module.css';
+  composes: pair from '../sidebars/sidebar.module.css';
 }
 
 .column {
-  composes: column from '../sidebar.module.css';
+  composes: column from '../sidebars/sidebar.module.css';
 }
