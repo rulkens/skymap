@@ -9,7 +9,6 @@ export type SurfaceEffectInputs = {
   readonly nightLights?: {
     /** The whole-globe night texture, for every leaf with no night tile. */
     readonly view: GPUTextureView;
-    readonly atlasView: GPUTextureView;
   };
   readonly cloudShadows?: {
     readonly view: GPUTextureView;

@@ -440,8 +440,8 @@ describe('surfaceTilesPass', () => {
     const [pass, args] = tileDraw.mock.calls[0]!;
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
-    expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
-    expect(args.heightAtlasView).toBe(HEIGHT_ATLAS_VIEW);
+    expect(args.atlasViews.albedo).toBe(ATLAS_VIEW);
+    expect(args.atlasViews.height).toBe(HEIGHT_ATLAS_VIEW);
     // No rebase: the tile vp is the slab's own eye-relative f32 `view.vp`.
     expect(args.vp).toBe(view.vp);
     expect(args.radiusM).toBe(SEEDED_EARTH.surface.datumRadiusM);

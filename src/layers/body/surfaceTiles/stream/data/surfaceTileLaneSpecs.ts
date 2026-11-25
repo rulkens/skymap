@@ -25,6 +25,8 @@ const fetchImageryPayload: SurfaceTileLaneSpec['fetch'] = async (tile, source) =
 export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>> = {
   albedo: {
     label: 'surface-tiles-albedo',
+    role: 'gates-cut',
+    binding: 5,
     atlasSide: SURFACE_TILE_ATLAS_SIDE,
     slotSide: SURFACE_TILE_PX,
     format: 'rgba8unorm-srgb',
@@ -32,6 +34,8 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
   },
   height: {
     label: 'surface-tiles-height',
+    role: 'gates-cut',
+    binding: 2,
     atlasSide: HEIGHT_TILE_ATLAS_SIDE,
     slotSide: HEIGHT_POSTS_PER_TILE,
     // Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`),
@@ -49,6 +53,8 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
   },
   night: {
     label: 'surface-tiles-night',
+    role: 'standalone',
+    binding: 10,
     atlasSide: NIGHT_TILE_ATLAS_SIDE,
     slotSide: SURFACE_TILE_PX,
     format: 'rgba8unorm-srgb',

@@ -32,6 +32,8 @@ import {
 import { HEIGHT_ATLAS_SLOTS_PER_ROW } from '../../format/data/surfaceTileParams';
 import { surfaceTileFadeWeight } from '../subsystems/surfaceTileFadeWeight';
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
+import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
+import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
@@ -100,6 +102,10 @@ export function createSurfaceTileRenderer(
     },
     { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
   ];
+  const atlasBindings = new Set(
+    SURFACE_TILE_PRODUCTS.map((p) => SURFACE_TILE_LANE_SPECS[p].binding),
+  );
+  const sharedBindings = new Set(sharedLayoutEntries.map((entry) => entry.binding));
   // No binding 8 (whole-globe normal map): patches take their normal from the
   // height field, and compositing both would shade the same relief twice.
   const fragmentLayoutEntries: Readonly<Record<number, GPUBindGroupLayoutEntry>> = {
@@ -209,8 +215,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
-      surfaceAtlasView,
-      heightAtlasView,
+      atlasViews,
     } = args;
     const tileCount = tiles.length;
     if (tileCount === 0) return;
@@ -315,12 +320,16 @@ export function createSurfaceTileRenderer(
     // Rebuilt every draw: the storage buffer may have grown and views arrive per call.
     const fragmentResources: Readonly<Record<number, GPUBindingResource | undefined>> = {
       3: baseSampler,
-      5: surfaceAtlasView,
       6: materialMap?.view,
       7: nightLights?.view,
       9: cloudShadows?.view,
-      10: nightLights?.atlasView,
     };
+    // Each product's atlas goes to its lane row's binding, where the pipeline declares one
+    // (an extra entry is a WebGPU validation error).
+    const atlasEntries = SURFACE_TILE_PRODUCTS.map((product) => ({
+      binding: SURFACE_TILE_LANE_SPECS[product].binding,
+      resource: atlasViews[product],
+    })).filter(({ binding }) => sharedBindings.has(binding) || variant.bindings.includes(binding));
     const bindGroup = device.createBindGroup({
       label: `surface-tile-bg[${key}]`,
       layout: variant.bindGroupLayout,
@@ -330,12 +339,11 @@ export function createSurfaceTileRenderer(
           binding: 1,
           resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
-        { binding: 2, resource: heightAtlasView },
         { binding: 4, resource: atlasSampler },
-        ...variant.bindings.map((binding) => ({
-          binding,
-          resource: fragmentResources[binding]!,
-        })),
+        ...atlasEntries,
+        ...variant.bindings
+          .filter((binding) => !atlasBindings.has(binding))
+          .map((binding) => ({ binding, resource: fragmentResources[binding]! })),
       ],
     });
 

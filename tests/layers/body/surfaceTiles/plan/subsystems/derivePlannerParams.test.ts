@@ -75,4 +75,27 @@ describe('derivePlannerParams', () => {
     expect(derivePlannerParams(manifest(), BASE_LEVEL - 1)?.bands[0]?.min).toBe(BASE_LEVEL);
     expect(derivePlannerParams(manifest(), BASE_LEVEL + 2)).toBeNull();
   });
+
+  it('a standalone product requests only in bands that build it', () => {
+    // Bug caught: night requested over a band with no night bake (a 404 per leaf).
+    const noNight = { ...BAND, min: 3, max: 6 };
+    const withNight = {
+      ...BAND,
+      min: 8,
+      max: 13,
+      builtFrom: { albedo: PROVENANCE, height: PROVENANCE, night: PROVENANCE },
+    };
+    const params = derivePlannerParams(manifest({ bands: [noNight, withNight] }), BASE_LEVEL);
+    expect(params?.requestBands.albedo).toHaveLength(2);
+    expect(params?.requestBands.night).toEqual([expect.objectContaining({ max: 13 })]);
+  });
+
+  it('gates-cut products request only where all gating products are built', () => {
+    // Bug caught: albedo requested where height is unbaked, so the leaf never gets its pair.
+    const albedoOnly = { ...BAND, min: 3, max: 6, builtFrom: { albedo: PROVENANCE } };
+    const both = { ...BAND, min: 8, max: 13 };
+    const params = derivePlannerParams(manifest({ bands: [albedoOnly, both] }), BASE_LEVEL);
+    expect(params?.requestBands.albedo).toEqual([expect.objectContaining({ max: 13 })]);
+    expect(params?.requestBands.height).toBe(params?.requestBands.albedo);
+  });
 });

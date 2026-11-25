@@ -68,9 +68,6 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         ...(has('nightLights') && {
           nightLights: {
             view: earthRenderer.getMapView('night'),
-            // No night lane leaves every rect zero-scale, so the stand-in is bound but never read.
-            atlasView:
-              surfaceTiles.stream.getAtlasView('night') ?? earthRenderer.getMapView('night'),
           },
         }),
         ...(has('cloudShadows') && {
@@ -89,6 +86,13 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         }),
       };
 
+      // Albedo and height are guaranteed by `enabled`. A product with no lane leaves every
+      // rect zero-scale, so its stand-in is bound but never read.
+      const atlasViews = {
+        albedo: surfaceTiles.stream.getAtlasView('albedo')!,
+        height: surfaceTiles.stream.getAtlasView('height')!,
+        night: surfaceTiles.stream.getAtlasView('night') ?? earthRenderer.getMapView('night'),
+      };
       runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,
         // Already eye-relative (body-m rows build vp about the eye): no rebase.
@@ -107,8 +111,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         debugLodOverlay: state.settings.surfaceTileDebug.overlays['surface-lod-overlay'],
         noDisplacement: state.settings.surfaceTileDebug.overlays['terrain-no-displacement'],
         noSkirts: state.settings.surfaceTileDebug.overlays['terrain-no-skirts'],
-        surfaceAtlasView: surfaceTiles.stream.getAtlasView('albedo')!,
-        heightAtlasView: surfaceTiles.stream.getAtlasView('height')!,
+        atlasViews,
       });
     },
   };

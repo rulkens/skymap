@@ -17,4 +17,6 @@ export type SurfaceTileLane = {
   /** key -> z, for the debug stats' per-level pending counts; cleared where the
    *  fetch resolves or its slot is evicted. */
   readonly pendingLevelOf: Map<string, number>;
+  /** The one-time warning for an 'empty' read on a gates-cut lane has been logged. */
+  warnedEmpty: boolean;
 };

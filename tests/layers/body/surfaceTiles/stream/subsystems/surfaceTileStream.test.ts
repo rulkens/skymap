@@ -33,6 +33,7 @@ import { IDLE_SURFACE_TILE_PLAN } from '../../../../../../src/layers/body/surfac
 import { fetchSurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile';
+import { SURFACE_TILE_LANE_SPECS } from '../../../../../../src/layers/body/surfaceTiles/stream/data/surfaceTileLaneSpecs';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { derivePlannerParams } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTiles/format/utils/isSurfaceTileBodyId';
@@ -43,6 +44,7 @@ import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
+  NIGHT_TILE_ATLAS_SIDE,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import {
   HEIGHT_GRID_BYTES,
@@ -312,6 +314,46 @@ describe('surfaceTileStream lanes', () => {
     expect(stream.getAtlasView('albedo')).not.toBeNull();
     expect(stream.getAtlasView('night')).toBeNull();
   });
+
+  it('a lane never allocates its reserved slots', async () => {
+    // Bug caught: a reserved slot handed to a tile, which the reserver then overwrites.
+    const spec = SURFACE_TILE_LANE_SPECS.albedo as { reservedSlots?: number };
+    spec.reservedSlots = 1;
+    try {
+      vi.mocked(fetchSurfaceTileBitmap).mockImplementation(async () => bitmap());
+      const stream = await streamWithManifest();
+      const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
+      const tiles = Array.from({ length: SLOT_COUNT }, (_, i) =>
+        albedo(i % side, Math.floor(i / side)),
+      );
+      stream.apply(requesting(tiles, ENGAGE_EARTH));
+      await tick();
+      const slots = tiles.map((tile) => stream.residency.residentSlot(tile)?.slot);
+      expect(slots).not.toContain(0);
+      expect(slots.filter((slot) => slot !== undefined)).toHaveLength(SLOT_COUNT - 1);
+    } finally {
+      delete spec.reservedSlots;
+    }
+  });
+
+  it("an 'empty' read on a gates-cut lane is a failure, warned once per lane", async () => {
+    // Bug caught: an empty albedo tile never resident and never failed, so
+    // refinement under it waits on it forever.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue('empty');
+      const stream = await streamWithManifest();
+      stream.apply(requesting([albedo(0), albedo(1)], ENGAGE_EARTH));
+      await tick();
+      for (const x of [0, 1]) {
+        expect(stream.residency.hasFailed(albedo(x))).toBe(true);
+        expect(stream.residency.isEmpty(albedo(x))).toBe(false);
+      }
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('surfaceTileStream residency', () => {
@@ -353,28 +395,47 @@ describe('surfaceTileStream residency', () => {
 
   it('names a key read empty as empty: not in flight, failed or resident; kept past eviction', async () => {
     // Bug caught: an empty read memoised as failed, uploaded as a bitmap, or
-    // forgotten when LRU reclaims its slot and so fetched again.
+    // forgotten when LRU reclaims its slot and so fetched again. Night is the
+    // standalone lane: an empty read on a gating lane is a failure.
+    const night = (x: number, y = 0): SurfaceTileId => ({
+      product: 'night',
+      z: MIN_TILE_LEVEL,
+      x,
+      y,
+    });
+    const nightParams = derivePlannerParams(
+      manifestOf(PREFIX, ['albedo', 'height', 'night']),
+      BASE_LEVEL,
+    );
+    const request = (tiles: readonly SurfaceTileId[], verdict: SurfaceTilePlan['verdict']) =>
+      plan({
+        verdict,
+        params: nightParams,
+        requests: tiles.map((tile, i) => ({ tile, screenPx: 1000 - i })),
+      });
     const stream = await streamWithManifest();
     vi.mocked(fetchSurfaceTileBitmap).mockResolvedValueOnce('empty');
-    stream.apply(requesting([albedo(0)], ENGAGE_EARTH));
+    stream.apply(request([night(0)], ENGAGE_EARTH));
     await tick();
 
-    expect(stream.residency.isEmpty(albedo(0))).toBe(true);
-    expect(stream.residency.isInFlight(albedo(0))).toBe(false);
-    expect(stream.residency.hasFailed(albedo(0))).toBe(false);
-    expect(stream.residency.residentSlot(albedo(0))).toBeNull();
+    expect(stream.residency.isEmpty(night(0))).toBe(true);
+    expect(stream.residency.isInFlight(night(0))).toBe(false);
+    expect(stream.residency.hasFailed(night(0))).toBe(false);
+    expect(stream.residency.residentSlot(night(0))).toBeNull();
 
     vi.mocked(fetchSurfaceTileBitmap).mockImplementation(async () => bitmap());
-    const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
+    const nightSlots = (NIGHT_TILE_ATLAS_SIDE / SURFACE_TILE_PX) ** 2;
+    const side = NIGHT_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
     stream.apply(
-      requesting(
-        Array.from({ length: SLOT_COUNT }, (_, i) => albedo((i % side) + 1, Math.floor(i / side))),
+      request(
+        Array.from({ length: nightSlots }, (_, i) => night((i % side) + 1, Math.floor(i / side))),
+        'keep',
       ),
     );
     await tick();
     // A full atlas's worth of new keys all allocated: the empty key's slot was reclaimed.
     expect(stream.debugStats().droppedAllocations).toBe(0);
-    expect(stream.residency.isEmpty(albedo(0))).toBe(true);
+    expect(stream.residency.isEmpty(night(0))).toBe(true);
   });
 
   it('lands a height tile in the height atlas, resolved against its own slot geometry', async () => {

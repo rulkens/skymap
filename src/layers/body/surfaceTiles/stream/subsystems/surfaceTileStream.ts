@@ -119,7 +119,26 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       resident.delete(key);
       pendingLevelOf.delete(key);
     });
-    return { stream, resident, pendingLevelOf, empty };
+    return { stream, resident, pendingLevelOf, empty, warnedEmpty: false };
+  }
+
+  /** A gating product's 'empty' read becomes a failure: an empty albedo or height tile
+   *  would never be resident and would stall refinement under it. Warned once per lane. */
+  async function fetchForLane(
+    tile: SurfaceTileId,
+    lane: SurfaceTileLane,
+    source: SurfaceTileSource,
+  ): Promise<SurfaceTilePayload | 'empty' | null> {
+    const spec = SURFACE_TILE_LANE_SPECS[tile.product];
+    const payload = await spec.fetch(tile, source);
+    if (payload !== 'empty' || spec.role === 'standalone') return payload;
+    if (!lane.warnedEmpty) {
+      lane.warnedEmpty = true;
+      console.warn(
+        `[surfaceTileStream] ${spec.label}: empty tile on a gates-cut lane, treated as failed`,
+      );
+    }
+    return null;
   }
 
   /** A lane for each product the plan requests over (`derivePlannerParams`
@@ -186,7 +205,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       lane.stream.enqueueFetch({
         key,
         priority: screenPx,
-        fetcher: () => SURFACE_TILE_LANE_SPECS[tile.product].fetch(tile, source),
+        fetcher: () => fetchForLane(tile, lane, source),
         onResult: (payload) => {
           lane.pendingLevelOf.delete(key);
           if (payload === null) return;

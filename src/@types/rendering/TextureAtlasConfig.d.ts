@@ -12,4 +12,6 @@ export type TextureAtlasConfig = {
    * consumer's texture. The texture view derives `${label}-view` from this.
    */
   readonly label: string;
+  /** Slots `[0, n)` are never handed to a key (default 0): a consumer keeps them for itself. */
+  readonly reservedSlots?: number;
 };
