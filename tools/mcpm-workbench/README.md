@@ -30,7 +30,9 @@ a row in the Data list, switched on, with every built-in catalog switched off;
 after that they toggle freely and can run together.
 
 - **CSV, `x, y, z, weight`**: positions in Mpc, equatorial cartesian, observer
-  at the origin. The native Polyphorm build reads the same file.
+  at the origin. The native Polyphorm build reads the same file, and is more
+  lenient: it splits each line on any separator, so a file that mixes
+  separators loads there and is refused here.
 - **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshifts become
   line-of-sight comoving distances under flat ΛCDM with your H0 and Ωm, the same
   conversion Skymap's catalogs use; the dialog starts at the app's values, H0 =
