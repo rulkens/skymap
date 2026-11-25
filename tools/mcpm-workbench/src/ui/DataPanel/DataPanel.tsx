@@ -12,6 +12,7 @@ import skymapIconUrl from '../../../../../public/favicon.svg';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import PlusIcon from '../../../../../src/components/icons/PlusIcon/PlusIcon';
 import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
+import { deriveGridBox } from '../../field/deriveGridBox';
 import {
   setCatalogSources,
   setCatalogTier,
@@ -30,9 +31,12 @@ import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
 import PanelRow from '../PanelRow/PanelRow';
 import PanelSection from '../PanelSection/PanelSection';
 import StatsReadout from '../StatsReadout/StatsReadout';
+import StatsSummary from '../StatsSummary/StatsSummary';
 import TierRow from '../TierRow/TierRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
+import { formatDataSummary } from './utils/formatDataSummary';
+import { formatSelectionSummary } from './utils/formatSelectionSummary';
 import styles from './DataPanel.module.css';
 
 export type DataPanelProps = {
@@ -43,6 +47,7 @@ export type DataPanelProps = {
 function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const dispatch = useAppDispatch();
   const catalog = useAppSelector((s) => s.catalog);
+  const grid = useAppSelector((s) => s.grid);
   const [dataOpen, setDataOpen] = useState(true);
   const [selectionOpen, setSelectionOpen] = useState(true);
   const [statsOpen, setStatsOpen] = useState(true);
@@ -64,6 +69,10 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             icon={<DatabaseIcon size={12} />}
             open={dataOpen}
             onToggle={() => setDataOpen((v) => !v)}
+            summary={formatDataSummary(
+              catalog.sources.length,
+              catalog.userCatalog !== null && catalog.userCatalogOn,
+            )}
           >
             <UserCatalogRow />
             <PanelRow>
@@ -93,6 +102,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             icon={<MarqueeIcon size={12} />}
             open={selectionOpen}
             onToggle={() => setSelectionOpen((v) => !v)}
+            summary={formatSelectionSummary(deriveGridBox(grid).sizeMpc)}
           >
             <GridBoxPanel />
           </PanelSection>
@@ -104,6 +114,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             icon={<GaugeIcon size={12} />}
             open={statsOpen}
             onToggle={() => setStatsOpen((v) => !v)}
+            summary={<StatsSummary />}
           >
             <StatsReadout />
           </PanelSection>

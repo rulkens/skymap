@@ -43,10 +43,12 @@
 
 /* The icon on the content edge, the name after it, one colour for both:
    brighter than the shared section header's dim, so an off section's ghost
-   label reads as off. */
+   label reads as off. The last track takes the folded summary, so the icon and
+   title sit where they are with or without it. */
 .label {
   grid-column: content-start / -1;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -59,6 +61,22 @@
 
 .title {
   min-width: 0;
+  text-box: trim-both cap alphabetic;
+}
+
+/* The dimmer tokens fail 4.5:1 on the panel; the smaller size, regular weight and
+   lower case set it back from the title instead. Clipped along the line only, so
+   the cap-trimmed box keeps its descenders. */
+.summary {
+  overflow-x: clip;
+  font-size: var(--font-size-sm);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-box: trim-both cap alphabetic;
 }
 
