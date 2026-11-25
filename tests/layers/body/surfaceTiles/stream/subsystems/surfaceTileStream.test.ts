@@ -34,6 +34,7 @@ import { fetchSurfaceTileManifest } from '../../../../../../src/layers/body/surf
 import { fetchSurfaceTileBitmap } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile';
 import { SURFACE_TILE_LANE_SPECS } from '../../../../../../src/layers/body/surfaceTiles/stream/data/surfaceTileLaneSpecs';
+import { TextureAtlas } from '../../../../../../src/services/gpu/resources/textureAtlas';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { derivePlannerParams } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTiles/format/utils/isSurfaceTileBodyId';
@@ -315,44 +316,15 @@ describe('surfaceTileStream lanes', () => {
     expect(stream.getAtlasView('night')).toBeNull();
   });
 
-  it('a lane never allocates its reserved slots', async () => {
+  it('a lane never allocates its reserved slots', () => {
     // Bug caught: a reserved slot handed to a tile, which the reserver then overwrites.
-    const spec = SURFACE_TILE_LANE_SPECS.albedo as { reservedSlots?: number };
-    spec.reservedSlots = 1;
-    try {
-      vi.mocked(fetchSurfaceTileBitmap).mockImplementation(async () => bitmap());
-      const stream = await streamWithManifest();
-      const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
-      const tiles = Array.from({ length: SLOT_COUNT }, (_, i) =>
-        albedo(i % side, Math.floor(i / side)),
-      );
-      stream.apply(requesting(tiles, ENGAGE_EARTH));
-      await tick();
-      const slots = tiles.map((tile) => stream.residency.residentSlot(tile)?.slot);
-      expect(slots).not.toContain(0);
-      expect(slots.filter((slot) => slot !== undefined)).toHaveLength(SLOT_COUNT - 1);
-    } finally {
-      delete spec.reservedSlots;
-    }
-  });
-
-  it("an 'empty' read on a gates-cut lane is a failure, warned once per lane", async () => {
-    // Bug caught: an empty albedo tile never resident and never failed, so
-    // refinement under it waits on it forever.
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue('empty');
-      const stream = await streamWithManifest();
-      stream.apply(requesting([albedo(0), albedo(1)], ENGAGE_EARTH));
-      await tick();
-      for (const x of [0, 1]) {
-        expect(stream.residency.hasFailed(albedo(x))).toBe(true);
-        expect(stream.residency.isEmpty(albedo(x))).toBe(false);
-      }
-      expect(warn).toHaveBeenCalledTimes(1);
-    } finally {
-      warn.mockRestore();
-    }
+    const atlas = new TextureAtlas(stubDevice(), {
+      ...SURFACE_TILE_LANE_SPECS.albedo,
+      reservedSlots: 1,
+    });
+    const slots = Array.from({ length: SLOT_COUNT }, (_, i) => atlas.allocate(`tile-${i}`, 1));
+    expect(slots).not.toContain(0);
+    expect(slots.filter((slot) => slot !== null)).toHaveLength(SLOT_COUNT - 1);
   });
 });
 

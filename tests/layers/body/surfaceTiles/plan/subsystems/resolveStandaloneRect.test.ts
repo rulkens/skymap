@@ -18,6 +18,7 @@ const rectOf = (origin: [number, number], scale: [number, number]) => ({
   atlasUvOrigin: origin,
   atlasUvScale: scale,
   readyAtMs: 0,
+  subtreeRangeM: null,
 });
 
 function resolve(

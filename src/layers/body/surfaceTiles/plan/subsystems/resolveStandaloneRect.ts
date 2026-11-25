@@ -1,7 +1,8 @@
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
-import type { ResidentLookupResult } from '../@types/ResidentLookupResult';
+import type { ResidentSlot } from '../../stream/@types/ResidentSlot';
 import type { StandaloneProduct } from '../@types/StandaloneProduct';
 import type { StandaloneRect } from '../@types/StandaloneRect';
+import { deepestResidentAncestor } from './deepestResidentAncestor';
 import { flattenAtlasRect } from './flattenAtlasRect';
 
 /**
@@ -20,19 +21,19 @@ export function resolveStandaloneRect(input: {
   /** The deepest max of the product's request bands; below 0 means it has none. */
   readonly maxLevel: number;
   readonly baseLevel: number;
-  readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
+  readonly residentSlot: (tile: SurfaceTileId) => ResidentSlot | null;
   readonly isEmpty: (tile: SurfaceTileId) => boolean;
 }): StandaloneRect {
   const { product, z, x, y, maxLevel, baseLevel, residentSlot, isEmpty } = input;
   if (maxLevel < 0) return null;
   const top = Math.min(z, maxLevel);
   const startDelta = z - top;
-  for (let climbed = 0; top - climbed > baseLevel; climbed++) {
-    const shift = startDelta + climbed;
-    const tile: SurfaceTileId = { product, z: top - climbed, x: x >> shift, y: y >> shift };
-    if (isEmpty(tile)) return 'empty';
-    const found = residentSlot(tile);
-    if (found !== null) return flattenAtlasRect(found, shift, x, y);
-  }
-  return null;
+  const hit = deepestResidentAncestor(
+    { product, z: top, x: x >> startDelta, y: y >> startDelta },
+    baseLevel,
+    (tile): ResidentSlot | 'empty' | null => (isEmpty(tile) ? 'empty' : residentSlot(tile)),
+  );
+  if (hit === null) return null;
+  if (hit.found === 'empty') return 'empty';
+  return flattenAtlasRect(hit.found, startDelta + hit.levelDelta, x, y);
 }

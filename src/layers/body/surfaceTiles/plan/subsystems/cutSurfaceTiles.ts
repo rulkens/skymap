@@ -13,8 +13,9 @@ import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from '../../patch/subsystems/surfacePatchAnchor';
-import type { ResidentLookupResult } from '../@types/ResidentLookupResult';
+import type { ResidentSlot } from '../../stream/@types/ResidentSlot';
 import type { StandaloneProduct } from '../@types/StandaloneProduct';
+import type { StandaloneRect } from '../@types/StandaloneRect';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { flattenAtlasRect } from './flattenAtlasRect';
 import { resolveStandaloneRect } from './resolveStandaloneRect';
@@ -69,7 +70,7 @@ export function cutSurfaceTiles(input: {
    *  the full `SurfaceTileId` (carries `product`, unlike `SurfaceCutTile.id`)
    *  because it must key the same `surfaceTilePath(tile, prefix)` lookup
    *  `surfaceTileStream` uses for its resident maps. */
-  readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
+  readonly residentSlot: (tile: SurfaceTileId) => ResidentSlot | null;
   /** Whether a tile was read as stored-empty; live, `SurfaceTileResidency.isEmpty`. */
   readonly isEmpty: (tile: SurfaceTileId) => boolean;
 }): {
@@ -329,21 +330,20 @@ export function cutSurfaceTiles(input: {
 
   /** Each standalone product's share of this leaf: none of them gates the cut. */
   function standaloneOf(z: number, x: number, y: number): SurfaceCutTile['standalone'] {
-    return Object.fromEntries(
-      STANDALONE_PRODUCTS.map((product) => [
+    const rects: Partial<Record<StandaloneProduct, StandaloneRect>> = {};
+    for (const product of STANDALONE_PRODUCTS) {
+      rects[product] = resolveStandaloneRect({
         product,
-        resolveStandaloneRect({
-          product,
-          z,
-          x,
-          y,
-          maxLevel: standaloneMaxLevel[product],
-          baseLevel,
-          residentSlot,
-          isEmpty,
-        }),
-      ]),
-    ) as SurfaceCutTile['standalone'];
+        z,
+        x,
+        y,
+        maxLevel: standaloneMaxLevel[product],
+        baseLevel,
+        residentSlot,
+        isEmpty,
+      });
+    }
+    return rects as SurfaceCutTile['standalone'];
   }
 
   // Explicit stack, not recursion: allocation-free in a per-frame path. Five
@@ -473,7 +473,7 @@ function resolveCutResidency(input: {
   readonly x: number;
   readonly y: number;
   readonly baseLevel: number;
-  readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
+  readonly residentSlot: (tile: SurfaceTileId) => ResidentSlot | null;
 }): ResolvedTileResidency | null {
   const { z, x, y, baseLevel, residentSlot } = input;
 

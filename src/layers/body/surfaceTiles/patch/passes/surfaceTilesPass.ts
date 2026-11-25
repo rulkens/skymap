@@ -88,10 +88,12 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
 
       // Albedo and height are guaranteed by `enabled`. A product with no lane leaves every
       // rect zero-scale, so its stand-in is bound but never read.
+      const albedoView = surfaceTiles.stream.getAtlasView('albedo')!;
       const atlasViews = {
-        albedo: surfaceTiles.stream.getAtlasView('albedo')!,
+        albedo: albedoView,
         height: surfaceTiles.stream.getAtlasView('height')!,
-        night: surfaceTiles.stream.getAtlasView('night') ?? earthRenderer.getMapView('night'),
+        night:
+          surfaceTiles.stream.getAtlasView('night') ?? effectInputs.nightLights?.view ?? albedoView,
       };
       runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,

@@ -1,10 +1,10 @@
-import type { ResidentLookupResult } from '../@types/ResidentLookupResult';
+import type { ResidentSlot } from '../../stream/@types/ResidentSlot';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 
 /** An ancestor's own atlas rect, narrowed to leaf `(x, y)`'s share of it —
  *  the low `levelDelta` bits of each, in the row order the header derives. */
 export function flattenAtlasRect(
-  found: NonNullable<ResidentLookupResult>,
+  found: ResidentSlot,
   levelDelta: number,
   x: number,
   y: number,

@@ -30,9 +30,8 @@
 //   - No AMBIENT. 'pbrDirect' is the DIRECT (sun-lit) term only; the caller adds
 //     the shared 'AMBIENT' floor from 'lib/bodyLighting.wesl' separately, and
 //     scales this result by the body's 'sunIrradiance'. Keeping ambient out of
-//     here means the one ambient constant stays the single source of truth (the
-//     same discipline 'bodyLighting.wesl' documents), and the night hemisphere's
-//     lift is decided in one place for every body.
+//     here keeps the one ambient constant the single source of truth, so the night
+//     hemisphere's lift is decided in one place for every body.
 //   - No multi-scatter energy compensation and no metal/dielectric blend: 'baseReflectance'
 //     arrives already blended from the caller. Image-based lighting is the
 //     separate 'envSplitSum' below, fed a caller-owned probe and LUT.

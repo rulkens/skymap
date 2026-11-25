@@ -1,11 +1,6 @@
-// lib/bodyLighting.wesl — the Lambert-plus-ambient shade of the flat planet
-// ('bodies/planet/fragment.wesl', through 'litShade') and of 'texturedBody',
-// which takes the two halves apart so 'composeSurfaceLight' can occlude each.
-//
-// 'AMBIENT' lifts the night hemisphere just off black so the silhouette never
-// dissolves at the terminator; kept low so the night side still reads as night.
-// Both vectors are in the body's local frame ('sunDirLocal' is CPU-rotated,
-// 'utils/camera/bodyCompose/sunDirLocal.ts'), so an axial tilt needs no maths here.
+// lib/bodyLighting.wesl — Lambert-plus-ambient shade for the flat planet ('litShade') and
+// 'texturedBody' (which takes the halves apart for 'composeSurfaceLight'). Vectors are in the
+// body's local frame; 'AMBIENT' lifts the night side just off black.
 
 const AMBIENT: f32 = 0.08;
 

@@ -86,17 +86,17 @@ Rules:
 - Albedo, height and night never produce `'empty'` (no zero-byte files exist), so nothing visible
   changes.
 
-- [ ] Tests in `createArchiveTileSource.test.ts`: `zero-length entry reads empty without fetching`
+- [x] Tests in `createArchiveTileSource.test.ts`: `zero-length entry reads empty without fetching`
       (assert `{ kind: 'empty' }` and zero `fetch` calls), `key absent from the index reads missing`,
       `a 404 reads failed`, `an aborted fetch reads failed`, `a short body reads failed`. Existing
       byte-read tests move to `{ kind: 'bytes' }`.
-- [ ] Test in `packSurfaceTileLevels.test.ts`: `a zero-byte tile file packs as a zero-length entry`
+- [x] Test in `packSurfaceTileLevels.test.ts`: `a zero-byte tile file packs as a zero-length entry`
       (the packer already sizes by `statSync` at `packSurfaceTileLevels.ts:49`; this pins it, no
       packer change).
-- [ ] Test in `planSurfaceTiles.test.ts`: `an empty tile is neither touched, requested nor counted a
+- [x] Test in `planSurfaceTiles.test.ts`: `an empty tile is neither touched, requested nor counted a
       miss` (a stub residency whose `isEmpty` is true for one requested tile).
-- [ ] Implement; `npm test -- createArchiveTileSource packSurfaceTileLevels planSurfaceTiles surfaceTileStream` passes.
-- [ ] Commit: `refactor(surface-tiles): tile reads say bytes, empty, missing or failed`.
+- [x] Implement; `npm test -- createArchiveTileSource packSurfaceTileLevels planSurfaceTiles surfaceTileStream` passes.
+- [x] Commit: `refactor(surface-tiles): tile reads say bytes, empty, missing or failed`.
 
 ---
 
@@ -146,16 +146,16 @@ Rules:
 - A deeper level cap is not a row field: a standalone product's cap is its bands' deepest `max`
   (Task 3).
 
-- [ ] Shoot the baseline set (Strategy table), including the two authored hashes.
-- [ ] Test in `derivePlannerParams.test.ts`: `a standalone product requests only in bands that
+- [x] Shoot the baseline set (Strategy table), including the two authored hashes.
+- [x] Test in `derivePlannerParams.test.ts`: `a standalone product requests only in bands that
       build it` (a band with albedo+height but no night: night's `requestBands` excludes it,
       albedo's includes it) and `gates-cut products request only where all gating products are
       built`. Existing tests stay green unchanged.
-- [ ] Test in `surfaceTileStream.test.ts`: `a lane never allocates its reserved slots` (a test lane
+- [x] Test in `surfaceTileStream.test.ts`: `a lane never allocates its reserved slots` (a test lane
       spec with `reservedSlots: 1`: no allocation returns slot 0).
-- [ ] Implement; targeted tests pass; `npm run typecheck:fast` clean.
-- [ ] Re-shoot the set; every pair matches.
-- [ ] Commit: `refactor(surface-tiles): lane rows carry role, binding and reserved slots`.
+- [x] Implement; targeted tests pass; `npm run typecheck:fast` clean.
+- [x] Re-shoot the set; every pair matches.
+- [x] Commit: `refactor(surface-tiles): lane rows carry role, binding and reserved slots`.
 
 ---
 
@@ -209,14 +209,14 @@ even when a coarser ancestor is resident; a resident tile gives its flattened su
 `cutSurfaceTiles`' input gains `isEmpty` beside `residentSlot`; `planSurfaceTiles` passes
 `residency.isEmpty` (or `() => false` for a non-engaged body, as it does for `residentSlot`).
 
-- [ ] Tests in `resolveStandaloneRect.test.ts`: `an own empty tile stops at empty even with a
+- [x] Tests in `resolveStandaloneRect.test.ts`: `an own empty tile stops at empty even with a
       resident ancestor`; `an empty ancestor stops the walk at empty`; `a resident ancestor gives
       the flattened sub-rect` (assert origin/scale for a leaf two levels below); `the walk starts at
       maxLevel`; `maxLevel < 0 gives null`.
-- [ ] `cutSurfaceTiles.test.ts`: the night assertions move to `standalone.night`; no new test.
-- [ ] Implement; targeted tests pass; typecheck clean.
-- [ ] Re-shoot the set; every pair matches.
-- [ ] Commit: `refactor(surface-tiles): one resolver for standalone products`.
+- [x] `cutSurfaceTiles.test.ts`: the night assertions move to `standalone.night`; no new test.
+- [x] Implement; targeted tests pass; typecheck clean.
+- [x] Re-shoot the set; every pair matches.
+- [x] Commit: `refactor(surface-tiles): one resolver for standalone products`.
 
 ---
 
@@ -257,9 +257,9 @@ Rules:
 - `planet/fragment.wesl:54` keeps calling `litShade`; nothing else moves.
 - Load the `wesl-shaders` skill before editing; check every `import package::lib::…` resolves.
 
-- [ ] Implement; `npm run typecheck:fast` and `npm test -- weslStaticPlugin weslNames` pass.
-- [ ] Re-shoot the set; every pair within one step (the Saturn shot proves the ring term moved intact).
-- [ ] Commit: `refactor(shaders): one composeSurfaceLight; texturedBody splits ambient`.
+- [x] Implement; `npm run typecheck:fast` and `npm test -- weslStaticPlugin weslNames` pass.
+- [x] Re-shoot the set; every pair within one step (the Saturn shot proves the ring term moved intact).
+- [x] Commit: `refactor(shaders): one composeSurfaceLight; texturedBody splits ambient`.
 
 ---
 
