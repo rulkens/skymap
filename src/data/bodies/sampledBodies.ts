@@ -1,5 +1,5 @@
 /**
- * SAMPLED_BODIES — the craft whose position comes from a loaded ephemeris track
+ * SAMPLED_BODIES — the bodies whose position comes from a loaded ephemeris track
  * instead of orbital elements; ids match `trajectoryRegistry` track ids.
  */
 

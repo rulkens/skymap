@@ -1,7 +1,7 @@
 /**
  * countAtOrBefore — how many entries of an ascending column are `<= x` (binary search).
  * `count - 1` is the bracketing interval's lower index; the `<=` tie rule is load-bearing:
- * the mission trail's head count and the Hermite interval must agree at a sample.
+ * a sampled trail's head count and the Hermite interval must agree at a sample.
  */
 
 export function countAtOrBefore(sorted: ArrayLike<number>, x: number): number {

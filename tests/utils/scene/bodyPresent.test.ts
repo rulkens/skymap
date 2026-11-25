@@ -12,10 +12,9 @@ vi.mock('../../../src/data/bodies/sampledBodies', () => ({
 
 import { trajectoryRegistry } from '../../../src/services/bodies/trajectoryRegistry';
 import { bodyPresent } from '../../../src/utils/scene/bodyPresent';
-import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
+import { isoToJulianDays } from '../../../src/utils/time/isoToJulianDays';
 
-const daysOf = (iso: string): number => unixMsToJulianDays(Date.parse(iso));
-const LAUNCH = daysOf('2030-01-01T00:00:00Z');
+const LAUNCH = isoToJulianDays('2030-01-01T00:00:00Z');
 const FIRST = LAUNCH + 1;
 const LAST = LAUNCH + 11;
 
@@ -30,7 +29,7 @@ for (const id of ['launched', 'unlaunched']) {
 
 describe('bodyPresent', () => {
   it('holds a row with presentFromIso absent before it', () => {
-    const from = daysOf('1990-04-25T19:38:00Z');
+    const from = isoToJulianDays('1990-04-25T19:38:00Z');
     expect(bodyPresent('hubble', from - 1)).toBe(false);
     expect(bodyPresent('hubble', from + 1)).toBe(true);
   });

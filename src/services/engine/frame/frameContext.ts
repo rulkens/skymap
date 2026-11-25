@@ -56,17 +56,18 @@ export function deriveFrameContext(
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
   // The presence filter: an absent body still has a parked snapshot position, so every
-  // consumer (slab rows, partition, glints, picks) reads this list or `sceneBodies`, never the roster.
+  // consumer (slab rows, partition, glints, picks) reads these lists or `sceneBodies`, never the roster.
   const meshBodies = SCENE_MESH_BODIES.filter((body) => bodyPresent(body.id, simDays));
   // A hostless mesh body (its driver hangs off something with no row of its own)
-  // gets a row here; every other row is a Layer's (`state.slabRows`).
-  const hostlessMeshBodies = HOSTLESS_MESH_BODIES.filter((body) => bodyPresent(body.id, simDays));
-  // A banded row exists only while its band is open. Keyed on the FRAME camera, not a
-  // view's offset eye: eye separation is metres against a band in AU.
+  // gets a row here; every other row is a Layer's (`state.slabRows`). A banded row exists
+  // only while its band is open. Keyed on the FRAME camera, not a view's offset eye: eye
+  // separation is metres against a band in AU.
   const slabBodyCandidates: readonly SlabRow[] = [
     ...state.slabRows,
-    ...hostlessMeshBodies.map(bodySlabRowOf),
-  ].filter((row) => slabRowActive(row, cam.position, bodyStates));
+    ...HOSTLESS_MESH_BODIES.map(bodySlabRowOf),
+  ].filter(
+    (row) => bodyPresent(row.anchorId, simDays) && slabRowActive(row, cam.position, bodyStates),
+  );
 
   // Provider B serves ONLY the engaged body, from its own stored pose (no Mpc round
   // trip); everything else, and the whole absolute arm, stays on provider A. Gated on

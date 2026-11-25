@@ -34,7 +34,8 @@ const STATE = {
   gpu: { galaxyPointRenderer: {}, galaxyPickRenderer: {}, renderTargets: {}, compositor: {} },
   terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: { texturedDisks: {} },
-  slabRows: [],
+  // The planet's own slab row, unbanded, as the body Layer authors one per planet.
+  slabRows: [{ anchorId: 'fixture-planet', drawRadiusM: () => 1e6, footprintRadiusM: 1e6 }],
   visibilityEntries: [],
 } as unknown as EngineState;
 
@@ -46,7 +47,7 @@ trajectoryRegistry.set({
   velKmS: Float32Array.of(0, 10, 0, 0, 10, 0),
 });
 
-const sceneBodyIdsAt = (simDays: number): string[] => {
+const frameAt = (simDays: number) => {
   const ctx = deriveFrameContext(STATE, {
     cam: assembleOrbitCamera(
       POSE,
@@ -61,13 +62,22 @@ const sceneBodyIdsAt = (simDays: number): string[] => {
     bodyStates: deriveBodyStates(simDays),
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
-  return ctx.sceneBodies.map(({ body }) => body.id);
+  return ctx;
 };
+const sceneBodyIdsAt = (simDays: number): string[] =>
+  frameAt(simDays).sceneBodies.map(({ body }) => body.id);
+const slabAnchorsAt = (simDays: number): string[] =>
+  frameAt(simDays).slabBodyCandidates.map((row) => row.anchorId);
 
 describe('deriveFrameContext — planet presence', () => {
   it('an absent sampled planet is not in the frame’s planets', () => {
     expect(sceneBodyIdsAt(CONST_J2000)).not.toContain('fixture-planet');
     expect(sceneBodyIdsAt(FIRST + 5)).toContain('fixture-planet');
     expect(sceneBodyIdsAt(FIRST + 20)).not.toContain('fixture-planet');
+  });
+
+  it('an absent sampled planet has no slab row', () => {
+    expect(slabAnchorsAt(CONST_J2000)).not.toContain('fixture-planet');
+    expect(slabAnchorsAt(FIRST + 5)).toContain('fixture-planet');
   });
 });

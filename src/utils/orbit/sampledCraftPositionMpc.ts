@@ -1,11 +1,11 @@
 /**
  * sampledCraftPositionMpc — a sampled body's world position at `simDays`. On the track from its
- * first sample; before it, a body with no launch holds that sample, a launched one rises from the
- * pad (turning with Earth) to that sample, which
- * an hour later sits ~260° east round Earth: a straight blend would tunnel through the planet, so
- * the Earth-relative radius and great-circle angle are eased separately, each ending on the
- * sample's own radial and along-arc velocity. The radius goes up to a parking height first and
- * holds it until the last-minutes burn. Before launch it waits on the pad. `positionAt` is injected
+ * first sample; before it, a body with no launch holds that sample, and a launched one rises from
+ * the pad (turning with Earth) to it. That sample, an hour after launch, sits ~260° east of the
+ * pad round Earth: a straight blend would tunnel through the planet, so the Earth-relative radius
+ * and great-circle angle are eased separately, each ending on the sample's own radial and
+ * along-arc velocity. The radius goes up to a parking height first and holds it until the
+ * last-minutes burn. Before launch it waits on the pad. `positionAt` is injected
  * (`bodyPositionMpcAt`) to place Earth and the Sun at other instants without an import cycle.
  */
 
@@ -22,7 +22,7 @@ import { dot3 } from '../math/dot3';
 import { normalize3 } from '../math/normalize3';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 import { smoothstep } from '../math/smoothstep';
-import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
+import { isoToJulianDays } from '../time/isoToJulianDays';
 import { bodyVelocityKmS } from './bodyVelocityKmS';
 import { hermiteTrackAt } from './hermiteTrackAt';
 
@@ -82,7 +82,7 @@ export function sampledCraftPositionMpc(
   // Signed sweep: the long way round when the craft arrives moving back toward the pad.
   const sweep = alongKmS >= 0 ? theta : theta - 2 * Math.PI;
 
-  const launchDays = unixMsToJulianDays(Date.parse(launch.iso));
+  const launchDays = isoToJulianDays(launch.iso);
   const spanS = (t0 - launchDays) * SECONDS_PER_DAY;
   const s = Math.min(Math.max((simDays - launchDays) / (t0 - launchDays), 0), 1);
   const h01 = 3 * s ** 2 - 2 * s ** 3;

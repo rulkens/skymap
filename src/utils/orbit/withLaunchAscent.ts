@@ -9,7 +9,7 @@ import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
-import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
+import { isoToJulianDays } from '../time/isoToJulianDays';
 import { sampledCraftPositionMpc } from './sampledCraftPositionMpc';
 
 const ASCENT_SAMPLES = 64;
@@ -21,7 +21,7 @@ export function withLaunchAscent(
 ): SampledTrack {
   if (!body.launch) return track;
   const t0 = track.tDays[0]!;
-  const launchDays = unixMsToJulianDays(Date.parse(body.launch.iso));
+  const launchDays = isoToJulianDays(body.launch.iso);
   if (!(launchDays < t0)) return track;
 
   const sunKmAt = (t: number): Vec3 => {

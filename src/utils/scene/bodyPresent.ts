@@ -9,19 +9,17 @@
 import { SCENE_MESH_BODIES } from '../../data/bodies/sceneMeshBodies';
 import { SAMPLED_BODIES } from '../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../services/bodies/trajectoryRegistry';
-import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
-
-const daysOf = (iso: string): number => unixMsToJulianDays(Date.parse(iso));
+import { isoToJulianDays } from '../time/isoToJulianDays';
 
 const PRESENT_FROM_DAYS = new Map<string, number>(
   SCENE_MESH_BODIES.flatMap(({ id, presentFromIso }) =>
-    presentFromIso === undefined ? [] : [[id, daysOf(presentFromIso)]],
+    presentFromIso === undefined ? [] : [[id, isoToJulianDays(presentFromIso)]],
   ),
 );
 
 // NaN for a body never launched: its window opens on its track's first sample.
 const LAUNCH_DAYS = new Map<string, number>(
-  SAMPLED_BODIES.map(({ id, launch }) => [id, launch ? daysOf(launch.iso) : NaN]),
+  SAMPLED_BODIES.map(({ id, launch }) => [id, launch ? isoToJulianDays(launch.iso) : NaN]),
 );
 
 export function bodyPresent(id: string, simDays: number): boolean {
