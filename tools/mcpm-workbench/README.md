@@ -52,6 +52,10 @@ warns when the values look like logarithms or the median is far above 0.02.
 **Limits:** files over 400 MB are refused. 324,901 rows is the largest size
 tested.
 
+Built-in tiers keep the brightest N galaxies by absolute magnitude plus a
+flux-limited local supplement (see `tools/catalog/selectTierRecords.ts`), so a
+medium-tier run is not comparable with the published SDSS run.
+
 ## Architecture
 
 State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
@@ -139,7 +143,9 @@ orientation check passed during T18's fix round.
 
 ## Validation (Phase 3 gate)
 
-2026-08-18. Numbers below are the **second correction** to this section —
+2026-08-18. Measured before the 2026-11-25 weight fix; not re-validated since.
+
+Numbers below are the **second correction** to this section —
 see "Comparator fix, round 2" below for what changed and why every row in
 the two main tables moved again. The packed-catalog loader (T21; dev-only
 then, now part of Load catalog) fed
