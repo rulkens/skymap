@@ -86,11 +86,10 @@ each pickable by dragging directly on the glyph:
 - **Rings — rotate.** Radius = 1.3× the arrow length, sitting outside the
   arrow tips for visual separation from the translate handles.
 
-**Reachability.** The handles are only drawn (and pickable) while the
-wireframe itself is visible: the "show box" toggle in the grid panel keeps
-them on screen. A drag in progress keeps the wireframe visible even if "show
-box" is off, so a gesture that starts with the box shown never gets stranded
-mid-drag if the toggle changes underneath it.
+**Reachability.** The handles are drawn (and pickable) while the wireframe
+is: whenever the pointer is over the canvas, for a moment after a grid edit,
+and for the whole of a drag, even when the pointer leaves the canvas
+mid-drag.
 
 **`rotation` semantics.** The gizmo's ring drag writes a unit quaternion to
 `GridBox.rotation`, applied **about the box's center** — `worldToBoxLocal`

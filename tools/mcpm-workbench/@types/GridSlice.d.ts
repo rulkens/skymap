@@ -16,9 +16,7 @@ import type { GridElement } from './GridElement';
  *
  * `importedBox` (V3): `deriveGridBox` returns it VERBATIM when set, so a
  * loaded preset reloads bit-identical; every setter representing a grid
- * edit (including `fitBoxToCatalog`) clears it back to null. `showGridBox`
- * (F1.7) is view state, not a grid edit — its setter does NOT clear
- * `importedBox` and it is never written into a preset.
+ * edit (including `fitBoxToCatalog`) clears it back to null.
  *
  * `manualRotation` (F2.5) mirrors center/size's manual-path shape:
  * `deriveGridBox` writes it into the derived box (`autoFitGridBox` always
@@ -44,7 +42,6 @@ export type GridSlice = {
   readonly importedBox: GridBox | null;
   readonly resolvedElement: GridElement | null;
   readonly byteBudget: GridBudget | null;
-  readonly showGridBox: boolean;
   readonly maxBufferBytes: number | null;
   /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
    * L∞-farthest-from-median fringe (see `denseFractionBounds`). */

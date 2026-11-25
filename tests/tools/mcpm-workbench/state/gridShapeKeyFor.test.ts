@@ -1,9 +1,9 @@
 /**
  * gridShapeKeyFor — same rotation-must-participate contract as
  * `state/scene/watchSceneSaga.test.ts`'s exhaustive trigger fixture, for the pending-box
- * PREVIEW timer instead of the rebuild trigger: a rotate drag that ends before the
- * wireframe's showGridBox toggle covers it must still restart the 200ms preview flash, or the
- * gizmo disappears the instant the drag ends.
+ * PREVIEW timer instead of the rebuild trigger: a rotate drag that ends with the
+ * pointer off the canvas must still restart the 200ms preview flash, or the gizmo disappears
+ * the instant the drag ends.
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';

@@ -262,7 +262,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // the galaxy dots.
       // A drag in progress keeps the wireframe up even once the 200ms preview timer
       // lapses — a continuous pointer signal is its own "still hot"; `input`'s own
-      // isWireframeVisible ORs that in on top of the showGridBox/flash pair below (F1.7).
+      // isWireframeVisible ORs that in on top of the pointer/flash pair below (F1.7).
       if (input.isWireframeVisible(s, now)) {
         // No harness (empty scene): the pending box IS the built box — the gizmo
         // manipulates a selection that nothing has been built against yet.
@@ -316,7 +316,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // pointer-inside tracking and drag mechanics all live in createViewportInput
     // (task input-port); this component only supplies the F1.7 preview-flash term
     // (`boxPreviewUntil`) it can't see — F1.8 keeps that term visible regardless of
-    // pointer position, unlike the module's own showGridBox term.
+    // pointer position, unlike the module's own pointer-over-canvas term.
     const input = createViewportInput({
       canvas,
       store,

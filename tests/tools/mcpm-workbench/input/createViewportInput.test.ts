@@ -143,7 +143,7 @@ describe('createViewportInput — gizmo routing (dragAnchor hits a handle)', () 
       markDirty: () => {},
     });
 
-    // showGridBox's term of isWireframeVisible is pointer-gated (F1.8) — a real pointerdown
+    // isWireframeVisible's pointer term is pointer-gated (F1.8) — a real pointerdown
     // is always preceded by the browser's own pointerenter, so the fixture reproduces that.
     fire('pointerenter', {});
     fire('pointerdown', mouseDown(clientXFor(ndcXForWorldX(arrowLengthMpc))));
@@ -284,8 +284,7 @@ describe('createViewportInput — store→register adoption', () => {
 });
 
 describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8)', () => {
-  // showGridBox defaults to true (defaultAppState.grid) — every case below relies on that.
-  it('hides the showGridBox-driven wireframe once the pointer leaves the canvas', () => {
+  it('hides the wireframe once the pointer leaves the canvas', () => {
     const { store } = createWorkbenchStore(defaultAppState);
     const { canvas, fire } = makeCanvas();
     const input = createViewportInput({

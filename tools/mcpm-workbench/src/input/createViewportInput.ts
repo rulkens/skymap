@@ -46,8 +46,8 @@ export type ViewportInputDeps = {
   /** The post-edit-flash reason of boxWireframeVisible's three (F1.7/F1.8) — Viewport's
    *  own `boxPreviewUntil` timer. Deliberately ignores pointer position: the user's mouse
    *  is on a panel control outside the canvas when the flash is the whole point. The other
-   *  two reasons (`showGridBox`, an in-flight gizmo drag) are this module's own state,
-   *  folded in by `isWireframeVisible` below. */
+   *  two reasons (the pointer over the canvas, an in-flight gizmo drag) are this module's
+   *  own state, folded in by `isWireframeVisible` below. */
   readonly isFlashVisible: (now: number) => boolean;
   /** Marks the render-on-demand loop dirty for closure-state-only changes (hover
    *  highlight, gizmo-drag start/end) that neither a store write nor a drained input
@@ -69,8 +69,8 @@ export type ViewportInput = {
   getDragHandleId(): GizmoHandleId | null;
   /** boxWireframeVisible's full OR (F1.7/F1.8): the gizmo hit-test/hover-pick below must
    *  agree with frame()'s draw call exactly, or picking an invisible/hidden handle would
-   *  hijack an orbit click. `showGridBox` alone is gated on the pointer being over the
-   *  canvas; the flash and an in-flight drag are not (F1.8's binding exceptions). */
+   *  hijack an orbit click. The box shows while the pointer is over the canvas; the
+   *  flash and an in-flight drag show it anywhere (F1.8's binding exceptions). */
   isWireframeVisible(s: RootState, now: number): boolean;
   destroy(): void;
 };
@@ -103,7 +103,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   let gizmoDragging: GizmoDragState | null = null;
   let hoverHandle: GizmoHandleId | null = null;
   // False on mount (no synthetic enter before the user's first real pointermove) — the
-  // showGridBox term of isWireframeVisible stays hidden until a pointerenter proves the
+  // pointer term of isWireframeVisible stays hidden until a pointerenter proves the
   // mouse is actually over the canvas.
   let pointerInside = false;
   // Which gesture a `dragAnchor` resolved into — decided once per gesture, at the first
@@ -116,7 +116,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   let pendingGestureStart = false;
 
   function isWireframeVisible(s: RootState, now: number): boolean {
-    return isFlashVisible(now) || gizmoDragging !== null || (s.grid.showGridBox && pointerInside);
+    return isFlashVisible(now) || gizmoDragging !== null || pointerInside;
   }
 
   function getCameraPose(): ViewSlice['camera'] {
@@ -354,7 +354,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   };
   const onPointerEnter = (): void => {
     pointerInside = true;
-    markDirty(); // wakes render-on-demand so showGridBox's wireframe reappears this frame
+    markDirty(); // wakes render-on-demand so the wireframe reappears this frame
   };
   const onPointerLeave = (): void => {
     // Mid-drag the gesture is window-tracked with no pointer capture (F1.8's first

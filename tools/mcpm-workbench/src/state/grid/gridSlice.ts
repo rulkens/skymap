@@ -22,7 +22,6 @@ export const defaultGridSlice: GridSlice = {
   importedBox: null,
   resolvedElement: null,
   byteBudget: null,
-  showGridBox: true,
   maxBufferBytes: null,
   autoFitPercent: 100,
 };
@@ -106,14 +105,6 @@ export const gridSlice = createSlice({
       ];
       state.importedBox = null;
     },
-    /**
-     * F1.7: persistent box-wireframe visibility, not a grid-control edit — unlike
-     * every setter above, this does NOT clear `importedBox` (view state, no
-     * bearing on which box is loaded).
-     */
-    setShowGridBox: (state, action: PayloadAction<boolean>) => {
-      state.showGridBox = action.payload;
-    },
     /** Records a completed fit: the resolved element and its byte budget. */
     setResolvedGrid: (
       state,
@@ -143,7 +134,6 @@ export const {
   setRotation,
   installImportedBox,
   fitBoxToCatalog,
-  setShowGridBox,
   setResolvedGrid,
   setMaxBufferBytes,
 } = gridSlice.actions;

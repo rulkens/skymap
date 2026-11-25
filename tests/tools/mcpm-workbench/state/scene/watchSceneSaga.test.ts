@@ -58,7 +58,6 @@ const GRID_FIXTURES: {
   setRotation: gridSlice.actions.setRotation([0, 0, Math.SQRT1_2, Math.SQRT1_2]),
   installImportedBox: gridSlice.actions.installImportedBox(SAMPLE_BOX),
   fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({ min: [0, 0, 0], max: [10, 10, 10] }),
-  setShowGridBox: gridSlice.actions.setShowGridBox(true),
   setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
   setResolvedGrid: gridSlice.actions.setResolvedGrid({
     resolvedElement: 'f32',

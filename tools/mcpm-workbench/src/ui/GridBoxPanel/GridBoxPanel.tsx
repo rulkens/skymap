@@ -22,14 +22,12 @@ import {
   setManualCenterMpc,
   setManualSizeMpc,
   setPaddingMpc,
-  setShowGridBox,
   setVoxelSizeMpc,
 } from '../../state/grid/gridSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
-import ToggleRow from '../ToggleRow/ToggleRow';
 import { AXES } from './utils/AXES';
 import { fieldStyle } from './utils/fieldStyle';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
@@ -98,12 +96,6 @@ function GridBoxPanel(): ReactNode {
         color: 'var(--color-fg-muted)',
       }}
     >
-      <ToggleRow
-        label="show box"
-        on={grid.showGridBox}
-        info="Keeps the box wireframe and its drag handles on screen, instead of only the 200ms flash after a slider edit."
-        onChange={(on) => dispatch(setShowGridBox(on))}
-      />
       {/* Group div so the slider's own margin (not the root grid's gap) sets its
           spacing to the readout/button it controls — same principle as the
           seven-slider wrapper below, applied to this one slider+button pairing. */}
