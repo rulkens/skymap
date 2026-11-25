@@ -288,8 +288,10 @@ v from the north pole). Byte-0 placeholder → an uncommitted map draws as today
 ring visibility multiplies into the sun visibility. Bodies without a horizon tier (every other
 `texturedBody`) bind the placeholder.
 
-- [ ] Implement; typecheck and layout tests pass. Shot of `moon-orbit`: long crater shadows along
+- [x] Implement; typecheck and layout tests pass. Shot of `moon-orbit`: long crater shadows along
       the terminator; Saturn and a planet without a map unchanged against main. Commit.
+      (Moon shadows wait on Task 8's bake: the Moon's one band is 10,912 tiles; the placeholder
+      path shot unchanged at `moon-orbit`, Saturn and Mercury.)
 
 ---
 

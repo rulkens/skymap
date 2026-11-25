@@ -5,7 +5,7 @@
  * asserted directly (NOT mirrored from the packer); the 80-byte lit prefix is compared slot-for-slot
  * with `packLitBodyUniforms`.
  *
- *   0..15 mvp  16..18 sunDirLocal  19 lit pad  20 ringInnerRatio
+ *   0..15 mvp  16..18 sunDirLocal  19 sunAngularRadiusRad  20 ringInnerRatio
  *   21 ringOuterRatio  22 limbStrength  23 limbExponent
  *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal
  */
@@ -29,6 +29,7 @@ const LIMB_STRENGTH = 0.625; // 10/16
 const LIMB_EXPONENT = 0.875; // 14/16
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
 const CAM_ALTITUDE_SQ = 0.375; // 6/16
+const SUN_RADIUS_RAD = 0.0625; // 1/16
 // 101..116, so no entry collides with the mvp's 1..16.
 const CAM_REL_VP = new Float32Array(16);
 for (let i = 0; i < 16; i++) CAM_REL_VP[i] = 101 + i;
@@ -45,15 +46,16 @@ describe('TexturedBodyUniforms byte offsets', () => {
       CAM_LOCAL,
       CAM_ALTITUDE_SQ,
       CAM_REL_VP,
+      SUN_RADIUS_RAD,
     );
     expect(out).toHaveLength(TEXTURED_BODY_UNIFORM_FLOATS);
     expect(out.length).toBe(44); // 176 bytes
     expect(out.byteLength).toBe(176);
 
-    // The 80-byte lit prefix is identical to packLitBodyUniforms, including the zeroed pad at 19.
+    // The lit prefix is identical to packLitBodyUniforms; its pad at 19 is a real field here.
     const lit = packLitBodyUniforms(MVP, SUN_DIR);
-    for (let i = 0; i < 20; i++) expect(out[i]).toBe(lit[i]);
-    expect(out[19]).toBe(0); // lit pad — belt-and-braces
+    for (let i = 0; i < 19; i++) expect(out[i]).toBe(lit[i]);
+    expect(out[19]).toBe(SUN_RADIUS_RAD); // byte 76
 
     expect(out[20]).toBe(RING_INNER); // byte 80
     expect(out[21]).toBe(RING_OUTER); // byte 84
@@ -68,7 +70,7 @@ describe('TexturedBodyUniforms byte offsets', () => {
 
   it('defaults to plain Lambert — limbStrength 0 is the identity the absent-row data-gate relies on', () => {
     // No Minnaert row packs strength 0: limb darkening collapses to 1.0 (plain Lambert), data not a code path.
-    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 0, [0, 0, 0], 0, CAM_REL_VP);
+    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 0, [0, 0, 0], 0, CAM_REL_VP, 0);
     expect(out[22]).toBe(0);
     expect(out[23]).toBe(0);
     expect([out[24], out[25], out[26]]).toEqual([0, 0, 0]);

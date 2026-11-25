@@ -55,7 +55,7 @@ struct LitBodyUniforms {
 //
 //   offset  0..63:   mvp            (mat4x4<f32>, column-major)
 //   offset 64..75:   sunDirLocal    (vec3<f32>)
-//   offset 76..79:   _pad           (f32)
+//   offset 76..79:   sunAngularRadiusRad (f32, the horizon shadow's penumbra)
 //   offset 80..83:   ringInnerRatio (f32, ring inner / planet radius)
 //   offset 84..87:   ringOuterRatio (f32, ring outer / planet radius; 0 = none)
 //   offset 88..91:   limbStrength   (f32, Minnaert blend; 0 = plain Lambert)
@@ -68,7 +68,7 @@ struct LitBodyUniforms {
 struct TexturedBodyUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
-  _pad: f32,
+  sunAngularRadiusRad: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
   limbStrength: f32,
@@ -121,7 +121,8 @@ struct RingUniforms {
 //   offset 104..107: cloudShellRadius    (f32)
 //   offset 108..111: ambientLight        (f32, night-side floor)
 //   offset 112..115: oceanRoughness      (f32, open-water GGX roughness)
-//   offset 116..123: _pad0, _pad1        (f32, zeroed, round to 16-byte)
+//   offset 116..119: sunAngularRadiusRad (f32, the horizon shadow's penumbra)
+//   offset 120..123: _pad1               (f32, zeroed, round to 16-byte)
 //   total: 128 bytes (32 f32s). Packer: `layers/body/earth/render/packEarthSurfaceUniforms.ts`.
 
 struct EarthSurfaceUniforms {
@@ -135,7 +136,7 @@ struct EarthSurfaceUniforms {
   cloudShellRadius: f32,
   ambientLight: f32,
   oceanRoughness: f32,
-  _pad0: f32,
+  sunAngularRadiusRad: f32,
   _pad1: f32,
 };
 

@@ -17,6 +17,7 @@ import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/compose
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
+import { sunAngularRadiusRad } from '../../../../utils/camera/bodyCompose/sunAngularRadiusRad';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../render/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../surfaceTiles/format/data/earthSurfaceParams';
@@ -72,6 +73,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
           // Live user settings, not the WESL consts.
           state.settings.earth.ambientLight,
           state.settings.earth.oceanRoughness,
+          sunAngularRadiusRad(earthState.positionMpc, RENDER_ORIGIN_MPC),
         ),
         viewFlipsWinding(ctx),
       );

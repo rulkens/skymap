@@ -1,7 +1,8 @@
 /**
  * packTexturedBodyUniforms: packer for the 176-byte `TexturedBodyUniforms` struct
  * (`shaders/lib/sphere.wesl` holds the layout table). Reuses `packLitBodyUniforms`
- * for the 80-byte prefix so the layouts cannot drift; writes only the ring ratios
+ * for the 80-byte prefix so the layouts cannot drift, then overwrites its pad at 19
+ * with `sunAngularRadiusRad` (the horizon shadow's penumbra); writes the ring ratios
  * (`ringOuterRatio == 0` means no ring), the Minnaert params (`limbStrength == 0`
  * is the identity), `camPosLocal`, and the contact-range depth pair
  * (`camAltitudeSq`, `vpCamRelLocal`; see `lib/analyticSphere.wesl`).
@@ -23,9 +24,11 @@ export function packTexturedBodyUniforms(
   camPosLocal: Readonly<Vec3>,
   camAltitudeSq: number,
   vpCamRelLocal: Float32Array,
+  sunAngularRadiusRad: number,
 ): Float32Array {
   const out = new Float32Array(TEXTURED_BODY_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // bytes 0..79
+  out[19] = sunAngularRadiusRad; // byte 76 — overwrite the lit pad with a real field
   out[20] = ringInnerRatio; // byte 80
   out[21] = ringOuterRatio; // byte 84
   out[22] = limbStrength; // byte 88

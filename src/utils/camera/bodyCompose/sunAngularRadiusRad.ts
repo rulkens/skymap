@@ -8,11 +8,11 @@ export function sunAngularRadiusRad(
   bodyPosMpc: Readonly<Vec3>,
   renderOriginMpc: Readonly<Vec3>,
 ): number {
-  const distanceM =
-    Math.hypot(
-      bodyPosMpc[0] - renderOriginMpc[0],
-      bodyPosMpc[1] - renderOriginMpc[1],
-      bodyPosMpc[2] - renderOriginMpc[2],
-    ) * SCALE_UNITS.MPC_TO_M;
-  return Math.asin(Math.min(1, (SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M) / distanceM));
+  // A ratio of two lengths, so both stay in Mpc: no metre seam to cross (`oneMpcSeam.test.ts`).
+  const distanceMpc = Math.hypot(
+    bodyPosMpc[0] - renderOriginMpc[0],
+    bodyPosMpc[1] - renderOriginMpc[1],
+    bodyPosMpc[2] - renderOriginMpc[2],
+  );
+  return Math.asin(Math.min(1, (SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC) / distanceMpc));
 }

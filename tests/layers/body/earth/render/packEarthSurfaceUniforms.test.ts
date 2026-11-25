@@ -27,6 +27,7 @@ const CLOUD_SHELL_RADIUS = 1.03;
 // Dyadic, so float32 `toBe` is exact.
 const AMBIENT_LIGHT = 0.03125;
 const OCEAN_ROUGHNESS = 0.28125;
+const SUN_RADIUS_RAD = 0.0625;
 
 describe('EarthSurfaceUniforms byte offsets', () => {
   it('packs a 128-byte / 32-f32 record with roughnessBase filling the vec3 tail @76', () => {
@@ -41,6 +42,7 @@ describe('EarthSurfaceUniforms byte offsets', () => {
       CLOUD_SHELL_RADIUS,
       AMBIENT_LIGHT,
       OCEAN_ROUGHNESS,
+      SUN_RADIUS_RAD,
     );
     expect(rec.length).toBe(EARTH_SURFACE_UNIFORM_FLOATS);
     expect(rec.length).toBe(32); // 128 bytes
@@ -77,8 +79,8 @@ describe('EarthSurfaceUniforms byte offsets', () => {
     // (open-water GGX roughness); a dropped 10th arg zeroes it.
     expect(rec[28]).toBe(OCEAN_ROUGHNESS); // byte 112
 
-    // Indices 29..31 (bytes 116..127) are true padding.
-    expect(rec[29]).toBe(0);
+    // sunAngularRadiusRad — float 29 (byte 116); indices 30..31 are true padding.
+    expect(rec[29]).toBe(SUN_RADIUS_RAD);
     expect(rec[30]).toBe(0);
     expect(rec[31]).toBe(0);
   });

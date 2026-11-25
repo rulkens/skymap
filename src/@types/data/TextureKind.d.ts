@@ -7,10 +7,11 @@
  * kind, and the one whose on-disk filename stays unsegmented (see
  * `bodyTextureFilename`). The other kinds are Earth-facing feature maps that land
  * with their own PRs: `night` (city lights), `clouds` (a body-agnostic shell
- * Venus/Titan can reuse), `material` (roughness/metalness packed for PBR), and
- * `normal` (tangent-space bump). Which kinds a given body actually has lives in
+ * Venus/Titan can reuse), `material` (roughness/metalness packed for PBR),
+ * `normal` (tangent-space bump) and `horizon` (baked horizon angles per post, read
+ * texel by texel by `lib/horizonLookup.wesl`, built by `bake-horizon`). Which kinds a given body actually has lives in
  * `BODY_TEXTURE_REGISTRY[id].kinds`, not here — this union is the full vocabulary,
  * the registry says which words each body speaks.
  */
 
-export type TextureKind = 'surface' | 'night' | 'clouds' | 'material' | 'normal';
+export type TextureKind = 'surface' | 'night' | 'clouds' | 'material' | 'normal' | 'horizon';

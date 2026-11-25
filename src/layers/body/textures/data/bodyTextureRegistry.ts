@@ -33,7 +33,9 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // (sRGB colour + luminance-derived alpha) hold the full 8 k ceiling — both resolve
   // fine detail. `material` (roughness + ocean mask) and `normal` (baked from the
   // GEBCO heightfield) are linear-PNG and capped at 4 k: a land/ocean mask and a
-  // normal map both downsample cleanly, so 8 k buys nothing.
+  // normal map both downsample cleanly, so 8 k buys nothing. `horizon` is repacked
+  // from the horizon tiles by `bake-horizon`, not built here; its image is half the
+  // tier's px wide (posts, not texels: tools/textures/surfaceHorizon/README.md).
   earth: {
     bodyId: 'earth',
     kinds: {
@@ -42,6 +44,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
       material: 'medium',
       normal: 'medium',
       clouds: 'large',
+      horizon: 'large',
     },
     provenance: 'nasa',
     treatment: { kind: 'colour' },
@@ -49,7 +52,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // Graded to colour-match the tuned Viking surface tiles (marsAlbedoRecipe.ts).
   mars: {
     bodyId: 'mars',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', horizon: 'large' },
     provenance: 'sss',
     treatment: { kind: 'grade', grade: MARS_GLOBE_GRADE },
   },
@@ -84,7 +87,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // `normal` is baked from the LOLA heightfield, capped at 4 k like Earth's.
   moon: {
     bodyId: 'moon',
-    kinds: { surface: 'large', normal: 'medium' },
+    kinds: { surface: 'large', normal: 'medium', horizon: 'large' },
     provenance: 'sss',
     treatment: { kind: 'colour' },
   },

@@ -17,9 +17,10 @@ export type EarthRenderer = Renderer & {
   /**
    * Install a texture map by kind, uploaded into a fresh texture sized to the
    * bitmap (format from `bodyTextureFormat`: sRGB for surface/night, linear for
-   * material/normal, one grey channel for clouds), mips generated, fragment bind
-   * group rebuilt. Placeholders: surface mid-blue, material all-land, night black
-   * (no emissive), normal flat, clouds coverage 0.
+   * material/normal/horizon, one grey channel for clouds), mips generated (not for
+   * horizon, uploaded unflipped too), fragment bind group rebuilt. Placeholders:
+   * surface mid-blue, material all-land, night black (no emissive), normal flat,
+   * clouds coverage 0, horizon byte 0 (fully lit).
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /** Destroy a kind's committed map (no-op if none); its placeholder binds again. */

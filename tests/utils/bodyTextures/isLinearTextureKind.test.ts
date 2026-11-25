@@ -6,12 +6,13 @@ describe('isLinearTextureKind', () => {
   // This predicate drives three consumers' correctness (filename extension,
   // fetcher decode, GPU texture format), so a wrong answer silently corrupts the
   // packed channels — a real property worth pinning, not a constant restatement.
-  // `material` (roughness/ocean mask) and `normal` (tangent-space bump) are the
-  // two linear-packed kinds; the sRGB colour kinds (`surface`, `night`) must stay
+  // `material` (roughness/ocean mask), `normal` (tangent-space bump) and `horizon`
+  // (angle bytes) are the linear-packed kinds; the sRGB colour kinds (`surface`, `night`) must stay
   // linear-false so they keep their JPEG/sRGB path.
   it('classifies the linear-packed data kinds as linear', () => {
     expect(isLinearTextureKind('material')).toBe(true);
     expect(isLinearTextureKind('normal')).toBe(true);
+    expect(isLinearTextureKind('horizon')).toBe(true);
   });
 
   it('classifies the sRGB colour kinds as non-linear', () => {

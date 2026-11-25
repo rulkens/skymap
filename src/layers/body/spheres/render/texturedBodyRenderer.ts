@@ -32,12 +32,14 @@ const UNIFORM_BUFFER_SIZE = TEXTURED_BODY_UNIFORM_FLOATS * 4;
 /**
  * Per-kind sphere-map config: bind-group binding, GPU format and 1×1 placeholder
  * texel. Layout, placeholders and bind groups are all derived from these rows.
+ * A body with no `horizon` map binds the placeholder, which reads fully lit.
  * `normal` is LINEAR `rgba8unorm`: its RG channels carry slope data, which an
  * sRGB decode would corrupt. Bindings 0 (uniform), 1 (sampler), 3 (ring) are fixed.
  */
 const KIND_CFG = {
   surface: { binding: 2, format: 'rgba8unorm-srgb', placeholder: [128, 128, 128, 255] },
   normal: { binding: 4, format: 'rgba8unorm', placeholder: [128, 128, 255, 255] }, // LINEAR — RG are slope data, never -srgb; [128,128,255] decodes to (0,0,1) = flat
+  horizon: { binding: 5, format: 'rgba8unorm', placeholder: [0, 0, 0, 0] }, // angle bytes; byte 0 = −3°, fully lit, whole sky open
 } as const satisfies Partial<
   Record<
     TextureKind,
@@ -252,7 +254,10 @@ export function createTexturedBodyRenderer(
     const cfg = KIND_CFG[kind as SphereMapKind];
     const res = resourcesFor(bodyId);
     res.maps.get(kind)?.destroy();
-    const levels = mipLevelCount(bitmap.width, bitmap.height);
+    // Horizon posts are read by `textureLoad` in their baked row order (north first, 2 × 2
+    // texels each): flipped, the block rows would swap sectors; mipped, nothing reads it.
+    const postLattice = kind === 'horizon';
+    const levels = postLattice ? 1 : mipLevelCount(bitmap.width, bitmap.height);
     const texture = device.createTexture({
       label: `texturedBody-${kind}-${bodyId}`,
       size: [bitmap.width, bitmap.height, 1],
@@ -265,12 +270,12 @@ export function createTexturedBodyRenderer(
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
     // flipY so texture v=0 is the south row, matching the mesh's south-first v.
-    device.queue.copyExternalImageToTexture({ source: bitmap, flipY: true }, { texture }, [
+    device.queue.copyExternalImageToTexture({ source: bitmap, flipY: !postLattice }, { texture }, [
       bitmap.width,
       bitmap.height,
       1,
     ]);
-    generateMipChain(device, texture);
+    if (!postLattice) generateMipChain(device, texture);
     res.maps.set(kind, texture);
     res.bindGroup = buildBindGroup(bodyId, res);
   }
