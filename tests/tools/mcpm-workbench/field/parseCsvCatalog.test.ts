@@ -71,6 +71,13 @@ describe('parseCsvCatalog problems', () => {
     expect(problem('1,2,3,1e-50\n', XYZ)).toBe(message);
   });
 
+  // A position stored as Float32 Infinity turns the catalog bounds, and so auto fit, infinite.
+  it('a position beyond 32-bit float range', () => {
+    const message = 'Line 2: position is outside the range a 32-bit float can hold';
+    expect(problem('1,2,3,1\n1e39,0,0,0.1\n', XYZ)).toBe(message);
+    expect(problem('1,2,3,1\n0,0,-1e39,0.1\n', XYZ)).toBe(message);
+  });
+
   it('RA/Dec format, Dec outside −90…90', () => {
     expect(problem('10,120,0.1,1\n', RADEC)).toBe(
       'Line 1: Dec 120 is outside −90 to 90. Did you mean cartesian?',

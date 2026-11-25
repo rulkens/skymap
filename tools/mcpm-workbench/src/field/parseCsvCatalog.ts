@@ -99,6 +99,10 @@ export function parseCsvCatalog(
       positions[count * 3 + 1] = b;
       positions[count * 3 + 2] = c;
     }
+    // Finite as read, but Float32 rounds past ±3.4e38 to Infinity.
+    if (!positions.subarray(count * 3, count * 3 + 3).every(Number.isFinite)) {
+      return refuse('position is outside the range a 32-bit float can hold');
+    }
 
     weight[count] = stored;
     count++;
