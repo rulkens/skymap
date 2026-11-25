@@ -121,9 +121,9 @@ Earth, the planets, moons and rings: its own renderers, texture slots, passes an
 atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its
 shape-model moons (rows with `shapeModel`, declared by adding the id to `body/bodies/shapeModelBodyIds.ts` and its mesh facts to `MESH_ASSETS`) are returned from its `assets` member as mesh rows; their slots load into and clear from core's one mesh renderer through `deps.meshBodies`. It also streams and plans the
 surface tiles, and its `heightAt` is the ground core's camera reads. It declares its identity: the body rows in `body/bodies/`, the
-`body` selection kind and card, palette rows, name captions, orbit trails and the
+`body` selection kind and card, palette rows, name captions, orbit trails (`guides.orbitTrails`) and the
 Solar System exhibit. `missions` draws its craft: the rows live in
 `missions/bodies/`; it returns each craft's mesh row from `assets`, and its own mesh,
-contact-shadow and glint passes draw through core's one mesh renderer, which its mesh slots load into through `deps.meshBodies`. `earthScenes` declares the Earth scene rows (they
+contact-shadow and glint passes draw through core's one mesh renderer, which its mesh slots load into through `deps.meshBodies`. It loads its craft's tracks (`loadSampledTracksSaga(MISSION_TRACK_IDS)`) and hands their trail rows to core through `guides.sampledTrails`; core draws them. `earthScenes` declares the Earth scene rows (they
 join the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh row returned from `assets` (the slot loads into core's one mesh renderer through `deps.meshBodies`, and its pass draws through that renderer), its
 glint through its own renderer.
