@@ -52,7 +52,7 @@ describe('catalogSlice zero-point status', () => {
   it('catalogLoaded moves points into catalog state', () => {
     const loaded = reducer(
       defaultCatalogSlice,
-      actions.catalogLoaded({ points, weights, bounds: null }),
+      actions.catalogLoaded({ points, weights, bounds: null, userFile: null }),
     );
 
     expect(loaded.points).toBe(points);
@@ -75,7 +75,10 @@ describe('catalogSlice setCatalogBuildError', () => {
   it('a later successful load clears it, same as any other statusMessage', () => {
     const failed = reducer(defaultCatalogSlice, actions.setCatalogBuildError('over budget'));
 
-    const loaded = reducer(failed, actions.catalogLoaded({ points, weights, bounds: null }));
+    const loaded = reducer(
+      failed,
+      actions.catalogLoaded({ points, weights, bounds: null, userFile: null }),
+    );
 
     expect(loaded.statusMessage).toBeNull();
   });

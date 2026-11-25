@@ -2,7 +2,7 @@ import type { AgentWeights } from '../../@types/AgentWeights';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
-import type { UserCatalog } from '../../@types/UserCatalog';
+import type { UserFileProvenance } from '../../@types/UserFileProvenance';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
@@ -43,8 +43,8 @@ export function emitTraceSidecar(input: {
   readonly steps: number;
   readonly seed: number;
   readonly producedAt: Date;
-  /** The loaded file while it is switched on; null otherwise. */
-  readonly userCatalog: (Pick<UserCatalog, 'fileName' | 'settings'> & { nPoints: number }) | null;
+  /** The loaded file the trace was built from; null otherwise. */
+  readonly userCatalog: UserFileProvenance | null;
 }): string {
   const { box, points, weights, tier, params, agentCount, steps, seed, producedAt, userCatalog } =
     input;

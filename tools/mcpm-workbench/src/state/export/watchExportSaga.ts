@@ -27,7 +27,7 @@ function* exportNpyWorker() {
   const harness = resources?.harness;
   const weights = resources?.weights;
   const s = yield* select((state: RootState) => state);
-  const { points, userCatalog, userCatalogOn } = s.catalog;
+  const { points, pointsUserFile } = s.catalog;
   if (!harness || !points || !weights) return; // mirrors Viewport's old runExport guard
   const epoch = resources.epoch;
   try {
@@ -48,14 +48,7 @@ function* exportNpyWorker() {
       steps: s.sim.stepCount,
       seed: s.sim.seed,
       producedAt: new Date(),
-      userCatalog:
-        userCatalogOn && userCatalog
-          ? {
-              fileName: userCatalog.fileName,
-              settings: userCatalog.settings,
-              nPoints: userCatalog.points.count,
-            }
-          : null,
+      userCatalog: pointsUserFile,
     });
     triggerDownload(`${stem}.json`, sidecar, 'application/json');
   } catch (err) {

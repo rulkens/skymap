@@ -14,8 +14,9 @@ import { takeLatest, put, select, call } from 'typed-redux-saga';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
+import type { UserCatalog } from '../../../@types/UserCatalog';
+import type { UserFileProvenance } from '../../../@types/UserFileProvenance';
 import { catalogBounds } from '../../field/catalogBounds';
 import { concatCatalogPoints } from '../../field/concatCatalogPoints';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
@@ -38,7 +39,7 @@ export type CatalogPointsPlan =
       readonly kind: 'load';
       readonly sources: readonly GalaxyCatalogId[];
       readonly tier: Tier;
-      readonly userPoints: CatalogPoints | null;
+      readonly userCatalog: UserCatalog | null;
     };
 
 /**
@@ -51,14 +52,20 @@ export function resolveCatalogPointsPlan(
   probeGate: boolean,
 ): CatalogPointsPlan {
   if (probeGate) return { kind: 'synthetic' };
-  const userPoints = catalog.userCatalogOn ? (catalog.userCatalog?.points ?? null) : null;
-  return { kind: 'load', sources: catalog.sources, tier: catalog.tier, userPoints };
+  const userCatalog = catalog.userCatalogOn ? catalog.userCatalog : null;
+  return { kind: 'load', sources: catalog.sources, tier: catalog.tier, userCatalog };
 }
 
 function* resolvePoints(plan: CatalogPointsPlan) {
   if (plan.kind === 'synthetic') return syntheticCatalog();
   const builtIn = yield* call(loadCatalogPoints, plan.sources, plan.tier);
-  return plan.userPoints ? concatCatalogPoints([builtIn, plan.userPoints]) : builtIn;
+  return plan.userCatalog ? concatCatalogPoints([builtIn, plan.userCatalog.points]) : builtIn;
+}
+
+function userFileOf(plan: CatalogPointsPlan): UserFileProvenance | null {
+  if (plan.kind === 'synthetic' || !plan.userCatalog) return null;
+  const { fileName, settings, points } = plan.userCatalog;
+  return { fileName, settings, nPoints: points.count };
 }
 
 function* loadCatalogWorker() {
@@ -68,7 +75,7 @@ function* loadCatalogWorker() {
     const points = yield* resolvePoints(plan);
     const weights = deriveAgentWeights(points.weight, catalog.weightMode);
     const bounds = points.count > 0 ? catalogBounds(points.positions) : null;
-    yield* put(catalogLoaded({ points, weights, bounds }));
+    yield* put(catalogLoaded({ points, weights, bounds, userFile: userFileOf(plan) }));
   } catch (err) {
     // A fetch failure must not kill this watcher (or, via takeLatest's shared
     // root, every OTHER saga in the tree) — surface it the same way a harness

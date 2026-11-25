@@ -3,6 +3,7 @@ import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { UserCatalog } from '../../../@types/UserCatalog';
+import type { UserFileProvenance } from '../../../@types/UserFileProvenance';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 
@@ -18,6 +19,7 @@ export const defaultCatalogSlice: CatalogSlice = {
   sources: ['sdss', '2mrs', 'glade'],
   tier: 'medium',
   points: null,
+  pointsUserFile: null,
   pointCount: 0,
   nanFillCount: 0,
   weightMode: 'stellarMass',
@@ -91,10 +93,12 @@ export const catalogSlice = createSlice({
         points: CatalogPoints;
         weights: AgentWeights;
         bounds: CatalogSlice['catalogBoundsMpc'];
+        userFile: UserFileProvenance | null;
       }>,
     ) => {
-      const { points, weights, bounds } = action.payload;
+      const { points, weights, bounds, userFile } = action.payload;
       state.points = points as Draft<CatalogPoints>;
+      state.pointsUserFile = userFile;
       state.pointCount = points.count;
       state.nanFillCount = weights.nanCount;
       state.statusMessage = null;

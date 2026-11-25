@@ -26,16 +26,16 @@ const userCatalog: UserCatalog = {
 };
 
 describe('resolveCatalogPointsPlan', () => {
-  it("plan carries the loaded catalog's points when it is on", () => {
+  it('plan carries the loaded catalog when it is on', () => {
     const plan = resolveCatalogPointsPlan(
       { userCatalog, userCatalogOn: true, sources: ['sdss'], tier: 'medium' },
       false,
     );
 
-    expect(plan).toEqual({ kind: 'load', sources: ['sdss'], tier: 'medium', userPoints });
+    expect(plan).toEqual({ kind: 'load', sources: ['sdss'], tier: 'medium', userCatalog });
   });
 
-  it('plan carries null user points when it is off', () => {
+  it('plan carries no loaded catalog when it is off', () => {
     const plan = resolveCatalogPointsPlan(
       { userCatalog, userCatalogOn: false, sources: ['sdss', 'glade'], tier: 'large' },
       false,
@@ -45,7 +45,7 @@ describe('resolveCatalogPointsPlan', () => {
       kind: 'load',
       sources: ['sdss', 'glade'],
       tier: 'large',
-      userPoints: null,
+      userCatalog: null,
     });
   });
 

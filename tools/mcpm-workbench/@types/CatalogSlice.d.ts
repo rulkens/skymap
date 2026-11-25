@@ -3,6 +3,7 @@ import type { Tier } from '../../../src/@types/data/Tier';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { CatalogPoints } from './CatalogPoints';
 import type { UserCatalog } from './UserCatalog';
+import type { UserFileProvenance } from './UserFileProvenance';
 
 /**
  * CatalogSlice — which v9 catalogs feed the sim, and what the last load
@@ -22,6 +23,8 @@ export type CatalogSlice = {
    * re-derives weights from it on every rebuild (weightMode can change without
    * a reload), so only `points` itself needs to live here, not weights too. */
   readonly points: CatalogPoints | null;
+  /** The loaded file inside `points`, null when off; the export reads this, not the toggle. */
+  readonly pointsUserFile: UserFileProvenance | null;
   readonly pointCount: number;
   readonly nanFillCount: number;
   readonly weightMode: 'stellarMass' | 'uniform';
