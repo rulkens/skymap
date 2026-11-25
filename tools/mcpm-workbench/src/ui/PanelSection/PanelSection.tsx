@@ -1,8 +1,9 @@
 /**
  * PanelSection — one foldable section of a workbench sidebar: a full-width
- * divider, a header that folds the body, and an optional on/off pill. The pill
- * sits beside the fold button, never inside it, so the two stay separately
- * focusable. Controlled: the caller owns `open`.
+ * divider, a header that folds the body, and an optional on/off pill on the
+ * row toggles' edge; an off section dims its title. The pill sits beside the
+ * fold button, never inside it, so the two stay separately focusable.
+ * Controlled: the caller owns `open`.
  */
 import type { ReactNode } from 'react';
 import cx from 'classnames';
@@ -32,7 +33,13 @@ function PanelSection({
 }: PanelSectionProps): ReactNode {
   return (
     <section className={styles.root}>
-      <div className={styles.header}>
+      <div className={cx(styles.header, on === false && styles.off)}>
+        <button type="button" className={styles.fold} onClick={onToggle} aria-expanded={open}>
+          <span className={cx(styles.chevron, open && styles.chevronOpen)}>
+            <ChevronRightIcon size={10} />
+          </span>
+          <span className={styles.title}>{title}</span>
+        </button>
         {on !== undefined && onChange && (
           <input
             type="checkbox"
@@ -42,12 +49,6 @@ function PanelSection({
             aria-label={toggleLabel}
           />
         )}
-        <button type="button" className={styles.fold} onClick={onToggle} aria-expanded={open}>
-          <span className={styles.title}>{title}</span>
-          <span className={cx(styles.chevron, open && styles.chevronOpen)}>
-            <ChevronRightIcon size={10} />
-          </span>
-        </button>
       </div>
       {open && <div className={styles.body}>{children}</div>}
     </section>

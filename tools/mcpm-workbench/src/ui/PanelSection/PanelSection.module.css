@@ -18,8 +18,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding: 0;
   border: none;
   background: transparent;
@@ -36,8 +35,15 @@
   outline-offset: 2px;
 }
 
+/* Brighter than the shared section header's dim, so an off section's ghost
+   title reads as off. */
 .title {
   min-width: 0;
+  color: var(--color-fg-tertiary);
+}
+
+.off .title {
+  color: var(--color-fg-ghost);
 }
 
 .chevron {
@@ -55,9 +61,10 @@
   }
 }
 
+/* Ends where a ToggleRow's pill does: PanelRow's gap plus its ⓘ column. */
 .toggle {
   composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
-  margin: 0;
+  margin: 0 calc(var(--space-4) + var(--space-10)) 0 0;
 }
 
 .body {
