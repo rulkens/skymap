@@ -2,6 +2,7 @@ import type { GridBox } from '../../@types/GridBox';
 import type { GridBudget } from '../../@types/GridBudget';
 import type { GridElement } from '../../@types/GridElement';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { bufferLimitBytes } from './bufferLimitBytes';
 import { BYTES_PER_ELEMENT } from './createGridBuffers';
 
 // agentX/Y/Z/Phi/Theta/Weight (io.wesl slots 3..8) plus T20's `densities` lane
@@ -49,9 +50,8 @@ export function estimateGridBudgetBytes(
  *
  * `agentCount` is the SoA lane LENGTH to budget: the harness passes
  * `points.count + agentCount`, since indices [0, nDataPoints) are the catalog
- * points sharing the same seven buffers. A storage buffer must clear both
- * `maxBufferSize` (to be created) and `maxStorageBufferBindingSize` (to be
- * bound), so the tighter of the two is the limit reported.
+ * points sharing the same seven buffers. Each buffer is checked against
+ * `bufferLimitBytes`.
  */
 export function planGridBudget(
   box: GridBox,
@@ -59,7 +59,7 @@ export function planGridBudget(
   element: GridElement,
   limits: Pick<GPUSupportedLimits, 'maxBufferSize' | 'maxStorageBufferBindingSize'>,
 ): GridBudget {
-  const limitBytes = Math.min(limits.maxBufferSize, limits.maxStorageBufferBindingSize);
+  const limitBytes = bufferLimitBytes(limits);
 
   const gridBytes = bufferBytesForDims(box.dims, BYTES_PER_ELEMENT[element]);
   const laneBytes = agentCount * BYTES_PER_AGENT_LANE_ENTRY;

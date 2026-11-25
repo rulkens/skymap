@@ -25,6 +25,7 @@ import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { disposeScene, type RenderResources } from '../../render/renderResources';
+import { bufferLimitBytes } from '../../sim/bufferLimitBytes';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
@@ -182,7 +183,7 @@ function* buildScene() {
     resources.weights = weights;
 
     yield* put(setResolvedGrid({ resolvedElement: harness.element }));
-    yield* put(setMaxBufferBytes(harness.gpu.device.limits.maxStorageBufferBindingSize));
+    yield* put(setMaxBufferBytes(bufferLimitBytes(harness.gpu.device.limits)));
     yield* put(resetStepCount());
     yield* put(resetHistogram());
 

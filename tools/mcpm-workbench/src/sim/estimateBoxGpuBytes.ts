@@ -1,5 +1,6 @@
 import type { GridSlice } from '../../@types/GridSlice';
 import { deriveGridBox } from '../field/deriveGridBox';
+import { gridElementOf } from '../field/gridElementOf';
 import { estimateGridBudgetBytes } from './planGridBudget';
 
 /**
@@ -13,10 +14,9 @@ export function estimateBoxGpuBytes(
   agentCount: number,
   pointCount: number,
 ): number {
-  // voxelSizeFloorMpc's own pre-first-build fallback; the two must match.
   return estimateGridBudgetBytes(
     deriveGridBox(grid).dims,
     pointCount + agentCount,
-    grid.resolvedElement ?? 'f32',
+    gridElementOf(grid),
   );
 }

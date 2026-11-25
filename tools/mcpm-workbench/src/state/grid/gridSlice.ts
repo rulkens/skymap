@@ -114,8 +114,8 @@ export const gridSlice = createSlice({
     /**
      * setMaxBufferBytes — V2's device-limit setter, same shape as `setResolvedGrid`
      * above: it records a fact about the hardware, not a user edit, so it does NOT
-     * clear `importedBox`. Viewport calls it once, right after its first successful
-     * GPU init, with `device.limits.maxStorageBufferBindingSize`.
+     * clear `importedBox`. The scene saga calls it after each build, with
+     * `bufferLimitBytes(device.limits)`, the limit planGridBudget refuses against.
      */
     setMaxBufferBytes: (state, action: PayloadAction<number>) => {
       state.maxBufferBytes = action.payload;
