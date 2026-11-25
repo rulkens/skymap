@@ -47,6 +47,20 @@ describe('parseCsvCatalog problems', () => {
     expect(problem('1,2,3,NaN\n', XYZ)).toEqual({ line: 1, message });
   });
 
+  // A weight stored as Float32 Infinity made deriveAgentWeights zero every deposit, built-ins too.
+  it('a linear mass column read as log₁₀ of mass overflows', () => {
+    expect(problem('1,2,3,1e10\n', LOG)).toEqual({
+      line: 1,
+      message: 'Line 1: weight 1e10 is too large for log₁₀ of mass. Did you mean linear?',
+    });
+  });
+
+  it('a linear weight beyond 32-bit float range, either way', () => {
+    const message = 'Line 1: weight is outside the range a 32-bit float can hold';
+    expect(problem('1,2,3,1e39\n', XYZ)).toEqual({ line: 1, message });
+    expect(problem('1,2,3,1e-50\n', XYZ)).toEqual({ line: 1, message });
+  });
+
   it('RA/Dec format, Dec outside −90…90', () => {
     expect(problem('10,120,0.1,1\n', RADEC)).toEqual({
       line: 1,

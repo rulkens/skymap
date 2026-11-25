@@ -276,7 +276,7 @@ No scale is computed or applied for the user: the file may hold something other 
   `raDecDistToEqCart` at `redshiftToDistanceMpc(z, { h0KmSMpc, omegaM })`.
 - Stored weight: `linear` → fourth column × `scale`; `log10MassMsun` → `massWeightFromLog10(column)`
   (Task 1's helper), so 12 becomes 1. In the log kind the "weight must be greater than 0" row does
-  not apply; the column only has to be finite.
+  not apply; the column has to be finite. Either kind, the stored weight must fit a 32-bit float.
 
 **Messages** (exact; `N` is the line number):
 
@@ -285,6 +285,8 @@ No scale is computed or applied for the user: the file may hold something other 
 | Fewer than 4 numbers | `Line N: expected 4 numbers, found K` |
 | Non-finite coordinate | `Line N: every value must be a finite number` |
 | Weight × scale ≤ 0 or non-finite | `Line N: weight must be greater than 0` |
+| Log kind, mass overflows a 32-bit float (added 2026-11-25, owner to confirm) | `Line N: weight V is too large for log₁₀ of mass. Did you mean linear?` |
+| Stored weight outside 32-bit float range (added 2026-11-25, owner to confirm) | `Line N: weight is outside the range a 32-bit float can hold` |
 | RA/Dec format, Dec outside −90…90 | `Line N: Dec V is outside −90 to 90. Did you mean cartesian?` |
 | RA/Dec format, RA outside 0…360 | `Line N: RA V is outside 0 to 360. Did you mean cartesian?` |
 | RA/Dec format, z < 0 | `Line N: redshift must be 0 or more` |

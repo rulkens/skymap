@@ -66,13 +66,21 @@ export function parseCsvCatalog(
       return refuse('every value must be a finite number');
     }
 
+    // Tested as stored in Float32: one Infinity zeroes every deposit, built-ins too.
     let stored: number;
     if (weightSetting.kind === 'linear') {
-      stored = w * weightSetting.scale;
-      if (!(stored > 0 && Number.isFinite(stored))) return refuse('weight must be greater than 0');
+      const scaled = w * weightSetting.scale;
+      if (!(scaled > 0)) return refuse('weight must be greater than 0');
+      stored = Math.fround(scaled);
     } else {
       if (!Number.isFinite(w)) return refuse('every value must be a finite number');
-      stored = massWeightFromLog10(w);
+      stored = Math.fround(massWeightFromLog10(w));
+      if (stored === Infinity) {
+        return refuse(`weight ${fields[3]} is too large for log₁₀ of mass. Did you mean linear?`);
+      }
+    }
+    if (!(stored > 0 && stored < Infinity)) {
+      return refuse('weight is outside the range a 32-bit float can hold');
     }
 
     if (cosmology) {
