@@ -76,8 +76,10 @@ along, and no task cites it.
 
 **Files:**
 - `tests/helpers/wesl/weslStructLayout.ts` (create)
-- `tests/helpers/wesl/WeslStructLayout.ts` (create: the return type, beside its function, as
-  `tests/helpers/frame/RenderFrameFixtureOptions.ts` sits beside `makeRenderFrameFixture.ts`)
+- `tests/helpers/wesl/@types/WeslStructLayout.ts` (create: the return type, as
+  `tests/helpers/starCatalog/@types/ReferenceStarCut.ts` sits beside `referenceStarCut.ts`; a
+  sibling `WeslStructLayout.ts` is the same file as `weslStructLayout.ts` on a case-insensitive
+  disk)
 - `tests/layers/blackHoles/lensing/render/blackHoleLensingUniformsLayout.parity.test.ts` (modify)
 - `tests/layers/body/atmosphere/render/atmosphereUniformsLayout.parity.test.ts` (modify)
 - `tests/layers/body/surfaceTiles/patch/render/surfaceTileLayout.test.ts` (modify)
@@ -124,12 +126,12 @@ export function weslStructLayout(
 
 Steps:
 
-- [ ] Write the helper, then switch each of the five tests to it and delete its private
+- [x] Write the helper, then switch each of the five tests to it and delete its private
       `WESL_TYPES` / `WGSL_TYPE` / `roundUp` / `structFields` / `structLayout` / `layoutOf`.
       Keep every assertion unchanged. Those unchanged assertions passing is the proof that the
       helper reproduces each copy.
-- [ ] No test of the helper itself: five parity tests exercise it against independent packers.
-- [ ] `npm run typecheck:fast`, then
+- [x] No test of the helper itself: five parity tests exercise it against independent packers.
+- [x] `npm run typecheck:fast`, then
       `npm test -- blackHoleLensingUniformsLayout atmosphereUniformsLayout surfaceTileLayout asteroidPoints sceneCamera`.
 
 **Done when:** no struct-layout parser remains outside `tests/helpers/wesl/`, and the five tests

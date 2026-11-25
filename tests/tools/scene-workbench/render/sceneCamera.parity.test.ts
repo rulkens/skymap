@@ -17,49 +17,7 @@ import {
   SCENE_CAMERA_BYTES,
   writeSceneCamera,
 } from '../../../../tools/scene-workbench/src/render/writeSceneCamera';
-
-/** WGSL's size AND alignment per type: a vec3 occupies 12 bytes but starts on 16. */
-const WGSL_TYPE: Record<string, { size: number; align: number }> = {
-  f32: { size: 4, align: 4 },
-  i32: { size: 4, align: 4 },
-  u32: { size: 4, align: 4 },
-  'vec3<f32>': { size: 12, align: 16 },
-  'vec4<f32>': { size: 16, align: 16 },
-  'mat4x4<f32>': { size: 64, align: 16 },
-};
-
-const STRUCT_ALIGN = 16;
-
-function parseWeslStructFields(text: string, structName: string): Array<[string, string]> {
-  const structRe = new RegExp(`struct\\s+${structName}\\s*{([^}]*)}`, 's');
-  const body = structRe.exec(text)?.[1];
-  if (body === undefined) throw new Error(`struct ${structName} not found`);
-  const fieldRe = /(\w+)\s*:\s*([\w<>]+)\s*,/g;
-  const fields: Array<[string, string]> = [];
-  let m: RegExpExecArray | null;
-  while ((m = fieldRe.exec(body)) !== null) fields.push([m[1]!, m[2]!]);
-  return fields;
-}
-
-function roundUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-function layoutOf(fields: ReadonlyArray<[string, string]>): {
-  floatOffsets: Map<string, number>;
-  sizeBytes: number;
-} {
-  const floatOffsets = new Map<string, number>();
-  let byteOffset = 0;
-  for (const [name, type] of fields) {
-    const layout = WGSL_TYPE[type];
-    if (layout === undefined) throw new Error(`unhandled WGSL type ${type} for field ${name}`);
-    byteOffset = roundUp(byteOffset, layout.align);
-    floatOffsets.set(name, byteOffset / 4);
-    byteOffset += layout.size;
-  }
-  return { floatOffsets, sizeBytes: roundUp(byteOffset, STRUCT_ALIGN) };
-}
+import { weslStructLayout } from '../../../helpers/wesl/weslStructLayout';
 
 // One distinct value per field, so a field written to a neighbour's slot shows up
 // as a wrong number rather than a coincidence. `upM` doubles as `lookAt`'s up and
@@ -87,7 +45,8 @@ describe('SceneCamera TS↔WESL parity (lib/sceneCamera.wesl ↔ writeSceneCamer
     join(process.cwd(), 'tools/scene-workbench/src/render/shaders/lib/sceneCamera.wesl'),
     'utf-8',
   );
-  const { floatOffsets, sizeBytes } = layoutOf(parseWeslStructFields(text, 'SceneCamera'));
+  const { fields, size: sizeBytes } = weslStructLayout(text, 'SceneCamera', 'uniform');
+  const floatOffsets = new Map(fields.map((field) => [field.name, field.offset / 4]));
 
   const out = new Float32Array(SCENE_CAMERA_BYTES / 4);
   writeSceneCamera(out, VIEW, POINT_SIZE_PX, SPLAT_SCALE, OPACITY_SCALE);

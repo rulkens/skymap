@@ -23,6 +23,7 @@ import { ASTEROID_HIDDEN_FLAG } from '../../../../src/layers/asteroids/catalog/d
 import { ASTEROID_CLASSES } from '../../../../src/data/asteroids/asteroidClasses';
 import { KEPLER_FIXED } from '../../../../src/data/orbit/keplerFixed';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { weslStructLayout } from '../../../helpers/wesl/weslStructLayout';
 
 const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/asteroids');
 const io = readFileSync(join(SHADERS, 'points/io.wesl'), 'utf-8');
@@ -32,41 +33,22 @@ const compute = readFileSync(join(SHADERS, 'kepler/compute.wesl'), 'utf-8');
 const constOf = (src: string, name: string): number =>
   Number(src.match(new RegExp(`const ${name}: (?:f32|u32) = ([-0-9.e]+)u?;`))![1]);
 
-/** WGSL offsets of `struct name`'s members, and its size rounded to its 16-byte alignment. */
-function structLayout(src: string, name: string): [Record<string, number>, number] {
-  const body = src.match(new RegExp(`struct ${name} \\{([\\s\\S]*?)\\n\\};`))![1]!;
-  const sizes: Record<string, [number, number]> = {
-    CameraUniforms: [16, 80],
-    'vec3<f32>': [16, 12],
-    'vec4<f32>': [16, 16],
-    'array<vec4<f32>, 4>': [16, 64],
-    'array<vec4<f32>, 3>': [16, 48],
-    f32: [4, 4],
-    u32: [4, 4],
-  };
-  const offsets: Record<string, number> = {};
-  let at = 0;
-  for (const m of body.matchAll(
-    /(\w+)\s*:\s*(CameraUniforms|vec3<f32>|vec4<f32>|array<vec4<f32>, \d>|f32|u32),/g,
-  )) {
-    const [align, size] = sizes[m[2]!]!;
-    at = Math.ceil(at / align) * align;
-    offsets[m[1]!] = at;
-    at += size;
-  }
-  return [offsets, Math.ceil(at / 16) * 16];
+/** WGSL offsets of a uniform `struct name`'s members, and its size. */
+function uniformOffsets(src: string, name: string): [Record<string, number>, number] {
+  const { fields, size } = weslStructLayout(src, name, 'uniform');
+  return [Object.fromEntries(fields.map((field) => [field.name, field.offset])), size];
 }
 
 describe('asteroids shader parity', () => {
   it('AsteroidUniforms offsets match the WGSL struct', () => {
-    const [offsets, bytes] = structLayout(io, 'AsteroidUniforms');
+    const [offsets, bytes] = uniformOffsets(io, 'AsteroidUniforms');
     const { viewProj, viewportPx, pxPerRad, ...rest } = ASTEROID_UNIFORM_OFFSETS;
     expect(offsets).toEqual({ cam: viewProj, ...rest });
     expect(bytes).toBe(ASTEROID_UNIFORM_BYTES);
   });
 
   it('KeplerUniforms offsets match the WGSL struct', () => {
-    const [offsets, bytes] = structLayout(compute, 'KeplerUniforms');
+    const [offsets, bytes] = uniformOffsets(compute, 'KeplerUniforms');
     expect(offsets).toEqual(KEPLER_UNIFORM_OFFSETS);
     expect(bytes).toBe(KEPLER_UNIFORM_BYTES);
   });
@@ -95,6 +77,8 @@ describe('asteroids shader parity', () => {
     );
     expect(constOf(kepler, 'KEPLER_STEPS')).toBe(KEPLER_FIXED.steps);
     expect(constOf(kepler, 'KEPLER_MAX_STEP')).toBe(KEPLER_FIXED.maxStep);
-    expect(kepler).toContain(`eccAnomaly = meanReduced + ${KEPLER_FIXED.danbyStart} * ecc * sign(meanReduced)`);
+    expect(kepler).toContain(
+      `eccAnomaly = meanReduced + ${KEPLER_FIXED.danbyStart} * ecc * sign(meanReduced)`,
+    );
   });
 });
