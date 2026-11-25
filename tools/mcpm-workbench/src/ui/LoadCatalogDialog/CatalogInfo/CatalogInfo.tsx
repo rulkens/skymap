@@ -7,7 +7,6 @@
  */
 import { Fragment, type ReactNode } from 'react';
 import type { CatalogPreview } from '../../../../@types/CatalogPreview';
-import type { UserCatalog } from '../../../../@types/UserCatalog';
 import { formatWeight } from '../../../field/formatWeight';
 import { AXES } from '../../GridBoxPanel/utils/AXES';
 import { formatBoundMpc } from '../utils/formatBoundMpc';
@@ -15,16 +14,15 @@ import styles from './CatalogInfo.module.css';
 
 export type CatalogInfoProps = {
   /** Null while reading, or when the file could not be parsed. */
-  readonly catalog: UserCatalog | null;
+  readonly pointCount: number | null;
   readonly bounds: CatalogPreview['bounds'];
   readonly weight: CatalogPreview['weight'];
   /** Parsed under settings that have since changed. */
   readonly stale: boolean;
 };
 
-function CatalogInfo({ catalog, bounds, weight, stale }: CatalogInfoProps): ReactNode {
-  const points = catalog && catalog.points.count > 0 ? catalog.points : null;
-  const rows = points ? points.count.toLocaleString() : '—';
+function CatalogInfo({ pointCount, bounds, weight, stale }: CatalogInfoProps): ReactNode {
+  const rows = pointCount ? pointCount.toLocaleString() : '—';
 
   return (
     <section className={styles.root} aria-label="File contents" data-stale={stale}>
@@ -48,7 +46,7 @@ function CatalogInfo({ catalog, bounds, weight, stale }: CatalogInfoProps): Reac
       </dl>
       {/* One announcement per read; the values are read on demand. */}
       <p role="status" className={styles.announce}>
-        {points ? `${rows} rows read` : ''}
+        {pointCount ? `${rows} rows read` : ''}
       </p>
     </section>
   );

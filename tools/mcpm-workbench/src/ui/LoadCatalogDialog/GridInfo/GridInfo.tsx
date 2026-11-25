@@ -5,7 +5,6 @@
  * The GPU figure counts this file's points: a load switches the built-ins off.
  */
 import type { ReactNode } from 'react';
-import type { UserCatalog } from '../../../../@types/UserCatalog';
 import type { UserCatalogLoad } from '../../../../@types/UserCatalogLoad';
 import { deriveGridBox } from '../../../field/deriveGridBox';
 import { estimateBoxGpuBytes } from '../../../sim/estimateBoxGpuBytes';
@@ -18,17 +17,17 @@ import { formatBoxSizeMpc } from '../utils/formatBoxSizeMpc';
 import styles from './GridInfo.module.css';
 
 export type GridInfoProps = {
-  /** Null while reading, or when the file could not be parsed. */
-  readonly catalog: UserCatalog | null;
+  /** The file's rows; null while reading, or when the file could not be parsed. */
+  readonly pointCount: number | null;
   readonly fitBounds: UserCatalogLoad['fitBounds'];
   readonly stale: boolean;
 };
 
-function GridInfo({ catalog, fitBounds, stale }: GridInfoProps): ReactNode {
+function GridInfo({ pointCount, fitBounds, stale }: GridInfoProps): ReactNode {
   const grid = useAppSelector((s) => s.grid);
   const agentCount = useAppSelector((s) => s.sim.agentCount);
   const loadGrid = fitBounds ? fittedGrid(grid, fitBounds) : grid;
-  const box = catalog && deriveGridBox(loadGrid);
+  const box = pointCount !== null && deriveGridBox(loadGrid);
 
   return (
     <div role="group" aria-label="Selection" className={styles.root} data-stale={stale}>
@@ -40,15 +39,15 @@ function GridInfo({ catalog, fitBounds, stale }: GridInfoProps): ReactNode {
         <dt className={styles.label}>GPU</dt>
         <dd className={styles.gpu}>
           <span>
-            {catalog
-              ? formatBytes(estimateBoxGpuBytes(loadGrid, agentCount, catalog.points.count))
+            {pointCount !== null
+              ? formatBytes(estimateBoxGpuBytes(loadGrid, agentCount, pointCount))
               : '—'}
           </span>
           {/* Always drawn, so the row keeps its height; a dash inside until the file is read. */}
-          <span className={styles.meter} aria-hidden={catalog ? undefined : true}>
+          <span className={styles.meter} aria-hidden={pointCount !== null ? undefined : true}>
             <GpuBufferMeter
               usedBytes={estimateBoxGridBufferBytes(loadGrid)}
-              limitBytes={catalog ? grid.maxBufferBytes : null}
+              limitBytes={pointCount !== null ? grid.maxBufferBytes : null}
             />
           </span>
         </dd>

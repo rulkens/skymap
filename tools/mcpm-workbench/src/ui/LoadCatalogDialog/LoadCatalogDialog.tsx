@@ -416,7 +416,13 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         </div>
 
         {(files !== null || refusal !== null) && (
-          <LoadInfo preview={preview} fitBounds={loadFit} stale={stale} />
+          <LoadInfo
+            pointCount={catalog?.points.count ?? null}
+            bounds={preview?.bounds ?? null}
+            weight={preview?.weight ?? null}
+            fitBounds={loadFit}
+            stale={stale}
+          />
         )}
 
         <footer className={styles.footer}>
