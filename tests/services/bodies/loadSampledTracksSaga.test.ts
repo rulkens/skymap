@@ -56,14 +56,14 @@ describe('loadSampledTracksSaga', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { store, requestRender } = build(['voyager1', 'probe-7']);
+    const { store, requestRender } = build(['probe-9', 'probe-7']);
     store.dispatch(ready);
     await flush();
     expect(fetchMock.mock.calls.map(([url]) => url.split('/').pop())).toEqual([
-      'sampledTrack.voyager1.bin',
+      'sampledTrack.probe-9.bin',
       'sampledTrack.probe-7.bin',
     ]);
-    expect(trajectoryRegistry.get('voyager1')).toBeUndefined();
+    expect(trajectoryRegistry.get('probe-9')).toBeUndefined();
     expect(trajectoryRegistry.get('probe-7')).toBeDefined();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(requestRender).toHaveBeenCalledTimes(1);

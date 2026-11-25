@@ -46,7 +46,7 @@ function flybyEvents(craftId: string, target: string): MissionEvent[] {
   });
 }
 
-const events: MissionEvent[] = HORIZONS_BODIES.filter((b) => b.id.startsWith('voyager')).flatMap(
+const events: MissionEvent[] = HORIZONS_BODIES.filter((b) => b.id in VOYAGER_LAUNCHES).flatMap(
   (row): MissionEvent[] => [
     {
       id: `${row.id}-launch`,

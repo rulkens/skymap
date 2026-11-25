@@ -15,4 +15,6 @@ export type HorizonsBody = {
   stepMinutes: number;
   /** VEC_TABLE '1' (position) or '2' (position + velocity). */
   vectors: 'position' | 'state';
+  /** A `<target>.dense.csv` of finer windows is merged in; fetched by a body-specific tool. */
+  dense?: true;
 };

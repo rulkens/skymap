@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
  * buildSampledTracks — every `HORIZONS_BODIES` row with `vectors: 'state'` → one
- * `public/data/sampledTrack.<id>.bin`. Its daily vectors are refined by the body's
- * `SAMPLED_TRACK_REFINEMENTS` entry, if any (merged first with the dense windows it requires),
- * decimated so the Hermite the app evaluates stays within 1 km of every raw sample, and every raw
+ * `public/data/sampledTrack.<id>.bin`. Its daily vectors (merged with its dense windows when the
+ * row is `dense`) are refined by the body's `SAMPLED_TRACK_REFINEMENTS` entry, if any, decimated so the Hermite the app evaluates stays within 1 km of every raw sample, and every raw
  * sample is re-checked against the kept ones.
  */
 import { existsSync, writeFileSync } from 'node:fs';
@@ -22,16 +21,15 @@ import type { HorizonsBody } from './@types/HorizonsBody';
 
 const TOLERANCE_KM = 1;
 
-/** The daily vectors, merged with the dense windows when `denseFetch` says the body needs them. */
-function loadDense(row: HorizonsBody, denseFetch: string | undefined): SampledTrack {
+function readRawTrack(row: HorizonsBody): SampledTrack {
   const dir = join(rawDataPath('horizons'), row.centre);
   const densePath = join(dir, `${row.target}.dense.csv`);
-  if (denseFetch && !existsSync(densePath))
-    throw new Error(`${row.id}: ${densePath} is missing; run \`${denseFetch}\``);
+  if (row.dense && !existsSync(densePath))
+    throw new Error(`${row.id}: dense windows ${densePath} are missing`);
   const rows = mergeHorizonsChunks([
     [
       ...readHorizonsCsv(join(dir, `${row.target}.csv`)),
-      ...(denseFetch ? readHorizonsCsv(densePath) : []),
+      ...(row.dense ? readHorizonsCsv(densePath) : []),
     ].sort((a, b) => a.jd - b.jd),
   ]);
   const track: SampledTrack = {
@@ -78,9 +76,8 @@ function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
 }
 
 for (const row of HORIZONS_BODIES.filter((b) => b.vectors === 'state')) {
-  const refinement = SAMPLED_TRACK_REFINEMENTS[row.id];
-  const dense = loadDense(row, refinement?.denseFetch);
-  refinement?.refine(dense, row);
+  const dense = readRawTrack(row);
+  SAMPLED_TRACK_REFINEMENTS[row.id]?.(dense, row);
   const kept = decimateHermiteSamples(dense.tDays, dense.posKm, dense.velKmS, TOLERANCE_KM);
   const worst = worstErrorKm(dense, kept);
   console.log(

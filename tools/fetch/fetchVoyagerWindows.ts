@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * fetchVoyagerWindows — the extra Horizons data `buildSampledTracks` and `buildMissionEvents`
- * need beside the daily `voyager1`/`voyager2` rows of `fetchHorizons`. The Sun-chain craft vectors (`-31` against
- * 500@10) follow the craft file's own planet chain, which is hundreds to thousands of km from the
- * DE441 planets the app draws, so each encounter also gets the craft against its system
- * barycentre and that barycentre against the Sun. Everything is 1 min within ±2 d, plus 1 h
+ * need beside the daily `voyager1`/`voyager2` rows of `fetchHorizons`. The Sun-chain craft
+ * vectors (`-31` against 500@10) follow the craft file's own planet chain, which is hundreds to
+ * thousands of km from the DE441 planets the app draws, so each encounter also gets the craft
+ * against its system barycentre and that barycentre against the Sun. Everything is 1 min within ±2 d, plus 1 h
  * out to ±60 d (Sun chain) or ±120 d (the DE441 pair). Files, all under data/raw/horizons/:
  *   500@10/<craft>.dense.csv        Sun-chain state, windows + the first sample after launch
  *   500@<bary>/<craft>.csv          craft vs system barycentre, state
