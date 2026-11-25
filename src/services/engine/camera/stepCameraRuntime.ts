@@ -124,7 +124,7 @@ export function stepCameraRuntime(
     };
   }
   const focus = stored.selectionRows.focus;
-  // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
+  // A row framing a body no focus names (a timeline exhibit's lane) stands it in as the pivot: the
   // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
   const stand = prev.wheel.pivotBody === null ? undefined : bodies.get(prev.wheel.pivotBody);
   const pivotRow = stand ? bodyRowAt(prev.wheel.pivotBody!, stand.positionMpc) : focus;

@@ -47,7 +47,7 @@ import {
   startFrameTween,
 } from '../../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
+import { setTimelineLane } from '../../../../src/state/settings/core/timelineSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { LENS_MAX_DEG } from '../../../../src/data/camera/lensMaxDeg';
@@ -71,7 +71,7 @@ import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveC
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
-import { missionEventMs } from '../../../../src/layers/missions/events/utils/missionEventMs';
+import { timelineEventMs } from '../../../../src/utils/exhibits/timeline/timelineEventMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
@@ -466,13 +466,13 @@ describe('the wheel under a mission', () => {
     const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune')!;
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, fovDeg: 50 });
     h.store.dispatch(
-      setSimDays({ simDays: unixMsToJulianDays(missionEventMs(neptune)), nowMs: 0 }),
+      setSimDays({ simDays: unixMsToJulianDays(timelineEventMs(neptune)), nowMs: 0 }),
     );
     h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
-    h.store.dispatch(setMissionCraft('voyager2'));
+    h.store.dispatch(setTimelineLane('voyager2'));
     h.store.dispatch(aimCamera({ ease: false }));
     h.frame(4);
-    expect(h.state.cameraRuntime.register.winner).toBe('mission');
+    expect(h.state.cameraRuntime.register.winner).toBe('timeline');
     for (let i = 0; i < 250; i++) h.wheel(-100);
     // The surfaceless floor is about 309 km; Voyager's hull standoff is metres.
     expect(readFollowMemory(h.state).distanceTarget! / SCALE_UNITS.KM_TO_MPC).toBeLessThan(1);
@@ -783,7 +783,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
 
   it('under a claiming exhibit row a held nav drag turns the register at the same rate', () => {
     const exhibitRow: CameraDriver = {
-      id: 'mission',
+      id: 'timeline',
       priority: 58,
       ridesExhibit: true,
       isActive: () => true,

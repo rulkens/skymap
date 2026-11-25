@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
 
 import { format, resolveConfig } from 'prettier';
 
-import type { MissionEvent } from '../../src/layers/missions/events/@types/MissionEvent';
+import type { TimelineEvent } from '../../src/@types/exhibits/timeline/TimelineEvent';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
 import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { julianDaysToUnixMs } from '../../src/utils/time/julianDaysToUnixMs';
@@ -25,7 +25,7 @@ const TITAN_RADIUS_KM = 2574.73;
 
 const jdToIso = (jd: number): string => new Date(julianDaysToUnixMs(jd)).toISOString();
 
-function flybyEvents(craftId: string): MissionEvent[] {
+function flybyEvents(craftId: string): TimelineEvent[] {
   return VOYAGER_ENCOUNTERS.filter((e) => e.craftId === craftId).map((e) => {
     const rows = readHorizonsCsv(horizonsCsvPath({ id: craftId, centre: `500@${e.bodyTarget}` }));
     const { jd, distanceKm } = closestApproach(rows);
@@ -44,8 +44,8 @@ function flybyEvents(craftId: string): MissionEvent[] {
   });
 }
 
-const events: MissionEvent[] = HORIZONS_BODIES.filter((b) => b.id in VOYAGER_LAUNCHES).flatMap(
-  (row): MissionEvent[] => [
+const events: TimelineEvent[] = HORIZONS_BODIES.filter((b) => b.id in VOYAGER_LAUNCHES).flatMap(
+  (row): TimelineEvent[] => [
     {
       id: `${row.id}-launch`,
       bodyId: row.id,
@@ -55,7 +55,7 @@ const events: MissionEvent[] = HORIZONS_BODIES.filter((b) => b.id in VOYAGER_LAU
     },
     ...flybyEvents(row.id),
     ...VOYAGER_MILESTONES.filter((m) => m.craftId === row.id).map(
-      ({ id, kind, iso, label }): MissionEvent => ({ id, bodyId: row.id, kind, iso, label }),
+      ({ id, kind, iso, label }): TimelineEvent => ({ id, bodyId: row.id, kind, iso, label }),
     ),
   ],
 );
@@ -66,8 +66,8 @@ const source =
   '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
   '// Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-sampled-tracks && npm run build-mission-events\n' +
   '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch, boundary and milestone instants are cited literals\n' +
-  "import type { MissionEvent } from '../@types/MissionEvent';\n\n" +
-  `export const MISSION_EVENTS: readonly MissionEvent[] = ${JSON.stringify(events)};\n`;
+  "import type { TimelineEvent } from '../../../../@types/exhibits/timeline/TimelineEvent';\n\n" +
+  `export const MISSION_EVENTS: readonly TimelineEvent[] = ${JSON.stringify(events)};\n`;
 const outPath = resolve(EVENTS_PATH);
 writeFileSync(
   outPath,

@@ -88,6 +88,7 @@ function makeSnapshot(
       blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
       picking: { ...f.picking },
+      timeline: { ...f.timeline, speed: 2 },
       earth: { ...f.earth },
       bias: { ...f.bias },
       thumbnails: { ...f.thumbnails },

@@ -111,7 +111,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, Bod
     positions.set(site.id, addVec3(hostPos, offsetMpc));
   }
 
-  // 1d — sampled craft, off the same walk the mission camera samples. With no track the
+  // 1d — sampled craft, off the same walk the timeline camera samples. With no track the
   // craft sits at Earth, so the state always exists (22 sites do `states.get(id)!`) and the
   // presence gate, not this phase, decides whether the craft is drawn.
   for (const { id } of SAMPLED_BODIES) positions.set(id, bodyPositionMpcAt(id, simDays));

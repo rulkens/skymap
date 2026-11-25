@@ -104,7 +104,7 @@ that does, and it is the one this spec adds.
   `watchFocusTweenSaga`'s `engineStatusChanged` loop and the `cameraRuntime() !== null` term in
   three `waitUntilSaga` predicates.
 - **D12. The sagas that skip when there is no camera keep skipping (owner ruling).** These are
-  `watchGoHomeSaga`, `watchFlyToLonLatSaga`, `watchOrientationChangeSaga`, `missionHoldSaga` and
+  `watchGoHomeSaga`, `watchFlyToLonLatSaga`, `watchOrientationChangeSaga`, `timelineHoldSaga` and
   `exhibitBodySaga`. Each switches to `select(...) === null`, and its behaviour doesn't change.
 - **D13. Contracts only shrink.** `SagaContext.cameraRuntime` and `LiveCameraRuntime` go, and
   `ReconcileEffects.logCameraState` returns `void`: `watchLogCameraStateSaga` builds the share URL
@@ -184,7 +184,7 @@ values. `runFrame` dispatches it where the readout loop runs today.
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Waiters for a camera           | `state/arrival/arrivalSaga.ts`, `state/navigation/navigateSaga.ts` (4 calls), `state/selection/watchFocusTweenSaga.ts`                                                                                | `renderedCameraSaga`                                                      |
 | Foci-and-camera pollers        | `state/camera/clipBodySaga.ts`, `state/camera/watchClipPathInspectSaga.ts`, `state/tour/visitBeatSaga.ts`                                                                                             | `renderedCameraSaga`, then `waitUntilSaga(foci)`                          |
-| Skippers (D12)                 | `state/selection/watchGoHomeSaga.ts`, `state/camera/watchFlyToLonLatSaga.ts`, `state/camera/watchOrientationChangeSaga.ts`, `state/exhibits/exhibitBodySaga.ts`, `layers/missions/timeline/sagas/missionHoldSaga.ts` | `select`, skip on null                                                    |
+| Skippers (D12)                 | `state/selection/watchGoHomeSaga.ts`, `state/camera/watchFlyToLonLatSaga.ts`, `state/camera/watchOrientationChangeSaga.ts`, `state/exhibits/exhibitBodySaga.ts`, `state/exhibits/timeline/timelineHoldSaga.ts`        | `select`, skip on null                                                    |
 | Share URL                      | `state/camera/watchLogCameraStateSaga.ts`                                                                                                                                                             | `select`                                                                  |
 | Scale bar, phone bracket       | `components/containers/ScaleBarContainer.tsx`, `ScaleBracketContainer.tsx`                                                                                                                            | `selectScale` from the camera selectors                                   |
 | Body card distance             | `layers/body/card/ui/BodyDetailCardContainer.tsx`                                                                                                                                                     | `useSampledSelector(selectFocusedBodyDistanceMpc, 250)`                   |
