@@ -20,6 +20,9 @@ export type SelectProps<T extends string> = {
   readonly labels?: Readonly<Record<T, string>>;
   /** Drawn before each option's label, in the picker and on the closed control. */
   readonly icons?: Readonly<Record<T, ReactNode>>;
+  /** Icons in the picker only: the closed control stays as wide as its names, the
+   *  control column every sidebar row shares. */
+  readonly pickerOnlyIcons?: boolean;
   readonly 'aria-label'?: string;
 };
 
@@ -29,6 +32,7 @@ function Select<T extends string>({
   onChange,
   labels,
   icons,
+  pickerOnlyIcons = false,
   'aria-label': ariaLabel,
 }: SelectProps<T>): ReactNode {
   const selectRef = useRef<HTMLSelectElement>(null);
@@ -58,7 +62,7 @@ function Select<T extends string>({
 
   const content = (option: T): ReactNode => (
     <>
-      {icons && <span className={styles.icon}>{icons[option]}</span>}
+      {icons && !pickerOnlyIcons && <span className={styles.icon}>{icons[option]}</span>}
       {labels?.[option] ?? option}
     </>
   );
