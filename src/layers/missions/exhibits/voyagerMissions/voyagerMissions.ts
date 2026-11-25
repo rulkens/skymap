@@ -12,7 +12,7 @@ import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { section } from '../../../../utils/exhibits/section';
 import { proseKind } from '../../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../../components/ExhibitOverlay/kinds/sourcesKind';
-import { missionTimelineKind } from '../timeline/missionTimelineKind';
+import { missionTimelineKind } from '../../../../components/ExhibitOverlay/kinds/missionTimelineKind';
 import type { Exhibit } from '../../../../@types/exhibits/Exhibit';
 import {
   CRUISE,

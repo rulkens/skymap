@@ -71,7 +71,7 @@ import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveC
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
-import { missionEventMs } from '../../../../src/layers/missions/events/utils/missionEventMs';
+import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';

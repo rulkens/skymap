@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
 
 import { format, resolveConfig } from 'prettier';
 
-import type { MissionEvent } from '../../src/layers/missions/events/@types/MissionEvent';
+import type { MissionEvent } from '../../src/@types/exhibits/timeline/MissionEvent';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
 import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { julianDaysToUnixMs } from '../../src/utils/time/julianDaysToUnixMs';
