@@ -116,15 +116,20 @@ March rules (spec §4): per post and sector, step outward; each step reads the f
 still resolves it (step length ≥ that level's post spacing), so the far field reads coarser
 ancestors; subtract curvature `d²/2R`; stop once `subtreeMaxM` of the z3 ancestor cannot rise
 above the running maximum. Mars's missing z8–9 make the far field step from z10 to z7: deliberate.
+As built (`marchCeilingM`): the ceiling is the max over the z3 ancestor **and its neighbours**
+(every column of a polar row), since a march crosses z3 edges; the ancestor alone missed a ridge
+just across one. Pole convention (`marchHorizonSector`, Task 6 copies it): the local frame comes
+from the post's own λ, φ, east = (−sin λ, cos λ, 0), north = (−sin φ cos λ, −sin φ sin λ, cos φ),
+no special case; at a pole it is the limit along meridian λ.
 
-- [ ] Test `a ridge on a sphere shades its anti-sun side at the analytic angle`: a synthetic
+- [x] Test `a ridge on a sphere shades its anti-sun side at the analytic angle`: a synthetic
       `HeightPyramid` (a single north–south ridge of height H at distance D east of a post);
       assert the post's east sector decodes to `atan2(H − D²/2R, D)` within one byte and its west
       sector to the flat-sphere value.
-- [ ] Test `a flat sphere bakes as flat`: constant height → `{ kind: 'flat' }`.
-- [ ] Test `the march reads past the tile edge`: the ridge sits in the neighbouring tile; the
+- [x] Test `a flat sphere bakes as flat`: constant height → `{ kind: 'flat' }`.
+- [x] Test `the march reads past the tile edge`: the ridge sits in the neighbouring tile; the
       post still sees it.
-- [ ] Implement; tests pass. Commit.
+- [x] Implement; tests pass. Commit.
 
 ---
 
