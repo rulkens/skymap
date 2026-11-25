@@ -730,7 +730,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Orbit trails',
         control: 'switch',
-        does: 'Shows the orbit of each planet, moon and spacecraft as a line, and the path of the asteroid 2026 QQ8.',
+        does: 'Shows the orbit of each planet, moon and small body as a line, and the path of the asteroid 2026 QQ8.',
         values: SWITCH,
         first: ON,
         state: 'orbitTrails.enabled',
