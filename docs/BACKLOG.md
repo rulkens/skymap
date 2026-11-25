@@ -265,6 +265,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: `export_metadata.txt` vs packed-catalog point-count mismatch** `needs-verification` — 324,849 (fork export) vs 324,901 (packed catalog sidecar), not yet investigated.
 - [ ] **mcpm-workbench: `attachTrace` rebuilds the whole pipeline on a palette change** `ready` — the live palette dropdown (`watchPaletteSaga`) now pays this every change; a `setPalette(id)` swaps only the LUT.
 - [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
+- [ ] **mcpm-workbench: a sim step sliced over frames** `needs-design` — a large selection locks up the UI; same result, spread over frames. → [details](backlog/2026-11-25-mcpm-workbench-sliced-sim-step.md)
 - [ ] **mcpm-workbench: `compareTraceCubes.test.ts`'s hand-rolled `.npy` writer is supersedable by `writeNpy`** `ready` — pre-existing test-helper duplication.
 - [ ] **mcpm-workbench: `HistogramSlice.d.ts` exports two types** `ready` — the only file in the tool's `@types/` that does; `HistogramSample` wants its own file.
 - [ ] **mcpm-workbench: stream large catalog files** `ready` — files over 400 MB (full DESI samples) need a streamed parse and an unboxed median.
