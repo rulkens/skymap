@@ -1,5 +1,5 @@
 import type { GpuBufferReading } from '../../../../@types/GpuBufferReading';
-import { GPU_BUFFER_ZONE_FROM } from './GPU_BUFFER_ZONE_FROM';
+import { GPU_BUFFER_ZONE_FROM } from '../../../sim/GPU_BUFFER_ZONE_FROM';
 
 /** gpuBufferReading — a buffer's size against the device limit; null until the limit is known. */
 export function gpuBufferReading(

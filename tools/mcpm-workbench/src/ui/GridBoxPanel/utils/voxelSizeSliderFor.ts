@@ -5,7 +5,7 @@ import { voxelSizeFloorMpc } from '../../../field/voxelSizeFloorMpc';
 import { COARSEST_LONG_AXIS_VOXELS } from './COARSEST_LONG_AXIS_VOXELS';
 import { VOXEL_SIZE_MAX_MPC } from './VOXEL_SIZE_MAX_MPC';
 import { VOXEL_SIZE_MIN_MPC } from './VOXEL_SIZE_MIN_MPC';
-import { VOXEL_SIZE_STEP_LOG10 } from './VOXEL_SIZE_STEP_LOG10';
+import { VOXEL_SIZE_STEP_LOG10 } from '../../../field/VOXEL_SIZE_STEP_LOG10';
 
 /**
  * voxelSizeSliderFor — the voxel-size slider in log10 Mpc, since its range runs

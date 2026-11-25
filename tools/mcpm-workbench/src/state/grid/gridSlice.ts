@@ -1,4 +1,5 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { voxelSizeFittingMemory } from '../../field/voxelSizeFittingMemory';
 import type { GridSlice } from '../../../@types/GridSlice';
 import type { GridBox } from '../../../@types/GridBox';
 import type { GridElement } from '../../../@types/GridElement';
@@ -95,7 +96,10 @@ export const gridSlice = createSlice({
      * catalog reload, etc — no boolean remembers how it got here). `paddingMpc`
      * bakes in at click time: it's an input to the NEXT fit, not a live modifier
      * of whatever box is already showing. A grid-control edit per the V3 ruling,
-     * so it clears `importedBox` too.
+     * so it clears `importedBox` too. The voxel size is kept unless the fitted box
+     * would put the GPU bar in its warn zone; then it is raised until it does not
+     * (voxelSizeFittingMemory). Every Auto fit, the panel's and the load dialog's,
+     * runs through here, so the dialog's preview (fittedGrid) shows the raise too.
      */
     fitBoxToCatalog: (state, action: PayloadAction<{ min: Vec3; max: Vec3 }>) => {
       const { min, max } = action.payload;
@@ -106,6 +110,7 @@ export const gridSlice = createSlice({
         max[2] - min[2] + 2 * state.paddingMpc,
       ];
       state.importedBox = null;
+      state.manualVoxelSizeMpc = voxelSizeFittingMemory(current(state));
     },
     /** Records a completed build's element. */
     setResolvedGrid: (state, action: PayloadAction<{ resolvedElement: GridElement }>) => {

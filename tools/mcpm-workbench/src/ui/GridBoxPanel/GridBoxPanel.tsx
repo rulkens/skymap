@@ -6,7 +6,8 @@
  * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
  * mode: it snapshots bounds into the manual center/size fields once,
  * `paddingMpc` baked in at click time — after that it's an ordinary manual
- * box. Below 100%, `resolveAutoFitBounds` swaps in the densest-fraction
+ * box. It keeps the voxel size unless the fitted box would not fit GPU memory,
+ * and then only raises it. Below 100%, `resolveAutoFitBounds` swaps in the densest-fraction
  * bounds (`autoFitPercent`, gridSlice.ts) before that same snapshot.
  */
 import { useState, type ReactNode } from 'react';
@@ -35,6 +36,7 @@ import { formatVoxelSizeMpc } from './utils/formatVoxelSizeMpc';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from './utils/sizeSliderFor';
+import { VOXEL_SIZE_INFO } from './utils/VOXEL_SIZE_INFO';
 import { VOXEL_SIZE_MIN_MPC } from './utils/VOXEL_SIZE_MIN_MPC';
 import { voxelSizeSliderFor } from './utils/voxelSizeSliderFor';
 import { withAxis } from './utils/withAxis';
@@ -58,8 +60,8 @@ function GridBoxPanel(): ReactNode {
   const liveFloorMpc = voxelSizeFloorMpc(grid);
   const voxelSizeInfo =
     liveFloorMpc !== null && liveFloorMpc > VOXEL_SIZE_MIN_MPC
-      ? `Edge of one sim voxel: the grid's resolution, kept when the box is resized or refit. Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
-      : "Edge of one sim voxel: the grid's resolution, kept when the box is resized or refit.";
+      ? `${VOXEL_SIZE_INFO} Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
+      : VOXEL_SIZE_INFO;
 
   return (
     <>

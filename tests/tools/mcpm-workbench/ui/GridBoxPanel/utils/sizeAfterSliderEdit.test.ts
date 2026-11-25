@@ -34,11 +34,13 @@ function drag(grid: GridSlice, axis: 0 | 1 | 2, valueMpc: number): GridSlice {
   return reducer(grid, actions.setManualSizeMpc(sizeAfterSliderEdit(grid, axis, valueMpc)));
 }
 
+// Auto fit raises the voxel size off the floor, so the fixture lowers it back.
 function fittedOn2GiB(halfMpc: Vec3): GridSlice {
-  return reducer(
+  const fitted = reducer(
     reducer(defaultGridSlice, actions.setMaxBufferBytes(2 ** 31)),
     actions.fitBoxToCatalog({ min: [-halfMpc[0], -halfMpc[1], -halfMpc[2]], max: halfMpc }),
   );
+  return reducer(fitted, actions.setVoxelSizeMpc(defaultGridSlice.manualVoxelSizeMpc));
 }
 
 /** Auto fit around a 800 Mpc cube on a 2 GiB device: the voxel floor is active. */

@@ -10,11 +10,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridSlice } from '../../../../tools/mcpm-workbench/@types/GridSlice';
 import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/deriveGridBox';
+import { GPU_BUFFER_ZONE_FROM } from '../../../../tools/mcpm-workbench/src/sim/GPU_BUFFER_ZONE_FROM';
+import { estimateBoxGridBufferBytes } from '../../../../tools/mcpm-workbench/src/sim/estimateBoxGridBufferBytes';
 import {
   defaultGridSlice,
   gridSlice,
 } from '../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
+import { voxelSizeSliderFor } from '../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/voxelSizeSliderFor';
 
 const { actions, reducer } = gridSlice;
 
@@ -97,6 +101,44 @@ describe('fitBoxToCatalog', () => {
     const fitted = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
     const afterPaddingEdit = reducer(fitted, actions.setPaddingMpc(50));
     expect(afterPaddingEdit.manualSizeMpc).toEqual(fitted.manualSizeMpc);
+  });
+});
+
+describe('fitBoxToCatalog on a known device limit', () => {
+  const booted = {
+    ...defaultGridSlice,
+    maxBufferBytes: 4 * 1024 ** 3,
+    resolvedElement: 'f16' as const,
+  };
+  const giant: { min: Vec3; max: Vec3 } = {
+    min: [-8_000, -8_000, -8_000],
+    max: [8_000, 8_000, 8_000],
+  };
+  const barFraction = (grid: GridSlice) => estimateBoxGridBufferBytes(grid) / grid.maxBufferBytes!;
+
+  it('raises the voxel size until a Milliquas-sized box sits below the GPU bar warn zone', () => {
+    const fitted = reducer(booted, actions.fitBoxToCatalog(giant));
+    expect(fitted.manualVoxelSizeMpc).toBeGreaterThan(booted.manualVoxelSizeMpc);
+    expect(barFraction(fitted)).toBeLessThan(GPU_BUFFER_ZONE_FROM.warn);
+    const slider = voxelSizeSliderFor(fitted);
+    expect(slider.min).toBeLessThanOrEqual(Math.log10(fitted.manualVoxelSizeMpc));
+    expect(Math.log10(fitted.manualVoxelSizeMpc)).toBeLessThanOrEqual(slider.max);
+  });
+
+  it('keeps the voxel size when the fitted box already fits', () => {
+    const small: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
+    expect(reducer(booted, actions.fitBoxToCatalog(small)).manualVoxelSizeMpc).toBe(0.75);
+  });
+
+  it('raises a voxel size lowered after a fit again on the next fit, and only then', () => {
+    const fitted = reducer(booted, actions.fitBoxToCatalog(giant));
+    const lowered = reducer(fitted, actions.setVoxelSizeMpc(fitted.manualVoxelSizeMpc / 2));
+    const refitted = reducer(lowered, actions.fitBoxToCatalog(giant));
+    expect(refitted.manualVoxelSizeMpc).toBeCloseTo(fitted.manualVoxelSizeMpc, 9);
+    const coarser = reducer(fitted, actions.setVoxelSizeMpc(fitted.manualVoxelSizeMpc * 2));
+    expect(reducer(coarser, actions.fitBoxToCatalog(giant)).manualVoxelSizeMpc).toBe(
+      coarser.manualVoxelSizeMpc,
+    );
   });
 });
 
