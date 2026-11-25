@@ -3,17 +3,16 @@
  * redux `<Provider>` here (not `hooks.ts`) — the store's construction site,
  * exactly the role `src/main.tsx` plays for the main app's `<Provider>`.
  * Stacks the HUD + controls over the WebGPU Viewport. Dev-only drag-drop:
- * dropping the fork's packed `.bin` + its `_metadata.txt` installs them via
- * `setPackedCatalog` — `watchCatalogSaga`'s `takeLatest` re-resolves from
- * `catalog.packedOverride` the same as a network fetch, so nothing here
- * forks the weight/bounds maths.
+ * dropping the fork's packed `.bin` + its `_metadata.txt` loads them as the
+ * user catalog via `userCatalogLoaded` — `watchCatalogSaga` derives weights
+ * and bounds for it the same as for a network fetch.
  */
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import { loadPackedCatalog } from '../../field/loadPackedCatalog';
-import { setPackedCatalog } from '../../state/catalog/catalogSlice';
+import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import Viewport from '../Viewport/Viewport';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
@@ -36,10 +35,13 @@ function App(): ReactNode {
           dropped.bin,
           dropped.metadataText,
         );
-        // `watchCatalogSaga`'s takeLatest also fires on this action and re-derives
-        // weights (same `deriveAgentWeights` transform the network path runs) via
-        // `catalogLoaded` — no need to duplicate that here just to discard it.
-        store.dispatch(setPackedCatalog({ points }));
+        store.dispatch(
+          userCatalogLoaded({
+            points,
+            fileName: dropped.sourceName,
+            settings: { format: { kind: 'cartesianMpc' }, weight: { kind: 'linear', scale: 1 } },
+          }),
+        );
         setPackedStatus(
           `packed catalog "${dropped.sourceName}": ${points.count.toLocaleString()} pts ` +
             `(declared ${declaredCount.toLocaleString()}), declared mean weight ${declaredMeanWeight}`,

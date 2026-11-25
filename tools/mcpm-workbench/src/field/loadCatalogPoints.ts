@@ -23,6 +23,7 @@ import {
   decodeGalaxyCatalog,
   emptyGalaxyCatalog,
 } from '../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
+import { concatCatalogPoints } from './concatCatalogPoints';
 import { massWeightFromLog10 } from './massWeightFromLog10';
 
 async function fetchSourceCatalog(source: GalaxyCatalogId, tier: Tier): Promise<GalaxyCatalog> {
@@ -36,6 +37,8 @@ export async function loadCatalogPoints(
   sources: readonly GalaxyCatalogId[],
   tier: Tier,
 ): Promise<CatalogPoints> {
+  // A file-only run must not need the network.
+  if (sources.length === 0) return concatCatalogPoints([]);
   await loadDataManifest();
   const catalogs = await Promise.all(sources.map((source) => fetchSourceCatalog(source, tier)));
 

@@ -2,14 +2,15 @@ import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/G
 import type { Tier } from '../../../src/@types/data/Tier';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { CatalogPoints } from './CatalogPoints';
+import type { UserCatalog } from './UserCatalog';
 
 /**
  * CatalogSlice — which v9 catalogs feed the sim, and what the last load
  * produced. `weightMode` mirrors `deriveAgentWeights`'s own union for a
  * no-remap pass-through. `nanFillCount / pointCount` is the NaN fraction,
- * computed at the display site rather than stored. `packedOverride` is a
- * dev-drop's parsed fork catalog — sticky for the session, cleared never.
- * `catalogBoundsMpc` is cached (not recomputed from positions) so
+ * computed at the display site rather than stored. `userCatalog` is the
+ * visitor's loaded file, kept while `userCatalogOn` toggles it in and out of
+ * the run beside `sources`. `catalogBoundsMpc` is cached (not recomputed from positions) so
  * `deriveGridBox` derives the SAME box for Viewport's build and the grid
  * panel's live readout.
  */
@@ -24,7 +25,8 @@ export type CatalogSlice = {
   readonly pointCount: number;
   readonly nanFillCount: number;
   readonly weightMode: 'stellarMass' | 'uniform';
-  readonly packedOverride: CatalogPoints | null;
+  readonly userCatalog: UserCatalog | null;
+  readonly userCatalogOn: boolean;
   readonly catalogBoundsMpc: { readonly min: Vec3; readonly max: Vec3 } | null;
   /**
    * Human-readable status for a state Viewport can reach but isn't an error —

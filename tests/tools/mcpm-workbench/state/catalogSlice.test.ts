@@ -8,10 +8,12 @@ import {
   catalogSlice,
   defaultCatalogSlice,
 } from '../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
+import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
+import type { UserCatalog } from '../../../../tools/mcpm-workbench/@types/UserCatalog';
 
 const { actions, reducer } = catalogSlice;
 
-const points = {
+const points: CatalogPoints = {
   positions: new Float32Array([1, 2, 3]),
   weight: new Float32Array([4]),
   count: 1,
@@ -20,13 +22,28 @@ const points = {
 
 const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianWeight: 10 };
 
-describe('catalogSlice setPackedCatalog', () => {
-  it("installs the override — pointCount/nanFillCount/bounds are catalogLoaded's job, not this reducer's", () => {
-    const next = reducer(defaultCatalogSlice, actions.setPackedCatalog({ points }));
+const userCatalog: UserCatalog = {
+  points,
+  fileName: 'desi.csv',
+  settings: { format: { kind: 'cartesianMpc' }, weight: { kind: 'linear', scale: 1 } },
+};
 
-    expect(next.packedOverride).toBe(points);
-    expect(next.pointCount).toBe(defaultCatalogSlice.pointCount);
-    expect(next.catalogBoundsMpc).toBe(defaultCatalogSlice.catalogBoundsMpc);
+describe('catalogSlice user catalog', () => {
+  it('loading a catalog switches every built-in source off and the catalog on', () => {
+    const next = reducer(defaultCatalogSlice, actions.userCatalogLoaded(userCatalog));
+
+    expect(next.userCatalog).toBe(userCatalog);
+    expect(next.userCatalogOn).toBe(true);
+    expect(next.sources).toEqual([]);
+  });
+
+  it('switching the loaded catalog off keeps it in the slice', () => {
+    const loaded = reducer(defaultCatalogSlice, actions.userCatalogLoaded(userCatalog));
+
+    const off = reducer(loaded, actions.setUserCatalogOn(false));
+
+    expect(off.userCatalogOn).toBe(false);
+    expect(off.userCatalog).toBe(userCatalog);
   });
 });
 

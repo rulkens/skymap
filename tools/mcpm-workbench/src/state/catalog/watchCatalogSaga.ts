@@ -1,10 +1,11 @@
 /**
  * watchCatalogSaga — the single owner of "what points feed the sim" and how
- * much stellar mass to weight them by. Triggers: the two catalog-identity
- * writes, a packed-catalog install, and `sagaContextRegistered` for the very
- * first load. `takeLatest` cancels an in-flight fetch the instant a newer
- * trigger lands for free — a superseded fetch's `catalogLoaded` never fires,
- * because the generator that would `put` it is already dead. WHERE points
+ * much stellar mass to weight them by. Triggers: the catalog-identity
+ * writes (sources, tier, the loaded file and its toggle), and
+ * `sagaContextRegistered` for the very first load. `takeLatest` cancels an
+ * in-flight fetch the instant a newer trigger lands for free — a superseded
+ * fetch's `catalogLoaded` never fires, because the generator that would `put`
+ * it is already dead. WHERE points
  * come from is `resolveCatalogPointsPlan`, below, pulled out so the decision
  * is unit-testable without a fetch, a DOM `location`, or a running saga.
  */
@@ -16,6 +17,7 @@ import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import { catalogBounds } from '../../field/catalogBounds';
+import { concatCatalogPoints } from '../../field/concatCatalogPoints';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { loadCatalogPoints } from '../../field/loadCatalogPoints';
 import { syntheticCatalog } from '../../field/syntheticCatalog';
@@ -26,33 +28,37 @@ import {
   setCatalogBuildError,
   setCatalogSources,
   setCatalogTier,
-  setPackedCatalog,
+  setUserCatalogOn,
+  userCatalogLoaded,
 } from './catalogSlice';
 
 export type CatalogPointsPlan =
-  | { readonly kind: 'packedOverride'; readonly points: CatalogPoints }
   | { readonly kind: 'synthetic' }
-  | { readonly kind: 'network'; readonly sources: readonly GalaxyCatalogId[]; readonly tier: Tier };
+  | {
+      readonly kind: 'load';
+      readonly sources: readonly GalaxyCatalogId[];
+      readonly tier: Tier;
+      readonly userPoints: CatalogPoints | null;
+    };
 
 /**
- * A dev-dropped packed catalog wins outright (sticky for the session, same as
- * `CatalogSlice.packedOverride`'s doc comment); otherwise `?probe`
- * (probeGpuErrors.ts) swaps in a deterministic in-tool catalog so the GPU
- * probe never touches the network or `public/data`; otherwise the real fetch.
+ * `?probe` (probeGpuErrors.ts) swaps in a deterministic in-tool catalog so the
+ * GPU probe never touches the network or `public/data`; otherwise the switched-on
+ * built-ins, plus the loaded file's points when it is on.
  */
 export function resolveCatalogPointsPlan(
-  catalog: Pick<CatalogSlice, 'packedOverride' | 'sources' | 'tier'>,
+  catalog: Pick<CatalogSlice, 'userCatalog' | 'userCatalogOn' | 'sources' | 'tier'>,
   probeGate: boolean,
 ): CatalogPointsPlan {
-  if (catalog.packedOverride) return { kind: 'packedOverride', points: catalog.packedOverride };
   if (probeGate) return { kind: 'synthetic' };
-  return { kind: 'network', sources: catalog.sources, tier: catalog.tier };
+  const userPoints = catalog.userCatalogOn ? (catalog.userCatalog?.points ?? null) : null;
+  return { kind: 'load', sources: catalog.sources, tier: catalog.tier, userPoints };
 }
 
 function* resolvePoints(plan: CatalogPointsPlan) {
-  if (plan.kind === 'packedOverride') return plan.points;
   if (plan.kind === 'synthetic') return syntheticCatalog();
-  return yield* call(loadCatalogPoints, plan.sources, plan.tier);
+  const builtIn = yield* call(loadCatalogPoints, plan.sources, plan.tier);
+  return plan.userPoints ? concatCatalogPoints([builtIn, plan.userPoints]) : builtIn;
 }
 
 function* loadCatalogWorker() {
@@ -73,7 +79,7 @@ function* loadCatalogWorker() {
 
 export function* watchCatalogSaga() {
   yield* takeLatest(
-    [setCatalogSources, setCatalogTier, setPackedCatalog, sagaContextRegistered],
+    [setCatalogSources, setCatalogTier, userCatalogLoaded, setUserCatalogOn, sagaContextRegistered],
     loadCatalogWorker,
   );
 }

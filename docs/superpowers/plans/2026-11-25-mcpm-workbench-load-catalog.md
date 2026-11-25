@@ -194,22 +194,22 @@ export type CatalogPointsPlan =
 concatCatalogPoints(parts: readonly CatalogPoints[]): CatalogPoints
 ```
 
-- [ ] Tests in `catalogSlice.test.ts`: `loading a catalog switches every built-in source off and the
+- [x] Tests in `catalogSlice.test.ts`: `loading a catalog switches every built-in source off and the
       catalog on`; `switching the loaded catalog off keeps it in the slice`.
-- [ ] Tests in `watchCatalogSaga.test.ts`: `plan carries the loaded catalog's points when it is on`;
+- [x] Tests in `watchCatalogSaga.test.ts`: `plan carries the loaded catalog's points when it is on`;
       `plan carries null user points when it is off`; `the probe gate still wins`. Replace the
       `packedOverride` cases.
-- [ ] Test `concatCatalogPoints joins positions, weights and counts in order`.
-- [ ] The worker concatenates the network result with `userPoints`; one `deriveAgentWeights` call over
+- [x] Test `concatCatalogPoints joins positions, weights and counts in order`.
+- [x] The worker concatenates the network result with `userPoints`; one `deriveAgentWeights` call over
       the merged set, as today. `loadCatalogPoints` returns an empty set without touching the network
       when `sources` is empty (`loadCatalogPoints.ts:37`), so a file-only run needs no fetch.
-- [ ] `watchCatalogSaga` takes `userCatalogLoaded` and `setUserCatalogOn` in place of
+- [x] `watchCatalogSaga` takes `userCatalogLoaded` and `setUserCatalogOn` in place of
       `setPackedCatalog` (`watchCatalogSaga.ts:76`).
-- [ ] `TYPED_ARRAY_STATE_PATHS`: `catalog.packedOverride` → `catalog.userCatalog`.
-- [ ] `App.tsx`'s dev drop dispatches `userCatalogLoaded` with `{ kind: 'cartesianMpc' }`, linear scale 1 and
+- [x] `TYPED_ARRAY_STATE_PATHS`: `catalog.packedOverride` → `catalog.userCatalog`.
+- [x] `App.tsx`'s dev drop dispatches `userCatalogLoaded` with `{ kind: 'cartesianMpc' }`, linear scale 1 and
       the `.bin` file name. It stays dev-gated until Task 6.
-- [ ] `grep -rn 'packedOverride\|setPackedCatalog' tools tests` → no hits outside `docs/`.
-- [ ] Commit.
+- [x] `grep -rn 'packedOverride\|setPackedCatalog' tools tests` → no hits outside `docs/`.
+- [x] Commit.
 
 ### Task 4: Cosmology arguments on the redshift helper
 

@@ -2,6 +2,7 @@ import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
+import type { UserCatalog } from '../../../@types/UserCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 
@@ -20,7 +21,8 @@ export const defaultCatalogSlice: CatalogSlice = {
   pointCount: 0,
   nanFillCount: 0,
   weightMode: 'stellarMass',
-  packedOverride: null,
+  userCatalog: null,
+  userCatalogOn: false,
   statusMessage: null,
   catalogBoundsMpc: null,
 };
@@ -111,18 +113,14 @@ export const catalogSlice = createSlice({
     setWeightMode: (state, action: PayloadAction<CatalogSlice['weightMode']>) => {
       state.weightMode = action.payload;
     },
-    /**
-     * Installs a dev-dropped packed catalog: `watchCatalogSaga`'s `takeLatest`
-     * also fires on this action, re-resolving from `packedOverride` and
-     * dispatching `catalogLoaded` right after — which is what actually
-     * populates `pointCount`/`nanFillCount`/`catalogBoundsMpc`/`points`. This
-     * reducer used to duplicate that same bookkeeping, but `catalogLoaded`
-     * always immediately supersedes it (same points, same weightMode-invariant
-     * nanCount), leaving nothing that ever reads the intermediate value —
-     * dead writes, deleted.
-     */
-    setPackedCatalog: (state, action: PayloadAction<{ points: CatalogPoints }>) => {
-      state.packedOverride = action.payload.points as Draft<CatalogPoints>;
+    /** Loading a file makes it the only selection; after that everything toggles freely. */
+    userCatalogLoaded: (state, action: PayloadAction<UserCatalog>) => {
+      state.userCatalog = action.payload as Draft<UserCatalog>;
+      state.userCatalogOn = true;
+      state.sources = [];
+    },
+    setUserCatalogOn: (state, action: PayloadAction<boolean>) => {
+      state.userCatalogOn = action.payload;
     },
   },
 });
@@ -134,5 +132,6 @@ export const {
   catalogLoaded,
   setCatalogBuildError,
   setWeightMode,
-  setPackedCatalog,
+  userCatalogLoaded,
+  setUserCatalogOn,
 } = catalogSlice.actions;

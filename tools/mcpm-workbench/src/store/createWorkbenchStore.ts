@@ -2,7 +2,7 @@
  * createWorkbenchStore — a factory (not a module singleton), mirroring
  * `src/store/createAppStore.ts` including its `registerSagaContext`
  * merge-then-announce ordering. This state legitimately holds typed arrays —
- * `catalog.packedOverride`/`catalog.points`'s `Float32Array`s and
+ * `catalog.userCatalog`/`catalog.points`'s `Float32Array`s and
  * `histogram.counts`'s `Uint32Array` — so both RTK dev checks ignore exactly
  * those paths: serializableCheck would flag every multi-million-float
  * dispatch as noise, and immutableCheck's deep freeze/diff over them is a
@@ -17,7 +17,7 @@ import { sagaContextRegistered } from './sagaContextRegistered';
 import type { RootState } from './types';
 import type { WorkbenchSagaContext } from './sagaContext';
 
-const TYPED_ARRAY_STATE_PATHS = ['catalog.packedOverride', 'catalog.points', 'histogram.counts'];
+const TYPED_ARRAY_STATE_PATHS = ['catalog.userCatalog', 'catalog.points', 'histogram.counts'];
 const TYPED_ARRAY_ACTION_PATHS = [
   'payload.points',
   'payload.weights',
