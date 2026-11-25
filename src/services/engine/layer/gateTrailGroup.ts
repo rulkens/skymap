@@ -4,22 +4,22 @@
  * resolve a per-group fade itself; `state` is the engine's own, read on each call.
  */
 
-import type { GatedOrbitTrailGroup } from '../../../@types/engine/frame/GatedOrbitTrailGroup';
-import type { OrbitTrailGroup } from '../../../@types/engine/layer/OrbitTrailGroup';
+import type { ShowKey } from '../../../@types/animation/ShowKey';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
 import { viewBandOf } from '../presentation/viewBandOf';
 
-export function gateOrbitTrailGroup(
-  group: OrbitTrailGroup,
+export function gateTrailGroup<G extends { readonly show: ShowKey }>(
+  group: G,
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
-): GatedOrbitTrailGroup {
+): G & { fade(view: FrameView): number } {
   return {
     ...group,
     // A trail group's show entry has no items, so its handed value is one number:
     // `resolveViewFadeValue`'s scalar branch, written out because `ShowKey` is not
     // narrowed here.
-    fade: (view) =>
+    fade: (view: FrameView) =>
       resolveVisibilityOpacity(state, view.snapshot, group.show) *
       viewBandOf(state.visibilityEntries, group.show, undefined, view),
   };

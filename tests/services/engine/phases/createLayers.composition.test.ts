@@ -27,7 +27,8 @@ import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/dat
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
-import type { ShowKey } from '../../../../src/@types/animation/ShowKey';
+import type { LayerGuides } from '../../../../src/@types/engine/layer/LayerGuides';
+import type { SampledTrailRow } from '../../../../src/@types/engine/layer/SampledTrailRow';
 
 function makeState(): EngineState {
   return {
@@ -103,17 +104,13 @@ function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, 
   } as unknown as Layer<string, unknown>;
 }
 
-function orbitTrailLayer(
-  tag: string,
-  rows: readonly OrbitalElements[],
-  show: ShowKey,
-): Layer<string, unknown> {
+function guidesLayer(tag: string, guides: LayerGuides): Layer<string, unknown> {
   return {
     name: tag,
     create: () => ({}),
     destroy: () => {},
     passes: () => [],
-    guides: () => ({ orbitTrails: { show, rows } }),
+    guides: () => guides,
   } as unknown as Layer<string, unknown>;
 }
 
@@ -150,8 +147,8 @@ describe('createLayers composition', () => {
     const aRows = [aRow];
     const bRows = [bRow];
     const layers = [
-      orbitTrailLayer('a', aRows, 'sStarTrails'),
-      orbitTrailLayer('b', bRows, 'orbitTrails'),
+      guidesLayer('a', { orbitTrails: { show: 'sStarTrails', rows: aRows } }),
+      guidesLayer('b', { orbitTrails: { show: 'orbitTrails', rows: bRows } }),
     ];
 
     await createLayers(state, makeDeps(layers, store));
@@ -163,6 +160,26 @@ describe('createLayers composition', () => {
     expect(groups[0]!.rows).toBe(aRows);
     expect(groups[0]!.show).toBe('sStarTrails');
     expect(groups[1]!.rows).toBe(bRows);
+  });
+
+  it("createLayers composes the Layers' sampled-trail groups", async () => {
+    const { store } = createAppStore();
+    const state = makeState();
+    const aRows: SampledTrailRow[] = [{ id: asSceneBodyId('a-craft'), color: [1, 0, 0] }];
+    const bRows: SampledTrailRow[] = [{ id: asSceneBodyId('b-craft'), color: [0, 1, 0] }];
+    const layers = [
+      guidesLayer('a', { sampledTrails: { show: 'missionTrails', rows: aRows } }),
+      guidesLayer('b', { sampledTrails: { show: 'orbitTrails', rows: bRows } }),
+    ];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    const groups = state.sampledTrailGroups;
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.rows).toBe(aRows);
+    expect(groups[0]!.show).toBe('missionTrails');
+    expect(groups[1]!.rows).toBe(bRows);
+    expect(groups.every((group) => typeof group.fade === 'function')).toBe(true);
   });
 
   it('each planet is captioned once', async () => {

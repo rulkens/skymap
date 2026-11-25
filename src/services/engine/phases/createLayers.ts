@@ -4,7 +4,8 @@
  * then composes each instance's contributions onto core's `state.passes` /
  * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
- * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
+ * `.label3DProducers`, `.orbitTrailGroups` and `.sampledTrailGroups` are unkeyed
+ * concatenations instead.
  * Last, it installs the composition's selection kinds for `selectionKindOf`.
  */
 
@@ -38,7 +39,7 @@ import { assertAssetDemands } from '../wiring/assertAssetDemands';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
-import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
+import { gateTrailGroup } from '../layer/gateTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
@@ -205,7 +206,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   );
   state.orbitTrailGroups = instances
     .flatMap((instance) => instance.orbitTrails)
-    .map((group) => gateOrbitTrailGroup(group, state));
+    .map((group) => gateTrailGroup(group, state));
+  state.sampledTrailGroups = instances
+    .flatMap((instance) => instance.sampledTrails)
+    .map((group) => gateTrailGroup(group, state));
   state.terrainHeightAt = composeTerrainHeightAt(
     instances.flatMap((instance) =>
       instance.heightAt ? [{ name: instance.name, heightAt: instance.heightAt }] : [],

@@ -265,6 +265,7 @@ export function createEngine(
     visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailGroups: [],
+    sampledTrailGroups: [],
     terrainHeightAt: datumOnlyTerrainHeight,
   };
 

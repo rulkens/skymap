@@ -33,6 +33,7 @@ import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
+import type { GatedSampledTrailGroup } from '../frame/GatedSampledTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
@@ -92,8 +93,10 @@ export type EngineState = {
   /** Each asset row's slot, indexed by key. */
   slotsByKey: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   label3DProducers: readonly Label3DProducer[];
-  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade bound. */
+  /** Every Layer's `guides.orbitTrails` group, each with its fade bound. */
   orbitTrailGroups: readonly GatedOrbitTrailGroup[];
+  /** Every Layer's `guides.sampledTrails` group, each with its fade bound. */
+  sampledTrailGroups: readonly GatedSampledTrailGroup[];
   /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `heightAt`. */
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
