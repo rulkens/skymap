@@ -8,23 +8,13 @@
  * the Raymarch / Agents / Galaxies / Path tracer sections are the four render
  * layers, each switched by its header pill, and any subset may be on.
  */
-import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import SubsectionGroup from './SubsectionGroup';
-import {
-  clearTraceRequested,
-  exportNpyRequested,
-  exportScfdRequested,
-  resetRequested,
-} from '../../state/commands';
-import { downloadStem } from '../../export/downloadStem';
-import { triggerDownload } from '../../export/triggerDownload';
-import { deriveGridBox } from '../../field/deriveGridBox';
-import { setCatalogSources, setWeightMode } from '../../state/catalog/catalogSlice';
-import { exportParams, MCPM_PARAM_KEYS } from '../../state/exportParams';
-import { installImportedBox } from '../../state/grid/gridSlice';
-import { importParams } from '../../state/importParams';
+import { clearTraceRequested, resetRequested } from '../../state/commands';
+import { setWeightMode } from '../../state/catalog/catalogSlice';
+import { MCPM_PARAM_KEYS } from '../../state/exportParams';
 import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../state/sim/simSlice';
 import {
   setAdditive,
@@ -43,7 +33,8 @@ import {
   setRaymarchPaletteId,
   setRaymarchParam,
 } from '../../state/view/viewSlice';
-import { useAppDispatch, useAppSelector, useAppStore } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import FileActions from '../FileActions/FileActions';
 import PaletteRow from '../PaletteRow/PaletteRow';
 import PanelSection from '../PanelSection/PanelSection';
 import PanelRow from '../PanelRow/PanelRow';
@@ -58,7 +49,6 @@ import styles from './ControlsPanel.module.css';
 
 function ControlsPanel(): ReactNode {
   const dispatch = useAppDispatch();
-  const store = useAppStore();
   const sim = useAppSelector((s) => s.sim);
   const catalog = useAppSelector((s) => s.catalog);
   const view = useAppSelector((s) => s.view);
@@ -72,58 +62,6 @@ function ControlsPanel(): ReactNode {
   const [pathTracerOpen, setPathTracerOpen] = useState(false);
   const toggleLayer = (layer: keyof ViewSlice['layers']) => (on: boolean) =>
     dispatch(setLayerEnabled({ layer, on }));
-
-  // V3: save/load a McpmParams + agent count + init mode + grid box preset,
-  // the same shape emitTraceSidecar's provenance.params rides (exportParams).
-  // `null` grid box (no catalog loaded yet, manual bounds never null) blocks
-  // save — there's nothing meaningful to freeze into a preset yet.
-  const [paramsStatus, setParamsStatus] = useState<string | null>(null);
-  const paramsFileInputRef = useRef<HTMLInputElement>(null);
-
-  const onSaveParams = (): void => {
-    const s = store.getState();
-    // deriveGridBox is never null: grid derivation is always the manual path
-    // (S13.5), and manualCenterMpc/manualSizeMpc always have a value.
-    const json = exportParams({
-      params: s.sim.params,
-      agentCount: s.sim.agentCount,
-      initMode: s.sim.initMode,
-      gridBox: deriveGridBox(s.grid),
-      sources: s.catalog.sources,
-    });
-    triggerDownload(`${downloadStem(new Date())}-params.json`, json, 'application/json');
-    setParamsStatus(null);
-  };
-
-  const onLoadParamsClick = (): void => paramsFileInputRef.current?.click();
-
-  const onLoadParamsFile = (e: ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0] ?? null;
-    e.target.value = ''; // clears the input so re-selecting the same file still fires onChange
-    if (!file) return;
-    void file
-      .text()
-      .then((text) => {
-        const imported = importParams(text);
-        // Order doesn't matter for the eventual rebuild: setInitMode/setAgentCount/
-        // installImportedBox are direct `watchSceneSaga` triggers, and setCatalogSources
-        // reaches it indirectly (via `watchCatalogSaga` dispatching `catalogLoaded` once
-        // the load resolves) — either way, whichever debounced build actually runs reads
-        // a fresh full state snapshot at that point, not a snapshot from dispatch time.
-        // Catalog dispatched last only because it's conditional (`imported.sources` may
-        // be absent); setSimParam isn't a trigger at all (live params, no rebuild).
-        for (const key of MCPM_PARAM_KEYS)
-          dispatch(setSimParam({ key, value: imported.params[key] }));
-        dispatch(setInitMode(imported.initMode));
-        dispatch(setAgentCount(imported.agentCount));
-        dispatch(installImportedBox(imported.gridBox));
-        if (imported.sources !== undefined) dispatch(setCatalogSources(imported.sources));
-        setParamsStatus(null);
-      })
-      .catch((err: unknown) => {
-        setParamsStatus((err as Error).message);
-      });
-  };
 
   return (
     <aside className={styles.root} aria-label="Simulation and rendering">
@@ -399,45 +337,7 @@ function ControlsPanel(): ReactNode {
           />
         </PanelSection>
       </div>
-      {/* Pinned below the scroll area, always visible (S12). */}
-      <div className={styles.footer}>
-        <PanelRow>
-          <div className={styles.footerActions}>
-            {/* T16 leg 1: `.npy` + `polyphy-trace` sidecar, one stem naming
-                both (downloadStem/emitTraceSidecar/exportNpy). Only the export
-                saga's harness closure (Task 8) can actually call readbackTrace,
-                so this button can only request. */}
-            <Button className={styles.actionButton} onClick={() => dispatch(exportNpyRequested())}>
-              download trace
-            </Button>
-            {/* T17 leg 2: same request/saga split, downloading a ready-to-serve
-                `.scfd` through the SAME packing code (packLogTraceVoxels/
-                encodeScalarField) the offline buildRhizomeVolume importer uses. */}
-            <Button className={styles.actionButton} onClick={() => dispatch(exportScfdRequested())}>
-              download .scfd
-            </Button>
-            {/* V3: unlike the two exports above, this runs synchronously right
-                here — exportParams needs no GPU readback, just the live snapshot. */}
-            <Button className={styles.actionButton} onClick={onSaveParams}>
-              save params
-            </Button>
-            {/* The visible control is the Button; the <input> stays off-screen and
-                is only ever driven programmatically. */}
-            <Button className={styles.actionButton} onClick={onLoadParamsClick}>
-              load params
-            </Button>
-            <input
-              ref={paramsFileInputRef}
-              type="file"
-              accept="application/json,.json"
-              aria-label="load params file"
-              style={{ display: 'none' }}
-              onChange={onLoadParamsFile}
-            />
-          </div>
-        </PanelRow>
-        {paramsStatus && <p className={styles.paramsStatus}>{paramsStatus}</p>}
-      </div>
+      <FileActions />
     </aside>
   );
 }

@@ -6,31 +6,6 @@
   composes: sections from '../sidebar.module.css';
 }
 
-.footer {
-  composes: pinnedSticky from '../sidebar.module.css';
-  row-gap: var(--space-2);
-  padding-block: var(--space-4);
-  border-block-start: 1px solid var(--border-divider);
-}
-
-.footerActions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.actionButton {
-  composes: blockButton from '../../../../../src/components/common/shared.module.css';
-}
-
-/* importParams' rejection message (malformed or hand-edited JSON). */
-.paramsStatus {
-  grid-column: label-start / control-end;
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-muted);
-}
-
 /* reset / clear trace, under the run/seed/weight toggles. */
 .simActions {
   display: grid;
