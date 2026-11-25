@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/deriveGridBox';
 import {
   defaultGridSlice,
   gridSlice,
@@ -96,5 +97,24 @@ describe('fitBoxToCatalog', () => {
     const fitted = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
     const afterPaddingEdit = reducer(fitted, actions.setPaddingMpc(50));
     expect(afterPaddingEdit.manualSizeMpc).toEqual(fitted.manualSizeMpc);
+  });
+});
+
+describe('setPaddingMpc', () => {
+  it('refuses an empty or negative padding, so auto fit never builds a NaN or negative box', () => {
+    const bounds: { min: Vec3; max: Vec3 } = { min: [-50, -50, -50], max: [50, 50, 50] };
+    for (const padding of [NaN, -60, Infinity]) {
+      const edited = reducer(defaultGridSlice, actions.setPaddingMpc(padding));
+      expect(edited.paddingMpc).toBe(defaultGridSlice.paddingMpc);
+      const { dims } = deriveGridBox(reducer(edited, actions.fitBoxToCatalog(bounds)));
+      for (const d of dims) {
+        expect(d).toBeGreaterThan(0);
+        expect(d % 8).toBe(0);
+      }
+    }
+  });
+
+  it('takes a padding of 0', () => {
+    expect(reducer(defaultGridSlice, actions.setPaddingMpc(0)).paddingMpc).toBe(0);
   });
 });

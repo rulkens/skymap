@@ -40,7 +40,9 @@ export const gridSlice = createSlice({
       state.manualVoxelSizeMpc = action.payload;
       state.importedBox = null;
     },
+    // Refused, not clamped: the field passes NaN while it is empty or mid-edit.
     setPaddingMpc: (state, action: PayloadAction<number>) => {
+      if (!(Number.isFinite(action.payload) && action.payload >= 0)) return;
       state.paddingMpc = action.payload;
       state.importedBox = null;
     },

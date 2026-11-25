@@ -12,3 +12,7 @@
   inline-size: 8ch;
   cursor: text;
 }
+
+.field[aria-invalid='true'] {
+  border-color: var(--tool-status-bad);
+}

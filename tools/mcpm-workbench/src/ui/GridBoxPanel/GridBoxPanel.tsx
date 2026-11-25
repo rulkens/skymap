@@ -9,7 +9,7 @@
  * box. Below 100%, `resolveAutoFitBounds` swaps in the densest-fraction
  * bounds (`autoFitPercent`, gridSlice.ts) before that same snapshot.
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import Button from '../../../../../src/components/common/Button/Button';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { keptCountFor } from '../../field/keptCountFor';
@@ -44,6 +44,7 @@ function GridBoxPanel(): ReactNode {
   const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
   const catalogPoints = useAppSelector((s) => s.catalog.points);
   const catalogPointCount = useAppSelector((s) => s.catalog.pointCount);
+  const [paddingText, setPaddingText] = useState<string | null>(null);
   // Display-only: how many catalog points the current slider position would evict on
   // the next Auto fit click. Derived here, not stored — `autoFitPercent` is a one-shot
   // input to that click, with no bearing on the box already showing (gridSlice.ts).
@@ -123,11 +124,22 @@ function GridBoxPanel(): ReactNode {
           label="padding (Mpc)"
           info="Margin added on every side when Auto fit sets the box."
         >
+          {/* Holds its own text while focused, so it can be cleared mid-edit; the store
+              refuses what isn't a padding and keeps the last one that was. */}
           <input
             type="number"
+            min={0}
             className={styles.field}
-            value={grid.paddingMpc}
-            onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
+            value={paddingText ?? grid.paddingMpc}
+            aria-invalid={
+              paddingText !== null &&
+              (paddingText.trim() === '' || Number(paddingText) !== grid.paddingMpc)
+            }
+            onChange={(e) => {
+              setPaddingText(e.target.value);
+              dispatch(setPaddingMpc(e.target.valueAsNumber));
+            }}
+            onBlur={() => setPaddingText(null)}
           />
         </PanelRow>
         <PanelRow>
