@@ -13,9 +13,9 @@ import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/m
 import { exhibitBodySaga } from '../../../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../../../src/layers/missions/exhibits/timeline/playMission';
 import {
-  setMissionCraft,
-  stepMissionSpeed,
-} from '../../../../../src/layers/missions/state/missions/slice';
+  setTimelineLane,
+  stepTimelineSpeed,
+} from '../../../../../src/state/settings/core/timelineSlice';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import {
   pause,
@@ -82,7 +82,7 @@ describe('mission hold loop', () => {
     const s = store.getState();
     expect(s.time.paused).toBe(true);
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
-    expect(s.settings.missions.craft).toBe('voyager1');
+    expect(s.settings.timeline.lane).toBe('voyager1');
     expect(s.camera.intent.aim).toEqual({ ease: false });
   });
 
@@ -93,7 +93,7 @@ describe('mission hold loop', () => {
 
   it('steps to a flyby two days early and plays', async () => {
     const { store, step, simDays } = await hold();
-    store.dispatch(setMissionCraft('voyager2'));
+    store.dispatch(setTimelineLane('voyager2'));
     await tick();
     step('voyager2-neptune');
     await tick();
@@ -119,11 +119,11 @@ describe('mission hold loop', () => {
     const { store, simDays } = await hold();
     const nowMs = performance.now();
     store.dispatch(setSimDays({ simDays: eventDays('voyager2-launch'), nowMs }));
-    store.dispatch(setMissionCraft('voyager1'));
+    store.dispatch(setTimelineLane('voyager1'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
     store.dispatch(setSimDays({ simDays: eventDays('voyager1-jupiter'), nowMs }));
-    store.dispatch(setMissionCraft('voyager2'));
+    store.dispatch(setTimelineLane('voyager2'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-jupiter'), 9);
   });
@@ -131,7 +131,7 @@ describe('mission hold loop', () => {
   it('carries a clock at one craft’s launch to the other’s launch on a tab switch', async () => {
     const { store, simDays } = await hold();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
-    store.dispatch(setMissionCraft('voyager2'));
+    store.dispatch(setTimelineLane('voyager2'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager2-launch'), 9);
   });
@@ -151,11 +151,11 @@ describe('mission hold loop', () => {
     store.dispatch(playMission());
     await tick();
     const first = store.getState().time.profile!;
-    store.dispatch(stepMissionSpeed({ step: 1 }));
+    store.dispatch(stepTimelineSpeed({ step: 1 }));
     await tick();
     const second = store.getState().time.profile!;
     expect(second).not.toBe(first);
-    expect(store.getState().settings.missions.speed).toBe(2);
+    expect(store.getState().settings.timeline.speed).toBe(2);
     await tick(second.wallMs.at(-1)! - 100);
     expect(store.getState().time.paused).toBe(false);
   });
@@ -184,7 +184,7 @@ describe('mission hold loop', () => {
 
   it('a tab click during the fly-in re-aims the camera', async () => {
     const { store } = await hold('fly', never());
-    store.dispatch(setMissionCraft('voyager2'));
+    store.dispatch(setTimelineLane('voyager2'));
     await tick();
     expect(store.getState().camera.intent.aim).toEqual({ ease: true });
   });
@@ -194,9 +194,9 @@ describe('mission hold loop', () => {
     store.dispatch(playMission());
     await tick();
     expect(store.getState().time.profile).not.toBeNull();
-    store.dispatch(stepMissionSpeed({ step: 1 }));
+    store.dispatch(stepTimelineSpeed({ step: 1 }));
     await tick();
-    expect(store.getState().settings.missions.speed).toBe(2);
+    expect(store.getState().settings.timeline.speed).toBe(2);
     step('voyager1-jupiter');
     await tick();
     expect(store.getState().time.profile).not.toBeNull();
@@ -234,11 +234,11 @@ describe('mission hold loop', () => {
   it('opens with the speed factor in the store, and − / + while paused only change it', async () => {
     const { store, simDays } = await hold();
     const at = simDays();
-    expect(store.getState().settings.missions.speed).toBe(1);
-    store.dispatch(stepMissionSpeed({ step: 1 }));
+    expect(store.getState().settings.timeline.speed).toBe(1);
+    store.dispatch(stepTimelineSpeed({ step: 1 }));
     await tick(1000);
     const s = store.getState();
-    expect(s.settings.missions.speed).toBe(2);
+    expect(s.settings.timeline.speed).toBe(2);
     expect(s.time.paused).toBe(true);
     expect(s.time.profile).toBeNull();
     expect(simDays()).toBeCloseTo(at, 9);
@@ -246,12 +246,12 @@ describe('mission hold loop', () => {
 
   it('the speed factor stops at the ladder ends and survives a step', async () => {
     const { store, step } = await hold();
-    for (let i = 0; i < 9; i++) store.dispatch(stepMissionSpeed({ step: -1 }));
+    for (let i = 0; i < 9; i++) store.dispatch(stepTimelineSpeed({ step: -1 }));
     await tick();
-    expect(store.getState().settings.missions.speed).toBe(MISSION_SPEEDS[0]);
+    expect(store.getState().settings.timeline.speed).toBe(MISSION_SPEEDS[0]);
     step('voyager1-pale-blue-dot');
     await tick();
-    expect(store.getState().settings.missions.speed).toBe(MISSION_SPEEDS[0]);
+    expect(store.getState().settings.timeline.speed).toBe(MISSION_SPEEDS[0]);
   });
 
   it('− / + at the end of the mission leave the clock at now; only run replays', async () => {
@@ -260,7 +260,7 @@ describe('mission hold loop', () => {
     await tick();
     await tick(store.getState().time.profile!.wallMs.at(-1)! + 100);
     const end = simDays();
-    store.dispatch(stepMissionSpeed({ step: 1 }));
+    store.dispatch(stepTimelineSpeed({ step: 1 }));
     await tick(1000);
     expect(simDays()).toBeCloseTo(end, 9);
     expect(store.getState().time.profile).toBeNull();
@@ -290,7 +290,7 @@ describe('mission hold loop', () => {
     const afterStep = store.getState().camera.intent.aim;
     expect(afterStep).toEqual({ ease: true });
     expect(afterStep).not.toBe(entry);
-    store.dispatch(setMissionCraft('voyager2'));
+    store.dispatch(setTimelineLane('voyager2'));
     await tick();
     const afterTab = store.getState().camera.intent.aim;
     expect(afterTab).toEqual({ ease: true });

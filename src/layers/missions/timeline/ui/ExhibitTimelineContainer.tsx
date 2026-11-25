@@ -1,7 +1,7 @@
 /**
  * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, paused
  * flag, mission profile and selected craft in; `setSimDays` (scrub), `stepToEvent`,
- * `setMissionCraft`, `playMission`, `stepMissionSpeed` and `pause` out (the craft tabs ARE the
+ * `setTimelineLane`, `playMission`, `stepTimelineSpeed` and `pause` out (the craft tabs ARE the
  * store's craft, so the 3D view dims the other craft). The instant and the profile's live
  * speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running clock
  * re-renders this leaf and not the whole exhibit overlay.
@@ -14,8 +14,8 @@ import ExhibitTimeline from './ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { playMission } from '../../exhibits/timeline/playMission';
 import { selectTimeState } from '../../../../state/time/selectors';
-import { selectMissionCraft, selectMissionSpeed } from '../../state/missions/selectors';
-import { setMissionCraft, stepMissionSpeed } from '../../state/missions/slice';
+import { selectTimelineLane, selectTimelineSpeed } from '../../../../state/settings/selectors';
+import { setTimelineLane, stepTimelineSpeed } from '../../../../state/settings/core/timelineSlice';
 import { pause, setSimDays, stepToEvent } from '../../../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../../../data/exhibits/timeline/missionSpeeds';
 import { deriveSimDays } from '../../../../utils/time/deriveSimDays';
@@ -38,7 +38,7 @@ export type ExhibitTimelineContainerProps = {
 function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
-  const craft = useAppSelector(selectMissionCraft);
+  const craft = useAppSelector(selectTimelineLane);
   const lanes = useMemo(() => timelineLanes(data.lanes), [data.lanes]);
   // An open end is the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => timelineEndMs(data), [data]);
@@ -79,9 +79,9 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
     () => dispatch(paused ? playMission() : pause({ nowMs: performance.now() })),
     [dispatch, paused],
   );
-  const onSlower = useCallback(() => dispatch(stepMissionSpeed({ step: -1 })), [dispatch]);
-  const onFaster = useCallback(() => dispatch(stepMissionSpeed({ step: 1 })), [dispatch]);
-  const factor = useAppSelector(selectMissionSpeed);
+  const onSlower = useCallback(() => dispatch(stepTimelineSpeed({ step: -1 })), [dispatch]);
+  const onFaster = useCallback(() => dispatch(stepTimelineSpeed({ step: 1 })), [dispatch]);
+  const factor = useAppSelector(selectTimelineSpeed);
   // Playing, the label is the profile's live speed; otherwise the factor the next run plays at.
   const clock = {
     paused,
@@ -92,7 +92,7 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
     atFastest: factor >= MISSION_SPEEDS.at(-1)!,
   };
 
-  const onSelect = useCallback((id: string) => dispatch(setMissionCraft(id)), [dispatch]);
+  const onSelect = useCallback((id: string) => dispatch(setTimelineLane(id)), [dispatch]);
 
   return (
     <ExhibitTimeline

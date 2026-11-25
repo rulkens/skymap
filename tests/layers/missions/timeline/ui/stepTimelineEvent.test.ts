@@ -15,7 +15,7 @@ const TIMELINE = voyagerTimeline();
 const V1 = SAVED.filter((e) => e.bodyId === 'voyager1');
 const stateAt = (iso: string, craft: string | null = 'voyager1'): RootState =>
   ({
-    settings: { missionTrails: { enabled: true }, missions: { craft } },
+    settings: { missionTrails: { enabled: true }, timeline: { lane: craft } },
     time: {
       mode: 'manual',
       anchor: { simDays: unixMsToJulianDays(Date.parse(iso)), realMs: 0 },

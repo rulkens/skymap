@@ -47,7 +47,7 @@ import {
   startFrameTween,
 } from '../../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
-import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
+import { setTimelineLane } from '../../../../src/state/settings/core/timelineSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { LENS_MAX_DEG } from '../../../../src/data/camera/lensMaxDeg';
@@ -469,7 +469,7 @@ describe('the wheel under a mission', () => {
       setSimDays({ simDays: unixMsToJulianDays(missionEventMs(neptune)), nowMs: 0 }),
     );
     h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
-    h.store.dispatch(setMissionCraft('voyager2'));
+    h.store.dispatch(setTimelineLane('voyager2'));
     h.store.dispatch(aimCamera({ ease: false }));
     h.frame(4);
     expect(h.state.cameraRuntime.register.winner).toBe('mission');

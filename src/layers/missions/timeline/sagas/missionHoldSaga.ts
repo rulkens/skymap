@@ -19,9 +19,12 @@ import { deriveSimDays } from '../../../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../../utils/time/unixMsToJulianDays';
 import { timelineEndMs } from '../utils/timelineEndMs';
 import { aimCamera } from '../../../../state/camera/cameraIntentSlice';
-import { selectOrientation } from '../../../../state/settings/selectors';
-import { selectMissionCraft, selectMissionSpeed } from '../../state/missions/selectors';
-import { setMissionCraft, stepMissionSpeed } from '../../state/missions/slice';
+import {
+  selectOrientation,
+  selectTimelineLane,
+  selectTimelineSpeed,
+} from '../../../../state/settings/selectors';
+import { setTimelineLane, stepTimelineSpeed } from '../../../../state/settings/core/timelineSlice';
 import { exitTakeover } from '../../../../state/takeover/takeoverActions';
 import { selectTimeState } from '../../../../state/time/selectors';
 import { pause, resume, setSimDays, stepToEvent } from '../../../../state/time/timeSlice';
@@ -51,9 +54,9 @@ export function* missionHoldSaga(
     stops: missionStops(timeline.events.filter((e) => e.bodyId === craftId)),
     cruise: timeline.cruise,
   });
-  let speed = yield* select(selectMissionSpeed);
+  let speed = yield* select(selectTimelineSpeed);
   // The exhibit's snapshot always sets the craft before this saga runs.
-  let mission = missionOf((yield* select(selectMissionCraft))!);
+  let mission = missionOf((yield* select(selectTimelineLane))!);
   const nowMs = performance.now();
   // A linked `t=` is already on the clock; it wins over the launch, kept inside the mission.
   const entryDays = atLinkedTime
@@ -77,16 +80,16 @@ export function* missionHoldSaga(
       const next = yield* race({
         exit: take(exitTakeover),
         step: take(stepToEvent),
-        tab: take(setMissionCraft),
+        tab: take(setTimelineLane),
         play: take(playMission),
         resume: take(resume),
-        speed: take(stepMissionSpeed),
+        speed: take(stepTimelineSpeed),
         scrub: take(setSimDays),
       });
       if (next.exit) break;
       if (next.speed) {
         // The cluster's reducer has already stepped (and clamped) the factor.
-        const stepped = yield* select(selectMissionSpeed);
+        const stepped = yield* select(selectTimelineSpeed);
         if (stepped === speed) continue;
         speed = stepped;
       }

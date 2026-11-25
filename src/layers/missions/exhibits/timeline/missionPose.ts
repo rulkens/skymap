@@ -56,7 +56,7 @@ export function missionPose(
   data: MissionTimeline,
 ): DriverOutput<MissionCameraMemory> {
   // The exhibit's snapshot always sets the craft before this row can win.
-  const craftId = ctx.state.settings.missions.craft;
+  const craftId = ctx.state.settings.timeline.lane;
   if (craftId === null) return { pose: ctx.state.camera.intent.base, memory: mem };
   const mission: MissionCourse = { craftId, stops: stopsOf(data, craftId), cruise: data.cruise };
   const token = ctx.state.camera.intent.aim;

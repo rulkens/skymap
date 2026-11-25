@@ -55,7 +55,7 @@ export const missionsLayer = defineLayer({
       show: 'missionTrails',
       rows: MISSION_TRAIL_ROWS,
       nearPlanets: (state) => state.settings.missionTrails.nearPlanets,
-      dim: (state, id) => emphasisDim(state.settings.missions.craft, id),
+      dim: (state, id) => emphasisDim(state.settings.timeline.lane, id),
     },
   }),
   selection: {

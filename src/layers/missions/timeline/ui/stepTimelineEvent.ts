@@ -1,4 +1,4 @@
-import { selectMissionCraft } from '../../state/missions/selectors';
+import { selectTimelineLane } from '../../../../state/settings/selectors';
 import { selectTimeState } from '../../../../state/time/selectors';
 import { stepToEvent } from '../../../../state/time/timeSlice';
 import { adjacentEventId } from '../../events/utils/adjacentEventId';
@@ -18,7 +18,7 @@ export const stepTimelineEvent = (
   timeline: MissionTimeline,
   direction: -1 | 1,
 ) => {
-  const craft = selectMissionCraft(state);
+  const craft = selectTimelineLane(state);
   const events = timeline.events.filter((e) => e.bodyId === craft);
   const nowMs = performance.now();
   const simMs = julianDaysToUnixMs(deriveSimDays(selectTimeState(state), nowMs));

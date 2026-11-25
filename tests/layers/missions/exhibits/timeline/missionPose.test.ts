@@ -19,7 +19,7 @@ import { missionPose } from '../../../../../src/layers/missions/exhibits/timelin
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { aimCamera } from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
-import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
+import { setTimelineLane } from '../../../../../src/state/settings/core/timelineSlice';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { eyeMpcOf } from '../../../../../src/utils/camera/orbitPose/eyeMpcOf';
@@ -68,7 +68,7 @@ const stopsOf = (craftId: string) =>
 /** A store with the craft selected and the aim token set, as the hold leaves it. */
 function storeOf(mission: Mission) {
   const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setMissionCraft(mission.craftId));
+  store.dispatch(setTimelineLane(mission.craftId));
   store.dispatch(aimCamera({ ease: mission.reaim }));
   return store;
 }

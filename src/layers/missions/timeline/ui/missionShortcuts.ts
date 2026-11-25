@@ -1,4 +1,4 @@
-import { stepMissionSpeed } from '../../state/missions/slice';
+import { stepTimelineSpeed } from '../../../../state/settings/core/timelineSlice';
 import { stepTimelineEvent } from './stepTimelineEvent';
 import type { KeyboardShortcut } from '../../../../@types/state/input/KeyboardShortcut';
 import type { MissionTimeline } from '../@types/MissionTimeline';
@@ -9,8 +9,8 @@ import type { MissionTimeline } from '../@types/MissionTimeline';
  * focus-free way to drive the timeline since `tab` is taken. No `preventDefault`.
  */
 export const missionShortcuts: readonly KeyboardShortcut<MissionTimeline>[] = [
-  { keys: '[', run: () => stepMissionSpeed({ step: -1 }) },
-  { keys: ']', run: () => stepMissionSpeed({ step: 1 }) },
+  { keys: '[', run: () => stepTimelineSpeed({ step: -1 }) },
+  { keys: ']', run: () => stepTimelineSpeed({ step: 1 }) },
   { keys: ',', run: (s, timeline) => stepTimelineEvent(s, timeline, -1) },
   { keys: '.', run: (s, timeline) => stepTimelineEvent(s, timeline, 1) },
 ];

@@ -9,6 +9,7 @@ import { hdrSlice } from './core/hdrSlice';
 import { labelsSlice } from './core/labelsSlice';
 import { orientationSlice } from './core/orientationSlice';
 import { pickingSlice } from './core/pickingSlice';
+import { timelineSlice } from './core/timelineSlice';
 import { tonemapSlice } from './core/tonemapSlice';
 
 export const CORE_SETTINGS_SLICES = [
@@ -22,4 +23,5 @@ export const CORE_SETTINGS_SLICES = [
   labelsSlice,
   pickingSlice,
   debugSlice,
+  timelineSlice,
 ] as const;

@@ -8,14 +8,3 @@ export const selectRoute = createSelector(
   [selectSettings],
   (settings): MissionsSettings => settings.missions,
 );
-
-/** The selected sampled craft's id, or null for none. */
-export const selectMissionCraft = createSelector(
-  [selectRoute],
-  (route: MissionsSettings): string | null => route.craft,
-);
-
-export const selectMissionSpeed = createSelector(
-  [selectRoute],
-  (route: MissionsSettings): number => route.speed,
-);

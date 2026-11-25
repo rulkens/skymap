@@ -44,7 +44,8 @@ export const voyagerMissions: Exhibit<'voyager-missions'> = {
   settings: {
     orbitTrails: { enabled: true },
     missionTrails: { enabled: true, nearPlanets: true },
-    missions: { ...missionsInitialState, craft: CRAFTS[0]!.bodyId },
+    missions: missionsInitialState,
+    timeline: { lane: CRAFTS[0]!.bodyId, speed: 1 },
     galaxyCatalogs: GALAXY_CATALOGS_OFF,
     structures: STRUCTURES_OFF,
     starCatalogs: STARS_DIMMED_UNLABELLED,

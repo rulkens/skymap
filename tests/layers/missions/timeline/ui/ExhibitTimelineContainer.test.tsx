@@ -11,11 +11,11 @@ import { Provider } from 'react-redux';
 import ExhibitTimelineContainer from '../../../../../src/layers/missions/timeline/ui/ExhibitTimelineContainer';
 import { createTestStore } from '../../../../support/createTestStore';
 import { selectTimeState } from '../../../../../src/state/time/selectors';
-import { selectMissionCraft } from '../../../../../src/layers/missions/state/missions/selectors';
+import { selectTimelineLane } from '../../../../../src/state/settings/selectors';
 import {
-  setMissionCraft,
-  stepMissionSpeed,
-} from '../../../../../src/layers/missions/state/missions/slice';
+  setTimelineLane,
+  stepTimelineSpeed,
+} from '../../../../../src/state/settings/core/timelineSlice';
 import { MISSION_SPEEDS } from '../../../../../src/data/exhibits/timeline/missionSpeeds';
 import { playMission } from '../../../../../src/layers/missions/exhibits/timeline/playMission';
 import {
@@ -31,7 +31,7 @@ import { voyagerTimeline } from '../../../../helpers/missions/voyagerTimeline';
 
 /** Steps the speed factor to one end of the ladder; the reducer clamps there. */
 const speedToEnd = (store: ReturnType<typeof mount>, step: -1 | 1) => {
-  for (let i = 0; i < MISSION_SPEEDS.length; i++) store.dispatch(stepMissionSpeed({ step }));
+  for (let i = 0; i < MISSION_SPEEDS.length; i++) store.dispatch(stepTimelineSpeed({ step }));
 };
 
 const section = voyagerTimeline();
@@ -41,7 +41,7 @@ function mount(simIso: string) {
   store.dispatch(
     setSimDays({ simDays: unixMsToJulianDays(Date.parse(simIso)), nowMs: performance.now() }),
   );
-  store.dispatch(setMissionCraft('voyager1'));
+  store.dispatch(setTimelineLane('voyager1'));
   store.dispatch(resume({ nowMs: performance.now() }));
   vi.spyOn(store, 'dispatch');
   const wrapper = ({ children }: { children: ReactNode }) =>
@@ -79,8 +79,8 @@ describe('ExhibitTimelineContainer', () => {
     expect(types()).toEqual([
       pause.type,
       playMission.type,
-      stepMissionSpeed.type,
-      stepMissionSpeed.type,
+      stepTimelineSpeed.type,
+      stepTimelineSpeed.type,
     ]);
   });
 
@@ -88,7 +88,7 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('2026-01-01');
     expect(screen.getByRole('tab', { name: /Voyager 1/ })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
-    expect(selectMissionCraft(store.getState())).toBe('voyager2');
+    expect(selectTimelineLane(store.getState())).toBe('voyager2');
     expect(screen.getByRole('tab', { name: /Voyager 2/ })).toHaveAttribute('aria-selected', 'true');
   });
 

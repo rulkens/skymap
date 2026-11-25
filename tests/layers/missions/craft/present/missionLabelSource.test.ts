@@ -14,7 +14,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import { missionsPickCode } from '../../../../support/layerPickCodes';
 
 const stateWith = (craft: string | null) =>
-  ({ settings: { missions: { craft } } }) as unknown as EngineState;
+  ({ settings: { timeline: { lane: craft } } }) as unknown as EngineState;
 const anchorOf = (position: unknown) => (position as { anchorId: string }).anchorId;
 
 describe('missionLabelSource', () => {
