@@ -401,6 +401,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Field errors | `Use an H0 greater than 0.` · `Use an Ωm from 0 to 1.` · `Use a scale greater than 0.` |
 | Reading | `Reading <name>…` |
 | Too large | `File is larger than 400 MB. Use a smaller sample, or the native build.` |
+| File contents, above the footer once a file is chosen (added 2026-11-25) | `N rows · weight M ± S` · `x A…B  y A…B  z A…B Mpc` (stored weights' mean ± standard deviation; `—` until read); announced as `N rows read` |
 
 `CATALOG_EXAMPLES` holds two rows per format, shown in a mono block labelled `Example`:
 `-239.4, -16.5, 201.2, 0.042` / `-241.0, -12.1, 198.7, 0.013` and

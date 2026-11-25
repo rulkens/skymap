@@ -1,0 +1,64 @@
+/* Grows in above the footer when a file is chosen; the dialog keeps its size,
+   so the room comes out of the body's free space and the footer stays put. The
+   padding sits inside, so only the divider shows at zero height. */
+.root {
+  composes: reveal from '../../reveal.module.css';
+  border-block-start: 1px solid var(--border-divider);
+}
+
+.content {
+  display: grid;
+  row-gap: var(--space-2);
+  padding: var(--space-4) var(--inset);
+  font-variant-numeric: tabular-nums;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* The same dim as an inactive form row. */
+.content[data-stale='true'] {
+  opacity: 0.45;
+}
+
+.line,
+.bounds {
+  margin: 0;
+}
+
+/* One line each, so a long value never changes the section's height. */
+.line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bounds {
+  display: flex;
+  column-gap: var(--space-8);
+}
+
+/* Narrow: one axis per row, the ranges starting on one line. */
+@container (inline-size < 30rem) {
+  .bounds {
+    display: grid;
+    row-gap: var(--space-2);
+  }
+}
+
+.muted {
+  color: var(--color-fg-tertiary);
+}
+
+.announce {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    transition: none;
+  }
+}

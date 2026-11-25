@@ -2,39 +2,36 @@
  * LoadCatalogDialog — the modal the Data section's "Load catalog…" row opens
  * (the owner's ruled exception to ui-ux.md's no-modal rule). Mounted on the
  * sidebar root, never in a foldable body, because it also owns the window drop
- * listener: a file dropped anywhere opens it with that file chosen. Files are read
- * and parsed in the page; the store sees only a parsed catalog, so a refused
- * or warned load leaves the loaded one in place. Closing keeps every choice,
- * which is why a click on the backdrop may close it.
+ * listener: a file dropped anywhere opens it with that file chosen. A chosen
+ * file is read once and parsed at once, then again from memory when a setting
+ * changes, so what it holds shows before Load; Load dispatches that parse. The
+ * store sees only a parsed catalog, so a refused or warned file leaves the
+ * loaded one in place. Closing keeps every choice, so the backdrop may close it.
  */
-import {
-  useEffect,
-  useEffectEvent,
-  useId,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from 'react';
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
+import type { CatalogContents } from '../../../@types/CatalogContents';
 import type { CatalogFiles } from '../../../@types/CatalogFiles';
 import type { CatalogImportFieldProblems } from '../../../@types/CatalogImportFieldProblems';
 import type { CatalogImportFields } from '../../../@types/CatalogImportFields';
 import type { CatalogLoadOutcome } from '../../../@types/CatalogLoadOutcome';
-import type { UserCatalog } from '../../../@types/UserCatalog';
+import type { CatalogParse } from '../../../@types/CatalogParse';
 import Button from '../../../../../src/components/common/Button/Button';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import { useAppDispatch } from '../../store/hooks';
 import FormField from '../FormField/FormField';
 import ImportIcon from '../icons/ImportIcon/ImportIcon';
 import SegmentedControl from '../SegmentedControl/SegmentedControl';
+import CatalogInfo from './CatalogInfo/CatalogInfo';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
 import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
 import { importFieldProblems } from './utils/importFieldProblems';
 import { importSettingsFrom } from './utils/importSettingsFrom';
 import { NAME_END_CHARS } from './utils/NAME_END_CHARS';
-import { parseCatalogFiles } from './utils/parseCatalogFiles';
+import { parseCatalogContents } from './utils/parseCatalogContents';
+import { readCatalogContents } from './utils/readCatalogContents';
 import { readCatalogFiles } from './utils/readCatalogFiles';
+import { REPARSE_DELAY_MS } from './utils/REPARSE_DELAY_MS';
 import { SLOW_READ_MS } from './utils/SLOW_READ_MS';
 import { WEIGHT_CHOICES } from './utils/WEIGHT_CHOICES';
 import styles from './LoadCatalogDialog.module.css';
@@ -54,10 +51,14 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Bumped by every new read, choice and close: a read whose id is stale is dropped.
-  const readId = useRef(0);
+  // Only a file's first parse moves focus to Load; a re-parse leaves it where the user is.
+  const focusedFor = useRef<CatalogFiles | null>(null);
 
   const [files, setFiles] = useState<CatalogFiles | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  // Held only while open and needed: a 400 MB file is 400 MB of string.
+  const [contents, setContents] = useState<CatalogContents | null>(null);
+  const [parsed, setParsed] = useState<CatalogParse | null>(null);
   const [fields, setFields] = useState<CatalogImportFields>({
     formatKind: 'cartesianMpc',
     weightKind: 'linear',
@@ -65,37 +66,84 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     omegaM: '0.315',
     scale: '1',
   });
-  // A field's error shows once it has been left or a load was tried, never while typing.
+  // A field's error shows once it has been left or Enter was pressed, never while typing.
   const [checked, setChecked] = useState<readonly (keyof CatalogImportFieldProblems)[]>([]);
-  const [outcome, setOutcome] = useState<Exclude<CatalogLoadOutcome, { kind: 'ready' }> | null>(
-    null,
-  );
-  const [reading, setReading] = useState(false);
   const [slowRead, setSlowRead] = useState(false);
 
+  const packed = files?.kind === 'packed';
   // A packed pair carries its own settings, so its fields are never in the way.
-  const problems = files?.kind === 'packed' ? {} : importFieldProblems(fields);
+  const problems = packed ? {} : importFieldProblems(fields);
+  const wrong = Object.keys(problems) as (keyof CatalogImportFieldProblems)[];
   const shown = (field: keyof CatalogImportFieldProblems): string | undefined =>
     checked.includes(field) ? problems[field] : undefined;
   const check = (field: keyof CatalogImportFieldProblems) => (): void =>
     setChecked((c) => (c.includes(field) ? c : [...c, field]));
 
-  const cancelRead = (): void => {
-    readId.current += 1;
-    setReading(false);
-    setSlowRead(false);
-  };
+  // Null while a field is wrong: nothing is parsed until the settings are whole.
+  const settingsKey = packed
+    ? 'packed'
+    : wrong.length > 0
+      ? null
+      : JSON.stringify(importSettingsFrom(fields));
+  const shownParse = files !== null && parsed?.files === files ? parsed : null;
+  const current = shownParse !== null && shownParse.settingsKey === settingsKey;
+  const outcome = shownParse?.outcome ?? null;
+  const catalog = outcome !== null && outcome.kind !== 'problem' ? outcome.catalog : null;
+  const loadable = current && catalog !== null;
+
+  const needsRead = open && files !== null && contents === null && !current;
+  useEffect(() => {
+    if (!needsRead || !files) return;
+    let live = true;
+    const slow = setTimeout(() => setSlowRead(true), SLOW_READ_MS);
+    readCatalogContents(files)
+      .then((read) => {
+        if (live) setContents(read);
+      })
+      .catch((err: unknown) => {
+        if (!live) return;
+        setFiles(null);
+        setRefusal((err as Error).message);
+      });
+    return () => {
+      live = false;
+      clearTimeout(slow);
+      setSlowRead(false);
+    };
+  }, [needsRead, files]);
+
+  const parseNow = useEffectEvent((): void => {
+    if (!files || !contents || settingsKey === null) return;
+    let next: CatalogLoadOutcome;
+    try {
+      next = parseCatalogContents(contents, importSettingsFrom(fields));
+    } catch (err) {
+      next = { kind: 'problem', message: (err as Error).message, showExample: false };
+    }
+    setParsed({ files, settingsKey, outcome: next });
+  });
+
+  // A new file parses at once; a changed setting waits out the typing.
+  const firstParse = parsed?.files !== files;
+  useEffect(() => {
+    if (!contents || settingsKey === null || current) return;
+    const timer = setTimeout(() => parseNow(), firstParse ? 0 : REPARSE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [contents, settingsKey, current, firstParse]);
+
+  useEffect(() => {
+    if (!parsed || focusedFor.current === parsed.files) return;
+    focusedFor.current = parsed.files;
+    if (parsed.outcome.kind !== 'problem') confirmRef.current?.focus();
+  }, [parsed]);
 
   const choose = (chosen: readonly File[]): void => {
-    cancelRead();
     const result = readCatalogFiles(chosen);
-    if (result.kind === 'problem') {
-      setFiles(null);
-      setOutcome({ kind: 'problem', message: result.message, showExample: false });
-    } else {
-      setFiles(result);
-      setOutcome(null);
-    }
+    const refused = result.kind === 'problem';
+    setFiles(refused ? null : result);
+    setRefusal(refused ? result.message : null);
+    setContents(null);
+    setParsed(null);
   };
 
   const onDrop = useEffectEvent((e: DragEvent): void => {
@@ -116,8 +164,6 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     };
   }, []);
 
-  // Before the files effect, so a dropped file's Load button takes focus from
-  // the first control that showModal() focuses.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -125,58 +171,18 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     else if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  useEffect(() => {
-    if (files) confirmRef.current?.focus();
-  }, [files]);
-
-  const edit = (patch: Partial<CatalogImportFields>): void => {
+  const edit = (patch: Partial<CatalogImportFields>): void =>
     setFields((f) => ({ ...f, ...patch }));
-    setOutcome(null);
-  };
-
-  const load = (catalog: UserCatalog): void => {
-    dispatch(userCatalogLoaded(catalog));
-    setOutcome(null);
-    dialogRef.current?.close();
-  };
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    if (reading) return;
-    if (!files) return choose([]); // shows the "Choose a .csv file…" problem
-    const wrong = Object.keys(problems) as (keyof CatalogImportFieldProblems)[];
-    if (wrong.length > 0) {
-      setChecked((c) => [...new Set([...c, ...wrong])]);
-      (e.currentTarget.elements.namedItem(wrong[0]!) as HTMLInputElement | null)?.focus();
-      return;
-    }
-    if (outcome?.kind === 'warning') return load(outcome.catalog);
-    readId.current += 1;
-    const id = readId.current;
-    const current = (): boolean => id === readId.current;
-    setReading(true);
-    const slow = setTimeout(() => current() && setSlowRead(true), SLOW_READ_MS);
-    parseCatalogFiles(files, importSettingsFrom(fields))
-      .then((result) => {
-        if (!current()) return;
-        if (result.kind === 'ready') load(result.catalog);
-        else setOutcome(result);
-      })
-      .catch((err: unknown) => {
-        if (current())
-          setOutcome({ kind: 'problem', message: (err as Error).message, showExample: false });
-      })
-      .finally(() => {
-        clearTimeout(slow);
-        if (!current()) return;
-        setReading(false);
-        setSlowRead(false);
-      });
-  };
 
   const filesName = files ? catalogFilesName(files) : null;
-  const packed = files?.kind === 'packed';
   const warned = outcome?.kind === 'warning';
+  const stale = shownParse !== null && !current;
+  const problem =
+    refusal !== null
+      ? { message: refusal, showExample: false }
+      : outcome?.kind === 'problem'
+        ? outcome
+        : null;
 
   return (
     <dialog
@@ -186,17 +192,28 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
       aria-describedby={noteId}
       closedby="any"
       onClose={() => {
-        cancelRead();
+        setContents(null);
         onOpenChange(false);
       }}
     >
       <form
         className={styles.form}
         noValidate
-        onSubmit={onSubmit}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!loadable) return;
+          dispatch(userCatalogLoaded(catalog));
+          dialogRef.current?.close();
+        }}
         onKeyDown={(e) => {
+          if (e.key !== 'Enter') return;
+          // Load is off while a field is wrong; Enter says which.
+          if (wrong.length > 0) {
+            setChecked((c) => [...new Set([...c, ...wrong])]);
+            (e.currentTarget.elements.namedItem(wrong[0]!) as HTMLInputElement | null)?.focus();
+          }
           // A radio has no implicit submission; Enter still loads.
-          if (e.key === 'Enter' && (e.target as HTMLInputElement).type === 'radio') {
+          if ((e.target as HTMLInputElement).type === 'radio') {
             e.preventDefault();
             e.currentTarget.requestSubmit();
           }
@@ -252,23 +269,6 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                 </div>
               )}
             </FormField>
-
-            {outcome?.kind === 'problem' && (
-              <div className={styles.issue}>
-                <p role="alert" className={styles.problem}>
-                  {outcome.message}
-                </p>
-                {outcome.showExample && (
-                  <FormField label="Example">
-                    {(ids) => (
-                      <pre id={ids.control} className={styles.example}>
-                        {CATALOG_EXAMPLES[fields.formatKind].join('\n')}
-                      </pre>
-                    )}
-                  </FormField>
-                )}
-              </div>
-            )}
 
             <FormField
               label="Columns"
@@ -377,12 +377,30 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
             </FormField>
           </div>
 
-          {warned && (
-            <p role="status" className={styles.warning}>
+          {problem && (
+            <div className={styles.issue}>
+              <p role="alert" className={styles.problem}>
+                {problem.message}
+              </p>
+              {problem.showExample && (
+                <FormField label="Example">
+                  {(ids) => (
+                    <pre id={ids.control} className={styles.example}>
+                      {CATALOG_EXAMPLES[fields.formatKind].join('\n')}
+                    </pre>
+                  )}
+                </FormField>
+              )}
+            </div>
+          )}
+          {outcome?.kind === 'warning' && (
+            <p role="status" className={styles.warning} data-stale={stale}>
               {outcome.message}
             </p>
           )}
         </div>
+
+        {(files !== null || refusal !== null) && <CatalogInfo catalog={catalog} stale={stale} />}
 
         <footer className={styles.footer}>
           <p role="status" className={styles.reading}>
@@ -396,7 +414,8 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
             type="submit"
             variant="primary"
             className={styles.load}
-            aria-busy={reading}
+            disabled={!loadable}
+            aria-busy={files !== null && settingsKey !== null && !current}
           >
             <ImportIcon size={ICON_SIZE} />
             {/* Both labels share one cell, so the button keeps its width. */}
