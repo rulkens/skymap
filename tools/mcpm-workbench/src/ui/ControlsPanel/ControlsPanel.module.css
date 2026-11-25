@@ -31,6 +31,8 @@
   overflow-y: auto;
   padding: 22px 22px 40px;
   display: grid;
+  /* minmax(0, …): a long loaded file name truncates instead of widening the column. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: var(--space-5);
 }

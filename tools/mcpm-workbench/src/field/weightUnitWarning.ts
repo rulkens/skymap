@@ -5,6 +5,7 @@
  */
 import type { CatalogImportSettings } from '../../@types/CatalogImportSettings';
 import type { WeightStats } from '../../@types/WeightStats';
+import { formatWeight } from './formatWeight';
 
 const LOG_MASS_RANGE = { min: 5, max: 15 };
 const MEDIAN_CEILING = 2;
@@ -14,12 +15,11 @@ export function weightUnitWarning(
   weight: CatalogImportSettings['weight'],
 ): string | null {
   if (weight.kind !== 'linear') return null;
-  const shown = (v: number): string => String(Number(v.toPrecision(2)));
   if (stats.min >= LOG_MASS_RANGE.min && stats.max <= LOG_MASS_RANGE.max) {
-    return `Weights run from ${shown(stats.min)} to ${shown(stats.max)}, which looks like log₁₀ mass. Choose "log₁₀ of mass in M☉", or load anyway.`;
+    return `Weights run from ${formatWeight(stats.min)} to ${formatWeight(stats.max)}, which looks like log₁₀ mass. Choose "log₁₀ of mass in M☉", or load anyway.`;
   }
   if (stats.median > MEDIAN_CEILING) {
-    return `Median weight is ${shown(stats.median)}. Built-in catalogs use stellar mass in 10¹² M☉, where the median is near 0.02. For 10⁹ M☉ use a scale of 0.001, or load anyway.`;
+    return `Median weight is ${formatWeight(stats.median)}. Built-in catalogs use stellar mass in 10¹² M☉, where the median is near 0.02. For 10⁹ M☉ use a scale of 0.001, or load anyway.`;
   }
   return null;
 }

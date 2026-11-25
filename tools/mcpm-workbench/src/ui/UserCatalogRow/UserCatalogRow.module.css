@@ -1,0 +1,11 @@
+.root {
+  margin-bottom: var(--space-8);
+}
+
+/* Pulled up under its own row, so it reads with the file rather than the next source. */
+.detail {
+  margin: calc(-1 * var(--space-3)) var(--space-10) 0 0;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-tertiary);
+}

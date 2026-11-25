@@ -380,9 +380,9 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 `-239.4, -16.5, 201.2, 0.042` / `-241.0, -12.1, 198.7, 0.013` and
 `185.73, 12.39, 0.0044, 0.042` / `186.10, 12.88, 0.0037, 0.013`.
 
-- [ ] Build; no new unit tests (UI wiring; the parser and reducers carry the logic).
-- [ ] Shoot each state at 1728 and 400 wide; run the ui-ux self-check; attach both to the report.
-- [ ] Commit.
+- [x] Build; no new unit tests (UI wiring; the parser and reducers carry the logic).
+- [x] Shoot each state at 1728 and 400 wide; run the ui-ux self-check; attach both to the report.
+- [x] Commit.
 
 ### Task 7: Export provenance and docs
 

@@ -26,6 +26,10 @@
 
 .labelText {
   composes: label from '../../../../../src/components/common/Slider/Slider.module.css';
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .labelMuted {

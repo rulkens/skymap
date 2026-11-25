@@ -7,7 +7,6 @@
  * fourth are ignored. The first problem refuses the whole file. The RA/Dec
  * range test is ours: it catches x, y, z read in the wrong format.
  */
-import { median } from '../../../utils/perf/median';
 import type { CatalogFileProblem } from '../../@types/CatalogFileProblem';
 import type { CatalogImportSettings } from '../../@types/CatalogImportSettings';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
@@ -15,6 +14,7 @@ import type { WeightStats } from '../../@types/WeightStats';
 import { raDecDistToEqCart } from '../../../../src/utils/math/raDecDistToEqCart';
 import { redshiftToDistanceMpc } from '../../../../src/utils/math/redshiftToDistanceMpc';
 import { massWeightFromLog10 } from './massWeightFromLog10';
+import { weightStatsFor } from './weightStatsFor';
 
 const DATA_LINE = /^\s*[0-9+\-.]/;
 const FIELD_SEPARATOR = /[,;\t ]+/;
@@ -43,8 +43,6 @@ export function parseCsvCatalog(
   const weight = new Float32Array(lines.length);
   let count = 0;
   let skippedLines = 0;
-  let min = Infinity;
-  let max = -Infinity;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
@@ -90,8 +88,6 @@ export function parseCsvCatalog(
     }
 
     weight[count] = stored;
-    min = Math.min(min, weight[count]!);
-    max = Math.max(max, weight[count]!);
     count++;
   }
 
@@ -102,6 +98,6 @@ export function parseCsvCatalog(
     ok: true,
     points: { positions: positions.slice(0, count * 3), weight: keptWeight, count, sources: [] },
     skippedLines,
-    weightStats: { min, median: median(Array.from(keptWeight)), max },
+    weightStats: weightStatsFor(keptWeight),
   };
 }

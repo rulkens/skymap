@@ -1,7 +1,13 @@
 import type { CSSProperties } from 'react';
-import { statusStyle } from './statusStyle';
 
-// Stacked above the (dev-only) packed-drop status line rather than sharing its
-// slot: catalog.statusMessage (e.g. "no catalog points") can be live in prod,
-// so the two must never silently overlap if both happen to be set at once.
-export const catalogStatusStyle: CSSProperties = { ...statusStyle, bottom: 44 };
+export const catalogStatusStyle: CSSProperties = {
+  position: 'fixed',
+  left: 12,
+  bottom: 12,
+  padding: '6px 10px',
+  font: '12px monospace',
+  color: '#e8e8e8',
+  background: 'rgba(0, 0, 0, 0.7)',
+  borderRadius: 4,
+  pointerEvents: 'none',
+};

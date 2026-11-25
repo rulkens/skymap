@@ -1,7 +1,7 @@
 /**
  * loadPackedCatalog — parses the Polyphorm fork's packed VAC-anchor catalog:
- * a flat f32 [X, Y, Z, W] .bin plus its sidecar `_metadata.txt`, dev-only
- * drag-drop input for validating against the same run the fork produced.
+ * a flat f32 [X, Y, Z, W] .bin plus its sidecar `_metadata.txt`, loaded to
+ * validate against the same run the fork produced.
  *
  * The packed `W` lands in `CatalogPoints.weight` unchanged: it is the same
  * linear weight the built-ins carry, so `deriveAgentWeights` runs on it with

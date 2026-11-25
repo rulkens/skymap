@@ -26,6 +26,7 @@ const userCatalog: UserCatalog = {
   points,
   fileName: 'desi.csv',
   settings: { format: { kind: 'cartesianMpc' }, weight: { kind: 'linear', scale: 1 } },
+  weightStats: { min: 4, median: 4, max: 4 },
 };
 
 describe('catalogSlice user catalog', () => {

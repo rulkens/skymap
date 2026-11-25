@@ -59,6 +59,8 @@ import PaletteRow from '../PaletteRow/PaletteRow';
 import Toggle from '../Toggle/Toggle';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
+import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
+import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
 import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
 import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
@@ -216,6 +218,8 @@ function ControlsPanel(): ReactNode {
         </CollapsibleSection>
 
         <CollapsibleSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
+          <LoadCatalogDialog />
+          <UserCatalogRow />
           {WORKBENCH_SOURCES.map((s) => (
             <ToggleRow
               key={s}
@@ -466,9 +470,7 @@ function ControlsPanel(): ReactNode {
           save params
         </Button>
         {/* The visible control is the Button; the <input> stays off-screen and
-            is only ever driven programmatically (App.tsx's dev packed-drop
-            reads a File the same way, via drag-drop instead of a click). Works
-            in prod builds, unlike that DEV-gated drop path. */}
+            is only ever driven programmatically. */}
         <Button className={styles.actionButton} onClick={onLoadParamsClick}>
           load params
         </Button>
