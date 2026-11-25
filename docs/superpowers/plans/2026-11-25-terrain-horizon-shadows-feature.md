@@ -2,8 +2,8 @@
 
 > **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../specs/2026-11-25-terrain-horizon-shadows-design.md)
 > §3–§8, §10, §11.
-> **Base.** Main **after** PR A ([`…-prep.md`](2026-11-25-terrain-horizon-shadows-prep.md)) merges. This plan
-> is written against that tree: `TileRead`, `SurfaceTileResidency.isEmpty`, lane rows with
+> **Base.** Main after PR A ([`…-prep.md`](completed/2026-11-25-terrain-horizon-shadows-prep.md)) merged
+> as #1171. This plan is written against that tree: `TileRead`, `SurfaceTileResidency.isEmpty`, lane rows with
 > `role`/`binding`/`reservedSlots?`, `SurfaceTileDrawArgs.atlasViews`, `resolveStandaloneRect` with
 > `SurfaceCutTile.standalone`, and `composeSurfaceLight` all exist.
 > **Branch.** a fresh `feat/terrain-horizon-shadows` from main once PR A is in.
@@ -49,12 +49,14 @@ The spike's runtime march, its side storage buffer and its z4 global height latt
 `review: yes` (TS↔WGSL contract)
 
 **Files:**
-- Create: `src/layers/body/surfaceTiles/format/data/horizonAngleMap.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonByteOfAngle.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonAngleOfByte.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonTexelOf.ts`,
-  `src/services/gpu/shaders/lib/horizonAngleMap.wesl`
-- Test: `tests/layers/body/surfaceTiles/format/utils/horizonAngleMap.test.ts`,
+- Create: `src/layers/body/surfaceTiles/horizon/data/horizonAngleMap.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonByteOfAngle.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonAngleOfByte.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonTexelOf.ts`,
+  `src/layers/body/surfaceTiles/horizon/@types/HorizonTexel.d.ts`,
+  `src/services/gpu/shaders/lib/horizonAngleMap.wesl` (a `horizon/` concern module, not
+  `format/`: `format/utils/` would pass `concernFolderShape`'s 15-file cap)
+- Test: `tests/layers/body/surfaceTiles/horizon/utils/horizonAngleMap.test.ts`,
   `tests/services/gpu/shaders/horizonAngleMap.parity.test.ts` (pattern: `constants.parity.test.ts`)
 
 **Interfaces (produces):**
@@ -73,11 +75,11 @@ export function horizonTexelOf(sector: number): { readonly dx: 0 | 1; readonly d
 fn horizonAngleOfUnorm(v: f32) -> f32 // radians, from a texel channel read as unorm
 ```
 
-- [ ] Tests: `the byte map round-trips every byte within half a step`; `−3° → 0, 27° → 204, 90° → 255`;
+- [x] Tests: `the byte map round-trips every byte within half a step`; `−3° → 0, 27° → 204, 90° → 255`;
       `angles below −3° clamp to 0`; `sector 13 lives in texel (1,1), channel G`.
-- [ ] Parity test: the WGSL constants equal `HORIZON_ANGLE_MAP` (parse the `.wesl` as the existing
+- [x] Parity test: the WGSL constants equal `HORIZON_ANGLE_MAP` (parse the `.wesl` as the existing
       parity tests do).
-- [ ] Implement; tests pass. Commit.
+- [x] Implement; tests pass. Commit.
 
 ---
 
