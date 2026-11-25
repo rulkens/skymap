@@ -47,7 +47,7 @@ export function stageInputs(over: Partial<LabelFrameInputs> = {}): LabelFrameInp
     director: LABEL_DIRECTORS.find((row) => row.slab === NEAR0)!,
     projection: STAGE_CAMERA.output,
     bodyStates: new Map(),
-    meshBodies: [],
+    simDays: 0,
     nowMs: 0,
     toggleFades: [1],
     recessions: [1],

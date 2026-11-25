@@ -1,5 +1,4 @@
 import type { BodyState } from '../scene/BodyState';
-import type { MeshBody } from '../scene/MeshBody';
 import type { OccluderBody } from '../scene/OccluderBody';
 import type { FocusUniformsValue } from './FocusUniformsValue';
 import type { LabelDirectorRow } from './LabelDirectorRow';
@@ -13,8 +12,8 @@ export type LabelFrameInputs = {
   readonly director: LabelDirectorRow;
   readonly projection: OutputProjection;
   readonly bodyStates: ReadonlyMap<string, BodyState>;
-  /** The mesh bodies present this frame; `bodyStates` also holds the absent ones. */
-  readonly meshBodies: readonly MeshBody[];
+  /** The frame clock, for `bodyPresent`: `bodyStates` also holds the absent bodies. */
+  readonly simDays: number;
   readonly nowMs: number;
   /** The toggle's handed value: one number, or per item, read by the record's `fadeKey`. */
   readonly toggleFades: readonly (number | Readonly<Record<string, number>>)[];

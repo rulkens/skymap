@@ -13,7 +13,7 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
-import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
+import { bodyPresent } from '../../../../utils/scene/bodyPresent';
 import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { sampledDepthBinding } from '../sampledDepthBinding';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -30,7 +30,7 @@ export const sampledTrailsPass: ContentPass = {
     const groups = state.sampledTrailGroups;
     if (groups.every((group) => group.fade(ctx) === 0)) return false;
     const { simDays } = ctx.snapshot;
-    return groups.some((group) => group.rows.some(({ id }) => spacecraftPresent(id, simDays)));
+    return groups.some((group) => group.rows.some(({ id }) => bodyPresent(id, simDays)));
   },
 
   draw(pass, view, ctx, state) {
@@ -58,6 +58,7 @@ export const sampledTrailsPass: ContentPass = {
       if (fade === 0) continue;
       const nearPlanets = group.nearPlanets?.(state) ?? false;
       for (const { id, color } of group.rows) {
+        if (!bodyPresent(id, ctx.snapshot.simDays)) continue;
         const trail = trails.find((t) => t.id === id);
         if (trail === undefined) continue;
         const opacity = fade * (group.dim?.(state, id) ?? 1);

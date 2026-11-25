@@ -39,7 +39,7 @@ export function sampledCraftPositionMpc(
   const t0 = track.tDays[0]!;
   const { launch } = body;
   if (simDays >= t0 || !launch) {
-    const km = hermiteTrackAt(track, Math.max(simDays, t0));
+    const km = hermiteTrackAt(track, simDays);
     const sun = positionAt('sun', simDays);
     return [sun[0] + km[0] * k, sun[1] + km[1] * k, sun[2] + km[2] * k];
   }
