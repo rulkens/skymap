@@ -4,7 +4,7 @@
  * `TimelineTrack` scrubber of that craft's lane. Presentational: the container hands it the
  * sim instant (throttled, never per-frame), the clock readout and the selection, and takes the
  * callbacks back; `onSeek` is the free scrub, `onStep` every event step. The axis gives each
- * leg the same width and runs from the craft's launch to now.
+ * leg the same width and runs from the craft's launch to the end (now, when open).
  */
 
 import { useId, useMemo } from 'react';
@@ -33,7 +33,7 @@ export type ExhibitTimelineProps = {
   readonly selectedId: string;
   /** The sim instant, as a UT Julian date. */
   readonly simDays: number;
-  /** Wall-clock now in Unix ms: the axis's right edge. */
+  /** The axis's right edge in Unix ms: the authored end, or wall-clock now. */
   readonly endMs: number;
   readonly onSeek: (simDays: number) => void;
   readonly onStep: (eventId: string) => void;
@@ -105,6 +105,7 @@ function ExhibitTimeline({
           axis={axis}
           simMs={simMs}
           endMs={endMs}
+          endIso={section.endIso}
           currentId={current.id}
           onSeekMs={onSeekMs}
           onStep={onStep}

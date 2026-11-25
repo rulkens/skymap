@@ -1,7 +1,7 @@
 /**
  * TimelineTrack — the scrubber of the exhibit timeline: the selected craft's lane with its fill
  * and event ticks, the thumb, and the year axis. Pointer drag and the free keys report instants
- * through `onSeekMs`, held between launch and now; PageUp / PageDown and the event dots step
+ * through `onSeekMs`, held between launch and the end; PageUp / PageDown and the event dots step
  * through `onStep`. A stop's events sit side by side on its boundary. The parent owns the clock.
  */
 
@@ -32,6 +32,8 @@ export type TimelineTrackProps = {
   readonly axis: TimelineAxis;
   readonly simMs: number;
   readonly endMs: number;
+  /** The authored end, or undefined for an open one that runs to now. */
+  readonly endIso: string | undefined;
   readonly currentId: string;
   readonly onSeekMs: (ms: number) => void;
   readonly onStep: (eventId: string) => void;
@@ -50,11 +52,12 @@ function TimelineTrack({
   axis,
   simMs,
   endMs,
+  endIso,
   currentId,
   onSeekMs,
   onStep,
 }: TimelineTrackProps): ReactNode {
-  const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
+  const labels = useMemo(() => timelineAxisLabels(axis, endIso), [axis, endIso]);
   const thumb = timelineFraction(simMs, axis);
   const firstMs = stops[0]!.ms;
   const from = timelineFraction(firstMs, axis);
@@ -172,7 +175,7 @@ function TimelineTrack({
         <div className={styles.axis} aria-hidden="true">
           {labels.map((label) => (
             <span
-              key={label.text}
+              key={label.fraction}
               className={cx(
                 styles.axisLabel,
                 label.fraction === 0 && styles.axisFirst,

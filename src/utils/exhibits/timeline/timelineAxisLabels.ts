@@ -7,10 +7,13 @@ const MIN_GAP = 0.13;
 
 /**
  * Year labels along the axis: each segment's start year, then the 5- or 10-year marks inside
- * it, and 'now' at the end. A mark closer than `MIN_GAP` of the track to the last kept one is
- * dropped, so 9 px mono labels never touch.
+ * it, and at the end the authored `endIso`'s year, or 'now' for an open end. A mark closer than
+ * `MIN_GAP` of the track to the last kept one is dropped, so 9 px mono labels never touch.
  */
-export function timelineAxisLabels(axis: TimelineAxis): readonly TimelineAxisLabel[] {
+export function timelineAxisLabels(
+  axis: TimelineAxis,
+  endIso: string | undefined,
+): readonly TimelineAxisLabel[] {
   const { boundsMs } = axis;
   const segments = boundsMs.length - 1;
   const labels: TimelineAxisLabel[] = [];
@@ -34,6 +37,7 @@ export function timelineAxisLabels(axis: TimelineAxis): readonly TimelineAxisLab
   }
   const last = labels.at(-1);
   if (last && 1 - last.fraction < MIN_GAP) labels.pop();
-  labels.push({ fraction: 1, text: 'now' });
+  const end = endIso === undefined ? 'now' : String(new Date(endIso).getUTCFullYear());
+  labels.push({ fraction: 1, text: end });
   return labels;
 }
