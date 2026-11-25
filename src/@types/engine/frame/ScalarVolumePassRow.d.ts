@@ -1,7 +1,8 @@
 /**
  * ScalarVolumePassRow — per-subsystem input to `createScalarVolumePass`: the
  * fields today's scalar-volume raymarch varies on (name, which offscreen it
- * draws into, its renderer instance, the shared liveness gate). Twin of
+ * draws into, its renderer instance, the shared liveness gate, its per-view
+ * march inputs). Twin of
  * `UpsamplePassRow`, one stage earlier in the producer/consumer pair.
  */
 

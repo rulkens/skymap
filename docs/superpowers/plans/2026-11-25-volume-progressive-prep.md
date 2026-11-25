@@ -203,7 +203,7 @@ const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
 | --- | --- | --- | --- | --- |
 | 252–255 | 63 | `jitterIndex` (renamed from `frame`) | `f32` | `inputs.jitterIndex % JITTER_INDEX_WRAP` |
 | 256–259 | 64 | `steps` | `f32` | `inputs.steps` |
-| 260–271 | 65–67 | padding (uniform struct rounded up to 16) | — | zeroed |
+| 260–271 | 65–67 | padding (uniform struct rounded up to 16) | — | never written (the scratch is fresh per draw) |
 
 ```wgsl
 // fragment.wesl, tail of struct VolumeUniforms (`frame` at :91-98 becomes jitterIndex)
@@ -224,8 +224,8 @@ Steps:
 - [x] Add the type file and the `draw`, `ScalarVolumePassRow` and `PassState` changes.
 - [x] Renderer:
   - Delete `let frame` and its increment (`volumeFieldRenderer.ts:206-212, 384`).
-  - Set `UNIFORM_BYTES` to 272. Pack indices 63 and 64 per the table, and zero 65–67 (the
-    scratch is reused across fields).
+  - Set `UNIFORM_BYTES` to 272. Pack indices 63 and 64 per the table; 65–67 stay zero (the
+    scratch is allocated fresh per draw and nothing writes them).
   - Call `pass.setBlendConstant({ r: w, g: w, b: w, a: w })` once per `draw`, before the field
     loop.
   - Switch the target blend at `:181-186` to `WEIGHTED_ADDITIVE_BLEND`.

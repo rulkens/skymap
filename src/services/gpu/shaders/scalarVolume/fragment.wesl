@@ -90,9 +90,9 @@ struct VolumeUniforms {
   // contrast's implicit deadband to suppress more, never less.
   trim: f32,
   // Index into the jitter sequence: the engine frame index, so every
-  // view of one frame (all five dome faces) shares a phase.  f32 like
-  // every scalar here; the CPU wraps it at 1e6 to keep the hash input
-  // exact in the f32 mantissa.
+  // view of one frame (all five dome faces) shares a phase.  The CPU
+  // wraps it at 1e6, but the seed below loses fraction bits well before
+  // that: from ~1e5 frames the jitter's entropy thins gradually.
   jitterIndex: f32,
   // March steps per ray (an integer, exact in f32).
   steps: f32,
@@ -203,7 +203,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   let stepLength = (tMax - tMin) / uniforms.steps;
   // Jitter the start offset by [0, stepLength) per fragment to break
   // the visible step-grid moiré that would otherwise slide across the
-  // cube during camera motion.  Without jitter, the 192 fixed sample
+  // cube during camera motion.  Without jitter, the fixed sample
   // positions along each ray show through as a coherent grid because
   // every pixel uses the same step phase — at high densityScale
   // (every shipping cube defaults to 18), per-step opacity is large

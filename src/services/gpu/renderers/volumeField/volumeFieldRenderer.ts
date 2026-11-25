@@ -27,8 +27,8 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 // struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 272;
 
-// f32 has 24 bits of mantissa (~16M integers exact); wrapping at 1e6 leaves headroom for the
-// shader's multiply-by-irrational hash input. `frameIndex` is never wrapped upstream.
+// Caps `inputs.jitterIndex` (never wrapped upstream) before it reaches the f32 hash seed. The cap
+// is loose: past ~1e5 the seed outgrows f32's fraction bits and the jitter's entropy thins.
 const JITTER_INDEX_WRAP = 1_000_000;
 
 // Each field's march adds in scaled by the pass's blend constant (`inputs.weight`); at 1 this
@@ -386,9 +386,6 @@ export function createVolumeFieldRenderer<Id extends string>(
         scratch[62] = s.trim;
         scratch[63] = jitterIndex;
         scratch[64] = inputs.steps;
-        scratch[65] = 0;
-        scratch[66] = 0;
-        scratch[67] = 0;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.
