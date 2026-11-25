@@ -275,6 +275,9 @@ Steps:
       shift 0.004 against a tip-vs-tip run-to-run RMS 0.86, dome RMS 0.29 / max 22, diff is
       unstructured grain inside the volume's footprint. At this pose the volume lands in the
       fisheye's front only, the same on both, so five-face coverage was not exercised.
+      Five faces re-checked 2026-11-25 inside the cube (`?dome#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0&layers=cosmicWebDensity,cosmicWebDensity:mcpm`,
+      PNG, dpr 1): the volume fills the whole fisheye, and base vs tip (RMS 1.05, max 22–37, mean
+      shift ≤ 0.005) matches tip vs tip and base vs base (RMS 1.04/1.05), with no seam or missing face.
 
 **Done when:**
 
