@@ -172,9 +172,9 @@ Rules:
   is half that width (1024/2048/4096); say so in the README, don't rename the scheme.
 - Test: `the globe repack places each tile's posts at their equirect position and writes flat
   tiles as byte 0` (a 2 × 1 tile fake at z1).
-- [ ] Implement; test passes; run once on a small band (`--body mars --band <Jezero's index>`) and
-      `npm run shot` the deep link from Task 9 against a dev server to see bytes land. Commit (code
-      only; baked outputs are data, gitignored).
+- [x] Implement; test passes; run once on a small band (`--body mars --band 1`, Jezero: 716 tiles,
+      0 flat, 6.0 MB of packs) and check the archive and index decode back to sane angles (the shot
+      can't show shadows before Task 6). Commit (code only; baked outputs are data, gitignored).
 
 ---
 

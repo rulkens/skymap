@@ -16,5 +16,5 @@ export type SurfaceTileManifestBand = {
   readonly bounds: LonLatBounds;
   readonly min: number;
   readonly max: number;
-  readonly builtFrom: Partial<Record<SurfaceTileProduct, SurfaceTileProvenance>>;
+  readonly builtFrom: Partial<Record<SurfaceTileProduct | 'horizon', SurfaceTileProvenance>>;
 };
