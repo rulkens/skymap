@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { mat4, mat4d } from 'wgpu-matrix';
 
-import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
+import { cutSurfaceTiles as cutWithEmptiness } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { surfaceTileXyForUv } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
@@ -40,6 +40,10 @@ import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { angleBetween } from '../../../../../helpers/math/angleBetween';
 import { requestBandsOf } from '../../../../../support/requestBandsOf';
+
+/** Nothing here is stored-empty unless a test says so (`resolveStandaloneRect.test.ts` owns that). */
+const cutSurfaceTiles = (input: Omit<Parameters<typeof cutWithEmptiness>[0], 'isEmpty'>) =>
+  cutWithEmptiness({ isEmpty: () => false, ...input });
 
 /** Every product requests over the fixture's `bands`, as `derivePlannerParams`
  *  builds them while albedo and height share one rule. */
@@ -769,11 +773,14 @@ describe('cutSurfaceTiles', () => {
       expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       const span = 1 << d;
       const scale = ancestorScale / span;
-      expect(leaf!.night).not.toBeNull();
-      expect(leaf!.night!.atlasUvScale[0]).toBeCloseTo(scale, 12);
-      expect(leaf!.night!.atlasUvScale[1]).toBeCloseTo(scale, 12);
-      expect(leaf!.night!.atlasUvOrigin[0]).toBeCloseTo(0.25 + (x & (span - 1)) * scale, 12);
-      expect(leaf!.night!.atlasUvOrigin[1]).toBeCloseTo(0.5 + (y & (span - 1)) * scale, 12);
+      const night = leaf!.standalone.night;
+      expect(night).not.toBeNull();
+      expect(night).not.toBe('empty');
+      const rect = night as Exclude<typeof night, 'empty' | null>;
+      expect(rect.atlasUvScale[0]).toBeCloseTo(scale, 12);
+      expect(rect.atlasUvScale[1]).toBeCloseTo(scale, 12);
+      expect(rect.atlasUvOrigin[0]).toBeCloseTo(0.25 + (x & (span - 1)) * scale, 12);
+      expect(rect.atlasUvOrigin[1]).toBeCloseTo(0.5 + (y & (span - 1)) * scale, 12);
     });
 
     it('night never asks for a tile below the night bands', () => {
@@ -807,7 +814,7 @@ describe('cutSurfaceTiles', () => {
       });
       const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
       expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
-      expect(leaf!.night).toBeNull();
+      expect(leaf!.standalone.night).toBeNull();
     });
   });
 

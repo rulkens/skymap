@@ -6,7 +6,6 @@ import type { SurfaceCutTile } from '../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import type { TileCamera } from '../@types/TileCamera';
 import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
@@ -14,21 +13,18 @@ import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from '../../patch/subsystems/surfacePatchAnchor';
+import type { ResidentLookupResult } from '../@types/ResidentLookupResult';
+import type { StandaloneProduct } from '../@types/StandaloneProduct';
+import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
+import { flattenAtlasRect } from './flattenAtlasRect';
+import { resolveStandaloneRect } from './resolveStandaloneRect';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
 import { resolveHeightLattice } from './resolveHeightLattice';
 import { deepestResidentAncestor } from './deepestResidentAncestor';
 
-type ResidentLookupResult = {
-  readonly slot: number;
-  readonly atlasUvOrigin: Readonly<Vec2>;
-  readonly atlasUvScale: Readonly<Vec2>;
-  readonly readyAtMs: number;
-  /** HEIGHT only: the tile header's `subtreeMin/MaxM`, which bound every
-   *  descendant of that tile. Absent or null is read as "no bound known",
-   *  which is the datum — never an assumption of flat ground. */
-  readonly subtreeRangeM?: readonly [number, number] | null;
-} | null;
-
+const STANDALONE_PRODUCTS = SURFACE_TILE_PRODUCTS.filter(
+  (product): product is StandaloneProduct => SURFACE_TILE_LANE_SPECS[product].role === 'standalone',
+);
 /** Placeholder until `balanceSurfaceCut` fills the real bits in. */
 const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 /** No resident height ancestor, or one with no bound: the datum. */
@@ -74,6 +70,8 @@ export function cutSurfaceTiles(input: {
    *  because it must key the same `surfaceTilePath(tile, prefix)` lookup
    *  `surfaceTileStream` uses for its resident maps. */
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
+  /** Whether a tile was read as stored-empty; live, `SurfaceTileResidency.isEmpty`. */
+  readonly isEmpty: (tile: SurfaceTileId) => boolean;
 }): {
   readonly cut: readonly SurfaceCutTile[];
   readonly requests: SurfaceTileDemand;
@@ -89,6 +87,7 @@ export function cutSurfaceTiles(input: {
     tilePx,
     lodBias,
     residentSlot,
+    isEmpty,
   } = input;
 
   const camLen = Math.hypot(camPosLocalM[0], camPosLocalM[1], camPosLocalM[2]);
@@ -110,10 +109,15 @@ export function cutSurfaceTiles(input: {
   // screen-space extent can't ask the walk to descend past every band's max.
   let maxTileLevel = baseLevel;
   for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
-  // Night bakes shallower than the cut (z7 against z13): a deeper leaf starts
-  // its climb at this level, and with no night bands no leaf climbs at all.
-  let nightMax = -1;
-  for (const band of requestBands.night) if (band.max > nightMax) nightMax = band.max;
+  // A standalone product can bake shallower than the cut (night z7 against z13): a deeper
+  // leaf starts its climb at the product's deepest band, and with no bands no leaf climbs.
+  const standaloneMaxLevel = Object.fromEntries(
+    STANDALONE_PRODUCTS.map((product) => {
+      let max = -1;
+      for (const band of requestBands[product]) if (band.max > max) max = band.max;
+      return [product, max];
+    }),
+  ) as Record<StandaloneProduct, number>;
 
   // Per view, hoisted out of the walk: the x/y/w rows of the vp (the z row is
   // never touched) and the four side planes of the frustum in the walk's own
@@ -323,18 +327,23 @@ export function cutSurfaceTiles(input: {
     return resolveHeightLattice({ z, x, y, baseLevel, minLevelDelta, residentSlot });
   }
 
-  /** The leaf's share of its deepest resident night ancestor, or null: night
-   *  never gates the cut, the global night texture stands in for it. */
-  function nightOf(z: number, x: number, y: number): SurfaceCutTile['night'] {
-    if (nightMax < 0) return null;
-    const top = Math.min(z, nightMax);
-    const d0 = z - top;
-    const hit = deepestResidentAncestor(
-      { product: 'night', z: top, x: x >> d0, y: y >> d0 },
-      baseLevel,
-      residentSlot,
-    );
-    return hit === null ? null : flattenAtlasRect(hit.found, d0 + hit.levelDelta, x, y);
+  /** Each standalone product's share of this leaf: none of them gates the cut. */
+  function standaloneOf(z: number, x: number, y: number): SurfaceCutTile['standalone'] {
+    return Object.fromEntries(
+      STANDALONE_PRODUCTS.map((product) => [
+        product,
+        resolveStandaloneRect({
+          product,
+          z,
+          x,
+          y,
+          maxLevel: standaloneMaxLevel[product],
+          baseLevel,
+          residentSlot,
+          isEmpty,
+        }),
+      ]),
+    ) as SurfaceCutTile['standalone'];
   }
 
   // Explicit stack, not recursion: allocation-free in a per-frame path. Five
@@ -420,7 +429,7 @@ export function cutSurfaceTiles(input: {
         anchor: surfacePatchAnchor(u0, v0, u1, v1),
         albedo: resolved,
         height,
-        night: nightOf(z, x, y),
+        standalone: standaloneOf(z, x, y),
         edgeCoarser: NO_COARSER_EDGES,
       });
     }
@@ -485,25 +494,5 @@ function resolveCutResidency(input: {
       fallback === null
         ? null
         : flattenAtlasRect(fallback.found, resumeDelta + fallback.levelDelta, x, y),
-  };
-}
-
-/** An ancestor's own atlas rect, narrowed to leaf `(x, y)`'s share of it —
- *  the low `levelDelta` bits of each, in the row order the header derives. */
-function flattenAtlasRect(
-  found: NonNullable<ResidentLookupResult>,
-  levelDelta: number,
-  x: number,
-  y: number,
-): Pick<ResolvedTileResidency, 'atlasUvOrigin' | 'atlasUvScale'> {
-  const span = 1 << levelDelta;
-  const offsetU = (x - (x >> levelDelta) * span) / span;
-  const offsetV = (y - (y >> levelDelta) * span) / span;
-  return {
-    atlasUvOrigin: [
-      found.atlasUvOrigin[0] + offsetU * found.atlasUvScale[0],
-      found.atlasUvOrigin[1] + offsetV * found.atlasUvScale[1],
-    ],
-    atlasUvScale: [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
   };
 }

@@ -250,6 +250,9 @@ export function createSurfaceTileRenderer(
       // No fallback ⇒ fadeWeight 1 with the fallback rect aliased to the primary, so
       // the fragment's mix() needs no branch.
       const fallback = tile.albedo.fallback ?? tile.albedo;
+      // Night never reads 'empty' (no empty night tile is baked): the sentinel maps to
+      // "no tile" like null, so the fragment falls back to the global map.
+      const nightRect = tile.standalone.night === 'empty' ? null : tile.standalone.night;
       const fadeWeight = surfaceTileFadeWeight(tile.albedo, nowMs);
 
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
@@ -272,13 +275,13 @@ export function createSurfaceTileRenderer(
           fallback.atlasUvScale[1],
         ],
         nightRect:
-          tile.night === null
+          nightRect === null
             ? NO_NIGHT_RECT
             : [
-                tile.night.atlasUvOrigin[0],
-                tile.night.atlasUvOrigin[1],
-                tile.night.atlasUvScale[0],
-                tile.night.atlasUvScale[1],
+                nightRect.atlasUvOrigin[0],
+                nightRect.atlasUvOrigin[1],
+                nightRect.atlasUvScale[0],
+                nightRect.atlasUvScale[1],
               ],
         heightSlotOrigin: [
           slotOriginX + tile.height.originPosts[0],

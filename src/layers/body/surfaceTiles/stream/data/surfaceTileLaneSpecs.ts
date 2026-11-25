@@ -22,7 +22,7 @@ const fetchImageryPayload: SurfaceTileLaneSpec['fetch'] = async (tile, source) =
   return { bitmap, subtreeRangeM: null, gridCodes: null };
 };
 
-export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>> = {
+export const SURFACE_TILE_LANE_SPECS = {
   albedo: {
     label: 'surface-tiles-albedo',
     role: 'gates-cut',
@@ -60,4 +60,4 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
     format: 'rgba8unorm-srgb',
     fetch: fetchImageryPayload,
   },
-};
+} satisfies Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>>;
