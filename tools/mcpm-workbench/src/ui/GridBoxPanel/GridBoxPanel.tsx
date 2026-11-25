@@ -26,16 +26,17 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import ButtonTip from '../ButtonTip/ButtonTip';
 import PanelRow from '../PanelRow/PanelRow';
 import SubsectionGroup from '../ControlsPanel/SubsectionGroup';
+import { LOG10_DISPLAYED } from '../ControlsPanel/utils/LOG10_DISPLAYED';
 import SliderRow from '../SliderRow/SliderRow';
 import { AXES } from './utils/AXES';
 import { centerSliderFor } from './utils/centerSliderFor';
 import { formatAxisSize } from './utils/formatAxisSize';
+import { formatVoxelSizeMpc } from './utils/formatVoxelSizeMpc';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from './utils/sizeSliderFor';
-import { VOXEL_SIZE_MAX_MPC } from './utils/VOXEL_SIZE_MAX_MPC';
 import { VOXEL_SIZE_MIN_MPC } from './utils/VOXEL_SIZE_MIN_MPC';
-import { VOXEL_SIZE_STEP_MPC } from './utils/VOXEL_SIZE_STEP_MPC';
+import { voxelSizeSliderFor } from './utils/voxelSizeSliderFor';
 import { withAxis } from './utils/withAxis';
 import styles from './GridBoxPanel.module.css';
 
@@ -54,10 +55,7 @@ function GridBoxPanel(): ReactNode {
       ? 0
       : catalogPointCount - keptCountFor(catalogPointCount, grid.autoFitPercent / 100);
   const box = deriveGridBox(grid);
-  // The floor deriveGridBox clamps to, here only as the voxel slider's `min`.
   const liveFloorMpc = voxelSizeFloorMpc(grid);
-  const voxelSizeMinMpc =
-    liveFloorMpc === null || liveFloorMpc < VOXEL_SIZE_MIN_MPC ? VOXEL_SIZE_MIN_MPC : liveFloorMpc;
   const voxelSizeInfo =
     liveFloorMpc !== null && liveFloorMpc > VOXEL_SIZE_MIN_MPC
       ? `Edge of one sim voxel: the grid's resolution, kept when the box is resized or refit. Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
@@ -67,17 +65,12 @@ function GridBoxPanel(): ReactNode {
     <>
       <SliderRow
         label="voxel size"
-        // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
-        // whenever the floor isn't active) rather than the raw manual value — otherwise,
-        // below the floor, the pill's number disagreed with the size sliders' voxel counts
-        // and arrow-key nudges silently ticked a value the display never moved for.
-        value={box.voxelSizeMpc}
-        min={voxelSizeMinMpc}
-        max={VOXEL_SIZE_MAX_MPC}
-        step={VOXEL_SIZE_STEP_MPC}
-        format={(v) => `${v.toFixed(2)} Mpc`}
+        // Log10 at this boundary only: the store keeps Mpc.
+        {...voxelSizeSliderFor(grid)}
+        format={(v) => formatVoxelSizeMpc(10 ** v)}
+        displayed={LOG10_DISPLAYED}
         info={voxelSizeInfo}
-        onChange={(v) => dispatch(setVoxelSizeMpc(v))}
+        onChange={(v) => dispatch(setVoxelSizeMpc(10 ** v))}
         path="grid.manualVoxelSizeMpc"
       />
       {AXES.map(({ axis, label }) => (
