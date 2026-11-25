@@ -114,8 +114,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'data/raw/horizons/README.md',
       },
       {
-        scripts: ['build-sampled-tracks'],
-        does: 'Write one track file per Voyager from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded, and compile their launch, flyby and milestone events.',
+        scripts: ['build-sampled-tracks', 'build-mission-events'],
+        does: 'Write one track file per Voyager and one for 2026 QQ8 from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded, and compile the Voyagers’ launch, flyby and milestone events. Body ids after -- write only those tracks.',
         manual: DATA,
       },
       {

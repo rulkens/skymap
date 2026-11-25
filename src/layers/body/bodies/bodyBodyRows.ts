@@ -1,5 +1,5 @@
 /**
- * bodyBodyRows — the planet, moon and small-body rows, each carrying identity, orbit and rotation.
+ * bodyBodyRows — the planet, moon and small-body rows: identity, position and, where measured, rotation.
  * Orbits: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons); JPL's `L`/`ϖ` columns
  * are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription
  * stays checkable against the source. Rotation (Archinal et al. 2018): Ẇ is live everywhere;
@@ -47,6 +47,7 @@ import { NEREID } from './moons/neptunePluto/nereid';
 import { VESTA } from './smallBodies/vesta';
 import { CERES } from './smallBodies/ceres';
 import { BENNU } from './smallBodies/bennu';
+import { ASTEROID_2026_QQ8 } from './smallBodies/asteroid2026Qq8';
 
 const AUTHORED_ROWS: readonly LayerBody[] = [
   EARTH,
@@ -85,6 +86,7 @@ const AUTHORED_ROWS: readonly LayerBody[] = [
   VESTA,
   CERES,
   BENNU,
+  ASTEROID_2026_QQ8,
 ];
 
 function withCorrection(row: LayerBody): LayerBody {

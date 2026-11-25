@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
+import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { blendEncounterToDE441 } from './blendEncounterToDE441';
 import { VOYAGER_ENCOUNTERS } from './voyagerEncounters';
@@ -18,7 +19,7 @@ export function blendVoyagerEncounters(track: SampledTrack, row: HorizonsBody): 
     const maxKm = blendEncounterToDE441(
       track,
       e.date,
-      readHorizonsCsv(join(root, `500@${e.baryTarget}`, `${row.target}.csv`)),
+      readHorizonsCsv(horizonsCsvPath({ ...row, centre: `500@${e.baryTarget}` })),
       readHorizonsCsv(join(root, row.centre, `${e.baryTarget}.${e.date}.csv`)),
     );
     console.log(`${row.id} ${e.date}: blend moved the track by up to ${maxKm.toFixed(0)} km`);

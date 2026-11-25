@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * buildSampledTracks — every `HORIZONS_BODIES` row with `vectors: 'state'` → one
- * `public/data/sampledTrack.<id>.bin`. Its daily vectors (merged with its dense windows when the
+ * buildSampledTracks — every `HORIZONS_BODIES` row with `vectors: 'state'` (or only the ids on the
+ * command line) → one `public/data/sampledTrack.<id>.bin`. Its daily vectors (merged with its dense windows when the
  * row is `dense`) are refined by the body's `SAMPLED_TRACK_REFINEMENTS` entry, if any, decimated so the Hermite the app evaluates stays within 1 km of every raw sample, and every raw
  * sample is re-checked against the kept ones.
  */
 import { existsSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
+import { selectByIds } from '../utils/cli/selectByIds';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { hermiteTrackAt } from '../../src/utils/orbit/hermiteTrackAt';
 import { writeSampledTracks } from '../utils/io/writeSampledTracks';
 import { decimateHermiteSamples } from '../utils/math/decimateHermiteSamples';
@@ -22,13 +23,12 @@ import type { HorizonsBody } from './@types/HorizonsBody';
 const TOLERANCE_KM = 1;
 
 function readRawTrack(row: HorizonsBody): SampledTrack {
-  const dir = join(rawDataPath('horizons'), row.centre);
-  const densePath = join(dir, `${row.target}.dense.csv`);
+  const densePath = horizonsCsvPath(row, '.dense');
   if (row.dense && !existsSync(densePath))
     throw new Error(`${row.id}: dense windows ${densePath} are missing`);
   const rows = mergeHorizonsChunks([
     [
-      ...readHorizonsCsv(join(dir, `${row.target}.csv`)),
+      ...readHorizonsCsv(horizonsCsvPath(row)),
       ...(row.dense ? readHorizonsCsv(densePath) : []),
     ].sort((a, b) => a.jd - b.jd),
   ]);
@@ -75,7 +75,8 @@ function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
   return worst;
 }
 
-for (const row of HORIZONS_BODIES.filter((b) => b.vectors === 'state')) {
+const stateRows = HORIZONS_BODIES.filter((b) => b.vectors === 'state');
+for (const row of selectByIds(stateRows, process.argv.slice(2))) {
   const dense = readRawTrack(row);
   SAMPLED_TRACK_REFINEMENTS[row.id]?.(dense, row);
   const kept = decimateHermiteSamples(dense.tDays, dense.posKm, dense.velKmS, TOLERANCE_KM);
