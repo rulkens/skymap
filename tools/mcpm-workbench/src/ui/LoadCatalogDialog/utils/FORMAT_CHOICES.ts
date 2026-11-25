@@ -7,11 +7,11 @@ export const FORMAT_CHOICES: readonly CatalogImportChoice<
   {
     value: 'cartesianMpc',
     label: 'x, y, z, weight',
-    hint: 'Positions in Mpc. One galaxy per row.',
+    hint: 'Positions in Mpc.',
   },
   {
     value: 'raDecRedshift',
     label: 'RA, Dec, redshift, weight',
-    hint: 'RA and Dec in degrees. Does not open in the native Polyphorm build.',
+    hint: 'RA and Dec in degrees.',
   },
 ];

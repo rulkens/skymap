@@ -7,11 +7,11 @@ export const WEIGHT_CHOICES: readonly CatalogImportChoice<
   {
     value: 'linear',
     label: 'linear',
-    hint: 'Built-in catalogs use stellar mass in 10¹²\u00a0M☉.',
+    hint: 'Stellar mass in 10¹²\u00a0M☉.',
   },
   {
     value: 'log10MassMsun',
     label: 'log₁₀ mass',
-    hint: 'Converted to stellar mass in 10¹²\u00a0M☉. Does not open in the native Polyphorm build.',
+    hint: 'Converted to stellar mass in 10¹²\u00a0M☉.',
   },
 ];
