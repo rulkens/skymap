@@ -12,6 +12,7 @@ import { useState, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import SubsectionGroup from './SubsectionGroup';
+import ButtonTip from '../ButtonTip/ButtonTip';
 import { clearTraceRequested, resetRequested } from '../../state/commands';
 import { setWeightMode } from '../../state/catalog/catalogSlice';
 import { MCPM_PARAM_KEYS } from '../../state/exportParams';
@@ -64,7 +65,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
   // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
-  const [raymarchOpen, setRaymarchOpen] = useState(true);
+  const [raymarchOpen, setRaymarchOpen] = useState(false);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
   const [pathTracerOpen, setPathTracerOpen] = useState(false);
@@ -102,15 +103,31 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
               pair reads as secondary to the run/seed/weight toggles it now sits under. */}
           <PanelRow>
             <div className={styles.simActions}>
-              <Button className={styles.simActionButton} onClick={() => dispatch(resetRequested())}>
-                reset
-              </Button>
-              <Button
-                className={styles.simActionButton}
-                onClick={() => dispatch(clearTraceRequested())}
+              <ButtonTip
+                tip="Re-seeds the agents, clears the trace and step count, and reframes the camera."
+                align="start"
               >
-                clear trace
-              </Button>
+                {(describedBy) => (
+                  <Button
+                    className={styles.simActionButton}
+                    aria-describedby={describedBy}
+                    onClick={() => dispatch(resetRequested())}
+                  >
+                    reset
+                  </Button>
+                )}
+              </ButtonTip>
+              <ButtonTip tip="Clears the trace; agents keep their positions." align="end">
+                {(describedBy) => (
+                  <Button
+                    className={styles.simActionButton}
+                    aria-describedby={describedBy}
+                    onClick={() => dispatch(clearTraceRequested())}
+                  >
+                    clear trace
+                  </Button>
+                )}
+              </ButtonTip>
             </div>
           </PanelRow>
           <SubsectionGroup title="Agents">

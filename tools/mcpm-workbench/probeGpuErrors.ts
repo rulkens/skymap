@@ -248,6 +248,13 @@ async function setLayers(page: Page, layers: Record<string, boolean>): Promise<v
   }
 }
 
+/** Unfold a PanelSection by its title; a no-op when it is already open, where a
+ * bare click would fold it and unmount the controls the step is about to drive. */
+async function openSection(page: Page, title: string): Promise<void> {
+  const fold = page.getByRole('button', { name: title, exact: true });
+  if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();
+}
+
 /** Drive a `role="slider"` pill by keyboard — Slider.tsx has no native input to set
  * (galaxy-renderer/probeGpuErrors.ts's own helper of the same name). */
 async function pressSlider(page: Page, label: string, keys: readonly string[]): Promise<void> {
@@ -486,9 +493,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
       // one, so this is the only render layer none of the other gates exercise. The
-      // "Selection" PanelSection defaults OPEN (DataPanel.tsx's `selectionOpen` starts
-      // true) — no fold click needed; a click here would instead TOGGLE
-      // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
+      // "Selection" PanelSection starts folded (its body unmounted), so this step opens
+      // it and leaves it open for 'gizmo:hover-drag' below (same slider group).
       // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
       // regardless of how the box's center/size got set. Its accessible name is distinct
       // from the raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
@@ -499,6 +505,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
+        await openSection(page, 'Selection');
         const voxelSize = page.getByRole('slider', { name: 'voxel size', exact: true });
         const before = await voxelSize.getAttribute('aria-valuenow');
         await pressSlider(page, 'voxel size', ['End']);
@@ -553,9 +560,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
       // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
-      // branch of the march loop at all.
+      // branch of the march loop at all. Raymarch starts folded; opened here, it stays
+      // open for the two raymarch steps after this one.
       name: 'toggle:additive',
       run: async (page) => {
+        await openSection(page, 'Raymarch');
         const additive = page.getByRole('checkbox', { name: 'additive blend', exact: true });
         await additive.uncheck();
         await settleFrames(page, SETTLE_FRAMES);
@@ -658,7 +667,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         // note above). Named 'path tracer divisor', not 'divisor', to stay distinct
         // from the raymarch section's own slider of that name — both sections are open
         // simultaneously from here on, so a shared name would be an ambiguous locator.
-        await page.getByRole('button', { name: 'Path tracer', exact: true }).click();
+        await openSection(page, 'Path tracer');
         const divisor = page.getByRole('slider', { name: 'path tracer divisor', exact: true });
         const before = await divisor.getAttribute('aria-valuenow');
         await pressSlider(page, 'path tracer divisor', ['End']);

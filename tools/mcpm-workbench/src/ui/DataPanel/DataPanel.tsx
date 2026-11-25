@@ -20,6 +20,7 @@ import {
   WORKBENCH_SOURCES,
 } from '../../state/catalog/catalogSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import ButtonTip from '../ButtonTip/ButtonTip';
 import CatalogStatus from '../CatalogStatus/CatalogStatus';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import HistogramDock from '../HistogramDock/HistogramDock';
@@ -49,7 +50,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const catalog = useAppSelector((s) => s.catalog);
   const grid = useAppSelector((s) => s.grid);
   const [dataOpen, setDataOpen] = useState(true);
-  const [selectionOpen, setSelectionOpen] = useState(true);
+  const [selectionOpen, setSelectionOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(true);
   const [histogramOpen, setHistogramOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,10 +77,19 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
           >
             <UserCatalogRow />
             <PanelRow>
-              <button type="button" className={styles.addRow} onClick={() => setDialogOpen(true)}>
-                <PlusIcon size={12} />
-                Load catalog…
-              </button>
+              <ButtonTip tip="Opens a catalog file from this computer; it is read here, not uploaded.">
+                {(describedBy) => (
+                  <button
+                    type="button"
+                    className={styles.addRow}
+                    aria-describedby={describedBy}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    <PlusIcon size={12} />
+                    Load catalog…
+                  </button>
+                )}
+              </ButtonTip>
             </PanelRow>
             <TierRow tier={catalog.tier} onChange={(t) => dispatch(setCatalogTier(t))} />
             {WORKBENCH_SOURCES.map((s) => (

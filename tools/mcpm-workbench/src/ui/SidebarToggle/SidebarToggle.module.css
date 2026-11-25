@@ -35,27 +35,30 @@
 }
 
 /* The side touching the sidebar is open; the far corners round. */
-.start {
+.tabStart {
   composes: root;
-  composes: toggleStart from '../sidebar.module.css';
   border-inline-start: 0;
   border-start-end-radius: var(--radius-md);
   border-end-end-radius: var(--radius-md);
 }
 
-.onEnd {
+.tabEnd {
   composes: root;
   border-inline-end: 0;
   border-start-start-radius: var(--radius-md);
   border-end-start-radius: var(--radius-md);
 }
 
+/* Where the tab sits and how it rides the slide: on its wrapper, so the tip
+   travels with it. */
+.start {
+  composes: toggleStart from '../sidebar.module.css';
+}
+
 .end {
-  composes: onEnd;
   composes: toggleEnd from '../sidebar.module.css';
 }
 
 .column {
-  composes: onEnd;
   composes: toggleColumn from '../sidebar.module.css';
 }

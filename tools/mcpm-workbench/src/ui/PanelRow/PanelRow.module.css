@@ -35,8 +35,10 @@
   white-space: normal;
 }
 
+/* A grid, so a ButtonTip's inline wrapper stretches and its button fills the row. */
 .wide {
   grid-column: label-start / control-end;
+  display: grid;
   min-width: 0;
 }
 

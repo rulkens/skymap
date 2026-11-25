@@ -25,10 +25,12 @@
   gap: var(--space-3);
 }
 
+/* Fills its ButtonTip wrapper, the pair's grid cell. */
 .action {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
+  inline-size: 100%;
   min-inline-size: 0;
   font-size: var(--font-size-sm);
   white-space: nowrap;

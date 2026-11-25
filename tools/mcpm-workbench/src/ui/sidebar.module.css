@@ -88,16 +88,16 @@
   display: none;
 }
 
-.toggleStart[aria-expanded='false'] {
+.toggleStart:has([aria-expanded='false']) {
   translate: calc(-1 * var(--sidebar-inline-size)) 0;
 }
 
-.toggleEnd[aria-expanded='false'] {
+.toggleEnd:has([aria-expanded='false']) {
   translate: var(--sidebar-inline-size) 0;
 }
 
 .sidebar[inert],
-.toggle[aria-expanded='false'],
+.toggle:has([aria-expanded='false']),
 .pair:has(> .start[inert]):has(> .end[inert]) {
   transition-duration: var(--duration-fast);
   transition-timing-function: ease-in;

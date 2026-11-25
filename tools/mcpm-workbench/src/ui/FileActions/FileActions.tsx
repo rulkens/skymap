@@ -17,6 +17,7 @@ import { installImportedBox } from '../../state/grid/gridSlice';
 import { importParams } from '../../state/importParams';
 import { setAgentCount, setInitMode, setSimParam } from '../../state/sim/simSlice';
 import { useAppDispatch, useAppStore } from '../../store/hooks';
+import ButtonTip from '../ButtonTip/ButtonTip';
 import CubeIcon from '../icons/CubeIcon/CubeIcon';
 import FilamentIcon from '../icons/FilamentIcon/FilamentIcon';
 import FloppyIcon from '../icons/FloppyIcon/FloppyIcon';
@@ -78,22 +79,38 @@ function FileActions(): ReactNode {
           export
         </span>
         <div className={styles.pair}>
-          <Button
-            className={styles.action}
-            aria-label="download trace"
-            onClick={() => dispatch(exportNpyRequested())}
+          <ButtonTip
+            tip="Downloads the trace as a .npy volume and its .json sidecar, for the build pipeline."
+            align="center"
           >
-            <FilamentIcon size={ICON_SIZE} />
-            <span className={styles.actionLabel}>trace</span>
-          </Button>
-          <Button
-            className={styles.action}
-            aria-label="download .scfd"
-            onClick={() => dispatch(exportScfdRequested())}
+            {(describedBy) => (
+              <Button
+                className={styles.action}
+                aria-describedby={describedBy}
+                aria-label="download trace"
+                onClick={() => dispatch(exportNpyRequested())}
+              >
+                <FilamentIcon size={ICON_SIZE} />
+                <span className={styles.actionLabel}>trace</span>
+              </Button>
+            )}
+          </ButtonTip>
+          <ButtonTip
+            tip="Downloads the trace packed as a .scfd scalar field, the volume format Skymap draws."
+            align="end"
           >
-            <CubeIcon size={ICON_SIZE} />
-            <span className={styles.actionLabel}>.scfd</span>
-          </Button>
+            {(describedBy) => (
+              <Button
+                className={styles.action}
+                aria-describedby={describedBy}
+                aria-label="download .scfd"
+                onClick={() => dispatch(exportScfdRequested())}
+              >
+                <CubeIcon size={ICON_SIZE} />
+                <span className={styles.actionLabel}>.scfd</span>
+              </Button>
+            )}
+          </ButtonTip>
         </div>
       </div>
       <div className={styles.group} role="group" aria-labelledby={paramsLabelId}>
@@ -101,18 +118,38 @@ function FileActions(): ReactNode {
           params
         </span>
         <div className={styles.pair}>
-          <Button className={styles.action} aria-label="save params" onClick={onSaveParams}>
-            <FloppyIcon size={ICON_SIZE} />
-            <span className={styles.actionLabel}>save</span>
-          </Button>
-          <Button
-            className={styles.action}
-            aria-label="load params"
-            onClick={() => paramsFileInputRef.current?.click()}
+          <ButtonTip
+            tip="Saves the simulation sliders, agent count, seeding, grid box and built-in catalogs as .json; not the seed, tier, weighting or view."
+            align="center"
           >
-            <FolderOpenIcon size={ICON_SIZE} />
-            <span className={styles.actionLabel}>load</span>
-          </Button>
+            {(describedBy) => (
+              <Button
+                className={styles.action}
+                aria-describedby={describedBy}
+                aria-label="save params"
+                onClick={onSaveParams}
+              >
+                <FloppyIcon size={ICON_SIZE} />
+                <span className={styles.actionLabel}>save</span>
+              </Button>
+            )}
+          </ButtonTip>
+          <ButtonTip
+            tip="Loads a saved params file: simulation sliders, agent count, seeding, grid box and, if saved, the built-in catalogs."
+            align="end"
+          >
+            {(describedBy) => (
+              <Button
+                className={styles.action}
+                aria-describedby={describedBy}
+                aria-label="load params"
+                onClick={() => paramsFileInputRef.current?.click()}
+              >
+                <FolderOpenIcon size={ICON_SIZE} />
+                <span className={styles.actionLabel}>load</span>
+              </Button>
+            )}
+          </ButtonTip>
         </div>
         <input
           ref={paramsFileInputRef}

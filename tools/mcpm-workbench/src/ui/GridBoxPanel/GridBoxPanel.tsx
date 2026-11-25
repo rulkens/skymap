@@ -24,6 +24,7 @@ import {
   setVoxelSizeMpc,
 } from '../../state/grid/gridSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import ButtonTip from '../ButtonTip/ButtonTip';
 import PanelRow from '../PanelRow/PanelRow';
 import SubsectionGroup from '../ControlsPanel/SubsectionGroup';
 import SliderRow from '../SliderRow/SliderRow';
@@ -144,20 +145,25 @@ function GridBoxPanel(): ReactNode {
           />
         </PanelRow>
         <PanelRow>
-          <Button
-            className={styles.autoFitButton}
-            disabled={!catalogBoundsMpc}
-            onClick={() => {
-              if (!catalogBoundsMpc) return;
-              dispatch(
-                fitBoxToCatalog(
-                  resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-                ),
-              );
-            }}
-          >
-            auto fit
-          </Button>
+          <ButtonTip tip="Fits the box around the fit % of catalog points it keeps, plus the padding on every side.">
+            {(describedBy) => (
+              <Button
+                className={styles.autoFitButton}
+                aria-describedby={describedBy}
+                disabled={!catalogBoundsMpc}
+                onClick={() => {
+                  if (!catalogBoundsMpc) return;
+                  dispatch(
+                    fitBoxToCatalog(
+                      resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+                    ),
+                  );
+                }}
+              >
+                auto fit
+              </Button>
+            )}
+          </ButtonTip>
         </PanelRow>
       </SubsectionGroup>
     </>

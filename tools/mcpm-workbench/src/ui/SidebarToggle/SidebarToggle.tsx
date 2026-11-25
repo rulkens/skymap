@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react';
 import ChevronLeftIcon from '../../../../../src/components/icons/ChevronLeftIcon/ChevronLeftIcon';
 import ChevronRightIcon from '../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
+import ButtonTip from '../ButtonTip/ButtonTip';
 import styles from './SidebarToggle.module.css';
 
 export type SidebarToggleProps = {
@@ -28,17 +29,30 @@ function SidebarToggle({
 }: SidebarToggleProps): ReactNode {
   // The chevron points the way the sidebar will move.
   const pointsLeft = (side === 'start') === expanded;
+  // The tip opens below the tab and grows away from the screen edge it is near.
+  const align = side === 'start' || (side === 'column' && expanded) ? 'start' : 'end';
   return (
-    <button
-      type="button"
-      className={styles[side]}
-      aria-expanded={expanded}
-      aria-controls={controls}
-      aria-label={`${expanded ? 'Hide' : 'Show'} ${label}`}
-      onClick={onToggle}
-    >
-      {pointsLeft ? <ChevronLeftIcon size={14} /> : <ChevronRightIcon size={14} />}
-    </button>
+    <span className={styles[side]}>
+      <ButtonTip
+        tip={`${expanded ? 'Hides' : 'Shows'} the ${label}.`}
+        placement="bottom"
+        align={align}
+      >
+        {(describedBy) => (
+          <button
+            type="button"
+            className={side === 'start' ? styles.tabStart : styles.tabEnd}
+            aria-expanded={expanded}
+            aria-controls={controls}
+            aria-label={`${expanded ? 'Hide' : 'Show'} ${label}`}
+            aria-describedby={describedBy}
+            onClick={onToggle}
+          >
+            {pointsLeft ? <ChevronLeftIcon size={14} /> : <ChevronRightIcon size={14} />}
+          </button>
+        )}
+      </ButtonTip>
+    </span>
   );
 }
 
