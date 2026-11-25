@@ -1,14 +1,14 @@
 /**
  * CatalogInfo — what the chosen file holds as it will load with the current
- * settings: rows, the stored weights' mean and spread, and the bounds per axis.
- * Its labels and values sit on LoadInfo's `file` tracks; until a parse is in,
- * every value is a dash in the same rows, so nothing changes height.
+ * settings: rows, the stored weights' mean and spread, and the bounds per axis
+ * (the last two worked out with the parse, in the catalog worker). Its labels
+ * and values sit on LoadInfo's `file` tracks; until a parse is in, every value
+ * is a dash in the same rows, so nothing changes height.
  */
-import { Fragment, useMemo, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
+import type { CatalogPreview } from '../../../../@types/CatalogPreview';
 import type { UserCatalog } from '../../../../@types/UserCatalog';
-import { catalogBounds } from '../../../field/catalogBounds';
 import { formatWeight } from '../../../field/formatWeight';
-import { meanStdDev } from '../../../utils/meanStdDev';
 import { AXES } from '../../GridBoxPanel/utils/AXES';
 import { formatBoundMpc } from '../utils/formatBoundMpc';
 import styles from './CatalogInfo.module.css';
@@ -16,14 +16,14 @@ import styles from './CatalogInfo.module.css';
 export type CatalogInfoProps = {
   /** Null while reading, or when the file could not be parsed. */
   readonly catalog: UserCatalog | null;
+  readonly bounds: CatalogPreview['bounds'];
+  readonly weight: CatalogPreview['weight'];
   /** Parsed under settings that have since changed. */
   readonly stale: boolean;
 };
 
-function CatalogInfo({ catalog, stale }: CatalogInfoProps): ReactNode {
+function CatalogInfo({ catalog, bounds, weight, stale }: CatalogInfoProps): ReactNode {
   const points = catalog && catalog.points.count > 0 ? catalog.points : null;
-  const bounds = useMemo(() => points && catalogBounds(points.positions), [points]);
-  const weight = useMemo(() => points && meanStdDev(points.weight), [points]);
   const rows = points ? points.count.toLocaleString() : '—';
 
   return (

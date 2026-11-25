@@ -5,8 +5,11 @@ import { useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import createSagaMiddleware from 'redux-saga';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CatalogContents } from '../../../../../tools/mcpm-workbench/@types/CatalogContents';
+import type { CatalogSource } from '../../../../../tools/mcpm-workbench/@types/CatalogSource';
+import { previewCatalog } from '../../../../../tools/mcpm-workbench/src/catalogWorker/previewCatalog';
+import { readCatalogSource } from '../../../../../tools/mcpm-workbench/src/catalogWorker/readCatalogSource';
 import { catalogBounds } from '../../../../../tools/mcpm-workbench/src/field/catalogBounds';
+import { createCsvColumnReader } from '../../../../../tools/mcpm-workbench/src/field/createCsvColumnReader';
 import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/field/deriveGridBox';
 import { estimateBoxGpuBytes } from '../../../../../tools/mcpm-workbench/src/sim/estimateBoxGpuBytes';
 import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
@@ -16,26 +19,32 @@ import { formatBytes } from '../../../../../tools/mcpm-workbench/src/ui/formatBy
 import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
 import DataPanel from '../../../../../tools/mcpm-workbench/src/ui/DataPanel/DataPanel';
 import LoadCatalogDialog from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/LoadCatalogDialog';
-import { parseCatalogContents } from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/parseCatalogContents';
-import { readCatalogContents } from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/readCatalogContents';
 
+// The worker's handler runs in-process; only the disk read is faked, so a test decides when it lands.
 vi.mock(
-  '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/readCatalogContents',
-  () => ({ readCatalogContents: vi.fn() }),
+  '../../../../../tools/mcpm-workbench/src/catalogWorker/createCatalogWorkerTransport',
+  async () => ({
+    createCatalogWorkerTransport: (
+      await import('../../../../fixtures/inProcessCatalogWorkerTransport')
+    ).inProcessCatalogWorkerTransport,
+  }),
 );
-// The real parser, watched: a load must not parse again.
+vi.mock('../../../../../tools/mcpm-workbench/src/catalogWorker/readCatalogSource', () => ({
+  readCatalogSource: vi.fn(),
+}));
+// The real derive, watched: a load must not derive again.
 vi.mock(
-  '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/parseCatalogContents',
+  '../../../../../tools/mcpm-workbench/src/catalogWorker/previewCatalog',
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import('../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/utils/parseCatalogContents')
+        typeof import('../../../../../tools/mcpm-workbench/src/catalogWorker/previewCatalog')
       >();
-    return { parseCatalogContents: vi.fn(actual.parseCatalogContents) };
+    return { previewCatalog: vi.fn(actual.previewCatalog) };
   },
 );
-const read = vi.mocked(readCatalogContents);
-const parse = vi.mocked(parseCatalogContents);
+const read = vi.mocked(readCatalogSource);
+const parse = vi.mocked(previewCatalog);
 
 // jsdom has HTMLDialogElement but no showModal/close.
 beforeAll(() => {
@@ -53,11 +62,11 @@ beforeEach(() => {
 });
 
 const csv = (name: string): File => new File([''], name, { type: 'text/csv' });
-const contents = (fileName: string, text: string): CatalogContents => ({
-  kind: 'csv',
-  fileName,
-  text,
-});
+function contents(fileName: string, text: string): CatalogSource {
+  const reader = createCsvColumnReader();
+  reader.push(new TextEncoder().encode(text));
+  return { kind: 'csv', fileName, columns: reader.finish() };
+}
 // Two rows: x from -4 to 1, weights 0.02 and 0.04.
 const TWO_ROWS = '1,2,3,0.02\n-4,5,-6,0.04\n';
 
@@ -68,15 +77,15 @@ function drop(file: File): void {
 }
 
 function deferred(): {
-  promise: Promise<CatalogContents>;
-  resolve: (c: CatalogContents) => Promise<void>;
+  promise: Promise<CatalogSource>;
+  resolve: (c: CatalogSource) => Promise<void>;
 } {
-  let settle!: (c: CatalogContents) => void;
-  const promise = new Promise<CatalogContents>((r) => (settle = r));
-  // The first parse waits a zero timeout after the read.
-  const resolve = async (c: CatalogContents): Promise<void> => {
+  let settle!: (c: CatalogSource) => void;
+  const promise = new Promise<CatalogSource>((r) => (settle = r));
+  // The read's answer, the first derive's zero timeout and the worker's own each take a turn.
+  const resolve = async (c: CatalogSource): Promise<void> => {
     await act(async () => settle(c));
-    await act(() => new Promise((r) => setTimeout(r, 0)));
+    for (let turn = 0; turn < 4; turn++) await act(() => new Promise((r) => setTimeout(r, 0)));
   };
   return { promise, resolve };
 }

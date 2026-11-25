@@ -3,25 +3,24 @@
  * (the owner's ruled exception to ui-ux.md's no-modal rule). Mounted on the
  * sidebar root, never in a foldable body, because it also owns the window drop
  * listener: a file dropped anywhere opens it with that file chosen. A chosen
- * file is read once and parsed at once, then again from memory when a setting
- * changes, so what it holds shows before Load; Load dispatches that parse. The
- * store sees only a parsed catalog, so a refused or warned file leaves the
- * loaded one in place. Closing keeps every choice, so the backdrop may close
+ * file is read once into the catalog worker and derived there at once, then
+ * again when a setting changes, so what it holds shows before Load and the page
+ * never waits on it; Load dispatches that result. The store sees only a parsed
+ * catalog, so a refused or warned file leaves the loaded one in place. Closing
+ * keeps every choice but drops the file from memory, so the backdrop may close
  * it; only Auto fit is on again at every open.
  */
-import { useEffect, useEffectEvent, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { CatalogContents } from '../../../@types/CatalogContents';
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
 import type { CatalogFiles } from '../../../@types/CatalogFiles';
 import type { CatalogImportFieldProblems } from '../../../@types/CatalogImportFieldProblems';
 import type { CatalogImportFields } from '../../../@types/CatalogImportFields';
-import type { CatalogLoadOutcome } from '../../../@types/CatalogLoadOutcome';
 import type { CatalogParse } from '../../../@types/CatalogParse';
 import Button from '../../../../../src/components/common/Button/Button';
-import { catalogBounds } from '../../field/catalogBounds';
+import { createCatalogWorkerClient } from '../../catalogWorker/createCatalogWorkerClient';
+import { createCatalogWorkerTransport } from '../../catalogWorker/createCatalogWorkerTransport';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import FormField from '../FormField/FormField';
-import { resolveAutoFitBounds } from '../GridBoxPanel/utils/resolveAutoFitBounds';
 import ImportIcon from '../icons/ImportIcon/ImportIcon';
 import SegmentedControl from '../SegmentedControl/SegmentedControl';
 import AutoFitField from './AutoFitField/AutoFitField';
@@ -32,8 +31,6 @@ import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
 import { importFieldProblems } from './utils/importFieldProblems';
 import { importSettingsFrom } from './utils/importSettingsFrom';
 import { NAME_END_CHARS } from './utils/NAME_END_CHARS';
-import { parseCatalogContents } from './utils/parseCatalogContents';
-import { readCatalogContents } from './utils/readCatalogContents';
 import { readCatalogFiles } from './utils/readCatalogFiles';
 import { REPARSE_DELAY_MS } from './utils/REPARSE_DELAY_MS';
 import { SLOW_READ_MS } from './utils/SLOW_READ_MS';
@@ -58,10 +55,11 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   // Only a file's first parse moves focus to Load; a re-parse leaves it where the user is.
   const focusedFor = useRef<CatalogFiles | null>(null);
 
+  const [worker] = useState(() => createCatalogWorkerClient(createCatalogWorkerTransport));
   const [files, setFiles] = useState<CatalogFiles | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // Held only while open and needed: a 400 MB file is 400 MB of string.
-  const [contents, setContents] = useState<CatalogContents | null>(null);
+  // The files the worker holds, only while open and needed: 400 MB of CSV is ~280 MB of columns.
+  const [held, setHeld] = useState<CatalogFiles | null>(null);
   const [parsed, setParsed] = useState<CatalogParse | null>(null);
   const [fields, setFields] = useState<CatalogImportFields>({
     formatKind: 'cartesianMpc',
@@ -86,83 +84,76 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
     setChecked((c) => (c.includes(field) ? c : [...c, field]));
 
   // Null while a field is wrong: nothing is parsed until the settings are whole.
+  // The Auto fit percent is in the key because the worker fits the box too.
   const settingsKey = packed
-    ? 'packed'
+    ? `packed@${autoFitPercent}`
     : wrong.length > 0
       ? null
-      : JSON.stringify(importSettingsFrom(fields));
+      : `${JSON.stringify(importSettingsFrom(fields))}@${autoFitPercent}`;
   const shownParse = files !== null && parsed?.files === files ? parsed : null;
   const current = shownParse !== null && shownParse.settingsKey === settingsKey;
-  const outcome = shownParse?.outcome ?? null;
+  const preview = shownParse?.preview ?? null;
+  const outcome = preview?.outcome ?? null;
   const catalog = outcome !== null && outcome.kind !== 'problem' ? outcome.catalog : null;
   const loadable = current && catalog !== null;
-  // Once per parse, and only while open: it sorts every point (4 s for 8.7 M).
-  const fitBounds = useMemo(
-    () =>
-      open && catalog && catalog.points.count > 0
-        ? resolveAutoFitBounds(
-            catalog.points,
-            catalogBounds(catalog.points.positions),
-            autoFitPercent,
-          )
-        : null,
-    [open, catalog, autoFitPercent],
-  );
-  const loadFit = autoFit ? fitBounds : null;
+  const loadFit = autoFit ? (preview?.fitBounds ?? null) : null;
 
-  const needsRead = open && files !== null && contents === null && !current;
+  useEffect(() => () => worker.dispose(), [worker]);
+
+  const needsRead = open && files !== null && held !== files;
   useEffect(() => {
     if (!needsRead || !files) return;
     let live = true;
     const slow = setTimeout(() => setSlowRead(true), SLOW_READ_MS);
-    readCatalogContents(files)
-      .then((read) => {
-        if (live) setContents(read);
-      })
-      .catch((err: unknown) => {
-        if (!live) return;
-        setFiles(null);
-        setRefusal((err as Error).message);
-      });
+    void worker.read(files).then((read) => {
+      if (!live || read === null) return;
+      if (read.kind === 'held') return setHeld(files);
+      setFiles(null);
+      setRefusal(read.message);
+    });
     return () => {
       live = false;
       clearTimeout(slow);
       setSlowRead(false);
     };
-  }, [needsRead, files]);
+  }, [needsRead, files, worker]);
 
   const parseNow = useEffectEvent((): void => {
-    if (!files || !contents || settingsKey === null) return;
-    let next: CatalogLoadOutcome;
-    try {
-      next = parseCatalogContents(contents, importSettingsFrom(fields));
-    } catch (err) {
-      next = { kind: 'problem', message: (err as Error).message, showExample: false };
-    }
-    setParsed({ files, settingsKey, outcome: next });
+    if (!files || settingsKey === null) return;
+    const key = settingsKey;
+    void worker.derive(importSettingsFrom(fields), autoFitPercent).then((next) => {
+      if (next) setParsed({ files, settingsKey: key, preview: next });
+    });
   });
 
   // A new file parses at once; a changed setting waits out the typing.
   const firstParse = parsed?.files !== files;
+  const ready = held !== null && held === files;
   useEffect(() => {
-    if (!contents || settingsKey === null || current) return;
+    if (!ready || settingsKey === null || current) return;
     const timer = setTimeout(() => parseNow(), firstParse ? 0 : REPARSE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [contents, settingsKey, current, firstParse]);
+  }, [ready, settingsKey, current, firstParse]);
 
   useEffect(() => {
     if (!parsed || focusedFor.current === parsed.files) return;
     focusedFor.current = parsed.files;
-    if (parsed.outcome.kind !== 'problem') confirmRef.current?.focus();
+    if (parsed.preview.outcome.kind !== 'problem') confirmRef.current?.focus();
   }, [parsed]);
+
+  // The worker forgets the last file before it reads the next, so two are never held.
+  const forget = (): void => {
+    worker.drop();
+    setHeld(null);
+    setParsed(null);
+  };
 
   const choose = (chosen: readonly File[]): void => {
     const result = readCatalogFiles(chosen);
     const refused = result.kind === 'problem';
     setFiles(refused ? null : result);
     setRefusal(refused ? result.message : null);
-    setContents(null);
-    setParsed(null);
+    forget();
   };
 
   const onDrop = useEffectEvent((e: DragEvent): void => {
@@ -211,7 +202,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
       aria-describedby={noteId}
       closedby="any"
       onClose={() => {
-        setContents(null);
+        forget();
         setAutoFit(true);
         onOpenChange(false);
       }}
@@ -425,7 +416,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         </div>
 
         {(files !== null || refusal !== null) && (
-          <LoadInfo catalog={catalog} fitBounds={loadFit} stale={stale} />
+          <LoadInfo preview={preview} fitBounds={loadFit} stale={stale} />
         )}
 
         <footer className={styles.footer}>
