@@ -160,6 +160,13 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       "Bennu is a near-Earth asteroid about half a kilometre across. NASA's OSIRIS-REx touched its surface on 20 October 2020 and brought 121.6 g of it back to Utah on 24 September 2023, the largest asteroid sample ever collected in space.",
   },
+  '2026-qq8': {
+    yearLength: '359 days',
+    distance: '0.989 AU',
+    wikiTitle: '2026_QQ8',
+    description:
+      "2026 QQ8 is a near-Earth asteroid about 1.6 m across, weighing 3 to 8 tonnes, first seen on 19 August 2026. It was temporarily captured by Earth from 26 April to 7 December 2026, a 225-day flyby that passed 537,000 km from Earth, 1.4 times the Moon's distance, on 18 August. Its colours match both a stony asteroid and the basalt Apollo 17 brought back from the Moon, so where it came from is still open.",
+  },
   moon: {
     massKg: 7.35e22,
     gravity: '0.17 g',

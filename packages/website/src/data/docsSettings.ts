@@ -620,7 +620,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       label(
         'Small bodies',
         'bodies.items.small-body.labelEnabled',
-        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
+        'the asteroids Vesta, Bennu and 2026 QQ8 and the dwarf planet Ceres',
       ),
       label(
         'Spacecraft',
@@ -730,7 +730,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Orbit trails',
         control: 'switch',
-        does: 'Shows the orbit of each planet, moon and spacecraft as a line.',
+        does: 'Shows the orbit of each planet, moon and spacecraft as a line, and the path of the asteroid 2026 QQ8.',
         values: SWITCH,
         first: ON,
         state: 'orbitTrails.enabled',
