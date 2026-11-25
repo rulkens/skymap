@@ -1,9 +1,13 @@
 /* No box of its own: the header's grid places the svg exactly as before. Only a
-   warning zone sets a colour; otherwise the section label's colour (and its
+   measured zone sets a colour; otherwise the section label's colour (and its
    off-section dim) comes through by inheritance, whatever the stylesheet order. */
 .root {
   --turn-duration: 4s;
   display: contents;
+}
+
+.root[data-zone='good'] {
+  color: var(--tool-status-good);
 }
 
 .root[data-zone='warn'] {
