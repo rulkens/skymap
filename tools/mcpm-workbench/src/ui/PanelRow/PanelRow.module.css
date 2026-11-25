@@ -42,9 +42,11 @@
   min-width: 0;
 }
 
+/* Flex, not a line box: an inline ⓘ's strut would make a row with one taller than its neighbours. */
 .info {
   grid-column: info;
   justify-self: center;
+  display: flex;
 }
 
 .infoIcon {

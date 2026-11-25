@@ -11,7 +11,7 @@ export type ToggleRowProps = {
   readonly label: string;
   readonly on: boolean;
   readonly onChange: (on: boolean) => void;
-  readonly info?: string;
+  readonly info?: ReactNode;
   /**
    * A muted trailing note (e.g. "not in small tier") — also mutes the label
    * itself, so the row reads as de-emphasized. Never disables the pill: a

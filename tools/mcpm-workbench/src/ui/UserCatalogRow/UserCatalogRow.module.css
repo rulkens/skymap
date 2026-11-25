@@ -1,13 +1,4 @@
-/* The detail sits closer to its file than rows sit to each other. */
 .root {
   composes: row from '../panelGrid.module.css';
   composes: reveal from '../reveal.module.css';
-  row-gap: var(--space-1);
-}
-
-.detail {
-  composes: readout from '../PanelRow/PanelRow.module.css';
-  margin: 0;
-  white-space: nowrap;
-  color: var(--color-fg-tertiary);
 }
