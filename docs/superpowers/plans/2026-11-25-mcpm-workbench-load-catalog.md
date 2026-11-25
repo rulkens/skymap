@@ -36,6 +36,26 @@ page by a pure function; nothing is sent anywhere.
     warns when the median is far from the published run's or the values look like logarithms, and
     lets the user declare the column as log₁₀ mass in M☉, converted on load.
 
+## Owner additions during execution (2026-11-25)
+
+Asked for by the owner while the tasks ran, so they are in scope, not creep:
+
+- A tier dropdown in the Data section.
+- Info texts on padding, additive blend and palette; info buttons at the end of the row.
+- Tighter spacing in collapsed sections; dividers span the full width, subsections too.
+- The Show box toggle is removed.
+- The format hint reads "Did you mean cartesian?".
+- Clamping built-in masses is backlogged, not built.
+- Data gets its own sidebar.
+- The import dialog is a form with segmented controls; its footer buttons carry icons.
+- "Grid box" is renamed "Selection".
+- The Simulation header toggle runs and pauses the sim.
+- The size sliders show the box the sim builds, in 8-voxel steps.
+- Section toggles sit on the right; a section switched off is dimmed.
+- The workbench has its own panel section component.
+- Modern CSS, with no workarounds.
+- Auto fit keeps 97% by default.
+
 ## Ground preparation
 
 Checkpoint shown and answered on 2026-11-25 (ruling 6 chose the flag shape over a tagged union; ruling 5
@@ -145,7 +165,7 @@ and every reader (8 source files, 9 test files under `tests/tools/mcpm-workbench
 - [x] `CatalogPoints.log10StellarMass` → `weight`, documented as
       "linear, positive; stellar mass in 10¹² M☉ for built-in catalogs; NaN where absent".
 - [x] `AgentWeights.medianLog10Mass` → `medianWeight`; `deriveAgentWeights`'s parameter follows.
-- [x] Use `npm run refactor` (property rename). Then `grep -rn 'log10StellarMass\|medianLog10Mass' tools/mcpm-workbench tests/tools/mcpm-workbench` → no hits. Runtime types under `src/` named `log10StellarMass` are a different type and stay.
+- [x] Use `npm run refactor` (property rename). Then `grep -rn 'log10StellarMass\|medianLog10Mass' tools/mcpm-workbench tests/tools/mcpm-workbench` → the only hit is `loadCatalogPoints.ts` reading the `src/` runtime type's `log10StellarMass`, a different type that stays.
 - [x] Commit.
 
 ### Task 3: A loaded catalog is a row that can be on or off (prep)
@@ -412,8 +432,9 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 
 - `parseCsvCatalog`, `concatCatalogPoints`, `massWeightFromLog10`, `LoadCatalogDialog`, the
   `UserCatalog` / `CatalogImportSettings` / `CatalogFileProblem` / `Cosmology` types.
-- `packedOverride`, `setPackedCatalog`, `readDroppedPackedCatalog`, `log10StellarMass` and
-  `medianLog10Mass` no longer appear under `tools/mcpm-workbench/` or its tests.
+- `packedOverride`, `setPackedCatalog`, `readDroppedPackedCatalog` and `medianLog10Mass` no longer
+  appear under `tools/mcpm-workbench/` or its tests; `log10StellarMass` appears only where
+  `loadCatalogPoints.ts` reads the `src/` runtime type's field of that name.
 
 **Smoke pass on a production build (`npm run build`, served)**
 
