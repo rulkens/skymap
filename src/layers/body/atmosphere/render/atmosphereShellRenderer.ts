@@ -50,9 +50,10 @@ const LUT_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /** `SkyViewParams`: 4 f32 (see `skyViewLut.wesl`). */
 const SKY_VIEW_PARAMS_BYTES = 16;
-/** Sun-zenith cosine change that still reuses the sky-view LUT: about 0.0006° of sun
- *  motion, about 0.06% radiance at twilight. */
-const SKY_VIEW_SUN_ZENITH_EPSILON = 1e-5;
+/** Sun-zenith cosine change that still reuses the sky-view LUT. A dragged camera moves the
+ *  cosine ~1e-4 per frame, so the gate sits above that or dragging re-bakes every frame;
+ *  1e-3 (~0.06° of sun at the horizon) leaves a table at most ~3/255 off (Mars sunset glow). */
+const SKY_VIEW_SUN_ZENITH_EPSILON = 1e-3;
 /** Derived from the packer's f32 count. */
 const ATMOSPHERE_UNIFORM_BYTES = ATMOSPHERE_UNIFORM_FLOATS * 4;
 
@@ -585,8 +586,8 @@ export function createAtmosphereShellRenderer(
     device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
     // The bake is a pure function of this record and the texture (its other inputs are
     // baked once), so a matching record would redraw the same table. Only sun zenith gets
-    // a tolerance: the live clock drifts it every frame for a body-fixed camera. It is
-    // measured from the last BAKE, so slow drift still re-bakes.
+    // a tolerance: the live clock drifts it every frame and a dragged camera moves it. It
+    // is measured from the last BAKE, so slow drift still re-bakes.
     const baked = bundle.skyViewBaked;
     if (
       baked?.texture === bundle.skyViewTex &&

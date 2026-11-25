@@ -338,17 +338,17 @@ describe('dispatchSkyView — re-bake only a stale LUT', () => {
     expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
   });
 
-  it('tolerates sun-zenith drift below 1e-5, measured from the last bake, not the last frame', () => {
+  it('tolerates sun-zenith drift below 1e-3, measured from the last bake, not the last frame', () => {
     const { renderer } = build();
     const pass = computePass();
     const gpuPass = pass as unknown as GPUComputePassEncoder;
 
     renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25));
-    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 0.6e-5));
+    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 0.6e-3));
     expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(1);
 
     // Each step is sub-epsilon, but the drift since the bake is not.
-    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 1.2e-5));
+    renderer.dispatchSkyView(gpuPass, 'earth', withSunZenith(0.25 + 1.2e-3));
     expect(pass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
   });
 
