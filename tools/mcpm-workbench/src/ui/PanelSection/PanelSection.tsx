@@ -1,8 +1,8 @@
 /**
  * PanelSection — one foldable section of a workbench sidebar: a full-width
- * divider, a header that folds the body, and an optional on/off pill on the
- * row toggles' edge; an off section dims its icon and title. The pill sits
- * beside the fold button, never inside it, so the two stay separately focusable.
+ * divider, a header that folds the body, and an optional on/off pill or other
+ * `control` on the row toggles' edge; an off section dims its icon and title. Either
+ * sits beside the fold button, never inside it, so the two stay separately focusable.
  * A folded section can show a one-line `summary` in its header; it is hidden from
  * assistive tech, since the body says the same and a live summary must not chatter.
  * Controlled: the caller owns `open`. A folded body is unmounted (the probe and the
@@ -23,6 +23,10 @@ export type PanelSectionProps = {
   readonly onChange?: (on: boolean) => void;
   /** The pill's accessible name; defaults to `Toggle <title>`. */
   readonly toggleLabel?: string;
+  /** A header control in the pill's place, for a section that has no pill. */
+  readonly control?: ReactNode;
+  /** Names what the body shows: a new key slides the sections below to its height. */
+  readonly contentKey?: string;
   /** Shown only while folded, muted, cut with an ellipsis when it does not fit. */
   readonly summary?: ReactNode;
   readonly children: ReactNode;
@@ -36,6 +40,8 @@ function PanelSection({
   on,
   onChange,
   toggleLabel = `Toggle ${title}`,
+  control,
+  contentKey,
   summary,
   children,
 }: PanelSectionProps): ReactNode {
@@ -61,6 +67,32 @@ function PanelSection({
       for (const grow of grows) if (grow.playState === 'running') grow.reverse();
     };
   }, [closing]);
+
+  // Grows or shrinks from the height the body had at the last commit to the new
+  // content's, the reveal's own timing; with reduced motion the sections below jump.
+  const lastKey = useRef(contentKey);
+  const lastHeight = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (contentKey === undefined) return;
+    const body = bodyRef.current;
+    const from = lastHeight.current;
+    const changed = contentKey !== lastKey.current;
+    lastKey.current = contentKey;
+    lastHeight.current = body?.getBoundingClientRect().height ?? null;
+    if (!body || !changed || from === null) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const style = getComputedStyle(body);
+    body.animate(
+      [
+        { blockSize: `${from}px`, overflow: 'clip' },
+        { blockSize: 'auto', overflow: 'clip' },
+      ],
+      {
+        duration: parseFloat(style.getPropertyValue('--duration-base')),
+        easing: style.getPropertyValue('--ease-standard'),
+      },
+    );
+  });
 
   return (
     <section className={styles.root}>
@@ -88,6 +120,7 @@ function PanelSection({
             aria-label={toggleLabel}
           />
         )}
+        {control !== undefined && <div className={styles.control}>{control}</div>}
       </div>
       {mounted && (
         <div

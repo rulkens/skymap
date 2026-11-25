@@ -30,7 +30,7 @@
   cursor: pointer;
 }
 
-.header:has(.toggle) .fold {
+.header:has(.toggle, .control) .fold {
   grid-column: full-start / label-end;
 }
 
@@ -106,6 +106,12 @@
   grid-column: control;
   justify-self: end;
   margin: 0;
+}
+
+.control {
+  grid-column: control;
+  justify-self: end;
+  display: flex;
 }
 
 /* Grows in on mount and folds up before it unmounts, so the sections below slide
