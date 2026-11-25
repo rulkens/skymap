@@ -1,5 +1,5 @@
 /**
- * Auto fit on load — the dialog previews `fittedGrid(grid, fitBounds)` and Load
+ * Auto fit on load — the dialog previews `fittedGrid(grid, fitBounds, lanes)` and Load
  * hands the same bounds to watchCatalogSaga, which fits the box and frames the
  * camera beside `catalogLoaded`. Two scene triggers that far apart would build
  * the sim twice, so the real scene saga runs here with `initGpu` counted as the build.
@@ -72,7 +72,10 @@ describe('auto fit on load', () => {
       catalogBounds(positions),
       before.autoFitPercent,
     );
-    const previewed = fittedGrid(before, fitBounds);
+    const previewed = fittedGrid(before, fitBounds, {
+      agentCount: store.getState().sim.agentCount,
+      pointCount: catalog.points.count,
+    });
 
     store.dispatch(userCatalogLoaded({ catalog, fitBounds }));
     await vi.advanceTimersByTimeAsync(2000);

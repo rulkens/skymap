@@ -14,8 +14,10 @@ import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/field/der
 import { estimateBoxGpuBytes } from '../../../../../tools/mcpm-workbench/src/sim/estimateBoxGpuBytes';
 import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
 import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
+import { setMaxBufferBytes } from '../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
 import { formatBytes } from '../../../../../tools/mcpm-workbench/src/ui/formatBytes';
+import { formatVoxelSizeMpc } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/formatVoxelSizeMpc';
 import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
 import DataPanel from '../../../../../tools/mcpm-workbench/src/ui/DataPanel/DataPanel';
 import LoadCatalogDialog from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/LoadCatalogDialog';
@@ -282,8 +284,27 @@ describe('LoadCatalogDialog', () => {
     const { grid, sim } = store.getState();
     expect(deriveGridBox(grid).dims).toEqual([24, 24, 32]);
     expect(previewed).toBe(
-      `voxels 24 × 24 × 32; size 18 × 18 × 24 Mpc; GPU ${formatBytes(estimateBoxGpuBytes(grid, sim.agentCount, 2))} —`,
+      `voxels 24 × 24 × 32 0.75 Mpc; size 18 × 18 × 24 Mpc; GPU ${formatBytes(estimateBoxGpuBytes(grid, sim.agentCount, 2))} —`,
     );
+  });
+
+  it('says when Auto fit raises the voxel size to fit memory, and Load stores that size', async () => {
+    const file = deferred();
+    read.mockReturnValueOnce(file.promise);
+    const { store } = setup(<Controlled />, { saga: true });
+    act(() => void store.dispatch(setMaxBufferBytes(1))); // nothing fits: the coarsest grid
+    drop(csv('a.csv'));
+    await file.resolve(contents('a.csv', TWO_ROWS));
+    const raisedTip = () =>
+      screen.queryByRole('button', { name: 'About voxel size', hidden: true });
+    expect(raisedTip()).toBeInTheDocument();
+    const previewed = gridInfo();
+
+    fireEvent.click(loadButton());
+    await waitFor(() => expect(store.getState().catalog.pointCount).toBe(2));
+    const voxelSize = formatVoxelSizeMpc(deriveGridBox(store.getState().grid).voxelSizeMpc);
+    expect(voxelSize).not.toBe('0.75 Mpc');
+    expect(previewed).toMatch(new RegExp(`^voxels [0-9 ×]+ ${voxelSize} ⓘ`));
   });
 
   it('shows the current box in place once Auto fit is off, and Load leaves the box as it was', async () => {
@@ -294,7 +315,7 @@ describe('LoadCatalogDialog', () => {
     drop(csv('a.csv'));
     await file.resolve(contents('a.csv', TWO_ROWS));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Auto fit', hidden: true }));
-    expect(gridInfo()).toMatch(/^voxels 272 × 272 × 272; size 204 Mpc; GPU /);
+    expect(gridInfo()).toMatch(/^voxels 272 × 272 × 272 0.75 Mpc; size 204 Mpc; GPU /);
 
     fireEvent.click(loadButton());
     await waitFor(() => expect(store.getState().catalog.pointCount).toBe(2));

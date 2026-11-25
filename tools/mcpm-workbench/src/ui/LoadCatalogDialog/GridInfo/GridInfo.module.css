@@ -28,6 +28,27 @@
   composes: value from '../infoBlock.module.css';
 }
 
+/* Dims, then the voxel size, then a fixed ⓘ slot, so the tip appearing moves nothing. */
+.voxels {
+  composes: value;
+  display: flex;
+  align-items: center;
+  column-gap: var(--space-4);
+}
+
+.tip {
+  display: flex;
+  flex: none;
+  inline-size: 1em;
+  justify-content: center;
+}
+
+/* At the text's size, not the rows' larger ⓘ, so the row keeps its line height. */
+.tipIcon {
+  composes: infoIcon from '../../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  font-size: inherit;
+}
+
 /* The total in a slot as wide as "257.3 MB", so the gauge after it never moves. */
 .gpu {
   composes: value;
