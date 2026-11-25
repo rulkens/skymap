@@ -60,6 +60,7 @@ import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
 import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
 import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
+import { PALETTE_INFO } from './utils/PALETTE_INFO';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
 import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
 import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
@@ -250,6 +251,7 @@ function ControlsPanel(): ReactNode {
           <ToggleRow
             label="additive blend"
             on={view.raymarch.additive}
+            info="Adds brightness along each ray, so dense regions show through. Off, nearer structure hides what is behind it, as in Polyphorm."
             onChange={(on) => dispatch(setAdditive(on))}
           />
           {/* T18: on demand, not a mode — watchPreviewPackedSaga packs once on the
@@ -264,6 +266,7 @@ function ControlsPanel(): ReactNode {
           <PaletteRow
             value={view.raymarch.paletteId}
             onChange={(id) => dispatch(setRaymarchPaletteId(id))}
+            info={PALETTE_INFO}
           />
           <SliderGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
@@ -375,6 +378,7 @@ function ControlsPanel(): ReactNode {
           <PaletteRow
             value={view.pathTracer.paletteId}
             onChange={(id) => dispatch(setPathTracerPaletteId(id))}
+            info={PALETTE_INFO}
           />
           <SliderGroup title="Trace">
             {PATHTRACER_SLIDERS.map((spec) => (

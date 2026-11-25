@@ -28,6 +28,7 @@ import {
 } from '../../state/grid/gridSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
+import PanelRow from '../PanelRow/PanelRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import { AXES } from './utils/AXES';
 import { dimsReadoutStyle } from './utils/dimsReadoutStyle';
@@ -139,15 +140,14 @@ function GridBoxPanel(): ReactNode {
         {box.dims[0]} × {box.dims[1]} × {box.dims[2]} vox · {box.voxelSizeMpc.toFixed(2)} Mpc/vox ·{' '}
         {formatBytes(estimatedBytes)}
       </div>
-      <label>
-        padding (Mpc)
+      <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
         <input
           type="number"
           style={fieldStyle}
           value={grid.paddingMpc}
           onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
         />
-      </label>
+      </PanelRow>
       {/* One wrapper for all seven sliders: consecutive ParamSliders space by their
           own margin (like every other panel); the root grid's gap would double it. */}
       <div>
