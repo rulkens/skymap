@@ -1,0 +1,43 @@
+/* Wide: beside CatalogInfo behind a vertical divider; narrow: under it, behind
+   a horizontal one. */
+.root {
+  composes: block from '../infoBlock.module.css';
+  grid-column: grid;
+  padding-inline-start: var(--space-8);
+  border-inline-start: 1px solid var(--border-divider);
+}
+
+@container (inline-size < 30rem) {
+  .root {
+    padding-block-start: var(--space-3);
+    padding-inline-start: 0;
+    border-block-start: 1px solid var(--border-divider);
+    border-inline-start: none;
+  }
+}
+
+.list {
+  composes: list from '../infoBlock.module.css';
+}
+
+.label {
+  composes: label from '../infoBlock.module.css';
+}
+
+.value {
+  composes: value from '../infoBlock.module.css';
+}
+
+/* The total in a slot as wide as "257.3 MB", so the gauge after it never moves. */
+.gpu {
+  composes: value;
+  display: grid;
+  grid-template-columns: 8ch minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: center;
+}
+
+.meter {
+  display: grid;
+  min-inline-size: 0;
+}

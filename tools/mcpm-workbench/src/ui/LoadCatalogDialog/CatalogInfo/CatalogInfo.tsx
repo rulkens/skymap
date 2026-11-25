@@ -1,15 +1,16 @@
 /**
  * CatalogInfo — what the chosen file holds as it will load with the current
  * settings: rows, the stored weights' mean and spread, and the bounds per axis.
- * Mounted once a file is chosen; from then on its height never changes, so
- * reading, a re-parse or a problem swap values for dashes in place.
+ * Its labels and values sit on LoadInfo's `file` tracks; until a parse is in,
+ * every value is a dash in the same rows, so nothing changes height.
  */
-import { useMemo, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import type { UserCatalog } from '../../../../@types/UserCatalog';
 import { catalogBounds } from '../../../field/catalogBounds';
 import { formatWeight } from '../../../field/formatWeight';
 import { meanStdDev } from '../../../utils/meanStdDev';
-import { formatSizeMpc } from '../../GridBoxPanel/utils/formatSizeMpc';
+import { AXES } from '../../GridBoxPanel/utils/AXES';
+import { formatBoundMpc } from '../utils/formatBoundMpc';
 import styles from './CatalogInfo.module.css';
 
 export type CatalogInfoProps = {
@@ -26,23 +27,25 @@ function CatalogInfo({ catalog, stale }: CatalogInfoProps): ReactNode {
   const rows = points ? points.count.toLocaleString() : '—';
 
   return (
-    <section className={styles.root} aria-label="File contents">
-      <div className={styles.content} data-stale={stale}>
-        <p className={styles.line}>
-          {rows} <span className={styles.muted}>rows ·</span>{' '}
-          <span className={styles.muted}>weight</span>{' '}
+    <section className={styles.root} aria-label="File contents" data-stale={stale}>
+      <dl className={styles.list}>
+        <dt className={styles.label}>rows</dt>
+        <dd className={styles.value}>{rows}</dd>
+        <dt className={styles.label}>weight</dt>
+        <dd className={styles.value}>
           {weight ? `${formatWeight(weight.mean)} ± ${formatWeight(weight.stdDev)}` : '—'}
-        </p>
-        <p className={styles.bounds}>
-          {(['x', 'y', 'z'] as const).map((axis, i) => (
-            <span key={axis} className={styles.line}>
-              <span className={styles.muted}>{axis}</span>{' '}
-              {bounds ? `${formatSizeMpc(bounds.min[i]!)}…${formatSizeMpc(bounds.max[i]!)}` : '—'}
-              {axis === 'z' && <span className={styles.muted}> Mpc</span>}
-            </span>
-          ))}
-        </p>
-      </div>
+        </dd>
+        {AXES.map(({ axis, label }) => (
+          <Fragment key={label}>
+            <dt className={styles.label}>{label}</dt>
+            <dd className={styles.range}>
+              <span>{bounds ? formatBoundMpc(bounds.min[axis]) : '—'}</span>
+              <span>{bounds ? formatBoundMpc(bounds.max[axis]) : ''}</span>
+              <span className={styles.unit}>{bounds && axis === 2 ? 'Mpc' : ''}</span>
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
       {/* One announcement per read; the values are read on demand. */}
       <p role="status" className={styles.announce}>
         {points ? `${rows} rows read` : ''}

@@ -25,7 +25,7 @@ import { resolveAutoFitBounds } from '../GridBoxPanel/utils/resolveAutoFitBounds
 import ImportIcon from '../icons/ImportIcon/ImportIcon';
 import SegmentedControl from '../SegmentedControl/SegmentedControl';
 import AutoFitField from './AutoFitField/AutoFitField';
-import CatalogInfo from './CatalogInfo/CatalogInfo';
+import LoadInfo from './LoadInfo/LoadInfo';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
 import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
@@ -108,6 +108,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         : null,
     [open, catalog, autoFitPercent],
   );
+  const loadFit = autoFit ? fitBounds : null;
 
   const needsRead = open && files !== null && contents === null && !current;
   useEffect(() => {
@@ -221,7 +222,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         onSubmit={(e) => {
           e.preventDefault();
           if (!loadable) return;
-          dispatch(userCatalogLoaded({ catalog, fitBounds: autoFit ? fitBounds : null }));
+          dispatch(userCatalogLoaded({ catalog, fitBounds: loadFit }));
           dialogRef.current?.close();
         }}
         onKeyDown={(e) => {
@@ -422,7 +423,9 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
           )}
         </div>
 
-        {(files !== null || refusal !== null) && <CatalogInfo catalog={catalog} stale={stale} />}
+        {(files !== null || refusal !== null) && (
+          <LoadInfo catalog={catalog} fitBounds={loadFit} stale={stale} />
+        )}
 
         <footer className={styles.footer}>
           <p role="status" className={styles.reading}>

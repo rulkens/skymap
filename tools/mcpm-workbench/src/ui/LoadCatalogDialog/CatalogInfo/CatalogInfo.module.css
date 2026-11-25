@@ -1,51 +1,45 @@
-/* Grows in above the footer when a file is chosen; the dialog keeps its size,
-   so the room comes out of the body's free space and the footer stays put. The
-   padding sits inside, so only the divider shows at zero height. */
 .root {
-  composes: reveal from '../../reveal.module.css';
-  border-block-start: 1px solid var(--border-divider);
+  composes: block from '../infoBlock.module.css';
+  grid-column: file;
+  padding-inline-end: var(--space-4);
 }
 
-.content {
+.list {
+  composes: list from '../infoBlock.module.css';
+}
+
+.label {
+  composes: label from '../infoBlock.module.css';
+}
+
+.value {
+  composes: value from '../infoBlock.module.css';
+}
+
+/* Min and max right-aligned in columns wide enough for −12345.6, so the points
+   line up; fixed widths, unit included, so neither a wider file nor the dashes
+   while reading move the grid block beside this one. */
+.range {
+  composes: value;
   display: grid;
-  row-gap: var(--space-2);
-  padding: var(--space-4) var(--inset);
-  font-variant-numeric: tabular-nums;
-  transition: opacity var(--duration-base) var(--ease-standard);
+  grid-template-columns: 8ch 8ch 3ch;
+  column-gap: var(--space-4);
 }
 
-/* The same dim as an inactive form row. */
-.content[data-stale='true'] {
-  opacity: 0.45;
+.range > :not(.unit) {
+  justify-self: end;
 }
 
-.line,
-.bounds {
-  margin: 0;
-}
-
-/* One line each, so a long value never changes the section's height. */
-.line {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.bounds {
-  display: flex;
-  column-gap: var(--space-8);
-}
-
-/* Narrow: one axis per row, the ranges starting on one line. */
-@container (inline-size < 30rem) {
-  .bounds {
-    display: grid;
-    row-gap: var(--space-2);
-  }
-}
-
-.muted {
+.unit {
   color: var(--color-fg-tertiary);
+}
+
+/* Narrow: the blocks stack, with less space around the divider between them. */
+@container (inline-size < 30rem) {
+  .root {
+    padding-block-end: var(--space-3);
+    padding-inline-end: 0;
+  }
 }
 
 .announce {
@@ -55,10 +49,4 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .content {
-    transition: none;
-  }
 }

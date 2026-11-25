@@ -101,17 +101,17 @@
 }
 
 /* The one track definition: every FormField takes these columns through subgrid.
-   12ch holds "Weight scale". A problem or the warning sits on the last row, at
-   the body's end, so neither moves a control. */
+   12ch holds "Weight scale". A problem or the warning sits at the end of the
+   free row, so neither moves a control. No row gap: the free row, mostly empty,
+   would still charge one, and at 400 wide the form only just fits. */
 .body {
   display: grid;
   grid-template-columns:
     [label-start] minmax(12ch, max-content)
     [label-end control-start] minmax(0, 1fr)
     [control-end];
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   column-gap: var(--space-8);
-  row-gap: var(--space-8);
   padding-block: var(--space-10);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -230,14 +230,16 @@
   grid-column: control;
 }
 
-.issue {
-  grid-row: 3;
+.issue,
+.warning {
+  grid-row: 2;
+  align-self: end;
+  margin-block-start: var(--space-8);
 }
 
 .warning {
   composes: error from '../FormField/FormField.module.css';
   grid-column: label-start / control-end;
-  grid-row: 3;
   border-inline-start-color: var(--tool-status-warn);
 }
 

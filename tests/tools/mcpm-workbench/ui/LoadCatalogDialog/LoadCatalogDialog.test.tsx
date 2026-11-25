@@ -3,11 +3,16 @@ import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
+import createSagaMiddleware from 'redux-saga';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CatalogContents } from '../../../../../tools/mcpm-workbench/@types/CatalogContents';
 import { catalogBounds } from '../../../../../tools/mcpm-workbench/src/field/catalogBounds';
+import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/field/deriveGridBox';
+import { estimateBoxGpuBytes } from '../../../../../tools/mcpm-workbench/src/sim/estimateBoxGpuBytes';
 import { userCatalogLoaded } from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
+import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
 import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
+import { formatBytes } from '../../../../../tools/mcpm-workbench/src/ui/formatBytes';
 import { resolveAutoFitBounds } from '../../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/resolveAutoFitBounds';
 import DataPanel from '../../../../../tools/mcpm-workbench/src/ui/DataPanel/DataPanel';
 import LoadCatalogDialog from '../../../../../tools/mcpm-workbench/src/ui/LoadCatalogDialog/LoadCatalogDialog';
@@ -76,7 +81,9 @@ function deferred(): {
   return { promise, resolve };
 }
 
-function setup(ui: ReactNode) {
+// `saga`: watchCatalogSaga runs, so Load really applies the fit and loads the points.
+function setup(ui: ReactNode, { saga = false } = {}) {
+  const sagaMiddleware = createSagaMiddleware();
   const loads: ReturnType<typeof userCatalogLoaded>['payload'][] = [];
   const record: Middleware = () => (next) => (action) => {
     if (userCatalogLoaded.match(action as Action))
@@ -86,8 +93,12 @@ function setup(ui: ReactNode) {
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) =>
-      getDefault({ serializableCheck: false, immutableCheck: false }).concat(record),
+      getDefault({ serializableCheck: false, immutableCheck: false }).concat(
+        record,
+        sagaMiddleware,
+      ),
   });
+  if (saga) sagaMiddleware.run(watchCatalogSaga);
   render(<Provider store={store}>{ui}</Provider>);
   return { store, loads, loaded: () => store.getState().catalog.userCatalog ?? null };
 }
@@ -107,10 +118,25 @@ function Controlled(): ReactNode {
 const dialog = (): HTMLDialogElement => document.querySelector('dialog')!;
 const loadButton = (name = 'Load catalog'): HTMLElement =>
   screen.getByRole('button', { name, hidden: true });
-// The file contents section as one line of text, or null while it is not mounted.
+// A block of the info section as "label values" pairs, or null while it is not mounted.
+function pairs(block: Element | null): string | null {
+  if (!block) return null;
+  const valuesAfter = (dt: Element): string[] => {
+    const values: string[] = [];
+    for (let dd = dt.nextElementSibling; dd?.tagName === 'DD'; dd = dd.nextElementSibling) {
+      const cells = dd.children.length > 0 ? [...dd.children] : [dd];
+      values.push(...cells.map((c) => c.textContent ?? '').filter(Boolean));
+    }
+    return values;
+  };
+  return [...block.querySelectorAll('dt')]
+    .map((dt) => [dt.textContent, ...valuesAfter(dt)].join(' '))
+    .join('; ');
+}
 const info = (): string | null =>
-  document.querySelector('section[aria-label="File contents"] > div')?.textContent ?? null;
-const EMPTY = '— rows · weight —x —y —z — Mpc';
+  pairs(document.querySelector('section[aria-label="File contents"]'));
+const gridInfo = (): string | null => pairs(document.querySelector('[aria-label="Selection"]'));
+const EMPTY = 'rows —; weight —; x —; y —; z —';
 
 describe('LoadCatalogDialog', () => {
   it('shows what a dropped file holds once read, and loads that parse without another', async () => {
@@ -124,7 +150,7 @@ describe('LoadCatalogDialog', () => {
     expect(loadButton()).toBeDisabled();
 
     await file.resolve(contents('a.csv', TWO_ROWS));
-    expect(info()).toBe('2 rows · weight 0.03 ± 0.01x -4…1y 2…5z -6…3 Mpc');
+    expect(info()).toBe('rows 2; weight 0.03 ± 0.01; x −4.0 1.0; y 2.0 5.0; z −6.0 3.0 Mpc');
     expect(loadButton()).toHaveFocus();
 
     fireEvent.click(loadButton());
@@ -141,7 +167,7 @@ describe('LoadCatalogDialog', () => {
 
     fireEvent.change(screen.getByLabelText('Weight scale'), { target: { value: '2' } });
     expect(loadButton()).toBeDisabled();
-    await waitFor(() => expect(info()).toMatch(/weight 0\.06 ± 0\.02/));
+    await waitFor(() => expect(info()).toMatch(/weight 0\.06 ± 0\.02;/));
     expect(loadButton()).toBeEnabled();
     expect(read).toHaveBeenCalledTimes(1);
   });
@@ -175,7 +201,7 @@ describe('LoadCatalogDialog', () => {
     expect(info()).toBe(EMPTY);
     expect(loadButton()).toBeDisabled();
     await second.resolve(contents('b.csv', '1,2,3,0.02\n'));
-    expect(info()).toMatch(/^1 rows/);
+    expect(info()).toMatch(/^rows 1;/);
   });
 
   it('reads the file again when closed during a read and opened again', async () => {
@@ -189,7 +215,7 @@ describe('LoadCatalogDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(info()).toBe(EMPTY);
     await reopened.resolve(contents('a.csv', TWO_ROWS));
-    expect(info()).toMatch(/^2 rows/);
+    expect(info()).toMatch(/^rows 2;/);
   });
 
   it('loads a file with a weight warning in one click', async () => {
@@ -231,6 +257,39 @@ describe('LoadCatalogDialog', () => {
     read.mockReturnValueOnce(new Promise(() => {}));
     drop(csv('a.csv'));
     expect(autoFit).toBeChecked();
+  });
+
+  it('previews the fitted box and its GPU cost, and Load leaves exactly that box', async () => {
+    const file = deferred();
+    read.mockReturnValueOnce(file.promise);
+    const { store } = setup(<Controlled />, { saga: true });
+    drop(csv('a.csv'));
+    expect(gridInfo()).toBe('voxels —; size —; GPU — —');
+    await file.resolve(contents('a.csv', TWO_ROWS));
+    const previewed = gridInfo();
+
+    fireEvent.click(loadButton());
+    await waitFor(() => expect(store.getState().catalog.pointCount).toBe(2));
+    const { grid, sim } = store.getState();
+    expect(deriveGridBox(grid).dims).toEqual([24, 24, 32]);
+    expect(previewed).toBe(
+      `voxels 24 × 24 × 32; size 18 × 18 × 24 Mpc; GPU ${formatBytes(estimateBoxGpuBytes(grid, sim.agentCount, 2))} —`,
+    );
+  });
+
+  it('shows the current box in place once Auto fit is off, and Load leaves the box as it was', async () => {
+    const file = deferred();
+    read.mockReturnValueOnce(file.promise);
+    const { store } = setup(<Controlled />, { saga: true });
+    const before = store.getState().grid;
+    drop(csv('a.csv'));
+    await file.resolve(contents('a.csv', TWO_ROWS));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Auto fit', hidden: true }));
+    expect(gridInfo()).toMatch(/^voxels 272 × 272 × 272; size 204 Mpc; GPU /);
+
+    fireEvent.click(loadButton());
+    await waitFor(() => expect(store.getState().catalog.pointCount).toBe(2));
+    expect(store.getState().grid).toBe(before);
   });
 
   it('opens on a page drop while the Data section is folded', () => {
