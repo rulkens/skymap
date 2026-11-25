@@ -38,7 +38,10 @@ function drag(grid: GridSlice, axis: 0 | 1 | 2, valueMpc: number): GridSlice {
 function fittedOn2GiB(halfMpc: Vec3): GridSlice {
   const fitted = reducer(
     reducer(defaultGridSlice, actions.setMaxBufferBytes(2 ** 31)),
-    actions.fitBoxToCatalog({ min: [-halfMpc[0], -halfMpc[1], -halfMpc[2]], max: halfMpc }),
+    actions.fitBoxToCatalog({
+      bounds: { min: [-halfMpc[0], -halfMpc[1], -halfMpc[2]], max: halfMpc },
+      lanes: { agentCount: 0, pointCount: 0 },
+    }),
   );
   return reducer(fitted, actions.setVoxelSizeMpc(defaultGridSlice.manualVoxelSizeMpc));
 }

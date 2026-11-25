@@ -51,7 +51,10 @@ const GRID_FIXTURES: {
   setManualSizeMpc: gridSlice.actions.setManualSizeMpc([10, 20, 30]),
   setRotation: gridSlice.actions.setRotation([0, 0, Math.SQRT1_2, Math.SQRT1_2]),
   installImportedBox: gridSlice.actions.installImportedBox(SAMPLE_BOX),
-  fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({ min: [0, 0, 0], max: [10, 10, 10] }),
+  fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({
+    bounds: { min: [0, 0, 0], max: [10, 10, 10] },
+    lanes: { agentCount: 0, pointCount: 0 },
+  }),
   setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
   setResolvedGrid: gridSlice.actions.setResolvedGrid({ resolvedElement: 'f32' }),
   setMaxBufferBytes: gridSlice.actions.setMaxBufferBytes(123),

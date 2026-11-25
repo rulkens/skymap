@@ -1,9 +1,10 @@
 /**
- * GpuBufferMeter — the largest grid buffer of the box as set, against the largest
- * single buffer the device allows (WebGPU reports no total memory). A read-only
- * gauge with "used / limit" inside at the start, so the text never moves as the
- * fill grows; the zone tints the fill, and the fill's length and the two numbers
- * say the same without colour. Before the limit is known the gauge is empty and
+ * GpuBufferMeter — the sim's total memory for the box as set, against the largest
+ * single buffer the device allows (WebGPU reports no total memory), so the used
+ * number can pass the limit; the fill then stops at full. A read-only gauge with
+ * "used / limit" inside at the start, so the text never moves as the fill grows;
+ * the zone tints the fill, and the fill's length and the two numbers say the
+ * same without colour. Before the limit is known the gauge is empty and
  * the text a dash.
  */
 import type { CSSProperties, ReactNode } from 'react';
@@ -26,7 +27,7 @@ function GpuBufferMeter({ usedBytes, limitBytes }: Props): ReactNode {
       data-zone={reading?.zone}
       style={{ '--fill': reading?.fill ?? 0 } as CSSProperties}
       role="meter"
-      aria-label="Largest grid buffer"
+      aria-label="Sim memory"
       aria-valuemin={0}
       aria-valuemax={1}
       aria-valuenow={reading?.fill ?? 0}

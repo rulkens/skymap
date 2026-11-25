@@ -1,36 +1,41 @@
 import type { GridSlice } from '../../@types/GridSlice';
-import { BYTES_PER_ELEMENT } from '../sim/createGridBuffers';
+import type { SimLaneCounts } from '../../@types/SimLaneCounts';
 import { DECAY_WG_EDGE } from '../sim/encodeStep';
-import { estimateBoxGridBufferBytes } from '../sim/estimateBoxGridBufferBytes';
-import { GPU_BUFFER_ZONE_FROM } from '../sim/GPU_BUFFER_ZONE_FROM';
-import { gridElementOf } from './gridElementOf';
+import { estimateBoxGpuBytes } from '../sim/estimateBoxGpuBytes';
+import { simMemoryZone } from '../sim/simMemoryZone';
 import { VOXEL_SIZE_STEP_LOG10 } from './VOXEL_SIZE_STEP_LOG10';
 
 /**
  * voxelSizeFittingMemory — the voxel size Auto fit leaves: the current one when
- * the GPU bar (estimateBoxGridBufferBytes against the device limit) stays below
- * its warn zone or the limit is unknown, else the smallest voxel size on the
- * slider's lattice that brings it there. The unrounded cube root is a lower
- * bound (ceil8 only grows dims), so the walk up from it is a step or two for
- * any box big enough to need it. Past every axis at 8 voxels nothing shrinks.
+ * the GPU bar (the sim's total memory, simMemoryZone) stays out of its warn zone
+ * or the limit is unknown, else the smallest voxel size on the slider's lattice
+ * that brings it there. Memory only falls as voxels grow, so a bisection between
+ * the current size and every axis at 8 voxels finds it; when the lanes alone
+ * fill the warn zone, no grid fits and the coarsest one is the answer.
  */
-export function voxelSizeFittingMemory(grid: GridSlice): number {
+export function voxelSizeFittingMemory(grid: GridSlice, lanes: SimLaneCounts): number {
   const limitBytes = grid.maxBufferBytes;
   if (limitBytes === null || grid.importedBox) return grid.manualVoxelSizeMpc;
-  const fitsAt = (voxelSizeMpc: number) =>
-    estimateBoxGridBufferBytes({ ...grid, manualVoxelSizeMpc: voxelSizeMpc }) / limitBytes <
-    GPU_BUFFER_ZONE_FROM.warn;
+  const voxelAt = (step: number) => 10 ** (step * VOXEL_SIZE_STEP_LOG10);
+  const fitsAt = (voxelSizeMpc: number) => {
+    const usedBytes = estimateBoxGpuBytes(
+      { ...grid, manualVoxelSizeMpc: voxelSizeMpc },
+      lanes.agentCount,
+      lanes.pointCount,
+    );
+    return simMemoryZone(usedBytes, limitBytes) === 'normal';
+  };
   if (fitsAt(grid.manualVoxelSizeMpc)) return grid.manualVoxelSizeMpc;
 
-  const [x, y, z] = grid.manualSizeMpc;
-  const elementBytes = BYTES_PER_ELEMENT[gridElementOf(grid)];
-  const lowerBoundMpc = Math.cbrt(
-    (x * y * z * elementBytes) / (GPU_BUFFER_ZONE_FROM.warn * limitBytes),
-  );
   const stepOf = (voxelSizeMpc: number) =>
     Math.ceil(Math.log10(voxelSizeMpc) / VOXEL_SIZE_STEP_LOG10);
-  const lastStep = stepOf(Math.max(x, y, z) / DECAY_WG_EDGE);
-  let step = stepOf(Math.max(lowerBoundMpc, grid.manualVoxelSizeMpc));
-  while (step < lastStep && !fitsAt(10 ** (step * VOXEL_SIZE_STEP_LOG10))) step++;
-  return 10 ** (step * VOXEL_SIZE_STEP_LOG10);
+  let lo = stepOf(grid.manualVoxelSizeMpc);
+  let hi = Math.max(lo, stepOf(Math.max(...grid.manualSizeMpc) / DECAY_WG_EDGE));
+  if (!fitsAt(voxelAt(hi))) return voxelAt(hi);
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (fitsAt(voxelAt(mid))) hi = mid;
+    else lo = mid + 1;
+  }
+  return voxelAt(lo);
 }

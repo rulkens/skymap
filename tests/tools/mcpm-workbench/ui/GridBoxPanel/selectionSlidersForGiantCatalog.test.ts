@@ -37,7 +37,13 @@ function autoFitted(): GridSlice {
     maxBufferBytes: DEVICE_LIMIT_BYTES,
     resolvedElement: 'f16',
   };
-  return gridSlice.reducer(booted, fitBoxToCatalog(catalogBoundsMpc));
+  return gridSlice.reducer(
+    booted,
+    fitBoxToCatalog({
+      bounds: catalogBoundsMpc,
+      lanes: { agentCount: AGENT_COUNT_MIN, pointCount: POINT_COUNT },
+    }),
+  );
 }
 
 describe('Selection sliders for a ±8,000 Mpc catalog', () => {

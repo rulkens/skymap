@@ -11,9 +11,10 @@ import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { GridSlice } from '../../../../tools/mcpm-workbench/@types/GridSlice';
+import type { SimLaneCounts } from '../../../../tools/mcpm-workbench/@types/SimLaneCounts';
 import { deriveGridBox } from '../../../../tools/mcpm-workbench/src/field/deriveGridBox';
+import { estimateBoxGpuBytes } from '../../../../tools/mcpm-workbench/src/sim/estimateBoxGpuBytes';
 import { GPU_BUFFER_ZONE_FROM } from '../../../../tools/mcpm-workbench/src/sim/GPU_BUFFER_ZONE_FROM';
-import { estimateBoxGridBufferBytes } from '../../../../tools/mcpm-workbench/src/sim/estimateBoxGridBufferBytes';
 import {
   defaultGridSlice,
   gridSlice,
@@ -21,6 +22,8 @@ import {
 import { voxelSizeSliderFor } from '../../../../tools/mcpm-workbench/src/ui/GridBoxPanel/utils/voxelSizeSliderFor';
 
 const { actions, reducer } = gridSlice;
+const LANES: SimLaneCounts = { agentCount: 1_000_000, pointCount: 1_000_000 };
+const fit = (bounds: { min: Vec3; max: Vec3 }) => actions.fitBoxToCatalog({ bounds, lanes: LANES });
 
 // centerMpc/sizeMpc/rotation deliberately differ from defaultGridSlice's manual
 // values on every axis — an installImportedBox test asserting sync against
@@ -40,7 +43,7 @@ const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
 describe('gridSlice setters clear importedBox on any user edit', () => {
   it('fitBoxToCatalog clears it', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    expect(reducer(withImportedBox, actions.fitBoxToCatalog(bounds)).importedBox).toBeNull();
+    expect(reducer(withImportedBox, fit(bounds)).importedBox).toBeNull();
   });
 
   it('setAutoFitPercent clears it', () => {
@@ -91,14 +94,14 @@ describe('setMaxBufferBytes', () => {
 describe('fitBoxToCatalog', () => {
   it('centers on the bounds midpoint and pads the extent by 2x paddingMpc per axis', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    const next = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
+    const next = reducer({ ...defaultGridSlice, paddingMpc: 5 }, fit(bounds));
     expect(next.manualCenterMpc).toEqual([50, 25, 15]);
     expect(next.manualSizeMpc).toEqual([110, 60, 40]);
   });
 
   it('bakes paddingMpc in at click time — a later paddingMpc change does not retroactively resize', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    const fitted = reducer({ ...defaultGridSlice, paddingMpc: 5 }, actions.fitBoxToCatalog(bounds));
+    const fitted = reducer({ ...defaultGridSlice, paddingMpc: 5 }, fit(bounds));
     const afterPaddingEdit = reducer(fitted, actions.setPaddingMpc(50));
     expect(afterPaddingEdit.manualSizeMpc).toEqual(fitted.manualSizeMpc);
   });
@@ -114,10 +117,11 @@ describe('fitBoxToCatalog on a known device limit', () => {
     min: [-8_000, -8_000, -8_000],
     max: [8_000, 8_000, 8_000],
   };
-  const barFraction = (grid: GridSlice) => estimateBoxGridBufferBytes(grid) / grid.maxBufferBytes!;
+  const barFraction = (grid: GridSlice) =>
+    estimateBoxGpuBytes(grid, LANES.agentCount, LANES.pointCount) / grid.maxBufferBytes!;
 
-  it('raises the voxel size until a Milliquas-sized box sits below the GPU bar warn zone', () => {
-    const fitted = reducer(booted, actions.fitBoxToCatalog(giant));
+  it('raises the voxel size until a Milliquas-sized sim sits below the GPU bar warn zone', () => {
+    const fitted = reducer(booted, fit(giant));
     expect(fitted.manualVoxelSizeMpc).toBeGreaterThan(booted.manualVoxelSizeMpc);
     expect(barFraction(fitted)).toBeLessThan(GPU_BUFFER_ZONE_FROM.warn);
     const slider = voxelSizeSliderFor(fitted);
@@ -127,18 +131,16 @@ describe('fitBoxToCatalog on a known device limit', () => {
 
   it('keeps the voxel size when the fitted box already fits', () => {
     const small: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
-    expect(reducer(booted, actions.fitBoxToCatalog(small)).manualVoxelSizeMpc).toBe(0.75);
+    expect(reducer(booted, fit(small)).manualVoxelSizeMpc).toBe(0.75);
   });
 
   it('raises a voxel size lowered after a fit again on the next fit, and only then', () => {
-    const fitted = reducer(booted, actions.fitBoxToCatalog(giant));
+    const fitted = reducer(booted, fit(giant));
     const lowered = reducer(fitted, actions.setVoxelSizeMpc(fitted.manualVoxelSizeMpc / 2));
-    const refitted = reducer(lowered, actions.fitBoxToCatalog(giant));
+    const refitted = reducer(lowered, fit(giant));
     expect(refitted.manualVoxelSizeMpc).toBeCloseTo(fitted.manualVoxelSizeMpc, 9);
     const coarser = reducer(fitted, actions.setVoxelSizeMpc(fitted.manualVoxelSizeMpc * 2));
-    expect(reducer(coarser, actions.fitBoxToCatalog(giant)).manualVoxelSizeMpc).toBe(
-      coarser.manualVoxelSizeMpc,
-    );
+    expect(reducer(coarser, fit(giant)).manualVoxelSizeMpc).toBe(coarser.manualVoxelSizeMpc);
   });
 });
 
@@ -148,7 +150,7 @@ describe('setPaddingMpc', () => {
     for (const padding of [NaN, -60, Infinity]) {
       const edited = reducer(defaultGridSlice, actions.setPaddingMpc(padding));
       expect(edited.paddingMpc).toBe(defaultGridSlice.paddingMpc);
-      const { dims } = deriveGridBox(reducer(edited, actions.fitBoxToCatalog(bounds)));
+      const { dims } = deriveGridBox(reducer(edited, fit(bounds)));
       for (const d of dims) {
         expect(d).toBeGreaterThan(0);
         expect(d % 8).toBe(0);

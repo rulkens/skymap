@@ -48,6 +48,7 @@ function GridBoxPanel(): ReactNode {
   const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
   const catalogPoints = useAppSelector((s) => s.catalog.points);
   const catalogPointCount = useAppSelector((s) => s.catalog.pointCount);
+  const agentCount = useAppSelector((s) => s.sim.agentCount);
   const [paddingText, setPaddingText] = useState<string | null>(null);
   // Display-only: how many catalog points the current slider position would evict on
   // the next Auto fit click. Derived here, not stored — `autoFitPercent` is a one-shot
@@ -145,9 +146,14 @@ function GridBoxPanel(): ReactNode {
                 onClick={() => {
                   if (!catalogBoundsMpc) return;
                   dispatch(
-                    fitBoxToCatalog(
-                      resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-                    ),
+                    fitBoxToCatalog({
+                      bounds: resolveAutoFitBounds(
+                        catalogPoints,
+                        catalogBoundsMpc,
+                        grid.autoFitPercent,
+                      ),
+                      lanes: { agentCount, pointCount: catalogPointCount },
+                    }),
                   );
                 }}
               >

@@ -97,7 +97,11 @@ function* loadCatalogWorker(trigger: Action) {
     const weights = deriveAgentWeights(points.weight, catalog.weightMode);
     const bounds = points.count > 0 ? catalogBounds(points.positions) : null;
     const load = userCatalogLoaded.match(trigger) ? trigger.payload : null;
-    if (load?.fitBounds) yield* put(fitBoxToCatalog(load.fitBounds));
+    if (load?.fitBounds) {
+      const agentCount = yield* select((s: RootState) => s.sim.agentCount);
+      const lanes = { agentCount, pointCount: points.count };
+      yield* put(fitBoxToCatalog({ bounds: load.fitBounds, lanes }));
+    }
     const pose = load && loadFraming(load, yield* select((s: RootState) => s.grid));
     if (pose) yield* put(commitCameraPose(pose));
     yield* put(catalogLoaded({ points, weights, bounds, userFile: userFileOf(plan) }));
