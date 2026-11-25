@@ -295,14 +295,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // both branches of that guard get exercised here.
       name: 'toggle:pause',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'running', exact: true }).uncheck();
+        await page.getByRole('checkbox', { name: 'Toggle Simulation', exact: true }).uncheck();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
       name: 'toggle:resume',
       run: async (page) => {
-        await page.getByRole('checkbox', { name: 'running', exact: true }).check();
+        await page.getByRole('checkbox', { name: 'Toggle Simulation', exact: true }).check();
         await settleFrames(page, SETTLE_FRAMES);
       },
     },

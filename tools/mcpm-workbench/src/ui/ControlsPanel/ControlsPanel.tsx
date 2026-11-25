@@ -4,9 +4,9 @@
  * to the sim slice; the harness reads `params` fresh each step, so these
  * are live with no rebuild. Agent count / weight mode / init mode / grid
  * box are structural — `watchSceneSaga` watches those actions and rebuilds
- * the harness (debounced). The Raymarch / Agents / Galaxies / Path tracer
- * sections are the four render layers: each section's header pill IS its
- * layer's on/off switch, and any subset may be on.
+ * the harness (debounced). Simulation's header pill runs and pauses the sim;
+ * the Raymarch / Agents / Galaxies / Path tracer sections are the four render
+ * layers, each switched by its header pill, and any subset may be on.
  */
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
@@ -144,13 +144,9 @@ function ControlsPanel(): ReactNode {
           title="Simulation"
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
+          headerToggle={sim.running}
+          onHeaderToggleChange={(on) => dispatch(setRunning(on))}
         >
-          <ToggleRow
-            label="running"
-            on={sim.running}
-            info="Steps the simulation every frame. Pause to let the path tracer accumulate and to take stable exports."
-            onChange={(on) => dispatch(setRunning(on))}
-          />
           <ToggleRow
             label="seed around data"
             on={sim.initMode === 'aroundData'}
