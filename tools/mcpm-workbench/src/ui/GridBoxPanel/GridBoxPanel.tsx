@@ -1,7 +1,7 @@
 /**
  * GridBoxPanel — grid-box configuration. Both modes share ONE voxel size:
- * Viewport and this panel's dims readout both call `deriveGridBox`, so they
- * can't disagree. This panel holds no catalog data, so the readout reads the
+ * Viewport and this panel's size sliders both call `deriveGridBox`, so they
+ * can't disagree. This panel holds no catalog data, so Auto fit reads the
  * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
  * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
  * mode: it snapshots bounds into the manual center/size fields once,
@@ -29,7 +29,7 @@ import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
 import { AXES } from './utils/AXES';
-import { formatSizeMpc } from './utils/formatSizeMpc';
+import { formatAxisSize } from './utils/formatAxisSize';
 import { resolveAutoFitBounds } from './utils/resolveAutoFitBounds';
 import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from './utils/sizeSliderFor';
@@ -85,8 +85,8 @@ function GridBoxPanel(): ReactNode {
     liveFloorMpc === null || liveFloorMpc < VOXEL_SIZE_MIN_MPC ? VOXEL_SIZE_MIN_MPC : liveFloorMpc;
   const voxelSizeInfo =
     liveFloorMpc !== null && liveFloorMpc > VOXEL_SIZE_MIN_MPC
-      ? `Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit. Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
-      : "Physical size of one sim voxel (Mpc) — the grid's resolution, stable under box resize/refit.";
+      ? `Edge of one sim voxel: the grid's resolution, kept when the box is resized or refit. Min for this box: ${liveFloorMpc.toFixed(2)} Mpc.`
+      : "Edge of one sim voxel: the grid's resolution, kept when the box is resized or refit.";
 
   return (
     <>
@@ -121,16 +121,6 @@ function GridBoxPanel(): ReactNode {
           auto fit
         </Button>
       </PanelRow>
-      <PanelRow
-        label={
-          // Two fixed lines: one line at the sidebar's width wrapped at some values.
-          <>
-            {`${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox`}
-            <br />
-            {`${formatBytes(estimatedBytes)} GPU memory`}
-          </>
-        }
-      />
       <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
         <input
           type="number"
@@ -143,13 +133,13 @@ function GridBoxPanel(): ReactNode {
         label="voxel size"
         // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
         // whenever the floor isn't active) rather than the raw manual value — otherwise,
-        // below the floor, the pill's number disagreed with the dims readout above and
-        // arrow-key nudges silently ticked a value the display never moved for.
+        // below the floor, the pill's number disagreed with the size sliders' voxel counts
+        // and arrow-key nudges silently ticked a value the display never moved for.
         value={box.voxelSizeMpc}
         min={voxelSizeMinMpc}
         max={VOXEL_SIZE_MAX_MPC}
         step={VOXEL_SIZE_STEP_MPC}
-        format={(v) => v.toFixed(2)}
+        format={(v) => `${v.toFixed(2)} Mpc`}
         info={voxelSizeInfo}
         onChange={(v) => dispatch(setVoxelSizeMpc(v))}
         path="grid.manualVoxelSizeMpc"
@@ -162,8 +152,8 @@ function GridBoxPanel(): ReactNode {
           min={-500}
           max={500}
           step={1}
-          format={(v) => v.toFixed(0)}
-          info="Centre of the simulated box (Mpc)."
+          format={(v) => `${v.toFixed(0)} Mpc`}
+          info="Centre of the simulated box along this axis."
           onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
           path={`grid.manualCenterMpc.${axis}`}
         />
@@ -173,12 +163,21 @@ function GridBoxPanel(): ReactNode {
           key={`size-${label}`}
           label={`size ${label}`}
           {...sizeSliderFor(box, axis)}
-          format={formatSizeMpc}
-          info="Extent of the simulated box along this axis (Mpc), in whole 8-voxel blocks."
+          format={(v) => formatAxisSize(v, box.dims[axis])}
+          info="Extent of the box along this axis: voxels × voxel size, in whole 8-voxel blocks."
           onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(box, axis, v)))}
           path={`grid.manualSizeMpc.${axis}`}
         />
       ))}
+      <PanelRow
+        label="GPU memory"
+        info="The three grids at this voxel count, plus the agent buffers."
+      >
+        {/* Off: a polite live region would speak every step of a size drag. */}
+        <output className={styles.cost} aria-live="off">
+          {formatBytes(estimatedBytes)}
+        </output>
+      </PanelRow>
     </>
   );
 }
