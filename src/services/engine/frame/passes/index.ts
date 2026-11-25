@@ -11,6 +11,7 @@ import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
+import { sampledTrailsPass } from './sampledTrailsPass';
 import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
@@ -22,6 +23,7 @@ import { COSMO, NEAR0 } from '../slabs';
 /** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   orbitTrailsPass,
+  sampledTrailsPass,
   selectionRingPass,
   near0SelectionRingPass,
   labelsPass({

@@ -9,4 +9,4 @@ Repro link:
 `#t=1977-09-05T13:20:00Z&pose=b,earth,0,0,0,40000000,0,0,0,1,0,0,0,1,1,0,0&layers=missionTrails`
 
 Cause not found. One untested guess: the straight Sun-frame line dips under Earth's occluder sphere there
-(`src/services/gpu/shaders/lib/trailOcclusion.wesl`). Confirm or rule that out first.
+(`src/services/gpu/shaders/lib/trailOcclusion.wesl`, read by core's `shaders/bodies/sampledTrail/fragment.wesl`). Confirm or rule that out first.

@@ -87,11 +87,12 @@ export type Layer<
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
    * the slots behind them. */
   assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
-  /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
+  /** Independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
    * `state.label3DProducers`, walked by `runLabel3DProducers`; the `orbitTrails` group
-   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
+   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`; the `sampledTrails` group
+   * joins `state.sampledTrailGroups`, walked by `sampledTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
   /** The kinds this Layer owns: static facts (`selectionKindOf`) and runtime rows. Every row's

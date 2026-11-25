@@ -4,12 +4,12 @@
  * the track's own terms (Sun-centred km, km/s), which keeps the trail under the craft.
  */
 
-import type { SampledBody } from '../../@types/missions/SampledBody';
+import type { SampledBody } from '../../@types/scene/SampledBody';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
-import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
+import { isoToJulianDays } from '../time/isoToJulianDays';
 import { sampledCraftPositionMpc } from './sampledCraftPositionMpc';
 
 const ASCENT_SAMPLES = 64;
@@ -19,8 +19,9 @@ export function withLaunchAscent(
   track: SampledTrack,
   positionAt: (id: string, simDays: number) => Readonly<Vec3>,
 ): SampledTrack {
+  if (!body.launch) return track;
   const t0 = track.tDays[0]!;
-  const launchDays = unixMsToJulianDays(Date.parse(body.launchIso));
+  const launchDays = isoToJulianDays(body.launch.iso);
   if (!(launchDays < t0)) return track;
 
   const sunKmAt = (t: number): Vec3 => {

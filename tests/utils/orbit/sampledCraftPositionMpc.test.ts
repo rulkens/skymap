@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SampledBody } from '../../../src/@types/missions/SampledBody';
+import type { SampledBody } from '../../../src/@types/scene/SampledBody';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { SampledTrack } from '../../../src/@types/scene/SampledTrack';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
@@ -22,9 +22,7 @@ const positionAt = (id: string): Vec3 =>
 
 const body: SampledBody = {
   id: asSceneBodyId('voyager1'),
-  trailColor: [1, 1, 1],
-  launchIso: LAUNCH_ISO,
-  launchPad: { latDeg: 28.5, lonDeg: -80.5 },
+  launch: { iso: LAUNCH_ISO, pad: { latDeg: 28.5, lonDeg: -80.5 } },
 };
 
 /** A track whose first sample is `altKm` above the ground, `spanS` after launch, rising at `rateKmS`. */
@@ -77,5 +75,12 @@ describe('sampledCraftPositionMpc, the climb before the first sample', () => {
       last = alt;
     }
     expect(Math.abs(last - joinAltKm)).toBeLessThan(1e-3);
+  });
+});
+
+describe('sampledCraftPositionMpc, a body with no launch', () => {
+  it('holds a body with no launch on its first sample before the track starts', () => {
+    const p = sampledCraftPositionMpc({ id: body.id }, voyagerLike, LAUNCH, positionAt);
+    expect(p).toEqual([voyagerLike.posKm[0]! * K, voyagerLike.posKm[1]! * K, 0]);
   });
 });

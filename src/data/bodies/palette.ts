@@ -33,7 +33,7 @@ export const SMALL_BODY_ROCK: Vec3 = [0.44, 0.33, 0.27];
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];
 export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 
-// Voyager trail tints (read by `SAMPLED_BODIES`): V1 lime, V2 green — a hue no planet
+// Voyager trail tints (read by `MISSION_TRAIL_ROWS`): V1 lime, V2 green — a hue no planet
 // trail uses (the old gold was Saturn's own), with the two still apart where they run close.
 // Muted a quarter of the way toward grey; at full saturation they read as neon.
 export const VOYAGER_1_LIME: Vec3 = [0.342, 0.5, 0.163];

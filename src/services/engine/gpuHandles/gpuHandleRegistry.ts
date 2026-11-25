@@ -15,6 +15,7 @@ import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/dom
 import { createOcclusionMaskRenderer } from '../../gpu/renderers/occlusionMask/occlusionMaskRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
+import { createSampledTrailRenderer } from '../../gpu/renderers/bodies/sampledTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
@@ -163,6 +164,11 @@ export const GPU_HANDLE_ROWS = [
     key: 'orbitTrailRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    key: 'sampledTrailRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createSampledTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Mesh bodies ride a host's body slab: pipeline formats are the `foreground:0`

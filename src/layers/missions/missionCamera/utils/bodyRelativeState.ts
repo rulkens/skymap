@@ -8,7 +8,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { trajectoryRegistry } from '../../../../services/bodies/trajectoryRegistry';
 import { hermiteTrackAt } from '../../../../utils/orbit/hermiteTrackAt';
-import { hermiteTrackVelAt } from './hermiteTrackVelAt';
+import { hermiteTrackVelAt } from '../../../../utils/orbit/hermiteTrackVelAt';
 import { bodyVelocityKmS } from '../../../../utils/orbit/bodyVelocityKmS';
 import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 

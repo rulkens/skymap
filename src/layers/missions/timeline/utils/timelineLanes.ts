@@ -1,5 +1,5 @@
 import { laneColorCss } from './laneColorCss';
-import { SAMPLED_BODIES } from '../../../../data/bodies/sampledBodies';
+import { MISSION_TRAIL_ROWS } from '../../trails/data/missionTrailRows';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { TimelineLane } from '../@types/TimelineLane';
@@ -12,6 +12,6 @@ export function timelineLanes(crafts: MissionTimeline['crafts']): readonly Timel
   return crafts.map(({ bodyId, label }) => ({
     bodyId,
     label,
-    color: laneColorCss(findByIdOrThrow(SAMPLED_BODIES, bodyId, 'timelineLanes').trailColor),
+    color: laneColorCss(findByIdOrThrow(MISSION_TRAIL_ROWS, bodyId, 'timelineLanes').color),
   }));
 }

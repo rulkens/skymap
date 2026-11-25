@@ -2,7 +2,7 @@ import type { SurfaceFixedSite } from '../../scene/SurfaceFixedSite';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { EphemerisCorrection } from '../../scene/EphemerisCorrection';
 import type { BarycentricPair } from '../../scene/BarycentricPair';
-import type { SampledBody } from '../../missions/SampledBody';
+import type { SampledBody } from '../../scene/SampledBody';
 import type { Vec3 } from '../../math/Vec3';
 
 /** One variant per position table a moved row lands in. */

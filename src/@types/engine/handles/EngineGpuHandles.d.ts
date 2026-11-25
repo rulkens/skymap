@@ -25,6 +25,7 @@ import type { OcclusionMaskRenderer } from '../../rendering/OcclusionMaskRendere
 import type { LetterboxRenderer } from '../../rendering/LetterboxRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
+import type { SampledTrailRenderer } from '../../rendering/sampledTrailRenderer/SampledTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
@@ -195,6 +196,12 @@ export type EngineGpuHandles = {
    * writeBuffer-vs-submit race to clobber.
    */
   orbitTrailRenderer: OrbitTrailRenderer | null;
+  /**
+   * The trails of bodies on sampled tracks (`state.sampledTrailGroups`), into the same depthless
+   * HDR target as the orbit trails. One uniform slot per draw, at most `MAX_TRAILS` per pass draw
+   * (per view): the slots reset at each `beginFrame`.
+   */
+  sampledTrailRenderer: SampledTrailRenderer | null;
   /**
    * Per-pass GPU timing. Always non-null: a no-op stub (`createDisabledGpuTimingService`)
    * until `initGpu` swaps in the device-aware one. `enabled` is true iff `?gpuTimings`

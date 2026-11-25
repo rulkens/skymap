@@ -13,7 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../../src/layers/starCatalog/seededStars/passes/starPointsPass';
-import { gateOrbitTrailGroup } from '../../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { gateTrailGroup } from '../../../../../src/services/engine/layer/gateTrailGroup';
 import { gatePassByFade } from '../../../../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes/index';
@@ -225,16 +225,16 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // The milky-way impostor and constellation overlay ride this group but their visibility
       // windows are far wider than the foreground gate, so they are toggled off to pin the STAR
       // rows' skip. orbit-trails' enabled() reads the visibility intent and `orbitTrailGroups`,
-      // so the fixture carries both.
+      // so the fixture carries both; sampled-trails' reads `sampledTrailGroups`, empty here.
       settings: {
         milkyWay: { enabled: false },
         starCatalogs: STAR_CATALOG_SETTINGS,
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
-        missionTrails: { enabled: false, nearPlanets: false },
       },
-      orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
+      orbitTrailGroups: [gateTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
+      sampledTrailGroups: [],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const hdrNear0 = FRAME_ORDER.flatMap((step) =>

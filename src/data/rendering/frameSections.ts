@@ -286,7 +286,7 @@ export const SCENE: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: [
         'orbit-trails',
-        'mission-trails',
+        'sampled-trails',
         'satellite-orbits',
         'satellites',
         'asteroid-orbits',

@@ -1,6 +1,7 @@
 import type { LabelSource } from './LabelSource';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitTrailGroup } from './OrbitTrailGroup';
+import type { SampledTrailGroup } from './SampledTrailGroup';
 
 /** A `screenLabels` source registers on the director of the slab it names —
  * COSMO hides labels nearer than 10 kpc (`LABEL_DIRECTORS`' `nearHideMpc`), so anchors at
@@ -14,4 +15,7 @@ export type LayerGuides = {
    * must also be an `ORBITAL_ELEMENTS` row (`deriveBodyStates`' source); `orbitTrailsPass`
    * asserts both non-null. */
   readonly orbitTrails?: OrbitTrailGroup;
+  /** Bodies on sampled tracks whose trails core's sampled-trails pass draws, faded by the
+   * group's `show` entry; each row's track must be in `trajectoryRegistry`. */
+  readonly sampledTrails?: SampledTrailGroup;
 };

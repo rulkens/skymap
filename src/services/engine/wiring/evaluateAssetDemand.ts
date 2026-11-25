@@ -12,7 +12,7 @@ import { bandDistanceMpc } from '../presentation/bandDistanceMpc';
 import { resolveAssetDemand } from './resolveAssetDemand';
 import { visibilitySwitchOf } from '../../../utils/visibility/visibilitySwitchOf';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
+import { bodyPresent } from '../../../utils/scene/bodyPresent';
 import { subjectOccludedByBodies } from '../../../utils/occlusion/subjectOccludedByBodies';
 import type { AssetDemandVerdict } from '../../../@types/loading/AssetDemandVerdict';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -76,7 +76,7 @@ function sizeVerdict(
     pxPerRad: ctx.drawPxPerRad,
   });
   if (px < size.loadPx) return px < size.releasePx ? RELEASE : HOLD;
-  if (!spacecraftPresent(size.body, ctx.simDays)) return HOLD;
+  if (!bodyPresent(size.body, ctx.simDays)) return HOLD;
   const siteHost = r.siteHost;
   if (siteHost === undefined) return LOAD;
   const host = states.get(siteHost.id);

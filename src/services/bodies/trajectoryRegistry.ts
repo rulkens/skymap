@@ -1,5 +1,5 @@
 /**
- * trajectoryRegistry — loaded spacecraft tracks, as plain module state.
+ * trajectoryRegistry — loaded sampled tracks, as plain module state.
  *
  * `deriveBodyStates` is a pure function of the clock that memoizes on
  * `simDays`; a track arriving while the clock is paused must still invalidate

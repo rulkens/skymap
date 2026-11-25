@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { bodyPositionMpcAt } from '../../../../src/utils/exhibits/mission/bodyPositionMpcAt';
-import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
+import { bodyPresent } from '../../../../src/utils/scene/bodyPresent';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
@@ -34,8 +34,8 @@ const bodyFixed = (v: Vec3, m: Mat3): Vec3 => [
 
 describe('Voyager between launch and its first track sample', () => {
   it('is present from the launch instant, not from the first sample', () => {
-    expect(spacecraftPresent('voyager1', LAUNCH - MINUTE)).toBe(false);
-    expect(spacecraftPresent('voyager1', LAUNCH + MINUTE)).toBe(true);
+    expect(bodyPresent('voyager1', LAUNCH - MINUTE)).toBe(false);
+    expect(bodyPresent('voyager1', LAUNCH + MINUTE)).toBe(true);
   });
 
   it('sits on the LC-41 pad at launch, turning with Earth', () => {

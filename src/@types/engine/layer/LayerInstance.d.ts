@@ -10,6 +10,7 @@ import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { LabelSource } from './LabelSource';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitTrailGroup } from './OrbitTrailGroup';
+import type { SampledTrailGroup } from './SampledTrailGroup';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
@@ -23,6 +24,8 @@ export type LayerInstance = {
   readonly worldLabels: readonly LayerWorldLabel[];
   /** `[]` or `[the Layer's group]`. */
   readonly orbitTrails: readonly OrbitTrailGroup[];
+  /** `[]` or `[the Layer's group]`. */
+  readonly sampledTrails: readonly SampledTrailGroup[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */

@@ -1,11 +1,9 @@
 /**
- * Voyager 1: the one source of its launch instant, read for both `presentFromIso`
- * and the sampled position.
+ * Voyager 1, on its sampled track from the launch pad.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
-import { VOYAGER_1_LIME } from '../../../data/bodies/palette';
 import { CAPE_CANAVERAL_LC41 } from '../craft/data/capeCanaveralLc41';
 import { launchIsoOf } from '../events/utils/launchIsoOf';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
@@ -22,15 +20,12 @@ export const VOYAGER_1: LayerBody = {
     label: 'Voyager 1',
     meshKey: 'voyager',
     standoffRadii: 0.5,
-    presentFromIso: LAUNCH,
   }),
   position: {
     kind: 'sampled',
     sampled: {
       id: asSceneBodyId('voyager1'),
-      trailColor: VOYAGER_1_LIME,
-      launchIso: LAUNCH,
-      launchPad: CAPE_CANAVERAL_LC41,
+      launch: { iso: LAUNCH, pad: CAPE_CANAVERAL_LC41 },
     },
   },
   // Both probes keep the high-gain dish on Earth — the real pointing constraint,

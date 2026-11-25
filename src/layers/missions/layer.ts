@@ -1,5 +1,5 @@
 /**
- * The missions Layer: the craft's trails, captions and their "Spacecraft" label item, the
+ * The missions Layer: the craft's trail rows, captions and their "Spacecraft" label item, the
  * `missions` and `missionTrails` settings clusters, the track load, and the Voyager exhibit with
  * its mission timeline kind. It owns the nine craft body rows, their registry row and the `craft`
  * selection kind with its pick code, and draws them: meshes (rows and slots its own) through core's
@@ -10,15 +10,17 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { missionsLayerSettings } from './state/slices';
 import { missionsVisibility } from './visibility';
-import { loadSpacecraftTracksSaga } from './trails/sagas/loadSpacecraftTracksSaga';
+import { loadSampledTracksSaga } from '../../services/bodies/loadSampledTracksSaga';
 import { create } from './create';
 import { destroy } from './destroy';
-import { missionTrailsPass } from './trails/passes/missionTrailsPass';
 import { missionMeshesPass } from './craft/passes/missionMeshesPass';
 import { contactShadowsPass } from './contactShadows/passes/contactShadowsPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
 import { MISSION_CRAFT_IDS } from './craft/present/missionCraftIds';
 import { missionLabelSource } from './craft/present/missionLabelSource';
+import { emphasisDim } from './craft/utils/emphasisDim';
+import { MISSION_TRAIL_ROWS } from './trails/data/missionTrailRows';
+import { MISSION_TRACK_IDS } from './trails/data/missionTrackIds';
 import { craftSelectionRow } from './selection/craftSelectionRow';
 import { missionsSelectionKinds } from './selection/kinds';
 import { craftSearch } from './craft/present/craftSearch';
@@ -36,20 +38,25 @@ export const missionsLayer = defineLayer({
   sources: MISSIONS_SOURCE_ROWS,
   settings: missionsLayerSettings,
   visibility: missionsVisibility,
-  sagas: [loadSpacecraftTracksSaga],
+  sagas: [loadSampledTracksSaga(MISSION_TRACK_IDS)],
   exhibits: missionsLayerExhibits,
   create,
   destroy,
   assets: (runtime) =>
     meshPresentationsOf(MISSIONS_BODY_ROWS).map((p) => meshAssetRow(runtime.meshBodies, p)),
   passes: (runtime) => [
-    missionTrailsPass(runtime),
     missionMeshesPass(runtime),
     contactShadowsPass,
     glintsPassOver('mission-glints', MISSION_CRAFT_IDS, runtime.glintRenderer),
   ],
   guides: (runtime) => ({
     screenLabels: [missionLabelSource(runtime.pickCode)],
+    sampledTrails: {
+      show: 'missionTrails',
+      rows: MISSION_TRAIL_ROWS,
+      nearPlanets: (state) => state.settings.missionTrails.nearPlanets,
+      dim: (state, id) => emphasisDim(state.settings.missions.craft, id),
+    },
   }),
   selection: {
     kinds: missionsSelectionKinds,

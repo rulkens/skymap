@@ -15,7 +15,7 @@ import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiu
 import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { MISSIONS_BODY_ROWS } from '../../bodies/missionsBodyRows';
 import { CRAFT_ENTRY } from '../../sources/craft';
-import { emphasisDim } from '../../trails/utils/emphasisDim';
+import { emphasisDim } from '../utils/emphasisDim';
 import { MESH_BODY_CAPTION_PRIORITY } from '../data/meshBodyCaptionPriority';
 import { CRAFT_ORDER } from './craftOrder';
 
