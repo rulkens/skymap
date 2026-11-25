@@ -19,6 +19,7 @@ import {
   type ReactNode,
 } from 'react';
 import cx from 'classnames';
+import type { SliderDisplayed } from '../../../@types/components/SliderDisplayed';
 import { decimalsForStep } from '../../../utils/math/decimalsForStep';
 import { snapToStep } from '../../../utils/math/snapToStep';
 import { useSliderTextEdit } from './useSliderTextEdit';
@@ -33,6 +34,8 @@ export type SliderProps = {
   readonly onChange: (value: number) => void;
   /** Formats the value shown inside the pill. Defaults to fixed decimals derived from `step`. */
   readonly format?: (value: number) => string;
+  /** Only when `format` shows another quantity than `value` (degrees for stops): the typed box then works in it. */
+  readonly displayed?: SliderDisplayed;
   readonly disabled?: boolean;
 };
 
@@ -44,13 +47,22 @@ function Slider({
   step = 0.01,
   onChange,
   format,
+  displayed,
   disabled = false,
 }: SliderProps): ReactNode {
   const rootRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<DOMRect | null>(null);
   const [dragging, setDragging] = useState(false);
   const labelId = useId();
-  const edit = useSliderTextEdit({ value, min, max, step, onChange, sliderRef: rootRef });
+  const edit = useSliderTextEdit({
+    value,
+    min,
+    max,
+    step,
+    onChange,
+    displayed,
+    sliderRef: rootRef,
+  });
 
   const span = max - min || 1;
   const percent = Math.min(1, Math.max(0, (value - min) / span)) * 100;

@@ -5,10 +5,8 @@ import type { TypedNumber } from '../../@types/input/TypedNumber';
 const COMPLETE = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
 const INCOMPLETE = /^[+-]?\.?$|^[+-]?(\d+\.?\d*|\.\d+)e[+-]?$/i;
 
-export function parseTypedNumber(text: string, min: number, max: number): TypedNumber {
+export function parseTypedNumber(text: string): TypedNumber {
   const trimmed = text.trim();
   if (INCOMPLETE.test(trimmed)) return 'incomplete';
-  if (!COMPLETE.test(trimmed)) return 'invalid';
-  const value = Number(trimmed);
-  return value >= min && value <= max ? value : 'invalid';
+  return COMPLETE.test(trimmed) ? Number(trimmed) : 'invalid';
 }

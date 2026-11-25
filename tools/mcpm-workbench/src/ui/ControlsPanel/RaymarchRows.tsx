@@ -12,6 +12,7 @@ import PaletteRow from '../PaletteRow/PaletteRow';
 import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import SubsectionGroup from './SubsectionGroup';
+import { LOG10_DISPLAYED } from './utils/LOG10_DISPLAYED';
 import { PALETTE_INFO } from './utils/PALETTE_INFO';
 import { RAYMARCH_SLIDERS } from './utils/RAYMARCH_SLIDERS';
 
@@ -51,6 +52,7 @@ function RaymarchRows(): ReactNode {
             max={spec.max}
             step={spec.step}
             format={spec.format}
+            displayed={spec.log ? LOG10_DISPLAYED : undefined}
             info={spec.info}
             onChange={(v) =>
               dispatch(setRaymarchParam({ key: spec.key, value: spec.log ? Math.pow(10, v) : v }))

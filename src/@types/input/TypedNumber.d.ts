@@ -1,2 +1,2 @@
-/** A typed number read against a range: the value, a half-typed one (`-`, `1e`, empty), or one that cannot be committed. */
+/** Typed text read as a number: the value, a half-typed one (`-`, `1e`, empty), or not a number at all. */
 export type TypedNumber = number | 'incomplete' | 'invalid';

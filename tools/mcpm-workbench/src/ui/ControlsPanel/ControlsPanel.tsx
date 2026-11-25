@@ -137,6 +137,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
               step={100_000}
               value={sim.agentCount}
               format={(v) => `${(v / 1_000_000).toFixed(1)}M`}
+              displayed={{ fromValue: (v) => v / 1_000_000, toValue: (m) => m * 1_000_000 }}
               info="Structural: changing it rebuilds the harness and reseeds the swarm."
               onChange={(v) => dispatch(setAgentCount(v))}
               path="sim.agentCount"

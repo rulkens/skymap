@@ -154,3 +154,41 @@ describe('Slider typed value', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
+
+describe('Slider typed in the units it shows', () => {
+  // Stored log10, shown 10^v: the shape of the workbench's log sliders.
+  const logScale = {
+    fromValue: (v: number) => 10 ** v,
+    toValue: (shown: number) => Math.log10(shown),
+  };
+  const renderLog = (value: number) =>
+    renderSlider({ value, min: -3, max: 3, step: 0.1, displayed: logScale });
+
+  it('prefills the shown number and stores what was typed in shown units', () => {
+    const { slider, onChange } = renderLog(-1);
+    const input = openWithEnter(slider);
+    expect(input.value).toBe('0.1');
+    type(input, '100');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(2);
+  });
+
+  it('takes the shown range as the valid typed range', () => {
+    for (const text of ['1e4', '0.0001', '0', '-5']) {
+      const { slider, onChange } = renderLog(0);
+      const input = openWithEnter(slider);
+      type(input, text);
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(input.getAttribute('aria-invalid'), text).toBe('true');
+      expect(onChange).not.toHaveBeenCalled();
+      cleanup();
+    }
+  });
+
+  it('sends nothing on Enter when the shown number was not edited', () => {
+    // 10^0.3 does not convert back to exactly 0.3, so only the text tells it was untouched.
+    const { slider, onChange } = renderLog(0.3);
+    fireEvent.keyDown(openWithEnter(slider), { key: 'Enter' });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
