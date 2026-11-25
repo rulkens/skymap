@@ -1,0 +1,8 @@
+/* The 22px is the section body's side padding (ControlsPanel.module.css
+   `.scroll > div > div`): the negative margin cancels it so the rule spans the
+   sidebar, the padding puts the label and rows back where they were. */
+.root {
+  margin: 14px -22px 0;
+  padding: 10px 22px 0;
+  border-top: 1px solid var(--border-default);
+}

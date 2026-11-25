@@ -12,7 +12,7 @@ import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import SliderGroup from '../../../../../src/components/common/SliderGroup/SliderGroup';
+import SubsectionGroup from './SubsectionGroup';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
 import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
@@ -181,7 +181,7 @@ function ControlsPanel(): ReactNode {
               </Button>
             </div>
           </PanelRow>
-          <SliderGroup title="Agents">
+          <SubsectionGroup title="Agents">
             {MCPM_PARAM_KEYS.map((id) => {
               const spec = PARAM_SLIDER_SPECS[id];
               return (
@@ -209,7 +209,7 @@ function ControlsPanel(): ReactNode {
               onChange={(v) => dispatch(setAgentCount(v))}
               path="sim.agentCount"
             />
-          </SliderGroup>
+          </SubsectionGroup>
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -273,7 +273,7 @@ function ControlsPanel(): ReactNode {
             onChange={(id) => dispatch(setRaymarchPaletteId(id))}
             info={PALETTE_INFO}
           />
-          <SliderGroup title="Trace">
+          <SubsectionGroup title="Trace">
             {RAYMARCH_SLIDERS.map((spec) => (
               <SliderRow
                 key={spec.key}
@@ -292,8 +292,8 @@ function ControlsPanel(): ReactNode {
                 path={`view.raymarch.${spec.key}`}
               />
             ))}
-          </SliderGroup>
-          <SliderGroup title="Preview">
+          </SubsectionGroup>
+          <SubsectionGroup title="Preview">
             <SliderRow
               label="divisor"
               value={view.raymarch.divisor}
@@ -305,7 +305,7 @@ function ControlsPanel(): ReactNode {
               onChange={(v) => dispatch(setDivisor(v))}
               path="view.raymarch.divisor"
             />
-          </SliderGroup>
+          </SubsectionGroup>
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -385,7 +385,7 @@ function ControlsPanel(): ReactNode {
             onChange={(id) => dispatch(setPathTracerPaletteId(id))}
             info={PALETTE_INFO}
           />
-          <SliderGroup title="Trace">
+          <SubsectionGroup title="Trace">
             {PATHTRACER_SLIDERS.map((spec) => (
               <SliderRow
                 key={spec.key}
@@ -404,8 +404,8 @@ function ControlsPanel(): ReactNode {
                 path={`view.pathTracer.${spec.key}`}
               />
             ))}
-          </SliderGroup>
-          <SliderGroup title="Preview">
+          </SubsectionGroup>
+          <SubsectionGroup title="Preview">
             <SliderRow
               label="path tracer divisor"
               value={view.pathTracer.divisor}
@@ -428,7 +428,7 @@ function ControlsPanel(): ReactNode {
               onChange={(v) => dispatch(setPathTracerSampleCap(v))}
               path="view.pathTracer.sampleCap"
             />
-          </SliderGroup>
+          </SubsectionGroup>
           <ToggleRow
             label="compressive"
             on={view.pathTracer.compressive}
