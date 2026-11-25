@@ -1,13 +1,12 @@
 /**
  * DataPanel — the left sidebar, what goes into the simulation: the tool's
- * title, the catalogs (a loaded file, the built-ins, the tier), and pinned
- * below them the stats and histogram. The import dialog is mounted here, at
+ * title, the catalogs (a loaded file, then the tier over the built-ins it
+ * applies to), and pinned below them the stats and histogram. The import dialog is mounted here, at
  * the sidebar root, so its window drop listener lives while Data is folded.
  */
 import { useState, type ReactNode } from 'react';
 import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
 import PlusIcon from '../../../../../src/components/icons/PlusIcon/PlusIcon';
-import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
 import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   setCatalogSources,
@@ -22,6 +21,7 @@ import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
 import PanelRow from '../PanelRow/PanelRow';
 import PanelSection from '../PanelSection/PanelSection';
 import StatsReadout from '../StatsReadout/StatsReadout';
+import TierRow from '../TierRow/TierRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
 import styles from './DataPanel.module.css';
@@ -46,6 +46,7 @@ function DataPanel(): ReactNode {
               Load catalog…
             </button>
           </PanelRow>
+          <TierRow tier={catalog.tier} onChange={(t) => dispatch(setCatalogTier(t))} />
           {WORKBENCH_SOURCES.map((s) => (
             <ToggleRow
               key={s}
@@ -60,9 +61,6 @@ function DataPanel(): ReactNode {
               }
             />
           ))}
-          <PanelRow>
-            <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
-          </PanelRow>
         </PanelSection>
       </div>
       <div className={styles.pinned}>

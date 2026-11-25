@@ -1,0 +1,6 @@
+/* The palette row's dropdown look, so the sidebar's two selects match. */
+.select {
+  composes: paletteSelect from '../../../../../src/components/common/PaletteSelect/PaletteSelect.module.css';
+  font-size: var(--font-size-sm);
+  min-inline-size: 0;
+}
