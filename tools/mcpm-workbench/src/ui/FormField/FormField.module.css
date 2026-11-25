@@ -49,8 +49,31 @@
   color: var(--color-fg);
 }
 
+/* Grows the line in from the help's height instead of appearing at once. */
+.warning {
+  composes: error;
+  border-inline-start-color: var(--tool-status-warn);
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition:
+    block-size var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard);
+}
+
+@starting-style {
+  .warning {
+    block-size: 0;
+    opacity: 0;
+  }
+}
+
+.warning[data-stale='true'] {
+  opacity: 0.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .root {
+  .root,
+  .warning {
     transition: none;
   }
 }

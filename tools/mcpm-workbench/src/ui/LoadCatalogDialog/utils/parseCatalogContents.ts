@@ -35,5 +35,5 @@ export function parseCatalogContents(
   if (parsed.kind === 'problem') return { ...parsed, showExample: true };
   const catalog = { points: parsed.points, fileName, settings, weightStats: parsed.weightStats };
   const warning = weightUnitWarning(parsed.weightStats, settings.weight);
-  return warning ? { kind: 'warning', message: warning, catalog } : { kind: 'ready', catalog };
+  return warning ? { kind: 'warning', warning, catalog } : { kind: 'ready', catalog };
 }

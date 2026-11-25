@@ -58,6 +58,8 @@ Asked for by the owner while the tasks ran, so they are in scope, not creep:
 - A lone `.txt`, `.tsv` or `.dat` loads like a `.csv`; a `.txt` with a `.bin` stays its metadata.
 - The import dialog has Auto fit, on at every open: Load fits the Selection box to the file. Beside
   the file contents, the box the load will leave and its GPU cost; the two laid out as tables.
+- A weight warning shows in the Weight scale row, in the help's place; a scale warning also tints
+  the field.
 
 ## Ground preparation
 
@@ -403,7 +405,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Field errors | `Use an H0 greater than 0.` · `Use an Ωm from 0 to 1.` · `Use a scale greater than 0.` |
 | Reading | `Reading <name>…` |
 | Too large | `File is larger than 400 MB. Use a smaller sample, or the native build.` |
-| Auto fit switch, last form row (added 2026-11-25) | `Auto fit` (no hint) |
+| Auto fit switch, the row under File (added 2026-11-25) | `Auto fit` (no hint) |
 | File contents, above the footer once a file is chosen (added 2026-11-25) | labels `rows` · `weight` (`M ± S`, stored weights' mean ± standard deviation) · `x` `y` `z` (min and max, one decimal, `−` for negatives, `Mpc` once); `—` until read; announced as `N rows read` |
 | Beside it, the box the load will leave (added 2026-11-25) | labels `voxels` (`A × B × C`) · `size` (`S Mpc`, or `A × B × C Mpc`) · `GPU` (total, then the largest-grid-buffer gauge); `—` until read; group named `Selection` |
 

@@ -1,4 +1,5 @@
 import type { UserCatalog } from './UserCatalog';
+import type { WeightUnitWarning } from './WeightUnitWarning';
 
 /**
  * CatalogLoadOutcome — what reading the chosen files came to. A warning holds
@@ -6,5 +7,5 @@ import type { UserCatalog } from './UserCatalog';
  */
 export type CatalogLoadOutcome =
   | { readonly kind: 'ready'; readonly catalog: UserCatalog }
-  | { readonly kind: 'warning'; readonly message: string; readonly catalog: UserCatalog }
+  | { readonly kind: 'warning'; readonly warning: WeightUnitWarning; readonly catalog: UserCatalog }
   | { readonly kind: 'problem'; readonly message: string; readonly showExample: boolean };

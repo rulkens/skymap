@@ -292,6 +292,23 @@ describe('LoadCatalogDialog', () => {
     expect(store.getState().grid).toBe(before);
   });
 
+  it('ties a scale warning to the Weight scale field until the scale clears it', async () => {
+    const file = deferred();
+    read.mockReturnValueOnce(file.promise);
+    setup(<Controlled />);
+    drop(csv('a.csv'));
+    await file.resolve(contents('a.csv', '1,2,3,20\n'));
+    const scale = screen.getByLabelText('Weight scale');
+    const line = (): HTMLElement =>
+      document.getElementById(scale.getAttribute('aria-describedby')!)!;
+    expect(line()).toHaveTextContent(/Median weight is 20\./);
+    expect(scale).toHaveAttribute('data-warned', 'true');
+
+    fireEvent.change(scale, { target: { value: '0.001' } });
+    await waitFor(() => expect(scale).toHaveAttribute('data-warned', 'false'));
+    expect(line()).not.toHaveTextContent(/Median/);
+  });
+
   it('opens on a page drop while the Data section is folded', () => {
     read.mockReturnValue(new Promise(() => {}));
     setup(<DataPanel id="data" collapsed={false} />);

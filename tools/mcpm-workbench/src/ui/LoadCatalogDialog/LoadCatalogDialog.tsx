@@ -291,6 +291,8 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
               )}
             </FormField>
 
+            <AutoFitField on={autoFit} onChange={setAutoFit} />
+
             <FormField
               label="Columns"
               hint={FORMAT_CHOICES.find((c) => c.value === fields.formatKind)!.hint}
@@ -377,6 +379,11 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
               label="Weight scale"
               hint={'0.001 turns 10⁹\u00a0M☉ into 10¹²\u00a0M☉.'}
               error={shown('scale')}
+              warning={
+                outcome?.kind === 'warning'
+                  ? { message: outcome.warning.message, stale }
+                  : undefined
+              }
               validated
               inactive={packed || fields.weightKind !== 'linear'}
             >
@@ -390,14 +397,13 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                   autoComplete="off"
                   aria-invalid={shown('scale') !== undefined}
                   aria-describedby={ids.hint}
+                  data-warned={outcome?.kind === 'warning' && outcome.warning.field === 'scale'}
                   value={fields.scale}
                   onChange={(e) => edit({ scale: e.target.value })}
                   onBlur={check('scale')}
                 />
               )}
             </FormField>
-
-            <AutoFitField on={autoFit} onChange={setAutoFit} />
           </div>
 
           {problem && (
@@ -415,11 +421,6 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
                 </FormField>
               )}
             </div>
-          )}
-          {outcome?.kind === 'warning' && (
-            <p role="status" className={styles.warning} data-stale={stale}>
-              {outcome.message}
-            </p>
           )}
         </div>
 
