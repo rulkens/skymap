@@ -88,7 +88,7 @@ describe('Settings page', () => {
   const NOT_IN_PANEL = [
     /^debug\./,
     /^(surfaceTileDebug|terrainPickMarker)\./,
-    /^missions\.(craft|speed)$/,
+    /^timeline\.(lane|speed)$/,
     /^missionTrails\.nearPlanets$/,
     /^(constellations|lightTime|zoneOfAvoidance|stellarStreams)\.labelEnabled$/,
     /^stellarStreams\.(streak|haze)\.\w+$/,

@@ -54,7 +54,7 @@ const STATE = {
   slabRows: [],
   settings: {
     bodies: { items: makeBodyItems() },
-    missions: { craft: null },
+    timeline: { lane: null },
   },
   picking: { pickInFlight: false },
 } as unknown as EngineState;
