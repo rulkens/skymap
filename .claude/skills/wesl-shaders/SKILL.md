@@ -62,6 +62,10 @@ export default defineConfig({
 
 Without this, Vitest fetches `.wesl` files and rolldown tries to parse them as JavaScript, failing with "expected a semicolon" or "unexpected token" — a JS parse error, not a shader error. A tool with its own `wesl.toml` passes `weslStaticPlugin({ weslToml })`, since the default is `<cwd>/wesl.toml`.
 
+## An `enable` directive goes AFTER the imports
+
+WGSL wants `enable …;` before every declaration, but the linker stops resolving imports once it has seen one: with `enable dual_source_blending;` above the `import` lines, the imports reach the browser unlinked (`unexpected token` on each `import`, then the "Invalid ShaderModule" cascade and a black frame). Put the `enable` directly below the imports; the linked output still carries it ahead of all declarations. Exemplar: `atmosphere/shell/fragmentDualSource.wesl`.
+
 ## Runtime-only failure: duplicate @builtin(position)
 
 Declaring `@builtin(position)` twice in one entry point (once on a member of the input struct and again on a bare parameter) fails ONLY at runtime: the build and the wesl linker both pass, and it is `device.createShaderModule` that rejects the module. Fix: read the position from the struct member and delete the bare parameter. Because nothing fails until module creation, the symptom is the same "Invalid ShaderModule" cascade as gotcha #3; the dev-mode compile logger (below) shows the real error.

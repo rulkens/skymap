@@ -21,11 +21,13 @@ import { packScatteringParams, SCATTERING_PARAMS_BYTES } from './packScatteringP
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
+import { DUAL_SOURCE_BLEND, DUAL_SOURCE_FEATURE } from '../../../../data/rendering/dualSourceBlend';
 import transmittanceCode from '../../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../../../services/gpu/shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../../../services/gpu/shaders/atmosphere/skyViewLut.wesl?static';
 import shellVsCode from '../../../../services/gpu/shaders/atmosphere/shell/vertex.wesl?static';
 import shellFsCode from '../../../../services/gpu/shaders/atmosphere/shell/fragment.wesl?static';
+import shellDualSourceCode from '../../../../services/gpu/shaders/atmosphere/shell/fragmentDualSource.wesl?static';
 
 /** 128x64. Only the proxy's far wall rasterises, so its silhouette IS the limb, and a
  *  coarse UV sphere polygonises it inward by ~cos(pi/SEGMENTS). Sized off the THINNEST
@@ -293,12 +295,13 @@ export function createAtmosphereShellRenderer(
     entryPoint: string,
     blend: GPUBlendState,
     depthStencil?: GPUDepthStencilState,
+    fragmentModule: GPUShaderModule = shellFsModule,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
       vertex: shellVertexState,
-      fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
+      fragment: { module: fragmentModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: shellPrimitiveState,
       ...(depthStencil === undefined ? {} : { depthStencil }),
     });
@@ -322,6 +325,23 @@ export function createAtmosphereShellRenderer(
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
   const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
+  // One draw where the device blends two sources, so `sampleShell` runs once per
+  // pixel, not twice; the pair is the fallback. In draw order either way.
+  const shellPipelines = device.features.has(DUAL_SOURCE_FEATURE)
+    ? [
+        createShellPipeline(
+          'atmosphere-shell-dual-source-pipeline',
+          'fsDualSource',
+          DUAL_SOURCE_BLEND,
+          undefined,
+          createShaderModuleWithDevLog(
+            device,
+            shellDualSourceCode,
+            'atmosphere.shell.fragmentDualSource',
+          ),
+        ),
+      ]
+    : [shellMultiplyPipeline, shellAddPipeline];
   const probeShellMultiplyPipeline = createShellPipeline(
     'atmosphere-probe-shell-multiply-pipeline',
     'fsMultiply',
@@ -645,20 +665,20 @@ export function createAtmosphereShellRenderer(
     device.queue.writeBuffer(buffer, 0, depthScratch);
   }
 
-  function drawShellPair(
+  function drawShell(
     pass: GPURenderPassEncoder,
     bindGroup: GPUBindGroup,
-    multiplyPipeline: GPURenderPipeline,
-    addPipeline: GPURenderPipeline,
+    pipelines: readonly GPURenderPipeline[],
   ): void {
     pass.setBindGroup(0, bindGroup);
-    // MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this body's own in-scatter.
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    pass.setPipeline(multiplyPipeline);
-    pass.drawIndexed(indexCount);
-    pass.setPipeline(addPipeline);
-    pass.drawIndexed(indexCount);
+    // A pair is MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this
+    // body's own in-scatter.
+    for (const pipeline of pipelines) {
+      pass.setPipeline(pipeline);
+      pass.drawIndexed(indexCount);
+    }
   }
 
   function draw(
@@ -680,7 +700,7 @@ export function createAtmosphereShellRenderer(
         depth.view,
       );
     }
-    drawShellPair(pass, bundle.shellBindGroup, shellMultiplyPipeline, shellAddPipeline);
+    drawShell(pass, bundle.shellBindGroup, shellPipelines);
   }
 
   // With FAR depth every pixel takes the far wall, and the analytic ground sphere ends the
@@ -711,7 +731,7 @@ export function createAtmosphereShellRenderer(
         farDepthView,
       );
     }
-    drawShellPair(pass, bundle.probeBindGroup, probeShellMultiplyPipeline, probeShellAddPipeline);
+    drawShell(pass, bundle.probeBindGroup, [probeShellMultiplyPipeline, probeShellAddPipeline]);
   }
 
   function writeAerialPerspectiveUniforms(bodyId: string, uniforms: Float32Array): void {

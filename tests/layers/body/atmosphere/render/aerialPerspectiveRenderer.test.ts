@@ -22,12 +22,13 @@ type Harness = {
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
 };
 
-function mockDevice(): Harness {
+function mockDevice(features: readonly string[] = []): Harness {
   const textures: GPUTextureDescriptor[] = [];
   const bindGroups: GPUBindGroupDescriptor[] = [];
   const descOf = new Map<unknown, GPURenderPipelineDescriptor>();
   const writeBuffer = vi.fn();
   const device = {
+    features: new Set(features),
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
@@ -65,8 +66,8 @@ function bundle() {
   };
 }
 
-function build(bodyIds: readonly string[] = ['earth']) {
-  const h = mockDevice();
+function build(bodyIds: readonly string[] = ['earth'], features: readonly string[] = []) {
+  const h = mockDevice(features);
   const bodies = new Map(bodyIds.map((id) => [id, bundle()]));
   const renderer = createAerialPerspectiveRenderer(
     h.device,
@@ -161,6 +162,17 @@ describe('createAerialPerspectiveRenderer — bake and apply share one uniform w
     renderer.draw(pass, 'earth', {} as GPUTextureView);
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
+  });
+
+  it('draws once where the device blends two sources', () => {
+    // The pair staying in the draw list would fog the frame twice.
+    const { renderer, descOf } = build(['earth'], ['dual-source-blending']);
+    const order: string[] = [];
+    const pass = mockRenderPass(order, descOf);
+
+    renderer.draw(pass, 'earth', {} as GPUTextureView);
+
+    expect(order).toEqual(['other(one/src1)', 'draw']);
   });
 
   it('rebuilds the apply bind group only when the depth view changes identity', () => {

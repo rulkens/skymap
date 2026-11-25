@@ -9,6 +9,7 @@
  * `canvas`, also read by `applySwapFormat`/`buildSwapRenderers` on a later rebuild.
  */
 
+import { DUAL_SOURCE_FEATURE } from '../../../data/rendering/dualSourceBlend';
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
 import { trackGpuMemory } from '../../gpu/memory/trackGpuMemory';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -41,7 +42,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Sync the backing store first — otherwise `getCurrentTexture()` may return a 300×150 default.
   resizeCanvasToDisplay(canvas);
 
-  const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
+  // Optional: granted only where the adapter has it; the atmosphere falls back to two draws.
+  const { device, context, format, hdrCapable } = await gpuInitGpu(canvas, {
+    requiredFeatures: [DUAL_SOURCE_FEATURE],
+  });
   state.gpu.memory = trackGpuMemory(device);
 
   // Assigned now so a later throw still lets `destroy()` remove the HDR listener.

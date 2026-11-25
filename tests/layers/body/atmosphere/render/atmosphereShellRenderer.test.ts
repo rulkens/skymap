@@ -31,7 +31,7 @@ type Harness = {
   bindGroupLabels: string[];
 };
 
-function mockDevice(): Harness {
+function mockDevice(features: readonly string[] = []): Harness {
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const shaderCode: string[] = [];
   const descOf = new Map<unknown, GPURenderPipelineDescriptor>();
@@ -48,6 +48,7 @@ function mockDevice(): Harness {
     return {};
   });
   const device = {
+    features: new Set(features),
     createSampler: vi.fn(() => ({})),
     createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
       shaderCode.push(desc.code);
@@ -86,8 +87,10 @@ function mockDevice(): Harness {
   };
 }
 
-function build() {
-  const h = mockDevice();
+const DUAL_SOURCE = ['dual-source-blending'];
+
+function build(features: readonly string[] = []) {
+  const h = mockDevice(features);
   const renderer = createAtmosphereShellRenderer(h.device, 'rgba16float', {
     earth: ATMOSPHERE_PARAMS.earth!,
   });
@@ -189,11 +192,13 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
     // The TS `entryPoint` string and the `fn` name in the .wesl are a cross-file
     // contract with no compiler check; a rename on one side fails only when the
     // browser builds the pipeline.
-    const { renderPipelines, shaderCode } = build();
-    const linked = shaderCode.join('\n');
-    for (const desc of renderPipelines) {
-      for (const entryPoint of [desc.vertex.entryPoint, desc.fragment!.entryPoint]) {
-        expect(linked).toMatch(new RegExp(`fn\\s+${entryPoint!}\\s*\\(`));
+    for (const features of [[], DUAL_SOURCE]) {
+      const { renderPipelines, shaderCode } = build(features);
+      const linked = shaderCode.join('\n');
+      for (const desc of renderPipelines) {
+        for (const entryPoint of [desc.vertex.entryPoint, desc.fragment!.entryPoint]) {
+          expect(linked).toMatch(new RegExp(`fn\\s+${entryPoint!}\\s*\\(`));
+        }
       }
     }
   });
@@ -215,6 +220,29 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
     renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), shellDepth());
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
+  });
+
+  it('draws the geometry once where the device blends two sources', () => {
+    // One draw must leave what the pair leaves: `dst = emission + dst * transmit`, alpha too.
+    // The pair staying in the draw list would apply the atmosphere twice.
+    const { descOf, renderer } = build(DUAL_SOURCE);
+    const drawn: GPURenderPipelineDescriptor[] = [];
+    const pass = {
+      setPipeline: vi.fn((p: unknown) => drawn.push(descOf.get(p)!)),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      setIndexBuffer: vi.fn(),
+      drawIndexed: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), shellDepth());
+
+    expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
+    expect(drawn).toHaveLength(1);
+    const blend = Array.from(drawn[0]!.fragment!.targets!)[0]!.blend!;
+    expect(blend.color).toMatchObject({ srcFactor: 'one', dstFactor: 'src1' });
+    expect(blend.alpha).toMatchObject({ srcFactor: 'one', dstFactor: 'src1-alpha' });
+    expect(drawn[0]!.depthStencil).toBeUndefined();
   });
 
   it('rebuilds the bind group only when the sampled depth view changes', () => {
