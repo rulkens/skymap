@@ -31,7 +31,8 @@ import type { GridElement } from './GridElement';
  * `autoFitPercent` — like `paddingMpc`, a one-shot input baked in at the
  * NEXT "auto fit" click, not a live modifier of the box already showing:
  * excluded from `gridShapeOf` and `SCENE_REBUILD_TRIGGERS` for the same
- * reason. 100 reproduces today's full-catalog-bounds fit exactly.
+ * reason. 100 is the full-catalog-bounds fit; the default 97 drops stray
+ * outliers that would stretch the box into a slow, mostly empty run.
  */
 export type GridSlice = {
   readonly manualVoxelSizeMpc: number;

@@ -25,7 +25,7 @@ export const defaultGridSlice: GridSlice = {
   resolvedElement: null,
   byteBudget: null,
   maxBufferBytes: null,
-  autoFitPercent: 100,
+  autoFitPercent: 97,
 };
 
 export const gridSlice = createSlice({

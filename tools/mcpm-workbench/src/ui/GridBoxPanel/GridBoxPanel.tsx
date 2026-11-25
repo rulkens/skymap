@@ -101,7 +101,7 @@ function GridBoxPanel(): ReactNode {
         onChange={(v) => dispatch(setAutoFitPercent(v))}
         path="grid.autoFitPercent"
       />
-      {grid.autoFitPercent < 100 && <PanelRow label={`evicts ${evictedCount} pts`} />}
+      {evictedCount > 0 && <PanelRow label={`evicts ${evictedCount} pts`} />}
       <PanelRow>
         <Button
           className={styles.autoFitButton}
