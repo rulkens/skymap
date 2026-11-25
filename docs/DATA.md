@@ -242,6 +242,17 @@ A fresh bake gets this right; adding a region to a baked pyramid does not, becau
 
 A region adjacent to a baked one also leaves stale z8–z12 parents and z13 halo tiles: delete those too before the second bake. R2 steps are in [DEPLOY.md](DEPLOY.md).
 
+### Surface horizon (terrain shadows)
+
+A derived product, **horizon**, sits beside height in each body's tile tree: `<prefix>/horizon/<z>/<x>/<y>.webp`, 66 x 66 lossless RGBA holding 16 horizon-angle sectors per post on height's 33 x 33 decimated lattice, a zero-byte file for a flat tile. It is baked from the height archives only (`builtFrom.horizon`, `sourceId: 'derived:height'`), so it follows height's prefix. Tool, flags and output details: [`tools/textures/surfaceHorizon/README.md`](../tools/textures/surfaceHorizon/README.md).
+
+```
+npm run build-surface-tiles -- --body <b>   # height
+npm run bake-horizon -- --body earth|moon|mars
+```
+
+**Bake order is height, then horizon, then pack**; the horizon tool packs its own archives. **Re-bake rule:** a height re-bake re-bakes horizon over the changed area grown by the march radius (about 12 degrees of arc; the march is capped at 30), since a tile's shadows come from terrain well outside it. Where a height tile is missing the read falls back to its deepest ancestor, and to 0 m where no level has it. The tool also writes the whole-globe horizon image (`public/data/images/textures/<body>-horizon-<px>.webp`), half the width its tier's px name says, because posts, not texels, are the resolution.
+
 ### Mars surface sources
 
 `npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev, Endeavour and Jezero orthos are grey; all four sites, Gale's colour mosaic included, are colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable. Viking is de-shaded at bake time with the fixed-sun values in [`marsAlbedoRecipe.ts`](../tools/textures/surfaceBodies/marsAlbedoRecipe.ts); its fitted-sun successor is tuned in [`tools/albedo-bench/`](../tools/albedo-bench/README.md) and saved to `marsAlbedoRecipe.json`, which the bake does not read yet.

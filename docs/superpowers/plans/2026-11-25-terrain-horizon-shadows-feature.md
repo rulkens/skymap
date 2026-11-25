@@ -341,7 +341,7 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 a height re-bake re-bakes horizon over the area grown by the search radius), `docs/BACKLOG.md`
 (remove nothing; the Moon polar double-shadow item stays).
 
-- [ ] Write; `npm run format`. Commit.
+- [x] Write; `npm run format`. Commit.
 
 ---
 
