@@ -13,21 +13,21 @@ import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
 import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
 import { describeTimelineInstant } from '../../utils/exhibits/timeline/describeTimelineInstant';
-import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
+import { timelineEventMs } from '../../utils/exhibits/timeline/timelineEventMs';
 import { timelineAxisLabels } from '../../utils/exhibits/timeline/timelineAxisLabels';
 import { timelineFraction } from '../../utils/exhibits/timeline/timelineFraction';
 import { timelineInstant } from '../../utils/exhibits/timeline/timelineInstant';
-import type { MissionEvent } from '../../@types/exhibits/timeline/MissionEvent';
+import type { TimelineEvent } from '../../@types/exhibits/timeline/TimelineEvent';
 import type { TimelineAxis } from '../../@types/exhibits/timeline/TimelineAxis';
-import type { MissionStop } from '../../@types/camera/timeline/MissionStop';
+import type { TimelineStop } from '../../@types/camera/timeline/TimelineStop';
 import type { TimelineLane } from '../../@types/exhibits/timeline/TimelineLane';
 import { DAY_MS } from '../../data/time/dayMs';
 import { YEAR_MS } from '../../data/time/yearMs';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineTrackProps = {
-  readonly events: readonly MissionEvent[];
-  readonly stops: readonly MissionStop[];
+  readonly events: readonly TimelineEvent[];
+  readonly stops: readonly TimelineStop[];
   readonly lane: TimelineLane;
   readonly axis: TimelineAxis;
   readonly simMs: number;
@@ -157,7 +157,7 @@ function TimelineTrack({
                     className={cx(
                       styles.tick,
                       styles[e.kind],
-                      missionEventMs(e) <= simMs && styles.passed,
+                      timelineEventMs(e) <= simMs && styles.passed,
                       currentId === e.id && styles.current,
                     )}
                   />

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
 import { stepTimelineEvent } from '../../../../src/state/exhibits/timeline/stepTimelineEvent';
-import { missionTimelineKind } from '../../../../src/components/ExhibitOverlay/kinds/missionTimelineKind';
+import { timelineKind } from '../../../../src/components/ExhibitOverlay/kinds/timelineKind';
 import { voyagerTimeline } from '../../../helpers/missions/voyagerTimeline';
 import { stepToEvent } from '../../../../src/state/time/timeSlice';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
-import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
-import { missionEventStepMs } from '../../../../src/utils/exhibits/timeline/missionEventStepMs';
+import { timelineEventMs } from '../../../../src/utils/exhibits/timeline/timelineEventMs';
+import { timelineEventStepMs } from '../../../../src/utils/exhibits/timeline/timelineEventStepMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { RootState } from '../../../../src/store/types';
 
@@ -35,8 +35,8 @@ const stepsTo = (e: { id: string }) =>
 describe('stepTimelineEvent', () => {
   it('steps to the next and previous event relative to the current sim day', () => {
     const state = stateAt('1980-01-01');
-    const before = V1.filter((e) => missionEventMs(e) < Date.parse('1980-01-01')).at(-1)!;
-    const after = V1.find((e) => missionEventMs(e) > Date.parse('1980-01-01'))!;
+    const before = V1.filter((e) => timelineEventMs(e) < Date.parse('1980-01-01')).at(-1)!;
+    const after = V1.find((e) => timelineEventMs(e) > Date.parse('1980-01-01'))!;
     expect(stepTimelineEvent(state, TIMELINE, 1)).toEqual(stepsTo(after));
     expect(stepTimelineEvent(state, TIMELINE, -1)).toEqual(stepsTo(before));
   });
@@ -61,11 +61,11 @@ describe('stepTimelineEvent lands the clock', () => {
   ])('%s: on %s, %i d early', (craft, id, leadDays) => {
     const events = SAVED.filter((e) => e.bodyId === craft);
     const i = events.findIndex((e) => e.id === id);
-    const from = new Date(missionEventStepMs(events[i - 1]!)).toISOString();
+    const from = new Date(timelineEventStepMs(events[i - 1]!)).toISOString();
     const action = stepTimelineEvent(stateAt(from, craft), TIMELINE, 1)!;
     expect(action.payload.eventId).toBe(id);
     expect(action.payload.simDays).toBeCloseTo(
-      unixMsToJulianDays(missionEventMs(events[i]!)) - leadDays,
+      unixMsToJulianDays(timelineEventMs(events[i]!)) - leadDays,
       9,
     );
   });
@@ -75,7 +75,7 @@ describe('stepTimelineEvent with a craft selected', () => {
   it("steps only through that craft's events", () => {
     const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
     // Where a step to Jupiter lands: two days before closest approach.
-    const state = stateAt(new Date(missionEventStepMs(v2[1]!)).toISOString(), 'voyager2');
+    const state = stateAt(new Date(timelineEventStepMs(v2[1]!)).toISOString(), 'voyager2');
     expect(stepTimelineEvent(state, TIMELINE, 1)).toEqual(stepsTo(v2[2]!));
     expect(stepTimelineEvent(state, TIMELINE, -1)).toEqual(stepsTo(v2[0]!));
     expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager2'), TIMELINE, 1)).toBeNull();
@@ -112,8 +112,8 @@ describe('stepTimelineEvent from a flyby step', () => {
 describe('the , and . shortcuts', () => {
   it('ride the timeline kind and step with its data', () => {
     const state = stateAt('1980-01-01');
-    const after = V1.find((e) => missionEventMs(e) > Date.parse('1980-01-01'))!;
-    const dot = missionTimelineKind.shortcuts!.find((s) => s.keys === '.')!;
+    const after = V1.find((e) => timelineEventMs(e) > Date.parse('1980-01-01'))!;
+    const dot = timelineKind.shortcuts!.find((s) => s.keys === '.')!;
     expect(dot.run(state, TIMELINE)).toEqual(stepsTo(after));
   });
 });

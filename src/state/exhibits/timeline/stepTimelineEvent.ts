@@ -4,9 +4,9 @@ import { stepToEvent } from '../../time/timeSlice';
 import { adjacentEventId } from '../../../utils/exhibits/timeline/adjacentEventId';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
-import { missionEventStepMs } from '../../../utils/exhibits/timeline/missionEventStepMs';
+import { timelineEventStepMs } from '../../../utils/exhibits/timeline/timelineEventStepMs';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import type { MissionTimeline } from '../../../@types/exhibits/timeline/MissionTimeline';
+import type { ExhibitTimelineData } from '../../../@types/exhibits/timeline/ExhibitTimelineData';
 import type { RootState } from '../../../store/types';
 
 /**
@@ -15,7 +15,7 @@ import type { RootState } from '../../../store/types';
  */
 export const stepTimelineEvent = (
   state: RootState,
-  timeline: MissionTimeline,
+  timeline: ExhibitTimelineData,
   direction: -1 | 1,
 ) => {
   const craft = selectTimelineLane(state);
@@ -24,6 +24,6 @@ export const stepTimelineEvent = (
   const simMs = julianDaysToUnixMs(deriveSimDays(selectTimeState(state), nowMs));
   const event = events.find((e) => e.id === adjacentEventId(events, simMs, direction));
   if (!event) return null;
-  const simDays = unixMsToJulianDays(missionEventStepMs(event));
+  const simDays = unixMsToJulianDays(timelineEventStepMs(event));
   return stepToEvent({ eventId: event.id, simDays, nowMs });
 };

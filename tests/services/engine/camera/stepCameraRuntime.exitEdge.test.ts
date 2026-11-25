@@ -39,7 +39,7 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   h.store.dispatch(setTimelineLane('voyager1'));
   h.store.dispatch(aimCamera({ ease: false }));
   h.frame(30);
-  expect(h.state.cameraRuntime.register.winner).toBe('mission');
+  expect(h.state.cameraRuntime.register.winner).toBe('timeline');
   const lastEye = displayedEye(h.state);
   const shown = h.state.cameraRuntime.outputs.displayed;
   if (!isWorldArm(shown)) throw new Error('the mission flies the world arm');

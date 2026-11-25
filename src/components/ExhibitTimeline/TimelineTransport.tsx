@@ -1,6 +1,6 @@
 /**
  * TimelineTransport — the exhibit clock as one pill: previous event, run/pause, the sim date,
- * a slower/faster speed pair and next event. While a mission profile drives the clock the rate
+ * a slower/faster speed pair and next event. While a timeline profile drives the clock the rate
  * slot reads its live speed, and the time of day shows once that is under a day per second.
  */
 

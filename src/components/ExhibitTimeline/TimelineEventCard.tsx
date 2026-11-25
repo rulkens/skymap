@@ -3,12 +3,12 @@
 import type { ReactNode } from 'react';
 
 import { formatClockDate } from '../../utils/exhibits/timeline/formatClockDate';
-import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
-import type { MissionEvent } from '../../@types/exhibits/timeline/MissionEvent';
+import { timelineEventMs } from '../../utils/exhibits/timeline/timelineEventMs';
+import type { TimelineEvent } from '../../@types/exhibits/timeline/TimelineEvent';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineEventCardProps = {
-  readonly event: MissionEvent;
+  readonly event: TimelineEvent;
 };
 
 function TimelineEventCard({ event }: TimelineEventCardProps): ReactNode {
@@ -16,7 +16,7 @@ function TimelineEventCard({ event }: TimelineEventCardProps): ReactNode {
     // Keyed on the event so the entrance animation replays on each step.
     <div key={event.id} className={styles.card}>
       <div className={styles.cardHead}>
-        <span className={styles.date}>{formatClockDate(missionEventMs(event))}</span>
+        <span className={styles.date}>{formatClockDate(timelineEventMs(event))}</span>
         <span className={styles.cardLabel}>{event.label}</span>
       </div>
     </div>

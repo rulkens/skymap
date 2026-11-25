@@ -1,6 +1,6 @@
 /**
  * voyagerMissions — both Voyagers from launch to today: their full trails and a mission timeline whose
- * camera follows the selected craft (`missionHoldSaga`). The event times and flyby distances
+ * camera follows the selected craft (`timelineHoldSaga`). The event times and flyby distances
  * are measured, in `MISSION_EVENTS`. Words live in `voyagerMissions.copy.ts`, tuned values in
  * `voyagerMissions.constants.ts`.
  */
@@ -12,7 +12,7 @@ import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { section } from '../../../../utils/exhibits/section';
 import { proseKind } from '../../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../../components/ExhibitOverlay/kinds/sourcesKind';
-import { missionTimelineKind } from '../../../../components/ExhibitOverlay/kinds/missionTimelineKind';
+import { timelineKind } from '../../../../components/ExhibitOverlay/kinds/timelineKind';
 import type { Exhibit } from '../../../../@types/exhibits/Exhibit';
 import {
   CRUISE,
@@ -56,7 +56,7 @@ export const voyagerMissions: Exhibit<'voyager-missions'> = {
   lede: LEDE,
   body: [
     section(proseKind, THE_VOYAGER_MISSIONS),
-    section(missionTimelineKind, {
+    section(timelineKind, {
       heading: TIMELINE_HEADING,
       lanes: LANES,
       events: MISSION_EVENTS.filter((e) => CRAFTS.some((c) => c.bodyId === e.bodyId)),

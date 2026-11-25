@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
-import { missionStops } from '../../../../src/utils/camera/timeline/missionStops';
+import { timelineStops } from '../../../../src/utils/camera/timeline/timelineStops';
 import { timelineAxis } from '../../../../src/utils/exhibits/timeline/timelineAxis';
 import { timelineFraction } from '../../../../src/utils/exhibits/timeline/timelineFraction';
 import { timelineInstant } from '../../../../src/utils/exhibits/timeline/timelineInstant';
 
 const END = Date.parse('2026-10-06');
 const v1 = MISSION_EVENTS.filter((e) => e.bodyId === 'voyager1');
-const stops = missionStops(v1);
+const stops = timelineStops(v1);
 const axis = timelineAxis(stops, END);
 const at = (id: string) => Date.parse(v1.find((e) => e.id === id)!.iso);
 

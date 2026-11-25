@@ -1,7 +1,7 @@
 /**
  * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, paused
- * flag, mission profile and selected craft in; `setSimDays` (scrub), `stepToEvent`,
- * `setTimelineLane`, `playMission`, `stepTimelineSpeed` and `pause` out (the craft tabs ARE the
+ * flag, timeline profile and selected craft in; `setSimDays` (scrub), `stepToEvent`,
+ * `setTimelineLane`, `playTimeline`, `stepTimelineSpeed` and `pause` out (the craft tabs ARE the
  * store's craft, so the 3D view dims the other craft). The instant and the profile's live
  * speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running clock
  * re-renders this leaf and not the whole exhibit overlay.
@@ -12,27 +12,27 @@ import type { ReactNode } from 'react';
 
 import ExhibitTimeline from '../ExhibitTimeline/ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { playMission } from '../../state/exhibits/timeline/playMission';
+import { playTimeline } from '../../state/exhibits/timeline/playTimeline';
 import { selectTimeState } from '../../state/time/selectors';
 import { selectTimelineLane, selectTimelineSpeed } from '../../state/settings/selectors';
 import { setTimelineLane, stepTimelineSpeed } from '../../state/settings/core/timelineSlice';
 import { pause, setSimDays, stepToEvent } from '../../state/time/timeSlice';
-import { MISSION_SPEEDS } from '../../data/exhibits/timeline/missionSpeeds';
+import { TIMELINE_SPEEDS } from '../../data/exhibits/timeline/timelineSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { formatMissionSpeed } from '../../utils/exhibits/timeline/formatMissionSpeed';
+import { formatTimelineSpeed } from '../../utils/exhibits/timeline/formatTimelineSpeed';
 import { formatSimRate } from '../../utils/time/formatSimRate';
 import { clockProfileRate } from '../../utils/time/clockProfileRate';
-import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
+import { timelineEventStepMs } from '../../utils/exhibits/timeline/timelineEventStepMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
 import { timelineEndMs } from '../../utils/exhibits/timeline/timelineEndMs';
-import type { MissionTimeline } from '../../@types/exhibits/timeline/MissionTimeline';
+import type { ExhibitTimelineData } from '../../@types/exhibits/timeline/ExhibitTimelineData';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 const REFRESH_MS = 250;
 
 export type ExhibitTimelineContainerProps = {
-  readonly data: MissionTimeline;
+  readonly data: ExhibitTimelineData;
 };
 
 function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): ReactNode {
@@ -69,14 +69,14 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
   const onStep = useCallback(
     (eventId: string) => {
       const event = data.events.find((e) => e.id === eventId)!;
-      const simDays = unixMsToJulianDays(missionEventStepMs(event));
+      const simDays = unixMsToJulianDays(timelineEventStepMs(event));
       dispatch(stepToEvent({ eventId, simDays, nowMs: performance.now() }));
     },
     [dispatch, data.events],
   );
 
   const onPlayPause = useCallback(
-    () => dispatch(paused ? playMission() : pause({ nowMs: performance.now() })),
+    () => dispatch(paused ? playTimeline() : pause({ nowMs: performance.now() })),
     [dispatch, paused],
   );
   const onSlower = useCallback(() => dispatch(stepTimelineSpeed({ step: -1 })), [dispatch]);
@@ -85,11 +85,11 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
   // Playing, the label is the profile's live speed; otherwise the factor the next run plays at.
   const clock = {
     paused,
-    rateLabel: speed > 0 ? formatSimRate(speed) : formatMissionSpeed(factor),
+    rateLabel: speed > 0 ? formatSimRate(speed) : formatTimelineSpeed(factor),
     profiled: speed > 0,
     showTime: speed > 0 && speed < SECONDS_PER_DAY,
-    atSlowest: factor <= MISSION_SPEEDS[0]!,
-    atFastest: factor >= MISSION_SPEEDS.at(-1)!,
+    atSlowest: factor <= TIMELINE_SPEEDS[0]!,
+    atFastest: factor >= TIMELINE_SPEEDS.at(-1)!,
   };
 
   const onSelect = useCallback((id: string) => dispatch(setTimelineLane(id)), [dispatch]);

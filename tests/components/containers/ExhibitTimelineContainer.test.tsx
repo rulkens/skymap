@@ -12,12 +12,9 @@ import ExhibitTimelineContainer from '../../../src/components/containers/Exhibit
 import { createTestStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectTimelineLane } from '../../../src/state/settings/selectors';
-import {
-  setTimelineLane,
-  stepTimelineSpeed,
-} from '../../../src/state/settings/core/timelineSlice';
-import { MISSION_SPEEDS } from '../../../src/data/exhibits/timeline/missionSpeeds';
-import { playMission } from '../../../src/state/exhibits/timeline/playMission';
+import { setTimelineLane, stepTimelineSpeed } from '../../../src/state/settings/core/timelineSlice';
+import { TIMELINE_SPEEDS } from '../../../src/data/exhibits/timeline/timelineSpeeds';
+import { playTimeline } from '../../../src/state/exhibits/timeline/playTimeline';
 import {
   pause,
   resume,
@@ -31,7 +28,7 @@ import { voyagerTimeline } from '../../helpers/missions/voyagerTimeline';
 
 /** Steps the speed factor to one end of the ladder; the reducer clamps there. */
 const speedToEnd = (store: ReturnType<typeof mount>, step: -1 | 1) => {
-  for (let i = 0; i < MISSION_SPEEDS.length; i++) store.dispatch(stepTimelineSpeed({ step }));
+  for (let i = 0; i < TIMELINE_SPEEDS.length; i++) store.dispatch(stepTimelineSpeed({ step }));
 };
 
 const section = voyagerTimeline();
@@ -78,7 +75,7 @@ describe('ExhibitTimelineContainer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Slower' }));
     expect(types()).toEqual([
       pause.type,
-      playMission.type,
+      playTimeline.type,
       stepTimelineSpeed.type,
       stepTimelineSpeed.type,
     ]);

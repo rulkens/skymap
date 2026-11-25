@@ -1,4 +1,4 @@
-/* src/layers/missions/timeline/ui/ExhibitTimeline.module.css */
+/* src/components/ExhibitTimeline/ExhibitTimeline.module.css */
 /*
  * The timeline's vocabulary is the tour rail's dots (upcoming / passed / current) on lanes
  * tinted by `--lane`, the craft's own trail colour. The overlay root is click-through, so

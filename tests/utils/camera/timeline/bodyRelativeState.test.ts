@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import type { MissionEvent } from '../../../../src/@types/exhibits/timeline/MissionEvent';
+import type { TimelineEvent } from '../../../../src/@types/exhibits/timeline/TimelineEvent';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { bodyRelativeState } from '../../../../src/utils/camera/timeline/bodyRelativeState';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import FLYBY from '../../../fixtures/voyager2NeptuneFlyby.json';
 
-const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as MissionEvent;
+const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune') as TimelineEvent;
 const tc = unixMsToJulianDays(Date.parse(neptune.iso));
 
 beforeAll(() => {
