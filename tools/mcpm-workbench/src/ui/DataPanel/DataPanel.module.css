@@ -36,12 +36,7 @@
 
 .pinned {
   composes: pinned from '../sidebar.module.css';
-  row-gap: var(--space-4);
   padding-block-end: var(--space-8);
-}
-
-.heading {
-  composes: heading from '../sidebar.module.css';
 }
 
 /* Closes the catalog list as one more row: the plus where a row's label starts. */

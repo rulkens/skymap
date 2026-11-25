@@ -122,16 +122,6 @@
   composes: pinned;
 }
 
-/* A section header that does not fold: PanelSection's divider and header look. */
-.heading {
-  composes: sectionHeader from '../../../../src/components/common/shared.module.css';
-  grid-column: full;
-  margin: 0;
-  padding-block: var(--space-8) var(--space-3);
-  padding-inline: var(--panel-inset);
-  border-block-start: 1px solid var(--border-divider);
-}
-
 @container workbench (width < 900px) {
   .pair {
     inset-inline-start: auto;

@@ -2,9 +2,10 @@
  * DataPanel — the left sidebar, what goes into the simulation: the tool's
  * title, the catalogs (a loaded file, then the tier over the built-ins it
  * applies to), the Selection box that cuts the simulated part out of them,
- * and pinned below them the stats and histogram. The import dialog is mounted here,
- * so its window drop listener lives while Data is folded or the sidebar collapsed, and beside the
- * aside, so it never sits in the collapsed sidebar's `inert` subtree.
+ * and pinned below them Stats and Histogram, which fold like the rest and give
+ * their height back to the scrolling sections. The import dialog is mounted
+ * here, so its drop listener lives while Data is folded or the sidebar
+ * collapsed, and beside the aside, outside the collapsed sidebar's `inert`.
  */
 import { useState, type ReactNode } from 'react';
 import skymapIconUrl from '../../../../../public/favicon.svg';
@@ -40,6 +41,8 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const catalog = useAppSelector((s) => s.catalog);
   const [dataOpen, setDataOpen] = useState(true);
   const [selectionOpen, setSelectionOpen] = useState(true);
+  const [statsOpen, setStatsOpen] = useState(true);
+  const [histogramOpen, setHistogramOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -86,10 +89,16 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
         </div>
         <div className={styles.pinned}>
           <CatalogStatus />
-          <h2 className={styles.heading}>Stats</h2>
-          <StatsReadout />
-          <h2 className={styles.heading}>Histogram</h2>
-          <HistogramDock />
+          <PanelSection title="Stats" open={statsOpen} onToggle={() => setStatsOpen((v) => !v)}>
+            <StatsReadout />
+          </PanelSection>
+          <PanelSection
+            title="Histogram"
+            open={histogramOpen}
+            onToggle={() => setHistogramOpen((v) => !v)}
+          >
+            <HistogramDock />
+          </PanelSection>
         </div>
       </aside>
       <LoadCatalogDialog open={dialogOpen} onOpenChange={setDialogOpen} />
