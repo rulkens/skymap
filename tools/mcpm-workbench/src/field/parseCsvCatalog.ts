@@ -1,0 +1,107 @@
+/**
+ * parseCsvCatalog — a visitor's CSV into catalog points, in the page.
+ *
+ * Line rules follow the native build (Polyphorm/cpplib/dataset.cpp:36-72): a
+ * line is data when it starts with a digit, sign or dot, anything else is
+ * skipped; fields split on comma, semicolon, tab or spaces; columns past the
+ * fourth are ignored. The first problem refuses the whole file. The RA/Dec
+ * range test is ours: it catches x, y, z read in the wrong format.
+ */
+import { median } from '../../../utils/perf/median';
+import type { CatalogFileProblem } from '../../@types/CatalogFileProblem';
+import type { CatalogImportSettings } from '../../@types/CatalogImportSettings';
+import type { CatalogPoints } from '../../@types/CatalogPoints';
+import type { WeightStats } from '../../@types/WeightStats';
+import { raDecDistToEqCart } from '../../../../src/utils/math/raDecDistToEqCart';
+import { redshiftToDistanceMpc } from '../../../../src/utils/math/redshiftToDistanceMpc';
+import { massWeightFromLog10 } from './massWeightFromLog10';
+
+const DATA_LINE = /^\s*[0-9+\-.]/;
+const FIELD_SEPARATOR = /[,;\t ]+/;
+const COLUMNS = 4;
+const WRONG_FORMAT_HINT = 'If the columns are x, y, z, choose that format';
+
+export function parseCsvCatalog(
+  text: string,
+  settings: CatalogImportSettings,
+):
+  | {
+      readonly ok: true;
+      readonly points: CatalogPoints;
+      readonly skippedLines: number;
+      readonly weightStats: WeightStats;
+    }
+  | { readonly ok: false; readonly problem: CatalogFileProblem } {
+  const lines = text.split(/\r?\n/);
+  if (lines.at(-1) === '') lines.pop(); // a final newline is not a blank line
+
+  const { format, weight: weightSetting } = settings;
+  const cosmology =
+    format.kind === 'raDecRedshift' ? { h0KmSMpc: format.h0KmSMpc, omegaM: format.omegaM } : null;
+  // Sized for every line being data; trimmed to `count` at the end.
+  const positions = new Float32Array(lines.length * 3);
+  const weight = new Float32Array(lines.length);
+  let count = 0;
+  let skippedLines = 0;
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (!DATA_LINE.test(line)) {
+      skippedLines++;
+      continue;
+    }
+    const refuse = (message: string) =>
+      ({ ok: false, problem: { line: i + 1, message: `Line ${i + 1}: ${message}` } }) as const;
+
+    const fields = line
+      .trim()
+      .split(FIELD_SEPARATOR)
+      .filter((f) => f !== '');
+    if (fields.length < COLUMNS) return refuse(`expected 4 numbers, found ${fields.length}`);
+    const a = Number(fields[0]);
+    const b = Number(fields[1]);
+    const c = Number(fields[2]);
+    const w = Number(fields[3]);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(c)) {
+      return refuse('every value must be a finite number');
+    }
+
+    let stored: number;
+    if (weightSetting.kind === 'linear') {
+      stored = w * weightSetting.scale;
+      if (!(stored > 0 && Number.isFinite(stored))) return refuse('weight must be greater than 0');
+    } else {
+      if (!Number.isFinite(w)) return refuse('every value must be a finite number');
+      stored = massWeightFromLog10(w);
+    }
+
+    if (cosmology) {
+      if (b < -90 || b > 90) return refuse(`Dec ${b} is outside −90 to 90. ${WRONG_FORMAT_HINT}`);
+      if (a < 0 || a > 360) return refuse(`RA ${a} is outside 0 to 360. ${WRONG_FORMAT_HINT}`);
+      if (c < 0) return refuse('redshift must be 0 or more');
+      const distMpc = redshiftToDistanceMpc(c, cosmology);
+      positions.set(raDecDistToEqCart({ raHours: a / 15, decDeg: b, distMpc }), count * 3);
+    } else {
+      positions[count * 3] = a;
+      positions[count * 3 + 1] = b;
+      positions[count * 3 + 2] = c;
+    }
+
+    weight[count] = stored;
+    min = Math.min(min, weight[count]!);
+    max = Math.max(max, weight[count]!);
+    count++;
+  }
+
+  if (count === 0) return { ok: false, problem: { line: null, message: 'No data rows found' } };
+
+  const keptWeight = weight.slice(0, count);
+  return {
+    ok: true,
+    points: { positions: positions.slice(0, count * 3), weight: keptWeight, count, sources: [] },
+    skippedLines,
+    weightStats: { min, median: median(Array.from(keptWeight)), max },
+  };
+}

@@ -290,19 +290,19 @@ No scale is computed or applied for the user: the file may hold something other 
 | RA/Dec format, z < 0 | `Line N: redshift must be 0 or more` |
 | No data lines | `No data rows found` |
 
-- [ ] One test per row of the table, named after its condition, asserting `line` and `message`.
-- [ ] `loads comma, semicolon, tab and space separated rows alike`.
-- [ ] `skips a header row, # comments and blank lines and counts them`; `reads CRLF line endings`.
-- [ ] `ignores columns after the fourth`.
-- [ ] `applies the weight scale` (weight 42, scale 0.001 → 0.042).
-- [ ] `converts a log10 mass column to linear 1e12 Msun` (12 → 1, 9 → 0.001; a 0 or negative log is accepted).
-- [ ] `reports min, median and max of the stored weights`.
-- [ ] `weightUnitWarning`: `flags weights that look like logarithms` (8.1…12.3, linear);
+- [x] One test per row of the table, named after its condition, asserting `line` and `message`.
+- [x] `loads comma, semicolon, tab and space separated rows alike`.
+- [x] `skips a header row, # comments and blank lines and counts them`; `reads CRLF line endings`.
+- [x] `ignores columns after the fourth`.
+- [x] `applies the weight scale` (weight 42, scale 0.001 → 0.042).
+- [x] `converts a log10 mass column to linear 1e12 Msun` (12 → 1, 9 → 0.001; a 0 or negative log is accepted).
+- [x] `reports min, median and max of the stored weights`.
+- [x] `weightUnitWarning`: `flags weights that look like logarithms` (8.1…12.3, linear);
       `flags a median far above the published run's` (median 20); `is silent for the published run's
       range` (median 0.02); `is silent for a declared log column`.
-- [ ] `places RA 0, Dec 0 on +x and Dec 90 on +z at the redshift's distance`.
-- [ ] `uses the given H0` (same row, H0 70 vs 140 → half the radius).
-- [ ] Implement; commit.
+- [x] `places RA 0, Dec 0 on +x and Dec 90 on +z at the redshift's distance`.
+- [x] `uses the given H0` (same row, H0 70 vs 140 → half the radius).
+- [x] Implement; commit.
 
 ### Task 6: Import dialog, Data row, drop
 
