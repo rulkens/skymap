@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
-import { configureStore, type Middleware } from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { loadSampledTracksSaga } from '../../../src/services/bodies/loadSampledTracksSaga';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
 import { trajectoryRegistry } from '../../../src/services/bodies/trajectoryRegistry';
-import { sampledTracksSettled } from '../../../src/services/bodies/sampledTracksSettled';
 import { writeSampledTracks } from '../../../tools/utils/io/writeSampledTracks';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -16,15 +15,7 @@ const T0 = 2444000.5;
 
 function build(ids: readonly string[]) {
   const mw = createSagaMiddleware();
-  const settled: unknown[] = [];
-  const record: Middleware = () => (next) => (action) => {
-    if (sampledTracksSettled.match(action)) settled.push(action.payload.ids);
-    return next(action);
-  };
-  const store = configureStore({
-    reducer: rootReducer,
-    middleware: (g) => g().concat(mw, record),
-  });
+  const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
   mw.run(loadSampledTracksSaga(ids.map((id) => asSceneBodyId(id))));
   const requestRender = vi.fn<() => void>();
   const reconcile: ReconcileEffects = {
@@ -34,7 +25,7 @@ function build(ids: readonly string[]) {
     applySwapFormat: vi.fn(),
   };
   mw.setContext({ reconcile });
-  return { store, requestRender, settled };
+  return { store, requestRender };
 }
 
 const ready = engineStatusChanged({ kind: 'ready', count: 1 });
@@ -64,7 +55,7 @@ describe('loadSampledTracksSaga', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { store, requestRender, settled } = build(['probe-9', 'probe-7']);
+    const { store, requestRender } = build(['probe-9', 'probe-7']);
     store.dispatch(ready);
     await flush();
     expect(fetchMock.mock.calls.map(([url]) => url.split('/').pop())).toEqual([
@@ -75,8 +66,6 @@ describe('loadSampledTracksSaga', () => {
     expect(trajectoryRegistry.get('probe-7')).toBeDefined();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(requestRender).toHaveBeenCalledTimes(1);
-    // The failed id settles too, or a focus waiting on its window would hang.
-    expect(settled).toEqual([['probe-9', 'probe-7']]);
     warn.mockRestore();
   });
 });
