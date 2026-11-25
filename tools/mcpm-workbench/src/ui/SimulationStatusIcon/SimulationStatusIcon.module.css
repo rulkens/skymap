@@ -1,0 +1,44 @@
+/* No box of its own: the header's grid places the svg exactly as before. Only a
+   warning zone sets a colour; otherwise the section label's colour (and its
+   off-section dim) comes through by inheritance, whatever the stylesheet order. */
+.root {
+  --turn-duration: 4s;
+  display: contents;
+}
+
+.root[data-zone='warn'] {
+  color: var(--tool-status-warn);
+}
+
+.root[data-zone='bad'] {
+  color: var(--tool-status-bad);
+}
+
+/* Mid-turn the arrowhead's round cap reaches past the 24-unit frame. */
+.root svg {
+  overflow: visible;
+}
+
+/* Paused keeps the angle it reached instead of snapping back upright. */
+.loop {
+  transform-box: view-box;
+  transform-origin: center;
+  animation: turn var(--turn-duration) linear infinite;
+  animation-play-state: paused;
+}
+
+.root[data-running] .loop {
+  animation-play-state: running;
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loop {
+    animation: none;
+  }
+}
