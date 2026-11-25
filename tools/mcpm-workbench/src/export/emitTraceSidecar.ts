@@ -61,6 +61,8 @@ export function emitTraceSidecar(input: {
     ...(userCatalog.settings.format.kind === 'raDecRedshift' && {
       h0_km_s_mpc: userCatalog.settings.format.h0KmSMpc,
       omega_m: userCatalog.settings.format.omegaM,
+      // redshiftToDistanceMpc's kind: line-of-sight comoving, not luminosity or angular-diameter.
+      distance_kind: 'comoving',
     }),
   };
   const half = boxHalfExtentMpc(box.sizeMpc);

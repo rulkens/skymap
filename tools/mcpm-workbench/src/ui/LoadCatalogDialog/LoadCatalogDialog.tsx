@@ -288,7 +288,8 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
             </FormField>
 
             <FormField
-              label="Flat ΛCDM"
+              label="Comoving distance"
+              hint="From redshift, flat ΛCDM."
               error={shown('h0') ?? shown('omegaM')}
               validated
               inactive={packed || fields.formatKind !== 'raDecRedshift'}

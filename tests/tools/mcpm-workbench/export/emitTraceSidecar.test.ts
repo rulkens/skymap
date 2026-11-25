@@ -198,6 +198,7 @@ describe('emitTraceSidecar', () => {
       weight_scale: 0.001,
       h0_km_s_mpc: 67.4,
       omega_m: 0.31,
+      distance_kind: 'comoving',
     });
     expect(sidecar.frame).toBe('equatorial-cartesian');
   });

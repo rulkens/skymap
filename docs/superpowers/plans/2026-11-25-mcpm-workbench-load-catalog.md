@@ -395,7 +395,7 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Weight help, log | `Converted to stellar mass in 10¹² M☉. Does not open in the native Polyphorm build.` |
 | Confirm after a warning | `Load anyway` |
 | Scale label, hint | `Weight scale` · `0.001 turns 10⁹ M☉ into 10¹² M☉.` |
-| Cosmology row label, field labels | `Flat ΛCDM` · `H0 (km/s/Mpc)` · `Ωm` |
+| Cosmology row label, hint, field labels | `Comoving distance` · `From redshift, flat ΛCDM.` · `H0 (km/s/Mpc)` · `Ωm` |
 | Field errors | `Use an H0 greater than 0.` · `Use an Ωm from 0 to 1.` · `Use a scale greater than 0.` |
 | Reading | `Reading <name>…` |
 | Too large | `File is larger than 400 MB. Use a smaller sample, or the native build.` |
@@ -416,7 +416,8 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 `docs/BACKLOG.md`
 
 - [x] `emitTraceSidecar` takes `userCatalog: Pick<UserCatalog, 'fileName' | 'settings'> & { nPoints: number } | null`
-      and, when present, writes `provenance.catalog.user_file = { name, n_points, format, weight_kind, weight_scale?, h0_km_s_mpc?, omega_m? }`.
+      and, when present, writes `provenance.catalog.user_file = { name, n_points, format, weight_kind, weight_scale?, h0_km_s_mpc?, omega_m?, distance_kind? }`
+      (`distance_kind: 'comoving'` beside the cosmology: redshifts become line-of-sight comoving distances).
       `frame` stays `equatorial-cartesian`: the importer validates it against a closed list
       (`tools/parsers/polyphyTraceSidecar.ts:96`), and for an x,y,z file the frame is the user's claim.
 - [x] Test `records the loaded file and its import settings`; test `omits user_file when no catalog is on`.

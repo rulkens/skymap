@@ -31,9 +31,10 @@ after that they toggle freely and can run together.
 
 - **CSV, `x, y, z, weight`**: positions in Mpc, equatorial cartesian, observer
   at the origin. The native Polyphorm build reads the same file.
-- **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshift becomes
-  comoving distance in flat ΛCDM, with H0 and Ωm from the dialog (defaults 70
-  and 0.315). Workbench only: the native build does not read it.
+- **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshifts become
+  line-of-sight comoving distances under flat ΛCDM with your H0 and Ωm, the same
+  conversion Skymap's catalogs use; the dialog starts at the app's values, H0 =
+  70 km/s/Mpc and Ωm = 0.315. Workbench only: the native build does not read it.
 - **Packed `.bin` + `_metadata.txt`**: the Polyphorm fork's own catalog pair,
   loaded as is.
 
