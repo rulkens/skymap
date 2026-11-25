@@ -15,7 +15,7 @@
 // ## Why this returns a FACTOR, not the whole shade term
 //
 // The textured-body fragment already multiplies by the Lambert term 'mu0'
-// (via 'litShade' in 'lib/bodyLighting.wesl'). Minnaert factors cleanly over
+// (via 'bodyDirectShade' in 'lib/bodyLighting.wesl'). Minnaert factors cleanly over
 // that existing cosine:
 //
 //   mu0^k * mu^(k-1) = mu0 * (mu0 * mu)^(k-1)

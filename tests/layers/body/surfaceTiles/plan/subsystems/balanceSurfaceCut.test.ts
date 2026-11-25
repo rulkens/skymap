@@ -32,7 +32,7 @@ function leafAt(z: number, x: number, y: number, heightLevel = z): SurfaceCutTil
       fallback: null,
     },
     height: { slot: heightLevel, levelDelta: z - heightLevel, originPosts: [0, 0] },
-    night: null,
+    standalone: { night: null },
     edgeCoarser: [0, 0, 0, 0],
   };
 }

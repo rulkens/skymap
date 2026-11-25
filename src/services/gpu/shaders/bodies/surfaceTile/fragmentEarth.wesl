@@ -11,6 +11,7 @@ import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::bodies::surfaceTile::surfaceLighting::tileNight;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
+import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
@@ -68,7 +69,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowCoverage = textureSample(cloudTexture, baseSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  let colour = direct * uniforms.sunIrradiance + uniforms.ambientLight * baseAlbedo;
+  let colour = composeSurfaceLight(direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, 1.0, 1.0);
 
   // Both samples are unconditional: 'textureSample' needs uniform control
   // flow, and a zero-scale rect (no night tile resident) picks the global one.

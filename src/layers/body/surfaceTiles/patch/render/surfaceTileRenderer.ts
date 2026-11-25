@@ -32,6 +32,8 @@ import {
 import { HEIGHT_ATLAS_SLOTS_PER_ROW } from '../../format/data/surfaceTileParams';
 import { surfaceTileFadeWeight } from '../subsystems/surfaceTileFadeWeight';
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
+import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
+import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
@@ -100,6 +102,10 @@ export function createSurfaceTileRenderer(
     },
     { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
   ];
+  const atlasBindings = new Set(
+    SURFACE_TILE_PRODUCTS.map((p) => SURFACE_TILE_LANE_SPECS[p].binding),
+  );
+  const sharedBindings = new Set(sharedLayoutEntries.map((entry) => entry.binding));
   // No binding 8 (whole-globe normal map): patches take their normal from the
   // height field, and compositing both would shade the same relief twice.
   const fragmentLayoutEntries: Readonly<Record<number, GPUBindGroupLayoutEntry>> = {
@@ -209,8 +215,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
-      surfaceAtlasView,
-      heightAtlasView,
+      atlasViews,
     } = args;
     const tileCount = tiles.length;
     if (tileCount === 0) return;
@@ -245,6 +250,9 @@ export function createSurfaceTileRenderer(
       // No fallback ⇒ fadeWeight 1 with the fallback rect aliased to the primary, so
       // the fragment's mix() needs no branch.
       const fallback = tile.albedo.fallback ?? tile.albedo;
+      // Night never reads 'empty' (no empty night tile is baked): the sentinel maps to
+      // "no tile" like null, so the fragment falls back to the global map.
+      const nightRect = tile.standalone.night === 'empty' ? null : tile.standalone.night;
       const fadeWeight = surfaceTileFadeWeight(tile.albedo, nowMs);
 
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
@@ -267,13 +275,13 @@ export function createSurfaceTileRenderer(
           fallback.atlasUvScale[1],
         ],
         nightRect:
-          tile.night === null
+          nightRect === null
             ? NO_NIGHT_RECT
             : [
-                tile.night.atlasUvOrigin[0],
-                tile.night.atlasUvOrigin[1],
-                tile.night.atlasUvScale[0],
-                tile.night.atlasUvScale[1],
+                nightRect.atlasUvOrigin[0],
+                nightRect.atlasUvOrigin[1],
+                nightRect.atlasUvScale[0],
+                nightRect.atlasUvScale[1],
               ],
         heightSlotOrigin: [
           slotOriginX + tile.height.originPosts[0],
@@ -315,12 +323,16 @@ export function createSurfaceTileRenderer(
     // Rebuilt every draw: the storage buffer may have grown and views arrive per call.
     const fragmentResources: Readonly<Record<number, GPUBindingResource | undefined>> = {
       3: baseSampler,
-      5: surfaceAtlasView,
       6: materialMap?.view,
       7: nightLights?.view,
       9: cloudShadows?.view,
-      10: nightLights?.atlasView,
     };
+    // Each product's atlas goes to its lane row's binding, where the pipeline declares one
+    // (an extra entry is a WebGPU validation error).
+    const atlasEntries = SURFACE_TILE_PRODUCTS.map((product) => ({
+      binding: SURFACE_TILE_LANE_SPECS[product].binding,
+      resource: atlasViews[product],
+    })).filter(({ binding }) => sharedBindings.has(binding) || variant.bindings.includes(binding));
     const bindGroup = device.createBindGroup({
       label: `surface-tile-bg[${key}]`,
       layout: variant.bindGroupLayout,
@@ -330,12 +342,11 @@ export function createSurfaceTileRenderer(
           binding: 1,
           resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
-        { binding: 2, resource: heightAtlasView },
         { binding: 4, resource: atlasSampler },
-        ...variant.bindings.map((binding) => ({
-          binding,
-          resource: fragmentResources[binding]!,
-        })),
+        ...atlasEntries,
+        ...variant.bindings
+          .filter((binding) => !atlasBindings.has(binding))
+          .map((binding) => ({ binding, resource: fragmentResources[binding]! })),
       ],
     });
 

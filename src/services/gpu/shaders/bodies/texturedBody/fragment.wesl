@@ -47,7 +47,9 @@ import package::lib::analyticSphere::equirectUvGradients;
 import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::TexturedBodyUniforms;
-import package::lib::bodyLighting::litShade;
+import package::lib::bodyLighting::AMBIENT;
+import package::lib::bodyLighting::bodyDirectShade;
+import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
 
@@ -119,13 +121,17 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
   let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
-  let shade = litShade(shadingNormal, uniforms.sunDirLocal * sunVis);
   let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
   // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
   let viewDir = -rayDir;
   let noV = max(dot(shadingNormal, viewDir), 0.0);
   let limb = limbDarkening(noL, noV, uniforms.limbStrength, uniforms.limbExponent);
-  let colour = albedo * shade * limb;
+  let colour = composeSurfaceLight(
+    albedo * bodyDirectShade(shadingNormal, uniforms.sunDirLocal) * limb,
+    albedo * AMBIENT * limb,
+    sunVis,
+    1.0,
+  );
 
   var out: FSOut;
   out.colour = vec4<f32>(colour, 1.0);
