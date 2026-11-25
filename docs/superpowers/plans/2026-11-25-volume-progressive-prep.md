@@ -601,18 +601,18 @@ previousViews: ReadonlyMap<string, FrameView>;
 
 Steps:
 
-- [ ] Type and util, then `deriveView` sets `stillFrames: stillFramesOf(previous, vp, sizePx)` in
+- [x] Type and util, then `deriveView` sets `stillFrames: stillFramesOf(previous, vp, sizePx)` in
       its return (`deriveView.ts:131-147`), then `runFrame`.
-- [ ] `stillFramesOf.test.ts`, with hand values:
+- [x] `stillFramesOf.test.ts`, with hand values:
   - `no previous derivation → 0`;
   - `same vp values (a different Float32Array) and same size → previous.stillFrames + 1`
     (4 → 5);
   - `one vp element differs by one ulp → 0`;
   - `same vp, height differs → 0`.
-- [ ] `runFrame.test.ts`: `a view's stillFrames counts unchanged frames and resets on a resize`.
+- [x] `runFrame.test.ts`: `a view's stillFrames counts unchanged frames and resets on a resize`.
       Run three ready frames at a fixed pose, reading `views[0].stillFrames` off the mocked
       `renderFrame`, then change `deps.canvas.width`. Expect 0, 1, 2, 0.
-- [ ] `npm run typecheck:fast`, `npm test -- stillFramesOf runFrame deriveView`.
+- [x] `npm run typecheck:fast`, `npm test -- stillFramesOf runFrame deriveView`.
 
 **Done when:** every rendered view carries `stillFrames` and nothing reads it yet. The derivation
 stays pure in its inputs plus the previous view.

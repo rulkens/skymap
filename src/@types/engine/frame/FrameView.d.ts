@@ -28,6 +28,9 @@ export type FrameView = {
   cam: OrbitCamera;
   /** Combined view-projection matrix, computed once per view. */
   vp: Mat4;
+  /** Frames since this view id's `vp` or `canvasSize` last changed; 0 on the frame it changed and on
+   *  a view with no previous derivation (capture faces, pick). Compared exactly: rest is exact. */
+  stillFrames: number;
   /** This view's slab table (`deriveSlabs`) — array position === `Slab.index`. */
   slabs: readonly Slab[];
   /** `snapshot.bodyPose` turned and offset by this view's spec

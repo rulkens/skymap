@@ -37,6 +37,7 @@ import type { OrbitTrailGroup } from '../layer/OrbitTrailGroup';
 import type { SampledTrailGroup } from '../layer/SampledTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { PerViewPlanMemory } from '../frame/PerViewPlanMemory';
+import type { FrameView } from '../frame/FrameView';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
@@ -50,6 +51,8 @@ export type EngineState = {
   /** Last rendered frame's per-view planner values. `renderFrame` is its only writer. Empty before
    *  the first frame. Engine-private: `PassState` does not pick it, so no pass or planner reaches it. */
   perViewPlanMemory: PerViewPlanMemory;
+  /** Last frame's derived views by id; `runFrame` is its only reader and writer. */
+  previousViews: ReadonlyMap<string, FrameView>;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
