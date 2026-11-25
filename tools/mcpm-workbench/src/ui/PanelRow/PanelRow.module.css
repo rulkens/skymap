@@ -17,12 +17,10 @@
   justify-self: end;
 }
 
-/* Inset by the slider pill's padding and border, so every label starts where
-   the label inside a slider pill does. */
+/* No inset: a label starts on the content edge, where a slider pill's border does. */
 .labelText {
   composes: label from '../../../../../src/components/common/Slider/Slider.module.css';
   min-width: 0;
-  padding-inline-start: calc(var(--space-5) + 1px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

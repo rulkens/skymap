@@ -1,8 +1,10 @@
+/* The header is a 24px hit target; these spaces keep the title's caps where a
+   bare text line put them, folded or open. */
 .root {
   composes: row from '../panelGrid.module.css';
   align-items: start;
-  row-gap: var(--space-7);
-  padding-block: var(--space-8) var(--space-7);
+  row-gap: var(--space-4);
+  padding-block: var(--space-5) var(--space-4);
   border-block-start: 1px solid var(--border-divider);
 }
 
@@ -13,10 +15,11 @@
 }
 
 .fold {
-  grid-column: content-start / control-end;
-  display: flex;
+  grid-column: full-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--space-3);
+  min-block-size: var(--space-12);
   padding: 0;
   border: none;
   background: transparent;
@@ -29,18 +32,21 @@
 }
 
 .header:has(.toggle) .fold {
-  grid-column: label;
+  grid-column: full-start / label-end;
 }
 
+/* Inset: the button starts at the sidebar's edge, where an outset ring clips. */
 .fold:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Brighter than the shared section header's dim, so an off section's ghost
    title reads as off. */
 .title {
+  grid-column: content-start / -1;
   min-width: 0;
+  text-box: trim-both cap alphabetic;
   color: var(--color-fg-tertiary);
 }
 
@@ -48,8 +54,15 @@
   color: var(--color-fg-ghost);
 }
 
+/* Hung in the gutter so the title keeps the content edge; its box spans the
+   track and the column gap, the whole visible gutter, and centres the glyph
+   there. Trimmed to its cap height, the title centres on it too. */
 .chevron {
+  grid-column: gutter;
+  justify-self: start;
+  inline-size: calc(100% + var(--panel-column-gap));
   display: flex;
+  justify-content: center;
   transition: transform 0.15s ease-out;
 }
 
@@ -73,4 +86,5 @@
 .body {
   composes: row from '../panelGrid.module.css';
   row-gap: var(--space-4);
+  padding-block-end: var(--space-3);
 }

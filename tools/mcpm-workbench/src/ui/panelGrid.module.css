@@ -1,17 +1,20 @@
 /* The one track definition every sidebar row lines up on: label, control and ⓘ
-   columns between two gutters. A gutter track plus the column gap is the
-   sidebar's 20px inset; anything spanning `full` (a divider) reaches the edges.
-   Rows, headers and groups take the tracks through `subgrid`. */
+   columns between two gutters. `content-start` is the sidebar's one left edge:
+   titles, pill and button edges and plain labels all start on it, and only a
+   section's fold chevron hangs in the `gutter` before it. A gutter track plus
+   the column gap is the sidebar's inset; anything spanning `full` (a divider)
+   reaches the edges. Rows, headers and groups take the tracks through `subgrid`. */
 .grid {
+  --panel-column-gap: var(--space-4);
   display: grid;
   grid-template-columns:
-    [full-start] var(--space-6)
-    [content-start label-start] minmax(0, 1fr)
+    [full-start gutter-start] var(--space-6)
+    [gutter-end content-start label-start] minmax(0, 1fr)
     [label-end control-start] auto
     [control-end info-start] var(--space-10)
     [info-end content-end] var(--space-6)
     [full-end];
-  column-gap: var(--space-4);
+  column-gap: var(--panel-column-gap);
   align-content: start;
 }
 
