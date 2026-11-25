@@ -13,8 +13,9 @@ function StatsSummary(): ReactNode {
   const fps = useAppSelector((s) => s.view.fps);
   const grid = useAppSelector((s) => s.grid);
   const agentCount = useAppSelector((s) => s.sim.agentCount);
+  const pointCount = useAppSelector((s) => s.catalog.pointCount);
 
-  return formatStatsSummary(stepCount, fps, estimateBoxGpuBytes(grid, agentCount));
+  return formatStatsSummary(stepCount, fps, estimateBoxGpuBytes(grid, agentCount, pointCount));
 }
 
 export default StatsSummary;

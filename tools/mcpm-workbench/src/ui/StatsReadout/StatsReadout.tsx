@@ -45,7 +45,9 @@ function StatsReadout(): ReactNode {
       </div>
       <div className={styles.cell}>
         <dt className={styles.label}>GPU memory</dt>
-        <dd className={styles.value}>{formatBytes(estimateBoxGpuBytes(grid, agentCount))}</dd>
+        <dd className={styles.value}>
+          {formatBytes(estimateBoxGpuBytes(grid, agentCount, pointCount))}
+        </dd>
       </div>
     </dl>
   );
