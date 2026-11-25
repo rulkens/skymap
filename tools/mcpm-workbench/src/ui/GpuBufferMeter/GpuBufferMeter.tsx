@@ -2,13 +2,12 @@
  * GpuBufferMeter — the largest grid buffer of the box as set, against the largest
  * single buffer the device allows (WebGPU reports no total memory). A read-only
  * gauge with "used / limit" inside at the start, so the text never moves as the
- * fill grows; the zone tints the fill, and the fill's length past the threshold
- * marks and the two numbers say the same without colour. Before the limit is
- * known the gauge is empty and the text a dash.
+ * fill grows; the zone tints the fill, and the fill's length and the two numbers
+ * say the same without colour. Before the limit is known the gauge is empty and
+ * the text a dash.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { formatBytePair } from './utils/formatBytePair';
-import { GPU_BUFFER_ZONE_FROM } from './utils/GPU_BUFFER_ZONE_FROM';
 import { gpuBufferReading } from './utils/gpuBufferReading';
 import styles from './GpuBufferMeter.module.css';
 
@@ -20,17 +19,12 @@ type Props = {
 function GpuBufferMeter({ usedBytes, limitBytes }: Props): ReactNode {
   const reading = gpuBufferReading(usedBytes, limitBytes);
   const pair = reading && limitBytes !== null ? formatBytePair(usedBytes, limitBytes) : null;
-  const geometry = {
-    '--fill': reading?.fill ?? 0,
-    '--warn-from': GPU_BUFFER_ZONE_FROM.warn,
-    '--bad-from': GPU_BUFFER_ZONE_FROM.bad,
-  } as CSSProperties;
 
   return (
     <div
       className={styles.root}
       data-zone={reading?.zone}
-      style={geometry}
+      style={{ '--fill': reading?.fill ?? 0 } as CSSProperties}
       role="meter"
       aria-label="Largest grid buffer"
       aria-valuemin={0}

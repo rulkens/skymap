@@ -1,7 +1,6 @@
 /* A flat gauge, kept apart from the slider pills on purpose: lower, squarer,
-   no control border or surface, marks at the zone thresholds, small readout
-   type at the start (a pill's value sits at its end), and no hover, focus or
-   pointer. The text stays in the body colour: 4.5:1 or more over the tinted
+   no control border or surface, small readout type at the start (a pill's
+   value sits at its end), and no hover, focus or pointer. The text stays in the body colour: 4.5:1 or more over the tinted
    fill and the bare track in every zone. */
 .root {
   --zone-color: var(--color-fg-tertiary);
@@ -33,25 +32,6 @@
   transition:
     transform var(--duration-base) var(--ease-standard),
     background var(--duration-color) var(--ease-standard);
-}
-
-/* The thresholds, each in the colour of the zone it opens. */
-.root::before,
-.root::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  border-inline-start: 1px solid;
-}
-
-.root::before {
-  inset-inline-start: calc(var(--warn-from) * 100%);
-  border-color: var(--tool-status-warn);
-}
-
-.root::after {
-  inset-inline-start: calc(var(--bad-from) * 100%);
-  border-color: var(--tool-status-bad);
 }
 
 .value {
