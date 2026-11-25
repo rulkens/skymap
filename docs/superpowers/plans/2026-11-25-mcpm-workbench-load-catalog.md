@@ -285,8 +285,8 @@ No scale is computed or applied for the user: the file may hold something other 
 | Fewer than 4 numbers | `Line N: expected 4 numbers, found K` |
 | Non-finite coordinate | `Line N: every value must be a finite number` |
 | Weight × scale ≤ 0 or non-finite | `Line N: weight must be greater than 0` |
-| RA/Dec format, Dec outside −90…90 | `Line N: Dec V is outside −90 to 90. If the columns are x, y, z, choose that format` |
-| RA/Dec format, RA outside 0…360 | `Line N: RA V is outside 0 to 360. If the columns are x, y, z, choose that format` |
+| RA/Dec format, Dec outside −90…90 | `Line N: Dec V is outside −90 to 90. Did you mean cartesian?` |
+| RA/Dec format, RA outside 0…360 | `Line N: RA V is outside 0 to 360. Did you mean cartesian?` |
 | RA/Dec format, z < 0 | `Line N: redshift must be 0 or more` |
 | No data lines | `No data rows found` |
 

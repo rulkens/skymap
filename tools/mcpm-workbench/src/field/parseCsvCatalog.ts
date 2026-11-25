@@ -19,7 +19,7 @@ import { weightStatsFor } from './weightStatsFor';
 const DATA_LINE = /^\s*[0-9+\-.]/;
 const FIELD_SEPARATOR = /[,;\t ]+/;
 const COLUMNS = 4;
-const WRONG_FORMAT_HINT = 'If the columns are x, y, z, choose that format';
+const WRONG_FORMAT_HINT = 'Did you mean cartesian?';
 
 export function parseCsvCatalog(
   text: string,

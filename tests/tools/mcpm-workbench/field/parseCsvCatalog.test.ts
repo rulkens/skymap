@@ -50,16 +50,14 @@ describe('parseCsvCatalog problems', () => {
   it('RA/Dec format, Dec outside −90…90', () => {
     expect(problem('10,120,0.1,1\n', RADEC)).toEqual({
       line: 1,
-      message:
-        'Line 1: Dec 120 is outside −90 to 90. If the columns are x, y, z, choose that format',
+      message: 'Line 1: Dec 120 is outside −90 to 90. Did you mean cartesian?',
     });
   });
 
   it('RA/Dec format, RA outside 0…360', () => {
     expect(problem('# ra dec z w\n-12.5,10,0.1,1\n', RADEC)).toEqual({
       line: 2,
-      message:
-        'Line 2: RA -12.5 is outside 0 to 360. If the columns are x, y, z, choose that format',
+      message: 'Line 2: RA -12.5 is outside 0 to 360. Did you mean cartesian?',
     });
   });
 
