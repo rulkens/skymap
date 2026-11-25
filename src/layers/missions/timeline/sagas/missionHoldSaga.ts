@@ -102,7 +102,7 @@ export function* missionHoldSaga(
         const at = performance.now();
         const days = deriveSimDays(yield* select(selectTimeState), at);
         // At any listed craft's launch, this one's: each tab then opens on Earth.
-        const atLaunch = timeline.crafts.some(
+        const atLaunch = timeline.lanes.some(
           (c) => Math.abs(days - launchDays(missionOf(c.bodyId))) < LAUNCH_TOLERANCE_DAYS,
         );
         mission = missionOf(next.tab.payload!);

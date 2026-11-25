@@ -1,17 +1,8 @@
 import { laneColorCss } from './laneColorCss';
-import { MISSION_TRAIL_ROWS } from '../../trails/data/missionTrailRows';
-import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import type { MissionTimeline } from '../@types/MissionTimeline';
 import type { TimelineLane } from '../@types/TimelineLane';
 
-/**
- * One lane per craft, in the given order. The colour is looked up, never authored: it is the
- * craft's trail tint, so panel and scene share one source, and a craft without a trail throws.
- */
-export function timelineLanes(crafts: MissionTimeline['crafts']): readonly TimelineLane[] {
-  return crafts.map(({ bodyId, label }) => ({
-    bodyId,
-    label,
-    color: laneColorCss(findByIdOrThrow(MISSION_TRAIL_ROWS, bodyId, 'timelineLanes').color),
-  }));
+/** One lane per data lane, in the given order, its trail tint turned into the CSS the panel paints. */
+export function timelineLanes(lanes: MissionTimeline['lanes']): readonly TimelineLane[] {
+  return lanes.map(({ bodyId, label, color }) => ({ bodyId, label, color: laneColorCss(color) }));
 }

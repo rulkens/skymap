@@ -7,6 +7,8 @@
 
 import { initialState as missionsInitialState } from '../../state/missions/initialState';
 import { MISSION_EVENTS } from '../../events/data/missionEvents.generated';
+import { MISSION_TRAIL_ROWS } from '../../trails/data/missionTrailRows';
+import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { section } from '../../../../utils/exhibits/section';
 import { proseKind } from '../../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../../components/ExhibitOverlay/kinds/sourcesKind';
@@ -29,6 +31,13 @@ import {
   TIMELINE_HEADING,
 } from './voyagerMissions.copy';
 
+// A lane's colour is its craft's trail tint, so panel and scene share one source; a craft
+// without a trail throws.
+const LANES = CRAFTS.map((craft) => ({
+  ...craft,
+  color: findByIdOrThrow(MISSION_TRAIL_ROWS, craft.bodyId, 'voyagerMissions').color,
+}));
+
 export const voyagerMissions: Exhibit<'voyager-missions'> = {
   id: 'voyager-missions',
   label: LABEL,
@@ -48,7 +57,7 @@ export const voyagerMissions: Exhibit<'voyager-missions'> = {
     section(proseKind, THE_VOYAGER_MISSIONS),
     section(missionTimelineKind, {
       heading: TIMELINE_HEADING,
-      crafts: CRAFTS,
+      lanes: LANES,
       events: MISSION_EVENTS.filter((e) => CRAFTS.some((c) => c.bodyId === e.bodyId)),
       cruise: CRUISE,
     }),

@@ -39,7 +39,7 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const craft = useAppSelector(selectMissionCraft);
-  const lanes = useMemo(() => timelineLanes(data.crafts), [data.crafts]);
+  const lanes = useMemo(() => timelineLanes(data.lanes), [data.lanes]);
   // An open end is the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => timelineEndMs(data), [data]);
 
