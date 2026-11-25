@@ -6,5 +6,5 @@
 export type AgentWeights = {
   readonly weights: Float32Array; // per data point, post-transform
   readonly nanCount: number;
-  readonly medianLog10Mass: number; // median linear weight, the NaN fill value
+  readonly medianWeight: number; // median linear weight, the NaN fill value
 };

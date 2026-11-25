@@ -94,15 +94,15 @@ differ by a factor of thousands. The workbench spec asked for this
 **Signature:** `massWeightFromLog10(log10MassMsun: number): number` — returns `10 ** (log10MassMsun - 12)`;
 `NaN` in, `NaN` out (the median fill downstream still handles absent masses).
 
-- [ ] Failing test first, in `deriveAgentWeights.test.ts`:
+- [x] Failing test first, in `deriveAgentWeights.test.ts`:
       `mass weighting separates a 1e8 and a 1e12 Msun galaxy like the port` — build the slot from
       `[8, 12].map(massWeightFromLog10)`, derive in `stellarMass` mode, assert
       `weights[1] / weights[0] > 1000`. (Fed `[8, 12]` directly, today's ratio is 1.17.)
-- [ ] Test `massWeightFromLog10 maps 12 to 1 and 9 to 0.001` and `keeps NaN`.
-- [ ] `loadCatalogPoints` converts each source's `log10StellarMass` through the helper while merging
+- [x] Test `massWeightFromLog10 maps 12 to 1 and 9 to 0.001` and `keeps NaN`.
+- [x] `loadCatalogPoints` converts each source's `log10StellarMass` through the helper while merging
       (`loadCatalogPoints.ts:46-50`). `syntheticCatalog` does the same for its generated masses.
-- [ ] Update `deriveAgentWeights.ts`'s header: the input is a linear weight; the `max(W, 0)` clamp stays.
-- [ ] Commit: "MCPM workbench: built-in catalogs weigh by linear mass, as the port does".
+- [x] Update `deriveAgentWeights.ts`'s header: the input is a linear weight; the `max(W, 0)` clamp stays.
+- [x] Commit: "MCPM workbench: built-in catalogs weigh by linear mass, as the port does".
 
 ### Task 1b: Divide by the mean of the raw weights, as the port does (bug fix)
 
@@ -125,14 +125,14 @@ against free agents.
 `weightScale = n / TOTAL_WEIGHT_MASS`. Decide per reader whether it wants the port's sum (the deposit)
 or a mean-1 display scale (the overlay), and say which in the commit message.
 
-- [ ] Failing test first: `matches the port's formula on linear weights` — W = `[0.01, 0.1, 1]`,
+- [x] Failing test first: `matches the port's formula on linear weights` — W = `[0.01, 0.1, 1]`,
       `stellarMass` mode, assert each weight equals `(1e6 / 3) * log10(1 + W) / mean(W)` within 1e-3
       relative.
-- [ ] `uniform` mode keeps its current behaviour (the port has no such mode); state that in the test name
+- [x] `uniform` mode keeps its current behaviour (the port has no such mode); state that in the test name
       `uniform mode still sums to 1e6`.
 - [ ] After a box cull, the kept points keep the weights they had before it (the port never culls; a
-      cropped box must not re-inflate the survivors). Test: `culling does not change a surviving point's weight`.
-- [ ] Commit.
+      cropped box must not re-inflate the survivors). Test: `culling does not change a surviving point's weight` — not added: it passes before the fix and repeats `filters the weights array with the same mask`.
+- [x] Commit.
 
 ### Task 2: Rename the weight slot
 
@@ -142,11 +142,11 @@ Pure rename, no behaviour change, no new test.
 and every reader (8 source files, 9 test files under `tests/tools/mcpm-workbench/`; search
 `log10StellarMass|medianLog10Mass`).
 
-- [ ] `CatalogPoints.log10StellarMass` → `weight`, documented as
+- [x] `CatalogPoints.log10StellarMass` → `weight`, documented as
       "linear, positive; stellar mass in 10¹² M☉ for built-in catalogs; NaN where absent".
-- [ ] `AgentWeights.medianLog10Mass` → `medianWeight`; `deriveAgentWeights`'s parameter follows.
-- [ ] Use `npm run refactor` (property rename). Then `grep -rn 'log10StellarMass\|medianLog10Mass' tools/mcpm-workbench tests/tools/mcpm-workbench` → no hits. Runtime types under `src/` named `log10StellarMass` are a different type and stay.
-- [ ] Commit.
+- [x] `AgentWeights.medianLog10Mass` → `medianWeight`; `deriveAgentWeights`'s parameter follows.
+- [x] Use `npm run refactor` (property rename). Then `grep -rn 'log10StellarMass\|medianLog10Mass' tools/mcpm-workbench tests/tools/mcpm-workbench` → no hits. Runtime types under `src/` named `log10StellarMass` are a different type and stay.
+- [x] Commit.
 
 ### Task 3: A loaded catalog is a row that can be on or off (prep)
 

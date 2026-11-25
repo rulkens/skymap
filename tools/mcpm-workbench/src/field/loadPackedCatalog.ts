@@ -3,9 +3,9 @@
  * a flat f32 [X, Y, Z, W] .bin plus its sidecar `_metadata.txt`, dev-only
  * drag-drop input for validating against the same run the fork produced.
  *
- * The packed `W` lands in `CatalogPoints.log10StellarMass` unchanged — not
- * a real log-mass, but the slot `deriveAgentWeights` already reads, so the
- * shared transform runs on it downstream with no forked maths (spec §9).
+ * The packed `W` lands in `CatalogPoints.weight` unchanged: it is the same
+ * linear weight the built-ins carry, so `deriveAgentWeights` runs on it with
+ * no forked maths (spec §9).
  */
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 
@@ -38,16 +38,16 @@ export function loadPackedCatalog(
 
   const flat = new Float32Array(bin);
   const positions = new Float32Array(declaredCount * 3);
-  const log10StellarMass = new Float32Array(declaredCount);
+  const weight = new Float32Array(declaredCount);
   for (let i = 0; i < declaredCount; i++) {
     positions[3 * i] = flat[FIELDS_PER_POINT * i]!;
     positions[3 * i + 1] = flat[FIELDS_PER_POINT * i + 1]!;
     positions[3 * i + 2] = flat[FIELDS_PER_POINT * i + 2]!;
-    log10StellarMass[i] = flat[FIELDS_PER_POINT * i + 3]!;
+    weight[i] = flat[FIELDS_PER_POINT * i + 3]!;
   }
 
   return {
-    points: { positions, log10StellarMass, count: declaredCount, sources: [] },
+    points: { positions, weight, count: declaredCount, sources: [] },
     declaredCount,
     declaredMeanWeight,
   };

@@ -60,7 +60,7 @@ function* loadCatalogWorker() {
     const catalog = yield* select((s: RootState) => s.catalog);
     const plan = resolveCatalogPointsPlan(catalog, hasUrlGate('probe'));
     const points = yield* resolvePoints(plan);
-    const weights = deriveAgentWeights(points.log10StellarMass, catalog.weightMode);
+    const weights = deriveAgentWeights(points.weight, catalog.weightMode);
     const bounds = points.count > 0 ? catalogBounds(points.positions) : null;
     yield* put(catalogLoaded({ points, weights, bounds }));
   } catch (err) {

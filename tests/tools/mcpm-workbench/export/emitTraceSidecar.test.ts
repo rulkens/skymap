@@ -29,7 +29,7 @@ const PARAMS: McpmParams = {
 function pointsFixture(): CatalogPoints {
   return {
     positions: new Float32Array(0),
-    log10StellarMass: new Float32Array(0),
+    weight: new Float32Array(0),
     count: 1_642_391,
     sources: ['sdss', '2mrs', 'glade'],
   };
@@ -38,7 +38,7 @@ function pointsFixture(): CatalogPoints {
 const WEIGHTS: AgentWeights = {
   weights: new Float32Array(0),
   nanCount: 20_114,
-  medianLog10Mass: 10.2,
+  medianWeight: 10.2,
 };
 
 // Mirrors emitTraceSidecar's own local-time-with-numeric-offset format —

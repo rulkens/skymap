@@ -162,7 +162,7 @@ function* buildScene() {
       return;
     }
 
-    const weights = deriveAgentWeights(points.log10StellarMass, s.catalog.weightMode);
+    const weights = deriveAgentWeights(points.weight, s.catalog.weightMode);
     const box = deriveGridBox(s.grid);
     // The staleness check runs INSIDE this promise's own `.then()` (acceptBuiltHarness),
     // not after the `yield*` below — see the module header for why code placed after

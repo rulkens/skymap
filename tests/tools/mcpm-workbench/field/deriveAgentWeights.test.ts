@@ -12,7 +12,7 @@ describe('deriveAgentWeights', () => {
   it('NaN masses take the finite median with an even finite count', () => {
     const input = new Float32Array([8, 9, 10, 11, NaN]); // finite sorted: 8,9,10,11 → median 9.5
     const result = deriveAgentWeights(input, 'stellarMass');
-    expect(result.medianLog10Mass).toBe(9.5);
+    expect(result.medianWeight).toBe(9.5);
   });
 
   it('nanCount reports how many entries were filled', () => {
@@ -54,7 +54,7 @@ describe('deriveAgentWeights', () => {
     for (let i = 0; i < result.weights.length; i++) {
       expect(result.weights[i]).toBeCloseTo(expected, -1);
     }
-    expect(result.medianLog10Mass).toBeNaN();
+    expect(result.medianWeight).toBeNaN();
     expect(result.nanCount).toBe(3);
   });
 });

@@ -14,7 +14,7 @@ function stubResources() {
   const graph = { dispose: vi.fn(() => calls.push('graph')) } as unknown as RenderGraph;
   const harness = { dispose: vi.fn(() => calls.push('harness')) } as unknown as McpmHarness;
   const gpu = {} as GpuContext;
-  const weights = { weights: new Float32Array(), nanCount: 0, medianLog10Mass: 10 } as AgentWeights;
+  const weights = { weights: new Float32Array(), nanCount: 0, medianWeight: 10 } as AgentWeights;
   const resources = createRenderResources();
   resources.gpu = gpu;
   resources.harness = harness;

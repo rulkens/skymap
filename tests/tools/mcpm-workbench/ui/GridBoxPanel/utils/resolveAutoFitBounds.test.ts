@@ -15,7 +15,7 @@ function syntheticCatalog(n: number, seed: number): CatalogPoints {
   const rng = mulberry32(seed);
   const positions = new Float32Array(n * 3);
   for (let i = 0; i < positions.length; i++) positions[i] = (rng() - 0.5) * 200;
-  return { positions, log10StellarMass: new Float32Array(n), count: n, sources: [] };
+  return { positions, weight: new Float32Array(n), count: n, sources: [] };
 }
 
 describe('resolveAutoFitBounds', () => {

@@ -43,15 +43,15 @@ export async function loadCatalogPoints(
   for (const catalog of catalogs) count += catalog.count;
 
   const positions = new Float32Array(count * 3);
-  const log10StellarMass = new Float32Array(count);
+  const weight = new Float32Array(count);
   let offset = 0;
   for (const catalog of catalogs) {
     positions.set(catalog.positions, offset * 3);
     for (let i = 0; i < catalog.count; i++) {
-      log10StellarMass[offset + i] = massWeightFromLog10(catalog.log10StellarMass[i]!);
+      weight[offset + i] = massWeightFromLog10(catalog.log10StellarMass[i]!);
     }
     offset += catalog.count;
   }
 
-  return { positions, log10StellarMass, count, sources };
+  return { positions, weight, count, sources };
 }

@@ -19,39 +19,39 @@ function median(sorted: readonly number[]): number {
 }
 
 export function deriveAgentWeights(
-  log10StellarMass: Float32Array,
+  weight: Float32Array,
   mode: 'stellarMass' | 'uniform',
 ): AgentWeights {
-  const n = log10StellarMass.length;
+  const n = weight.length;
 
   const finiteSorted: number[] = [];
   for (let i = 0; i < n; i++) {
-    const v = log10StellarMass[i]!;
+    const v = weight[i]!;
     if (!Number.isNaN(v)) finiteSorted.push(v);
   }
   finiteSorted.sort((a, b) => a - b);
   const nanCount = n - finiteSorted.length;
-  const medianLog10Mass = median(finiteSorted);
+  const medianWeight = median(finiteSorted);
 
-  // No finite mass in the slice degrades stellarMass to uniform: medianLog10Mass
+  // No finite mass in the slice degrades stellarMass to uniform: medianWeight
   // stays NaN (nothing to fill from) rather than poisoning every weight with NaN.
   const degradeToUniform = mode === 'uniform' || finiteSorted.length === 0;
 
   const weights = new Float32Array(n);
   if (degradeToUniform) {
     weights.fill(DEPOSIT_SCALE / n);
-    return { weights, nanCount, medianLog10Mass };
+    return { weights, nanCount, medianWeight };
   }
 
   let rawSum = 0;
   for (let i = 0; i < n; i++) {
-    const v = log10StellarMass[i]!;
-    const filled = Math.max(Number.isNaN(v) ? medianLog10Mass : v, 0);
+    const v = weight[i]!;
+    const filled = Math.max(Number.isNaN(v) ? medianWeight : v, 0);
     rawSum += filled;
     weights[i] = Math.log10(1 + filled);
   }
   const scale = DEPOSIT_SCALE / n / (rawSum / n);
   for (let i = 0; i < n; i++) weights[i] = weights[i]! * scale;
 
-  return { weights, nanCount, medianLog10Mass };
+  return { weights, nanCount, medianWeight };
 }

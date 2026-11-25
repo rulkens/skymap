@@ -28,7 +28,7 @@ export function syntheticCatalog(): CatalogPoints {
   const rng = mulberry32(SEED);
   const count = CLUSTER_COUNT * POINTS_PER_CLUSTER;
   const positions = new Float32Array(count * 3);
-  const log10StellarMass = new Float32Array(count);
+  const weight = new Float32Array(count);
 
   let i = 0;
   for (let c = 0; c < CLUSTER_COUNT; c++) {
@@ -37,12 +37,12 @@ export function syntheticCatalog(): CatalogPoints {
       positions[3 * i] = center[0] + gaussian(rng) * CLUSTER_SIGMA_MPC;
       positions[3 * i + 1] = center[1] + gaussian(rng) * CLUSTER_SIGMA_MPC;
       positions[3 * i + 2] = center[2] + gaussian(rng) * CLUSTER_SIGMA_MPC;
-      log10StellarMass[i] =
+      weight[i] =
         i % NAN_MASS_STRIDE === 0
           ? NaN
           : massWeightFromLog10(MEAN_LOG10_MASS + gaussian(rng) * LOG10_MASS_SIGMA);
     }
   }
 
-  return { positions, log10StellarMass, count, sources: ['sdss'] };
+  return { positions, weight, count, sources: ['sdss'] };
 }

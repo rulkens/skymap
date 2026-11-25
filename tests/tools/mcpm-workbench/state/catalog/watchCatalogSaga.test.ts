@@ -12,7 +12,7 @@ import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/C
 
 const packedPoints: CatalogPoints = {
   positions: new Float32Array([1, 2, 3]),
-  log10StellarMass: new Float32Array([4]),
+  weight: new Float32Array([4]),
   count: 1,
   sources: ['sdss'],
 };

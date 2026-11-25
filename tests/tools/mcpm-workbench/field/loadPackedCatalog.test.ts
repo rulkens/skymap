@@ -25,9 +25,9 @@ describe('loadPackedCatalog', () => {
     expect(declaredMeanWeight).toBe(8);
     expect(points.count).toBe(3);
     expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7, 9, 10, 11]);
-    // Packed W plugs straight into log10StellarMass — deriveAgentWeights's
+    // Packed W plugs straight into the weight slot — deriveAgentWeights's
     // transform runs on it downstream unmodified.
-    expect(Array.from(points.log10StellarMass)).toEqual([4, 8, 12]);
+    expect(Array.from(points.weight)).toEqual([4, 8, 12]);
   });
 
   it('rejects a buffer whose length disagrees with the metadata count', () => {

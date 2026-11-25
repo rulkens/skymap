@@ -20,7 +20,7 @@ function pointsFrom(positions: readonly number[]): CatalogPoints {
   const count = positions.length / 3;
   return {
     positions: new Float32Array(positions),
-    log10StellarMass: new Float32Array(count).fill(10),
+    weight: new Float32Array(count).fill(10),
     count,
     sources: ['sdss'],
   };
@@ -36,7 +36,7 @@ describe('cullPointsToBox', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([5, 9]),
       nanCount: 0,
-      medianLog10Mass: 10,
+      medianWeight: 10,
     };
 
     const culled = cullPointsToBox(points, weights, box);
@@ -53,7 +53,7 @@ describe('cullPointsToBox', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([11, 22, 33]),
       nanCount: 0,
-      medianLog10Mass: 10,
+      medianWeight: 10,
     };
 
     const culled = cullPointsToBox(points, weights, box);

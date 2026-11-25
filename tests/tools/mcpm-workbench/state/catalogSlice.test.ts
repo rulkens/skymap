@@ -13,12 +13,12 @@ const { actions, reducer } = catalogSlice;
 
 const points = {
   positions: new Float32Array([1, 2, 3]),
-  log10StellarMass: new Float32Array([4]),
+  weight: new Float32Array([4]),
   count: 1,
   sources: [],
 };
 
-const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianLog10Mass: 10 };
+const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianWeight: 10 };
 
 describe('catalogSlice setPackedCatalog', () => {
   it("installs the override — pointCount/nanFillCount/bounds are catalogLoaded's job, not this reducer's", () => {

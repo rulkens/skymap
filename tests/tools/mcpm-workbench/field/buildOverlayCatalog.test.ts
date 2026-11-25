@@ -26,7 +26,7 @@ const sum = (a: Float32Array): number => {
 
 // Only 3 of the 6 points land in [-8,8) on every axis; the other 3 sit far outside —
 // exactly the fixture cullPointsToBox.test.ts drops to 3.
-const log10Mass = new Float32Array([9, 10, 11, 12, 8, 10.5]);
+const weight = new Float32Array([9, 10, 11, 12, 8, 10.5]);
 const positions = [
   -2,
   -6,
@@ -49,11 +49,11 @@ const positions = [
 ];
 const points: CatalogPoints = {
   positions: new Float32Array(positions),
-  log10StellarMass: log10Mass,
+  weight,
   count: 6,
   sources: ['sdss'],
 };
-const weights = deriveAgentWeights(log10Mass, 'stellarMass');
+const weights = deriveAgentWeights(weight, 'stellarMass');
 
 describe('buildOverlayCatalog', () => {
   it('draws every RAW loaded point, not the box-culled subset the sim seeds from', () => {
