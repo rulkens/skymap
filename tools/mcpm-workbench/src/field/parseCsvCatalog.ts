@@ -4,8 +4,9 @@
  * Line rules follow the native build (Polyphorm/cpplib/dataset.cpp:36-72): a
  * line is data when it starts with a digit, sign or dot, anything else is
  * skipped; fields split on comma, semicolon, tab or spaces; columns past the
- * fourth are ignored. The first problem refuses the whole file. The RA/Dec
- * range test is ours: it catches x, y, z read in the wrong format.
+ * fourth are ignored. The first problem refuses the whole file. Ours, not the
+ * native build's: the RA/Dec range test (it catches x, y, z read in the wrong
+ * format) and refusing an empty field, which would shift every later column.
  */
 import type { CatalogFileProblem } from '../../@types/CatalogFileProblem';
 import type { CatalogImportSettings } from '../../@types/CatalogImportSettings';
@@ -17,7 +18,8 @@ import { massWeightFromLog10 } from './massWeightFromLog10';
 import { weightStatsFor } from './weightStatsFor';
 
 const DATA_LINE = /^\s*[0-9+\-.]/;
-const FIELD_SEPARATOR = /[,;\t ]+/;
+// A comma or semicolon is one field boundary; a run of spaces or tabs is one too.
+const FIELD_SEPARATOR = /\s*[,;]\s*|[\t ]+/;
 const COLUMNS = 4;
 const WRONG_FORMAT_HINT = 'Did you mean cartesian?';
 
@@ -53,11 +55,11 @@ export function parseCsvCatalog(
     const refuse = (message: string) =>
       ({ ok: false, problem: { line: i + 1, message: `Line ${i + 1}: ${message}` } }) as const;
 
-    const fields = line
-      .trim()
-      .split(FIELD_SEPARATOR)
-      .filter((f) => f !== '');
+    const fields = line.trim().split(FIELD_SEPARATOR);
+    while (fields.at(-1) === '') fields.pop(); // trailing separators
     if (fields.length < COLUMNS) return refuse(`expected 4 numbers, found ${fields.length}`);
+    // Number('') is 0, so an empty field would read as a zero.
+    if (fields.slice(0, COLUMNS).includes('')) return refuse('every value must be a finite number');
     const a = Number(fields[0]);
     const b = Number(fields[1]);
     const c = Number(fields[2]);

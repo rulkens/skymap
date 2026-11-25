@@ -33,6 +33,14 @@ describe('parseCsvCatalog problems', () => {
     });
   });
 
+  // Collapsed separators once read this row as x=10, y=20, z=0.03, w=0.5 without a word.
+  it('an empty field between commas', () => {
+    expect(problem('10,,20,0.03,0.5,7\n', XYZ)).toEqual({
+      line: 1,
+      message: 'Line 1: every value must be a finite number',
+    });
+  });
+
   it('non-finite coordinate', () => {
     expect(problem('1,abc,3,1\n', XYZ)).toEqual({
       line: 1,
@@ -102,6 +110,13 @@ describe('parseCsvCatalog', () => {
       1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17, 18, 19,
     ]);
     expect(Array.from(points.weight)).toEqual([4, 8, 12, 16, 20]);
+  });
+
+  it('reads runs of spaces or tabs as one separator, and allows trailing separators', () => {
+    const { points } = parsed('1\t\t2   3 \t4\t\n5 , 6 ,7, 8,\n9;10;11;12;;  \n', XYZ);
+
+    expect(Array.from(points.positions)).toEqual([1, 2, 3, 5, 6, 7, 9, 10, 11]);
+    expect(Array.from(points.weight)).toEqual([4, 8, 12]);
   });
 
   it('skips a header row, # comments and blank lines and counts them', () => {

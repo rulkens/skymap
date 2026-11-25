@@ -270,6 +270,8 @@ No scale is computed or applied for the user: the file may hold something other 
 - A line is data when its first non-blank character is a digit, `-`, `+` or `.`; every other line
   (header, `#` comment, blank) is skipped and counted.
 - Fields are separated by a comma, semicolon, tab or spaces. Columns after the fourth are ignored.
+- An empty field in the first four columns (`10,,20,…`) is refused as a non-finite value (added
+  2026-11-25); runs of spaces or tabs and trailing separators are not empty fields.
 - The first problem ends the parse; nothing partial is returned.
 - `cartesianMpc`: columns are x, y, z in Mpc, used as written.
 - `raDecRedshift`: RA and Dec in degrees, redshift z; position =
