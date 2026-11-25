@@ -1,5 +1,10 @@
+/* The height comes from the form around it (LoadCatalogDialog sets it). Segments
+   share a line equally while their labels fit, and stack once they do not. */
 .root {
+  box-sizing: border-box;
+  min-block-size: var(--control-block-size, auto);
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
   padding: var(--space-1);
   border: 1px solid var(--border-control);
@@ -12,6 +17,7 @@
   display: grid;
   place-items: center;
   flex: 1 1 0;
+  min-inline-size: max-content;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
   color: var(--color-fg-tertiary);

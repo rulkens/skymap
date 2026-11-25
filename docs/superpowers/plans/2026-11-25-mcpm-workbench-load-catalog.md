@@ -279,7 +279,7 @@ weightUnitWarning(stats: WeightStats, weight: CatalogImportSettings['weight']): 
 
 | Condition | Sentence |
 | --- | --- |
-| Every stored weight between 5 and 15 | `Weights run from A to B, which looks like log₁₀ mass. Choose "log₁₀ of mass in M☉", or load anyway.` |
+| Every stored weight between 5 and 15 | `Weights run from A to B, which looks like log₁₀ mass. Choose "log₁₀ mass", or load anyway.` |
 | Median above 2 | `Median weight is M. Built-in catalogs use stellar mass in 10¹² M☉, where the median is near 0.02. For 10⁹ M☉ use a scale of 0.001, or load anyway.` |
 
 No scale is computed or applied for the user: the file may hold something other than stellar mass.
@@ -386,16 +386,17 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Button, dialog title, confirm | `Load catalog` |
 | Cancel | `Cancel` |
 | Under the title | `Read in this browser. The file is not uploaded.` |
-| File control | `Choose file` |
+| File control, formats beside it until a file is chosen | `Choose file…` · `.csv, or .bin + _metadata.txt` |
 | Format options | `x, y, z, weight` · `RA, Dec, redshift, weight` |
 | x, y, z help | `Positions in Mpc. One galaxy per row.` |
 | RA/Dec help | `RA and Dec in degrees. Does not open in the native Polyphorm build.` |
-| Weight choice label, options | `Weight is` · `linear` · `log₁₀ of mass in M☉` |
-| Weight help, linear | `A positive number. Built-in catalogs use stellar mass in 10¹² M☉.` |
+| Weight choice label, options | `Weight is` · `linear` · `log₁₀ mass` |
+| Weight help, linear (under the scale) | `Built-in catalogs use stellar mass in 10¹² M☉.` |
 | Weight help, log | `Converted to stellar mass in 10¹² M☉. Does not open in the native Polyphorm build.` |
 | Confirm after a warning | `Load anyway` |
-| Scale label, hint | `Weight scale` · `Multiplies the weight column. 0.001 turns 10⁹ M☉ into 10¹² M☉.` |
-| Cosmology labels, hint | `H0 (km/s/Mpc)` · `Ωm` · `Flat ΛCDM.` |
+| Scale label, hint | `Weight scale` · `0.001 turns 10⁹ M☉ into 10¹² M☉.` |
+| Cosmology row label, field labels | `Flat ΛCDM` · `H0 (km/s/Mpc)` · `Ωm` |
+| Field errors | `Use an H0 greater than 0.` · `Use an Ωm from 0 to 1.` · `Use a scale greater than 0.` |
 | Reading | `Reading <name>…` |
 | Too large | `File is larger than 400 MB. Use a smaller sample, or the native build.` |
 

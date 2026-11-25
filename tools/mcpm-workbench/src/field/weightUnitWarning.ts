@@ -16,7 +16,7 @@ export function weightUnitWarning(
 ): string | null {
   if (weight.kind !== 'linear') return null;
   if (stats.min >= LOG_MASS_RANGE.min && stats.max <= LOG_MASS_RANGE.max) {
-    return `Weights run from ${formatWeight(stats.min)} to ${formatWeight(stats.max)}, which looks like log₁₀ mass. Choose "log₁₀ of mass in M☉", or load anyway.`;
+    return `Weights run from ${formatWeight(stats.min)} to ${formatWeight(stats.max)}, which looks like log₁₀ mass. Choose "log₁₀ mass", or load anyway.`;
   }
   if (stats.median > MEDIAN_CEILING) {
     return `Median weight is ${formatWeight(stats.median)}. Built-in catalogs use stellar mass in 10¹² M☉, where the median is near 0.02. For 10⁹ M☉ use a scale of 0.001, or load anyway.`;

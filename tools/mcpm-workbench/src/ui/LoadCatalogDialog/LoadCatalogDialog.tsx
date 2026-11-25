@@ -46,6 +46,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   const dispatch = useAppDispatch();
   const titleId = useId();
   const noteId = useId();
+  const fileStatusId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -209,10 +210,17 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
           <FormField label="File">
             {(ids) => (
               <div id={ids.control} className={styles.file}>
-                <Button className={styles.button} onClick={() => fileInputRef.current?.click()}>
-                  Choose file
+                <Button
+                  className={styles.button}
+                  aria-describedby={fileStatusId}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Choose file…
                 </Button>
-                {filesName && <span className={styles.fileName}>{filesName}</span>}
+                {/* What readCatalogFiles accepts, until a file is chosen. */}
+                <span id={fileStatusId} className={filesName ? styles.fileName : styles.formats}>
+                  {filesName ?? '.csv, or .bin + _metadata.txt'}
+                </span>
                 <input
                   ref={fileInputRef}
                   type="file"

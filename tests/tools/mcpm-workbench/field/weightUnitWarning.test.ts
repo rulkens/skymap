@@ -6,7 +6,7 @@ const LINEAR = { kind: 'linear', scale: 1 } as const;
 describe('weightUnitWarning', () => {
   it('flags weights that look like logarithms', () => {
     expect(weightUnitWarning({ min: 8.1, median: 10.2, max: 12.34 }, LINEAR)).toBe(
-      'Weights run from 8.1 to 12, which looks like log₁₀ mass. Choose "log₁₀ of mass in M☉", or load anyway.',
+      'Weights run from 8.1 to 12, which looks like log₁₀ mass. Choose "log₁₀ mass", or load anyway.',
     );
   });
 

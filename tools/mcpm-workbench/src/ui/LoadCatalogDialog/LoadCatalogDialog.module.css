@@ -1,6 +1,8 @@
+/* One height for every control in a row; SegmentedControl reads it too. */
 .root {
+  --control-block-size: calc(2 * var(--space-8));
   container-type: inline-size;
-  inline-size: min(32rem, 100vw - 2 * var(--corner-offset));
+  inline-size: min(36rem, 100vw - 2 * var(--corner-offset));
   max-block-size: calc(100dvh - 2 * var(--corner-offset));
   padding: 0;
   overflow-y: auto;
@@ -98,6 +100,12 @@
   color: var(--color-fg-tertiary);
 }
 
+.button,
+.number {
+  box-sizing: border-box;
+  block-size: var(--control-block-size);
+}
+
 @media (pointer: coarse) {
   .button,
   .number {
@@ -117,6 +125,11 @@
   min-inline-size: 0;
   overflow-wrap: anywhere;
   color: var(--color-fg);
+}
+
+.formats {
+  composes: fileName;
+  color: var(--color-fg-tertiary);
 }
 
 .problem {
