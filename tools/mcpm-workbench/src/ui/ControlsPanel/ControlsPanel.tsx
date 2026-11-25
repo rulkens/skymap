@@ -12,9 +12,6 @@ import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { ViewSlice } from '../../../@types/ViewSlice';
 import Button from '../../../../../src/components/common/Button/Button';
 import SubsectionGroup from './SubsectionGroup';
-import { APP_SOURCE_REGISTRY } from '../../../../../src/compositions/appSources';
-import { TierChip } from '../../../../../src/components/SettingsPanel/TierChip';
-import { tierTarget } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   clearTraceRequested,
   exportNpyRequested,
@@ -24,13 +21,7 @@ import {
 import { downloadStem } from '../../export/downloadStem';
 import { triggerDownload } from '../../export/triggerDownload';
 import { deriveGridBox } from '../../field/deriveGridBox';
-import {
-  setCatalogSources,
-  setCatalogTier,
-  setWeightMode,
-  toggleCatalogSource,
-  WORKBENCH_SOURCES,
-} from '../../state/catalog/catalogSlice';
+import { setCatalogSources, setWeightMode } from '../../state/catalog/catalogSlice';
 import { exportParams, MCPM_PARAM_KEYS } from '../../state/exportParams';
 import { installImportedBox } from '../../state/grid/gridSlice';
 import { importParams } from '../../state/importParams';
@@ -59,8 +50,6 @@ import PanelRow from '../PanelRow/PanelRow';
 import SliderRow from '../SliderRow/SliderRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import GridBoxPanel from '../GridBoxPanel/GridBoxPanel';
-import LoadCatalogDialog from '../LoadCatalogDialog/LoadCatalogDialog';
-import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
 import { PALETTE_INFO } from './utils/PALETTE_INFO';
 import { PARAM_SLIDER_SPECS } from './utils/PARAM_SLIDER_SPECS';
 import { PATHTRACER_SLIDERS } from './utils/PATHTRACER_SLIDERS';
@@ -76,7 +65,6 @@ function ControlsPanel(): ReactNode {
   // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
-  const [dataOpen, setDataOpen] = useState(true);
   const [gridBoxOpen, setGridBoxOpen] = useState(true);
   const [raymarchOpen, setRaymarchOpen] = useState(true);
   const [agentsOpen, setAgentsOpen] = useState(false);
@@ -138,7 +126,7 @@ function ControlsPanel(): ReactNode {
   };
 
   return (
-    <div className={styles.root}>
+    <aside className={styles.root} aria-label="Simulation and rendering">
       <div className={styles.scroll}>
         <PanelSection
           title="Simulation"
@@ -215,29 +203,6 @@ function ControlsPanel(): ReactNode {
           onToggle={() => setGridBoxOpen((v) => !v)}
         >
           <GridBoxPanel />
-        </PanelSection>
-
-        <PanelSection title="Data" open={dataOpen} onToggle={() => setDataOpen((v) => !v)}>
-          <LoadCatalogDialog />
-          <UserCatalogRow />
-          {WORKBENCH_SOURCES.map((s) => (
-            <ToggleRow
-              key={s}
-              label={APP_SOURCE_REGISTRY[s].label}
-              on={catalog.sources.includes(s)}
-              // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
-              // this tier, but selection must survive a tier switch — mute + hint, never
-              // disable.
-              hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
-              onChange={(on) => {
-                const next = toggleCatalogSource(catalog.sources, s, on);
-                dispatch(setCatalogSources(next));
-              }}
-            />
-          ))}
-          <PanelRow>
-            <TierChip tier={catalog.tier} onTierChange={(t) => dispatch(setCatalogTier(t))} />
-          </PanelRow>
         </PanelSection>
 
         {/* Three INDEPENDENT layers, each switched by its own header pill — not a mode
@@ -471,9 +436,9 @@ function ControlsPanel(): ReactNode {
             />
           </div>
         </PanelRow>
+        {paramsStatus && <p className={styles.paramsStatus}>{paramsStatus}</p>}
       </div>
-      {paramsStatus && <div className={styles.paramsStatus}>{paramsStatus}</div>}
-    </div>
+    </aside>
   );
 }
 

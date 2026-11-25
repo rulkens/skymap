@@ -1,20 +1,9 @@
-.main {
-  composes: main from '../PanelRow/PanelRow.module.css';
-  cursor: pointer;
-}
-
-.labelText {
-  composes: labelText from '../PanelRow/PanelRow.module.css';
-}
-
-.labelMuted {
+.muted {
   color: var(--color-fg-muted);
 }
 
 .hint {
-  font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
-  color: var(--color-fg-muted);
 }
 
 .toggle {

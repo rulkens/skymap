@@ -1,0 +1,25 @@
+.root {
+  composes: row from '../panelGrid.module.css';
+  row-gap: var(--space-2);
+  margin: 0;
+}
+
+.stat {
+  composes: row from '../panelGrid.module.css';
+}
+
+.label {
+  composes: labelText from '../PanelRow/PanelRow.module.css';
+  grid-column: label;
+  color: var(--color-fg-tertiary);
+}
+
+.value {
+  grid-column: control;
+  justify-self: end;
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-base);
+  white-space: nowrap;
+}

@@ -1,0 +1,108 @@
+/* The two sidebars' shared chrome: data on the left, simulation and rendering
+   on the right. App's root is the `workbench` container; under 900px wide the
+   pair becomes one right-hand column, data first, because two 340px panels
+   leave no viewport. */
+.pair {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+/* The scroll lives on `.sections`, so the wheel scrolls the controls instead of
+   reaching the viewport's zoom handler. No App-level wrapper carries an ambient
+   text style, so the colour and face are set here. */
+.sidebar {
+  inline-size: 340px;
+  max-inline-size: 90vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+  pointer-events: auto;
+}
+
+.start {
+  composes: sidebar;
+  border-inline-end: 1px solid var(--border-default);
+}
+
+.end {
+  composes: sidebar;
+  border-inline-start: 1px solid var(--border-default);
+}
+
+.sections {
+  composes: grid from './panelGrid.module.css';
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding-block: var(--space-10);
+}
+
+/* Below the scroll, always visible; opaque so scrolled-under rows don't show. */
+.pinned {
+  composes: grid from './panelGrid.module.css';
+  flex: none;
+  background: var(--surface-panel);
+}
+
+.pinnedSticky {
+  composes: pinned;
+}
+
+/* A section header that does not fold: PanelSection's divider and header look. */
+.heading {
+  composes: sectionHeader from '../../../../src/components/common/shared.module.css';
+  grid-column: full;
+  margin: 0;
+  padding-block: var(--space-8) var(--space-3);
+  padding-inline: calc(var(--space-6) + var(--space-4));
+  border-block-start: 1px solid var(--border-divider);
+}
+
+@container workbench (width < 900px) {
+  .pair {
+    inset-inline-start: auto;
+    inline-size: 340px;
+    max-inline-size: 90vw;
+    display: block;
+    overflow-y: auto;
+    pointer-events: auto;
+    background: var(--surface-panel);
+    backdrop-filter: blur(var(--blur-panel));
+    border-inline-start: 1px solid var(--border-default);
+  }
+
+  .sidebar {
+    inline-size: auto;
+    max-inline-size: none;
+    display: block;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .start,
+  .end {
+    border: 0;
+  }
+
+  .sections {
+    overflow: visible;
+    padding-block-end: 0;
+  }
+
+  .pinned {
+    background: none;
+  }
+
+  .pinnedSticky {
+    position: sticky;
+    inset-block-end: 0;
+    background: var(--surface-panel);
+    backdrop-filter: blur(var(--blur-panel));
+  }
+}

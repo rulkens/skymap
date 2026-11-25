@@ -6,7 +6,6 @@
  * Controlled: the caller owns `open`.
  */
 import type { ReactNode } from 'react';
-import cx from 'classnames';
 import ChevronRightIcon from '../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import styles from './PanelSection.module.css';
 
@@ -33,9 +32,9 @@ function PanelSection({
 }: PanelSectionProps): ReactNode {
   return (
     <section className={styles.root}>
-      <div className={cx(styles.header, on === false && styles.off)}>
+      <div className={styles.header}>
         <button type="button" className={styles.fold} onClick={onToggle} aria-expanded={open}>
-          <span className={cx(styles.chevron, open && styles.chevronOpen)}>
+          <span className={styles.chevron}>
             <ChevronRightIcon size={10} />
           </span>
           <span className={styles.title}>{title}</span>

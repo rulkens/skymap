@@ -1,7 +1,7 @@
 /**
  * HistogramDock — the convergence readout (HistogramPlot + its jittered-
- * sampling toggle), floated bottom-left over the viewport instead of living
- * in the sidebar, so it stays visible while the sidebar scrolls elsewhere.
+ * sampling toggle), in the data sidebar's pinned block so it stays visible
+ * while the sections scroll.
  */
 import { type ReactNode } from 'react';
 import { setSampleRandomly } from '../../state/histogram/histogramSlice';
@@ -16,8 +16,9 @@ function HistogramDock(): ReactNode {
 
   return (
     <div className={styles.root}>
-      <div className={styles.eyebrow}>HISTOGRAM</div>
-      <HistogramPlot />
+      <div className={styles.plot}>
+        <HistogramPlot />
+      </div>
       <ToggleRow
         label="jittered sampling"
         on={sampleRandomly}

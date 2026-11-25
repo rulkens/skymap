@@ -1,0 +1,23 @@
+/* The one track definition every sidebar row lines up on: label, control and ⓘ
+   columns between two gutters. A gutter track plus the column gap is the
+   sidebar's 20px inset; anything spanning `full` (a divider) reaches the edges.
+   Rows, headers and groups take the tracks through `subgrid`. */
+.grid {
+  display: grid;
+  grid-template-columns:
+    [full-start] var(--space-6)
+    [content-start label-start] minmax(0, 1fr)
+    [label-end control-start] auto
+    [control-end info-start] var(--space-10)
+    [info-end content-end] var(--space-6)
+    [full-end];
+  column-gap: var(--space-4);
+  align-content: start;
+}
+
+.row {
+  grid-column: full;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+}

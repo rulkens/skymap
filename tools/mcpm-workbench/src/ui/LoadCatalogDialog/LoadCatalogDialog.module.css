@@ -1,8 +1,3 @@
-.openButton {
-  composes: blockButton from '../../../../../src/components/common/shared.module.css';
-  font-size: var(--font-size-sm);
-}
-
 .root {
   width: min(36rem, calc(100vw - 2 * var(--corner-offset)));
   max-height: calc(100dvh - 2 * var(--corner-offset));

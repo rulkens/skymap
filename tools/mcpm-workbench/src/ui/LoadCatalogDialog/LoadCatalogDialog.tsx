@@ -1,7 +1,8 @@
 /**
- * LoadCatalogDialog — the Data section's "Load catalog" button and the modal
- * it opens (the owner's ruled exception to ui-ux.md's no-modal rule). A file
- * dropped anywhere on the page opens it with that file chosen. Files are read
+ * LoadCatalogDialog — the modal the Data section's "Load catalog…" row opens
+ * (the owner's ruled exception to ui-ux.md's no-modal rule). Mounted on the
+ * sidebar root, never in a foldable body, because it also owns the window drop
+ * listener: a file dropped anywhere opens it with that file chosen. Files are read
  * and parsed in the page; the store sees only a parsed catalog, so a refused
  * or warned load leaves the loaded one in place.
  */
@@ -14,7 +15,6 @@ import Button from '../../../../../src/components/common/Button/Button';
 import { userCatalogLoaded } from '../../state/catalog/catalogSlice';
 import { useAppDispatch } from '../../store/hooks';
 import ChoiceGroup from '../ChoiceGroup/ChoiceGroup';
-import PanelRow from '../PanelRow/PanelRow';
 import { CATALOG_EXAMPLES } from './utils/CATALOG_EXAMPLES';
 import { catalogFilesName } from './utils/catalogFilesName';
 import { FORMAT_CHOICES } from './utils/FORMAT_CHOICES';
@@ -24,11 +24,15 @@ import { SLOW_READ_MS } from './utils/SLOW_READ_MS';
 import { WEIGHT_CHOICES } from './utils/WEIGHT_CHOICES';
 import styles from './LoadCatalogDialog.module.css';
 
-function LoadCatalogDialog(): ReactNode {
+export type LoadCatalogDialogProps = {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+};
+
+function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): ReactNode {
   const dispatch = useAppDispatch();
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const openerRef = useRef<HTMLButtonElement>(null);
   const chooseRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +68,7 @@ function LoadCatalogDialog(): ReactNode {
       const dropped = Array.from(e.dataTransfer?.files ?? []);
       if (dropped.length === 0) return;
       choose(dropped);
-      if (!dialogRef.current?.open) dialogRef.current?.showModal();
+      onOpenChange(true);
     };
     window.addEventListener('dragover', allowDrop);
     window.addEventListener('drop', onDrop);
@@ -72,17 +76,22 @@ function LoadCatalogDialog(): ReactNode {
       window.removeEventListener('dragover', allowDrop);
       window.removeEventListener('drop', onDrop);
     };
-  }, []);
+  }, [onOpenChange]);
+
+  // Focus returns to the opener on close natively (the dialog's focus restore).
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      chooseRef.current?.focus();
+    } else if (!open && dialog.open) dialog.close();
+  }, [open]);
 
   // Once files are chosen, Enter is one key away from loading them.
   useEffect(() => {
     if (files) confirmRef.current?.focus();
   }, [files]);
-
-  const open = (): void => {
-    dialogRef.current?.showModal();
-    chooseRef.current?.focus();
-  };
 
   const edited =
     <T,>(set: (value: T) => void) =>
@@ -139,177 +148,168 @@ function LoadCatalogDialog(): ReactNode {
         : '';
 
   return (
-    <>
-      <PanelRow>
-        <Button ref={openerRef} className={styles.openButton} onClick={open}>
-          Load catalog
-        </Button>
-      </PanelRow>
-      <dialog
-        ref={dialogRef}
-        className={styles.root}
-        aria-labelledby={titleId}
-        onClose={() => openerRef.current?.focus()}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) e.currentTarget.close(); // the backdrop
+    <dialog
+      ref={dialogRef}
+      className={styles.root}
+      aria-labelledby={titleId}
+      onClose={() => onOpenChange(false)}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) e.currentTarget.close(); // the backdrop
+      }}
+    >
+      <form
+        className={styles.form}
+        onSubmit={onSubmit}
+        onKeyDown={(e) => {
+          const target = e.target as HTMLInputElement;
+          if (e.key === 'Enter' && target.type === 'radio') {
+            e.preventDefault();
+            e.currentTarget.requestSubmit();
+          }
         }}
       >
-        <form
-          className={styles.form}
-          onSubmit={onSubmit}
-          onKeyDown={(e) => {
-            const target = e.target as HTMLInputElement;
-            if (e.key === 'Enter' && target.type === 'radio') {
-              e.preventDefault();
-              e.currentTarget.requestSubmit();
-            }
-          }}
-        >
-          <header>
-            <h2 id={titleId} className={styles.title}>
-              Load catalog
-            </h2>
-            <p className={styles.hint}>Read in this browser. The file is not uploaded.</p>
-          </header>
+        <header>
+          <h2 id={titleId} className={styles.title}>
+            Load catalog
+          </h2>
+          <p className={styles.hint}>Read in this browser. The file is not uploaded.</p>
+        </header>
 
-          <div className={styles.fileRow}>
-            <Button
-              ref={chooseRef}
-              className={styles.button}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Choose file
-            </Button>
-            {filesName && (
-              <span className={styles.fileName} title={filesName}>
-                {filesName}
-              </span>
+        <div className={styles.fileRow}>
+          <Button
+            ref={chooseRef}
+            className={styles.button}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Choose file
+          </Button>
+          {filesName && (
+            <span className={styles.fileName} title={filesName}>
+              {filesName}
+            </span>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.bin,.txt"
+            multiple
+            hidden
+            onChange={(e) => {
+              const chosen = Array.from(e.target.files ?? []);
+              e.target.value = ''; // so choosing the same file again still fires
+              if (chosen.length > 0) choose(chosen);
+            }}
+          />
+        </div>
+
+        {/* Under the file and above the column choice: the two things a problem points at. */}
+        {outcome?.kind === 'problem' && (
+          <div className={styles.problem}>
+            <p role="alert" className={styles.message}>
+              {outcome.message}
+            </p>
+            {outcome.showExample && (
+              <div className={styles.example}>
+                <span className={styles.label}>Example</span>
+                <pre className={styles.exampleRows}>{CATALOG_EXAMPLES[formatKind].join('\n')}</pre>
+              </div>
             )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.bin,.txt"
-              multiple
-              hidden
-              onChange={(e) => {
-                const chosen = Array.from(e.target.files ?? []);
-                e.target.value = ''; // so choosing the same file again still fires
-                if (chosen.length > 0) choose(chosen);
-              }}
-            />
           </div>
+        )}
 
-          {/* Under the file and above the column choice: the two things a problem points at. */}
-          {outcome?.kind === 'problem' && (
-            <div className={styles.problem}>
-              <p role="alert" className={styles.message}>
-                {outcome.message}
-              </p>
-              {outcome.showExample && (
-                <div className={styles.example}>
-                  <span className={styles.label}>Example</span>
-                  <pre className={styles.exampleRows}>
-                    {CATALOG_EXAMPLES[formatKind].join('\n')}
-                  </pre>
+        {files?.kind !== 'packed' && (
+          <>
+            <ChoiceGroup
+              legend="Columns"
+              options={FORMAT_CHOICES}
+              value={formatKind}
+              onChange={edited(setFormatKind)}
+              hint={FORMAT_CHOICES.find((c) => c.value === formatKind)!.hint}
+            >
+              {formatKind === 'raDecRedshift' && (
+                <div className={styles.fields}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>H0 (km/s/Mpc)</span>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      step="any"
+                      min="1"
+                      required
+                      value={h0}
+                      onChange={(e) => edited(setH0)(e.target.value)}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Ωm</span>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      step="any"
+                      min="0"
+                      max="1"
+                      required
+                      value={omegaM}
+                      onChange={(e) => edited(setOmegaM)(e.target.value)}
+                    />
+                  </label>
+                  <p className={styles.hint}>Flat ΛCDM.</p>
                 </div>
               )}
-            </div>
-          )}
+            </ChoiceGroup>
 
-          {files?.kind !== 'packed' && (
-            <>
-              <ChoiceGroup
-                legend="Columns"
-                options={FORMAT_CHOICES}
-                value={formatKind}
-                onChange={edited(setFormatKind)}
-                hint={FORMAT_CHOICES.find((c) => c.value === formatKind)!.hint}
-              >
-                {formatKind === 'raDecRedshift' && (
-                  <div className={styles.fields}>
-                    <label className={styles.field}>
-                      <span className={styles.label}>H0 (km/s/Mpc)</span>
-                      <input
-                        className={styles.input}
-                        type="number"
-                        step="any"
-                        min="1"
-                        required
-                        value={h0}
-                        onChange={(e) => edited(setH0)(e.target.value)}
-                      />
-                    </label>
-                    <label className={styles.field}>
-                      <span className={styles.label}>Ωm</span>
-                      <input
-                        className={styles.input}
-                        type="number"
-                        step="any"
-                        min="0"
-                        max="1"
-                        required
-                        value={omegaM}
-                        onChange={(e) => edited(setOmegaM)(e.target.value)}
-                      />
-                    </label>
-                    <p className={styles.hint}>Flat ΛCDM.</p>
-                  </div>
-                )}
-              </ChoiceGroup>
+            <ChoiceGroup
+              legend="Weight is"
+              options={WEIGHT_CHOICES}
+              value={weightKind}
+              onChange={edited(setWeightKind)}
+              hint={WEIGHT_CHOICES.find((c) => c.value === weightKind)!.hint}
+            >
+              {weightKind === 'linear' && (
+                <div className={styles.fields}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>Weight scale</span>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      step="any"
+                      required
+                      value={scale}
+                      onChange={(e) => edited(setScale)(e.target.value)}
+                    />
+                    <span className={styles.hint}>
+                      Multiplies the weight column. 0.001 turns 10⁹{'\u00a0'}M☉ into 10¹²
+                      {'\u00a0'}M☉.
+                    </span>
+                  </label>
+                </div>
+              )}
+            </ChoiceGroup>
+          </>
+        )}
 
-              <ChoiceGroup
-                legend="Weight is"
-                options={WEIGHT_CHOICES}
-                value={weightKind}
-                onChange={edited(setWeightKind)}
-                hint={WEIGHT_CHOICES.find((c) => c.value === weightKind)!.hint}
-              >
-                {weightKind === 'linear' && (
-                  <div className={styles.fields}>
-                    <label className={styles.field}>
-                      <span className={styles.label}>Weight scale</span>
-                      <input
-                        className={styles.input}
-                        type="number"
-                        step="any"
-                        required
-                        value={scale}
-                        onChange={(e) => edited(setScale)(e.target.value)}
-                      />
-                      <span className={styles.hint}>
-                        Multiplies the weight column. 0.001 turns 10⁹{'\u00a0'}M☉ into 10¹²
-                        {'\u00a0'}M☉.
-                      </span>
-                    </label>
-                  </div>
-                )}
-              </ChoiceGroup>
-            </>
-          )}
-
-          <footer className={styles.footer}>
-            <p role="status" className={slowRead ? styles.reading : styles.warning}>
-              {status}
-            </p>
-            <div className={styles.actions}>
-              <Button className={styles.button} onClick={() => dialogRef.current?.close()}>
-                Cancel
-              </Button>
-              <Button
-                ref={confirmRef}
-                type="submit"
-                variant="primary"
-                className={styles.button}
-                disabled={!files || reading}
-                aria-busy={reading}
-              >
-                {outcome?.kind === 'warning' ? 'Load anyway' : 'Load catalog'}
-              </Button>
-            </div>
-          </footer>
-        </form>
-      </dialog>
-    </>
+        <footer className={styles.footer}>
+          <p role="status" className={slowRead ? styles.reading : styles.warning}>
+            {status}
+          </p>
+          <div className={styles.actions}>
+            <Button className={styles.button} onClick={() => dialogRef.current?.close()}>
+              Cancel
+            </Button>
+            <Button
+              ref={confirmRef}
+              type="submit"
+              variant="primary"
+              className={styles.button}
+              disabled={!files || reading}
+              aria-busy={reading}
+            >
+              {outcome?.kind === 'warning' ? 'Load anyway' : 'Load catalog'}
+            </Button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
   );
 }
 

@@ -1,21 +1,19 @@
-/* `--section-gutter` is read by SubsectionGroup to bleed its divider to the edges. */
 .root {
-  --section-gutter: var(--space-10);
+  composes: row from '../panelGrid.module.css';
+  align-items: start;
+  row-gap: var(--space-7);
+  padding-block: var(--space-8) var(--space-7);
+  border-block-start: 1px solid var(--border-divider);
 }
 
 .header {
+  composes: row from '../panelGrid.module.css';
   composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin: var(--space-2) 0 var(--space-7);
-  padding: var(--space-8) var(--section-gutter) 0;
-  border-top: 1px solid var(--border-divider);
   user-select: none;
 }
 
 .fold {
-  flex: 1;
+  grid-column: content-start / control-end;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -26,8 +24,12 @@
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
+}
+
+.header:has(.toggle) .fold {
+  grid-column: label;
 }
 
 .fold:focus-visible {
@@ -42,7 +44,7 @@
   color: var(--color-fg-tertiary);
 }
 
-.off .title {
+.header:has(.toggle:not(:checked)) .title {
   color: var(--color-fg-ghost);
 }
 
@@ -51,7 +53,7 @@
   transition: transform 0.15s ease-out;
 }
 
-.chevronOpen {
+.fold[aria-expanded='true'] .chevron {
   transform: rotate(90deg);
 }
 
@@ -61,12 +63,14 @@
   }
 }
 
-/* Ends where a ToggleRow's pill does: PanelRow's gap plus its ⓘ column. */
 .toggle {
   composes: pillToggle from '../../../../../src/components/SettingsPanel/pillToggle.module.css';
-  margin: 0 calc(var(--space-4) + var(--space-10)) 0 0;
+  grid-column: control;
+  justify-self: end;
+  margin: 0;
 }
 
 .body {
-  padding-inline: var(--section-gutter);
+  composes: row from '../panelGrid.module.css';
+  row-gap: var(--space-4);
 }

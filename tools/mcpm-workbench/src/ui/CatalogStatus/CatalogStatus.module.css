@@ -1,0 +1,9 @@
+.root {
+  grid-column: content;
+  margin: 0;
+  padding-block: var(--space-4) 0;
+  padding-inline-start: var(--space-5);
+  border-inline-start: 2px solid var(--tool-status-bad);
+  font-size: var(--font-size-md);
+  color: var(--color-fg);
+}

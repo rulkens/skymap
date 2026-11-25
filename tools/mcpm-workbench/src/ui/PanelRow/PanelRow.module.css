@@ -1,17 +1,20 @@
 .root {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  composes: row from '../panelGrid.module.css';
 }
 
-.main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
+/* Label text in the label column, the control in the control column, its end
+   on the edge every row's control shares. */
+.labelled {
+  grid-column: label-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
+  cursor: pointer;
+}
+
+.control {
+  display: flex;
+  justify-self: end;
 }
 
 /* Inset by the slider pill's padding and border, so every label starts where
@@ -19,7 +22,7 @@
 .labelText {
   composes: label from '../../../../../src/components/common/Slider/Slider.module.css';
   min-width: 0;
-  padding-left: calc(var(--space-5) + 1px);
+  padding-inline-start: calc(var(--space-5) + 1px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -28,15 +31,19 @@
 /* A readout wraps instead of truncating; it is read, not scanned. */
 .readout {
   composes: labelText;
+  grid-column: label-start / control-end;
   font-size: var(--font-size-sm);
   white-space: normal;
 }
 
-.infoSlot {
-  flex: none;
-  width: var(--space-10);
-  display: flex;
-  justify-content: center;
+.wide {
+  grid-column: label-start / control-end;
+  min-width: 0;
+}
+
+.info {
+  grid-column: info;
+  justify-self: center;
 }
 
 .infoIcon {

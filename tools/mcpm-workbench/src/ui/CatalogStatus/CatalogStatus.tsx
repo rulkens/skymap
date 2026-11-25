@@ -1,18 +1,20 @@
 /**
- * CatalogStatus — `catalog.statusMessage` read via `useAppSelector`, so it has
- * to live INSIDE `<Provider store={store}>` (App.tsx), not in App itself: a
- * hook call in the component that renders its own Provider runs before that
- * Provider has mounted, so `useAppSelector` there throws "could not find
- * react-redux context value" the instant the message goes non-null.
+ * CatalogStatus — `catalog.statusMessage` (a failed catalog load or build) in
+ * the data sidebar's pinned block. It reads the store, so it must render
+ * inside App's `<Provider>`, not in App itself.
  */
 import type { ReactNode } from 'react';
 import { useAppSelector } from '../../store/hooks';
-import { catalogStatusStyle } from '../App/utils/catalogStatusStyle';
+import styles from './CatalogStatus.module.css';
 
 function CatalogStatus(): ReactNode {
   const message = useAppSelector((s) => s.catalog.statusMessage);
   if (!message) return null;
-  return <div style={catalogStatusStyle}>{message}</div>;
+  return (
+    <p role="status" className={styles.root}>
+      {message}
+    </p>
+  );
 }
 
 export default CatalogStatus;

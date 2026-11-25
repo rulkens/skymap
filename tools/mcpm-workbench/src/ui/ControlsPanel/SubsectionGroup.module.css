@@ -1,7 +1,17 @@
-/* The negative margin cancels PanelSection's body gutter so the rule spans the
-   sidebar; the padding puts the label and rows back on the gutter. */
 .root {
-  margin: var(--space-7) calc(-1 * var(--section-gutter)) 0;
-  padding: var(--space-5) var(--section-gutter) 0;
-  border-top: 1px solid var(--border-default);
+  composes: row from '../panelGrid.module.css';
+  row-gap: var(--space-4);
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--border-default);
+}
+
+.title {
+  grid-column: content;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: inherit;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-fg-faint);
 }

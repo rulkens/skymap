@@ -1,0 +1,10 @@
+/* The container the sidebars' narrow layout queries (sidebar.module.css). */
+.root {
+  position: fixed;
+  inset: 0;
+  container: workbench / inline-size;
+}
+
+.sidebars {
+  composes: pair from '../sidebar.module.css';
+}
