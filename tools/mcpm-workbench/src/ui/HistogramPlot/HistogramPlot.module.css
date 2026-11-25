@@ -1,38 +1,28 @@
-/* Small chrome, same badge vocabulary as Hud's — a bordered panel-surface box
-   rather than a bespoke look, so this reads as part of the same HUD family. */
+/* One bordered panel-surface box, Hud's badge vocabulary. Its sixteen columns
+   are the one column definition: the bars and labels rows take them through
+   subgrid, so a bar and its label share a track by construction.
+   `--bin-count` comes from the component (the shader's bin count). */
 .root {
   display: grid;
-  gap: var(--space-2);
-}
-
-.canvasBox {
-  position: relative;
-  border-radius: 6px;
+  grid-template-columns: repeat(var(--bin-count), minmax(0, 1fr));
+  column-gap: var(--space-1);
+  row-gap: var(--space-2);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-divider);
   background: var(--surface-panel);
   padding: var(--space-3);
-}
-
-.canvas {
-  display: block;
-  width: 100%;
-  height: 110px;
-}
-
-/* The E / M / null% / log-base column — same offsets (4px) and 12px row pitch
-   the canvas text used, and the same font tokens draw() measures with, so the
-   bars' reserved strip stays honest. Right-aligned: a value's width change
-   never nudges anything else. */
-.readout {
-  position: absolute;
-  top: calc(var(--space-3) + 4px);
-  right: calc(var(--space-3) + 4px);
-  display: grid;
-  justify-items: end;
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
-  line-height: 12px;
-  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: var(--space-4);
+  padding-block-end: var(--space-2);
 }
 
 .readoutRow {
@@ -40,8 +30,43 @@
   cursor: help;
 }
 
-/* E alone shares the mean-trace line's colour — it IS that series' readout. */
+/* E shares the history line's colour: it IS that series' newest value. */
 .readoutEmphasis {
-  color: var(--color-fg-base);
+  color: var(--color-accent);
   cursor: help;
+}
+
+/* The canvas sizes the plot row (its aspect ratio); the bars stretch to it. */
+.canvas {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  aspect-ratio: 5 / 2;
+}
+
+.bars {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  border-block-end: 1px solid var(--border-divider);
+}
+
+.bar {
+  align-self: end;
+  block-size: calc(var(--fill) * 100%);
+  background: var(--color-fg-ghost);
+}
+
+.labels {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  color: var(--color-fg-label);
+  line-height: var(--line-height-tight);
+}
+
+.label {
+  justify-self: center;
 }
