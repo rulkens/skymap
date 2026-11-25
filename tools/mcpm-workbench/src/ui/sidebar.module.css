@@ -6,8 +6,8 @@
 /* On App's root, so the pair and the toggles beside it read one width: each
    sidebar's, and the narrow column's. One gutter for every row and heading. */
 .frame {
+  composes: metrics from './panelGrid.module.css';
   --sidebar-inline-size: min(340px, 90vw);
-  --sidebar-gutter: calc(var(--space-6) + var(--space-4));
 }
 
 /* A hidden sidebar slides off its edge and its toggle rides along, out faster
@@ -128,7 +128,7 @@
   grid-column: full;
   margin: 0;
   padding-block: var(--space-8) var(--space-3);
-  padding-inline: var(--sidebar-gutter);
+  padding-inline: var(--panel-inset);
   border-block-start: 1px solid var(--border-divider);
 }
 

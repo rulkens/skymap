@@ -4,11 +4,20 @@
    section's fold chevron hangs in the `gutter` before it. A gutter track plus
    the column gap is the sidebar's inset; anything spanning `full` (a divider)
    reaches the edges. Rows, headers and groups take the tracks through `subgrid`. */
-.grid {
+
+/* The gutter, once. Also on App's root (sidebar `frame`), so the page title and
+   headings outside a grid start on the same edge through `--panel-inset`. */
+.metrics {
+  --panel-gutter: var(--space-8);
   --panel-column-gap: var(--space-4);
+  --panel-inset: calc(var(--panel-gutter) + var(--panel-column-gap));
+}
+
+.grid {
+  composes: metrics;
   display: grid;
   grid-template-columns:
-    [full-start gutter-start] var(--space-6)
+    [full-start gutter-start] var(--panel-gutter)
     [gutter-end content-start label-start] minmax(0, 1fr)
     [label-end control-start] auto
     [control-end info-start] var(--space-10)
