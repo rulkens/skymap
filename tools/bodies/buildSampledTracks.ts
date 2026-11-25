@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * buildSampledTracks — every `HORIZONS_BODIES` row with `vectors: 'state'` → one
- * `public/data/sampledTrack.<id>.bin`. Its daily vectors (plus `<target>.dense.csv`, the dense
- * windows `fetchVoyagerWindows` adds, when present) are merged, refined by the body's
- * `SAMPLED_TRACK_REFINEMENTS` entry, decimated so the Hermite the app evaluates stays within 1 km
- * of every raw sample, and every raw sample is re-checked against the kept ones.
+ * `public/data/sampledTrack.<id>.bin`. Its daily vectors are refined by the body's
+ * `SAMPLED_TRACK_REFINEMENTS` entry, if any (merged first with the dense windows it requires),
+ * decimated so the Hermite the app evaluates stays within 1 km of every raw sample, and every raw
+ * sample is re-checked against the kept ones.
  */
 import { existsSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -22,13 +22,16 @@ import type { HorizonsBody } from './@types/HorizonsBody';
 
 const TOLERANCE_KM = 1;
 
-function loadDense(row: HorizonsBody): SampledTrack {
+/** The daily vectors, merged with the dense windows when `denseFetch` says the body needs them. */
+function loadDense(row: HorizonsBody, denseFetch: string | undefined): SampledTrack {
   const dir = join(rawDataPath('horizons'), row.centre);
   const densePath = join(dir, `${row.target}.dense.csv`);
+  if (denseFetch && !existsSync(densePath))
+    throw new Error(`${row.id}: ${densePath} is missing; run \`${denseFetch}\``);
   const rows = mergeHorizonsChunks([
     [
       ...readHorizonsCsv(join(dir, `${row.target}.csv`)),
-      ...(existsSync(densePath) ? readHorizonsCsv(densePath) : []),
+      ...(denseFetch ? readHorizonsCsv(densePath) : []),
     ].sort((a, b) => a.jd - b.jd),
   ]);
   const track: SampledTrack = {
@@ -74,14 +77,10 @@ function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
   return worst;
 }
 
-const rows = HORIZONS_BODIES.filter((b) => b.vectors === 'state');
-const voyagers = HORIZONS_BODIES.filter((b) => b.id.startsWith('voyager'));
-if (rows.map((r) => r.id).join() !== voyagers.map((r) => r.id).join())
-  throw new Error(`buildSampledTracks: state rows ${rows.map((r) => r.id)} are not the Voyagers`);
-
-for (const row of rows) {
-  const dense = loadDense(row);
-  SAMPLED_TRACK_REFINEMENTS[row.id]?.(dense, row);
+for (const row of HORIZONS_BODIES.filter((b) => b.vectors === 'state')) {
+  const refinement = SAMPLED_TRACK_REFINEMENTS[row.id];
+  const dense = loadDense(row, refinement?.denseFetch);
+  refinement?.refine(dense, row);
   const kept = decimateHermiteSamples(dense.tDays, dense.posKm, dense.velKmS, TOLERANCE_KM);
   const worst = worstErrorKm(dense, kept);
   console.log(
