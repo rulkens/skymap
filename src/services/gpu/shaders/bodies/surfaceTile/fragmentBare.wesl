@@ -9,6 +9,7 @@ import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
+import package::lib::surfaceLight::composeSurfaceLight;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
 @group(0) @binding(4) var atlasSampler: sampler;
@@ -33,7 +34,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   let roughness = clamp(uniforms.roughnessBase, MIN_ROUGHNESS, 1.0);
   let direct = pbrDirect(shadingNormal, viewDir, sunDir, baseAlbedo, roughness, vec3<f32>(uniforms.f0));
-  let colour = direct * uniforms.sunIrradiance + uniforms.ambientLight * baseAlbedo;
+  let colour = composeSurfaceLight(direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, 1.0, 1.0);
 
   return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, uniforms.debugLodOverlay), 1.0);
 }

@@ -12,7 +12,7 @@
 //   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), uniforms.oceanRoughness, mat.g)
 //   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
 //               * (1 - cloudShadow.r * cloudShadowStrength)
-//   colour    = direct * sunIrradiance + ambientLight * albedo
+//   colour    = composeSurfaceLight(direct * sunIrradiance, ambientLight * albedo, 1, 1)
 //   emissive  = nightLights(nightColour, NoL, cloud.r)   // added, not lit
 //   return      colour + emissive
 //
@@ -65,6 +65,7 @@ import package::bodies::earth::io::VSOut;
 import package::lib::sphere::EarthSurfaceUniforms;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
+import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::nightLights::nightLights;
 import package::lib::normalMap::perturbNormal;
 import package::lib::util::raySphere;
@@ -133,7 +134,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowCoverage = textureSample(cloudTexture, earthSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  let colour = direct * uniforms.sunIrradiance + uniforms.ambientLight * albedo;
+  let colour = composeSurfaceLight(direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, 1.0, 1.0);
 
   // City lights are EMISSIVE -- added to the lit colour, never multiplied through
   // Lambert (see 'lib/nightLights.wesl'). 'NoL' is the RAW clamped term;
