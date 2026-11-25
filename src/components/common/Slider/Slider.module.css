@@ -1,20 +1,10 @@
 /*
- * Slider.module.css — the compact label+value pill.
- *
- * The track is the interactive element (`.root`, `role="slider"`). It's a flex
- * row: label at the start, value at the end, both painted on top of the fill
- * bar that sits behind them (`.fill`, `inset: 0`, width driven by an inline
- * `%`); the fill edge is the only progress cue (no separate handle/thumb).
- *
- * Tokens mirror the house range slider (SettingsPanel's `.panelRow`): the track
- * borrows `--surface-control` + `--border-control` and hover raises the border
- * to `--border-hover`, so this reads as the same control family. The fill stays
- * a muted `--surface-control-*` wash (not a bright accent) so a board of these
- * doesn't shout.
- *
- * The fill `transition` is what animates a keyboard nudge or a programmatic
- * change; `.dragging` kills it so a pointer drag tracks the finger frame-for-
- * frame instead of easing behind it (see the .tsx module header).
+ * Slider.module.css — the compact label+value pill. `.root` is a flex row, label
+ * start and value end, painted over the fill (`inset: 0`, inline `%` width); the
+ * fill edge is the only progress cue. Tokens mirror the house range slider
+ * (`--surface-control`, `--border-control`, `--border-hover` on hover) and the
+ * fill stays a muted wash so a board of these doesn't shout. Its transition
+ * animates key nudges; `.dragging` drops it so a drag tracks the pointer.
  */
 
 .root {
@@ -91,6 +81,58 @@
 /* During a drag the fill must follow the pointer with no easing lag. */
 .dragging .fill {
   transition: background var(--duration-color) var(--ease-standard);
+}
+
+/*
+ * Edit mode: the same box becomes a text field. It wears the house form-control
+ * chrome, whose module also defines `--tool-status-bad`, so composing it is what
+ * guarantees the glow's colour exists in the main app too. A darker well, the
+ * fill gone and a caret say "type here" without changing a single dimension.
+ */
+.editing {
+  composes: control from '../shared.module.css';
+}
+
+.root.editing {
+  cursor: text;
+  border-color: var(--border-hover);
+  background: var(--surface-soft);
+  box-shadow: inset 0 1px var(--space-1) var(--shadow-card-outer);
+}
+
+.root.editing:focus-within {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.root.editing:has(.input[aria-invalid='true']) {
+  border-color: color-mix(in srgb, var(--tool-status-bad) 60%, transparent);
+  box-shadow:
+    inset 0 1px var(--space-1) var(--shadow-card-outer),
+    0 0 var(--space-3) color-mix(in srgb, var(--tool-status-bad) 45%, transparent);
+}
+
+.editing .fill {
+  visibility: hidden;
+}
+
+/* `font: inherit` carries the line height, so the box is exactly as tall as the value it replaces. */
+.input {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg);
+  caret-color: var(--color-accent);
+  text-align: end;
 }
 
 .disabled {
