@@ -6,13 +6,10 @@
   font-size: var(--font-size-sm);
 }
 
-/* The padding field: the shared form-control chrome at the panel's own text size. */
+/* The padding field, in the chrome every sidebar dropdown shares. */
 .field {
-  composes: control from '../../../../../src/components/common/shared.module.css';
+  composes: control from '../formControl.module.css';
   inline-size: 8ch;
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-md);
   cursor: text;
 }
 
