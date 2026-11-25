@@ -1,9 +1,9 @@
 # Sampled trails as a core service: implementation plan
 
-> Spec: [`2026-11-25-sampled-trails-core-service-design.md`](../specs/2026-11-25-sampled-trails-core-service-design.md).
+> Spec: [`2026-11-25-sampled-trails-core-service-design.md`](../../specs/completed/2026-11-25-sampled-trails-core-service-design.md).
 > Branch `refactor/sampled-trails-core-service`, from main at d36088137. Preparation for asteroid
 > 2026 QQ8; no new body ships here.
-> Execution: lean SDD ([`sdd-execution.md`](../conventions/sdd-execution.md)), three serial
+> Execution: lean SDD ([`sdd-execution.md`](../../conventions/sdd-execution.md)), three serial
 > dispatches. No perf gate (owner, 2026-11-25).
 
 ## Strategy
@@ -49,13 +49,13 @@ export type GatedTrailGroup<G> = G & { fade(view: FrameView): number };
 GatedTrailGroup<SampledTrailGroup>[]`, composed exactly as `orbitTrailGroups` (`createLayers.ts:206-208`) and
 exposed on `PassState`.
 
-- [ ] `gateOrbitTrailGroup` binds a show key to a fade and nothing else: rename it `gateTrailGroup`,
+- [x] `gateOrbitTrailGroup` binds a show key to a fade and nothing else: rename it `gateTrailGroup`,
       generic over `{ readonly show: ShowKey }`, and use it for both lists. One function, not a twin.
-- [ ] Test `createLayers composes the Layers' sampled-trail groups`, beside the orbit-trail one at
+- [x] Test `createLayers composes the Layers' sampled-trail groups`, beside the orbit-trail one at
       `createLayers.composition.test.ts:145`: two fixture Layers, one group each, both land in
       `state.sampledTrailGroups` with a `fade` function.
-- [ ] Fix the stale comment at `EngineState.d.ts:95` while there (only Layers' groups compose).
-- [ ] Commit.
+- [x] Fix the stale comment at `EngineState.d.ts:95` while there (only Layers' groups compose).
+- [x] Commit.
 
 ## Task 2: Core draws sampled trails; the missions Layer hands in its rows
 
@@ -125,17 +125,17 @@ draws what `trailDrawsAt(trail, simDays, group.nearPlanets?.(state) ?? false)` r
 (`missionTrailsPass.ts:38-87`) carries over unchanged. The ids handed to `ensureTracks` are the
 union of all groups' row ids.
 
-- [ ] The missions runtime, `create` and `destroy` drop `trailRenderer`; `layer.ts` drops the pass
+- [x] The missions runtime, `create` and `destroy` drop `trailRenderer`; `layer.ts` drops the pass
       and keeps the `missionTrails` visibility entry, slice and switch.
-- [ ] `timelineLanes.ts:15` reads the lane colour from `MISSION_TRAIL_ROWS`.
-- [ ] The uniform layout (`TRAIL_UNIFORM_OFFSETS`, 144 bytes, `fadeInvKm` at 124, `fadeRelKm` at
+- [x] `timelineLanes.ts:15` reads the lane colour from `MISSION_TRAIL_ROWS`.
+- [x] The uniform layout (`TRAIL_UNIFORM_OFFSETS`, 144 bytes, `fadeInvKm` at 124, `fadeRelKm` at
       128) and the vertex stride do not change; the parity test moves with the shaders and must
       pass untouched in its assertions.
-- [ ] No new test: this task moves code. `tests/conventions/layerImportBoundary.test.ts` must pass
+- [x] No new test: this task moves code. `tests/conventions/layerImportBoundary.test.ts` must pass
       without a new allow-list row (core imports nothing from `src/layers/missions/`).
-- [ ] `grep -rn "missionTrail\|MissionTrail\|mission-trail" src tests tools packages` leaves only
+- [x] `grep -rn "missionTrail\|MissionTrail\|mission-trail" src tests tools packages` leaves only
       the missions Layer's own `missionTrails` setting, key, slice, type and `MISSION_TRAIL_ROWS`.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 3: One track file per body, loaded by its Layer; the builder loses its Voyager steps
 
@@ -172,18 +172,18 @@ encounter blend, `buildSpacecraftTracks.ts:116-125`), decimate, check, write one
 tool that the filter yields exactly the rows today's `startsWith('voyager')` does.
 `buildMissionEvents` takes over `buildSpacecraftTracks.ts:91-109` and `:133-165`.
 
-- [ ] Before changing the tool: fetch the raw Voyager vectors (`npm run fetch-horizons -- voyager1
+- [x] Before changing the tool: fetch the raw Voyager vectors (`npm run fetch-horizons -- voyager1
       voyager2`, then the dense windows via `tools/fetch/fetchVoyagerWindows.ts`), run the tool as
       it stands, and keep its two outputs outside the repo as the reference.
-- [ ] After: each new file's samples equal that craft's track in the reference file bit for bit
+- [x] After: each new file's samples equal that craft's track in the reference file bit for bit
       (`tDays`, `posKm`, `velKmS`), and `missionEvents.generated.ts` differs from the reference in
       its header comment at most. Report both comparisons in the reply. If the fresh reference
       differs from the committed `missionEvents.generated.ts` (Horizons drift), stop and report.
-- [ ] Tests: the parser and saga tests move and rename with their files; the saga test asserts
+- [x] Tests: the parser and saga tests move and rename with their files; the saga test asserts
       one fetch per id and that a failed fetch for one id still loads the other. Use a neutral
       fixture id beside a Voyager one.
-- [ ] Do not delete or rewrite `spacecraftTracks.*.bin` in `public/data/`.
-- [ ] Commit.
+- [x] Do not delete or rewrite `spacecraftTracks.*.bin` in `public/data/`.
+- [x] Commit.
 
 ## Task 4: A sampled body's launch is optional
 
@@ -202,12 +202,12 @@ export type SampledBody = {
 };
 ```
 
-- [ ] Test `withLaunchAscent returns the track itself for a body with no launch`.
-- [ ] Test `sampledCraftPositionMpc holds a body with no launch on its first sample before the
+- [x] Test `withLaunchAscent returns the track itself for a body with no launch`.
+- [x] Test `sampledCraftPositionMpc holds a body with no launch on its first sample before the
       track starts` (finite, equal to the first sample's position).
-- [ ] The Voyager rows regroup their two fields; their positions before, at and after the join do
+- [x] The Voyager rows regroup their two fields; their positions before, at and after the join do
       not change (the existing tests cover it).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 5: Every body can be absent, and a track sets its own window
 
@@ -229,16 +229,16 @@ export type SampledBody = {
 | sampled, no `launch` | before the track's first sample, or after its last |
 | every other body | never |
 
-- [ ] Tests on `bodyPresent`, one per row of the table, with a two-sample fixture track.
-- [ ] Test `hermiteTrackAt holds the first sample before the track starts` (finite; today NaN).
-- [ ] `frameContext` filters the planet list by `bodyPresent`, as it already filters mesh bodies;
+- [x] Tests on `bodyPresent`, one per row of the table, with a two-sample fixture track.
+- [x] Test `hermiteTrackAt holds the first sample before the track starts` (finite; today NaN).
+- [x] `frameContext` filters the planet list by `bodyPresent`, as it already filters mesh bodies;
       test `an absent sampled planet is not in the frame's planets`, with a fixture planet-class
       body on a sampled position outside its track.
-- [ ] Captions: an anchor is dropped for any absent body, not only for mesh bodies; test
+- [x] Captions: an anchor is dropped for any absent body, not only for mesh bodies; test
       `a caption anchored on an absent planet is dropped`.
-- [ ] The sampled-trails pass skips a row whose body is absent.
-- [ ] Left alone: selection and search of an absent body (backlogged).
-- [ ] Commit.
+- [x] The sampled-trails pass skips a row whose body is absent.
+- [x] Left alone: selection and search of an absent body (backlogged).
+- [x] Commit.
 
 ## Task 6: Docs
 
@@ -249,31 +249,31 @@ export type SampledBody = {
 `docs/backlog/2026-10-06-scale-fade-bands-voyager-comment.md`,
 `docs/backlog/2026-11-24-sun-trail-gap-after-launch.md`.
 
-- [ ] Names and paths follow the code. RENDERER.md says who owns what: core draws, a Layer hands
+- [x] Names and paths follow the code. RENDERER.md says who owns what: core draws, a Layer hands
       in `guides.sampledTrails` and loads its own bodies' tracks.
-- [ ] `docs/backlog/2026-11-05-spacecraft-tracks-hidden-input.md`: the store is now written by
+- [x] `docs/backlog/2026-11-05-spacecraft-tracks-hidden-input.md`: the store is now written by
       each Layer's loader; the hidden-input finding itself still stands.
-- [ ] No completed plan or spec is edited.
-- [ ] Commit.
+- [x] No completed plan or spec is edited.
+- [x] Commit.
 
 ## Definition of Done
 
 **Deliverables**
 
-- [ ] `LayerGuides.sampledTrails`, `SampledTrailGroup`, `SampledTrailRow`, `state.sampledTrailGroups`.
-- [ ] Core pass `'sampled-trails'`, `state.gpu.sampledTrailRenderer`, shaders under `shaders/bodies/sampledTrail/`.
-- [ ] `loadSampledTracksSaga(ids)`, `parseSampledTracks`, `sampledTrack.<id>.bin` per Voyager,
+- [x] `LayerGuides.sampledTrails`, `SampledTrailGroup`, `SampledTrailRow`, `state.sampledTrailGroups`.
+- [x] Core pass `'sampled-trails'`, `state.gpu.sampledTrailRenderer`, shaders under `shaders/bodies/sampledTrail/`.
+- [x] `loadSampledTracksSaga(ids)`, `parseSampledTracks`, `sampledTrack.<id>.bin` per Voyager,
       `npm run build-sampled-tracks`, `tools/missions/buildMissionEvents.ts`.
-- [ ] `SampledBody` under `src/@types/scene/` with an optional `launch`; `bodyPresent`.
-- [ ] `src/layers/missions/trails/` holds only the Layer's rows and its `missionTrails` state.
+- [x] `SampledBody` under `src/@types/scene/` with an optional `launch`; `bodyPresent`.
+- [x] `src/layers/missions/trails/` holds only the Layer's rows and its `missionTrails` state.
 
 **Smoke pass** (each shot beside the same link on main)
 
-- [ ] Voyager exhibit at Jupiter: one trail, around the planet, fading at its loose end.
-- [ ] Voyager exhibit at launch: the trail starts on the pad.
-- [ ] Normal mode with `layers=missionTrails`: both Sun-centred trails, full strength.
-- [ ] The exhibit's craft switch: the other craft's trail and caption dim.
-- [ ] The switch still reads "Mission trails" and toggles the trails.
+- [x] Voyager exhibit at Jupiter: one trail, around the planet, fading at its loose end.
+- [x] Voyager exhibit at launch: the trail starts on the pad.
+- [x] Normal mode with `layers=missionTrails`: both Sun-centred trails, full strength.
+- [x] The exhibit's craft switch: the other craft's trail and caption dim.
+- [x] The switch still reads "Mission trails" and toggles the trails.
 
 **Out of scope**
 

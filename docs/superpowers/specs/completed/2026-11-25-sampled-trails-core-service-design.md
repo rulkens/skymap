@@ -1,6 +1,6 @@
 # Sampled trails as a core service: design spec
 
-> **Status.** Draft, 2026-11-25. Owner: Alexander Rulkens. The owner ruled the shape the same day
+> **Status.** Shipped, 2026-11-25. Owner: Alexander Rulkens. The owner ruled the shape the same day
 > (§2). **Written against** main at d36088137.
 > **Scope.** Preparation only: core draws the trails of bodies on sampled tracks, and Layers hand in
 > their rows. The asteroid 2026 QQ8 is the next PR (§8).
