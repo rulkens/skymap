@@ -445,20 +445,20 @@ alreadyTouched = touched.has(target) || (spec.retained && !restartRequested(step
 
 Steps:
 
-- [ ] Types. `expandFrameOrder`'s render expander (`:88-97`) copies `restartPlanner` the way it
+- [x] Types. `expandFrameOrder`'s render expander (`:88-97`) copies `restartPlanner` the way it
       copies `slot`. `sameGroup` (`:133-144`) compares it, because it shapes the pass descriptor.
       No test for the merge key: no authored line pairs two same-group steps with different values.
-- [ ] `restartRequested` reads `view.snapshot.plans.get(planner, view)`.
-- [ ] Executor: apply the rule above. Add one sentence to the module header's "First-touch clear"
+- [x] `restartRequested` reads `view.snapshot.plans.get(planner, view)`.
+- [x] Executor: apply the rule above. Add one sentence to the module header's "First-touch clear"
       section.
-- [ ] Test `a retained target loads on first touch when its planner value does not restart`:
+- [x] Test `a retained target loads on first touch when its planner value does not restart`:
   - Fixture: a `retained: true` row, a per-view planner whose stored value is
     `{ restart: false }`, and one render step naming it.
   - Expect `loadOp: 'load'`, on the view that `viewOf(id, ctx.id)` returns.
-- [ ] Test `a retained target clears on first touch when its planner value says restart`: with
+- [x] Test `a retained target clears on first touch when its planner value says restart`: with
       `{ restart: true }`, expect `loadOp: 'clear'` with the row's `clearValue`.
-- [ ] Test `a retained target's step without restartPlanner throws`.
-- [ ] `npm run typecheck:fast`, `npm test -- executeFrame expandFrameOrder checkFrameOrder`.
+- [x] Test `a retained target's step without restartPlanner throws`.
+- [x] `npm run typecheck:fast`, `npm test -- executeFrame expandFrameOrder checkFrameOrder`.
 
 **Done when:** no shipped line sets `restartPlanner`, so every pass descriptor is byte-identical to
 today's, and the existing `executeFrame` suite stays green unchanged.

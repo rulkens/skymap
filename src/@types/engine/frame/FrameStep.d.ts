@@ -40,6 +40,9 @@ export type FrameStep =
        * keeps the FIRST line's. Absent ⇒ bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
+      /** `RenderStepSpec.restartPlanner`: the per-view planner whose value's `restart` decides a
+       *  retained target's first-touch clear. Required on a step whose target row is `retained`. */
+      readonly restartPlanner?: string;
     } & (
       | /** A render-target row by id. */ { target: string; capture?: undefined }
       /**
