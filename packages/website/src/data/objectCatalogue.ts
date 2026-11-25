@@ -37,8 +37,8 @@ import { byName } from '../utils/byName';
  */
 export const OBJECT_SECTIONS: readonly ObjectSection[] = [
   {
-    id: 'sun-planets-and-dwarf-planets',
-    title: 'Sun, planets and dwarf planets',
+    id: 'sun-planets-and-small-bodies',
+    title: 'Sun, planets and small bodies',
     kinds: ['sun', 'planet'],
     one: 'body',
     many: 'bodies',
