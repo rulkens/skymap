@@ -31,4 +31,10 @@ describe('hermiteTrackVelAt', () => {
       expect(v[k]!).toBeCloseTo((b[k]! - a[k]!) / (2 * h * 86_400), 4);
     }
   });
+
+  it('hermiteTrackVelAt is zero outside the track', () => {
+    const last = track.tDays[track.tDays.length - 1]!;
+    expect(hermiteTrackVelAt(track, track.tDays[0]! - 1)).toEqual([0, 0, 0]);
+    expect(hermiteTrackVelAt(track, last + 1)).toEqual([0, 0, 0]);
+  });
 });

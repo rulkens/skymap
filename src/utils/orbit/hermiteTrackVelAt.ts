@@ -1,7 +1,7 @@
 /**
  * hermiteTrackVelAt — the derivative of the cubic Hermite `hermiteTrackAt` evaluates, in km/s.
- * The same basis differentiated, so position and velocity agree exactly at every node; past the
- * last sample the body is held, so its velocity is the last sample's.
+ * The same basis differentiated, so position and velocity agree exactly at every node, the end
+ * nodes included; outside the track `hermiteTrackAt` holds the body, so its velocity is zero.
  */
 
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
@@ -12,7 +12,8 @@ import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 export function hermiteTrackVelAt(track: SampledTrack, tDays: number): Vec3 {
   const { tDays: ts, posKm, velKmS } = track;
   const last = ts.length - 1;
-  if (tDays >= ts[last]!) return [velKmS[3 * last]!, velKmS[3 * last + 1]!, velKmS[3 * last + 2]!];
+  if (tDays < ts[0]! || tDays > ts[last]!) return [0, 0, 0];
+  if (tDays === ts[last]) return [velKmS[3 * last]!, velKmS[3 * last + 1]!, velKmS[3 * last + 2]!];
 
   const lo = countAtOrBefore(ts, tDays) - 1;
 
