@@ -1,6 +1,5 @@
 /**
- * Voyager 1: the one source of its launch instant, read for both `presentFromIso`
- * and the sampled position.
+ * Voyager 1, on its sampled track from the launch pad.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
@@ -21,7 +20,6 @@ export const VOYAGER_1: LayerBody = {
     label: 'Voyager 1',
     meshKey: 'voyager',
     standoffRadii: 0.5,
-    presentFromIso: LAUNCH,
   }),
   position: {
     kind: 'sampled',

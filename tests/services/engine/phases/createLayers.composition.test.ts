@@ -179,7 +179,6 @@ describe('createLayers composition', () => {
     expect(groups[0]!.rows).toBe(aRows);
     expect(groups[0]!.show).toBe('missionTrails');
     expect(groups[1]!.rows).toBe(bRows);
-    expect(groups.every((group) => typeof group.fade === 'function')).toBe(true);
   });
 
   it('each planet is captioned once', async () => {

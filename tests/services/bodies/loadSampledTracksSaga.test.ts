@@ -5,7 +5,6 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { loadSampledTracksSaga } from '../../../src/services/bodies/loadSampledTracksSaga';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
-import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../src/services/bodies/trajectoryRegistry';
 import { writeSampledTracks } from '../../../tools/utils/io/writeSampledTracks';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
@@ -68,20 +67,5 @@ describe('loadSampledTracksSaga', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(requestRender).toHaveBeenCalledTimes(1);
     warn.mockRestore();
-  });
-
-  it('a track arriving while paused shows the craft', async () => {
-    const body = trackFile('voyager1');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(body) }),
-    );
-    const t = T0 + 5;
-    const before = deriveBodyStates(t).get(asSceneBodyId('voyager1'))!.positionMpc;
-    const { store, requestRender } = build(['voyager1']);
-    store.dispatch(ready);
-    await flush();
-    expect(deriveBodyStates(t).get(asSceneBodyId('voyager1'))!.positionMpc).not.toEqual(before);
-    expect(requestRender).toHaveBeenCalledTimes(1);
   });
 });

@@ -81,7 +81,6 @@ describe('sampledCraftPositionMpc, the climb before the first sample', () => {
 describe('sampledCraftPositionMpc, a body with no launch', () => {
   it('holds a body with no launch on its first sample before the track starts', () => {
     const p = sampledCraftPositionMpc({ id: body.id }, voyagerLike, LAUNCH, positionAt);
-    expect(p.every(Number.isFinite)).toBe(true);
     expect(p).toEqual([voyagerLike.posKm[0]! * K, voyagerLike.posKm[1]! * K, 0]);
   });
 });
