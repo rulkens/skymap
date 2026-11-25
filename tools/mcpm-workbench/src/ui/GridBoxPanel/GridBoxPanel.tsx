@@ -27,6 +27,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { formatBytes } from '../formatBytes';
 import PanelRow from '../PanelRow/PanelRow';
+import SubsectionGroup from '../ControlsPanel/SubsectionGroup';
 import SliderRow from '../SliderRow/SliderRow';
 import { AXES } from './utils/AXES';
 import { formatAxisSize } from './utils/formatAxisSize';
@@ -91,45 +92,6 @@ function GridBoxPanel(): ReactNode {
   return (
     <>
       <SliderRow
-        label="fit %"
-        value={grid.autoFitPercent}
-        min={80}
-        max={100}
-        step={1}
-        format={(v) => v.toFixed(0)}
-        info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
-        onChange={(v) => dispatch(setAutoFitPercent(v))}
-        path="grid.autoFitPercent"
-      />
-      {/* Always rendered, so dragging fit % never moves the rows under the pointer. */}
-      <PanelRow
-        label={evictedCount > 0 ? `evicts ${evictedCount.toLocaleString()} pts` : 'keeps all pts'}
-      />
-      <PanelRow>
-        <Button
-          className={styles.autoFitButton}
-          disabled={!catalogBoundsMpc}
-          onClick={() => {
-            if (!catalogBoundsMpc) return;
-            dispatch(
-              fitBoxToCatalog(
-                resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
-              ),
-            );
-          }}
-        >
-          auto fit
-        </Button>
-      </PanelRow>
-      <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
-        <input
-          type="number"
-          className={styles.field}
-          value={grid.paddingMpc}
-          onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
-        />
-      </PanelRow>
-      <SliderRow
         label="voxel size"
         // Fix round 1: `box.voxelSizeMpc` (the CLAMPED value, equal to manualVoxelSizeMpc
         // whenever the floor isn't active) rather than the raw manual value — otherwise,
@@ -146,6 +108,17 @@ function GridBoxPanel(): ReactNode {
       />
       {AXES.map(({ axis, label }) => (
         <SliderRow
+          key={`size-${label}`}
+          label={`size ${label}`}
+          {...sizeSliderFor(box, axis)}
+          format={(v) => formatAxisSize(v, box.dims[axis])}
+          info="Extent of the box along this axis: voxels × voxel size, in whole 8-voxel blocks."
+          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(box, axis, v)))}
+          path={`grid.manualSizeMpc.${axis}`}
+        />
+      ))}
+      {AXES.map(({ axis, label }) => (
+        <SliderRow
           key={`center-${label}`}
           label={`center ${label}`}
           value={grid.manualCenterMpc[axis]}
@@ -158,17 +131,6 @@ function GridBoxPanel(): ReactNode {
           path={`grid.manualCenterMpc.${axis}`}
         />
       ))}
-      {AXES.map(({ axis, label }) => (
-        <SliderRow
-          key={`size-${label}`}
-          label={`size ${label}`}
-          {...sizeSliderFor(box, axis)}
-          format={(v) => formatAxisSize(v, box.dims[axis])}
-          info="Extent of the box along this axis: voxels × voxel size, in whole 8-voxel blocks."
-          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(box, axis, v)))}
-          path={`grid.manualSizeMpc.${axis}`}
-        />
-      ))}
       <PanelRow
         label="GPU memory"
         info="The three grids at this voxel count, plus the agent buffers."
@@ -178,6 +140,50 @@ function GridBoxPanel(): ReactNode {
           {formatBytes(estimatedBytes)}
         </output>
       </PanelRow>
+      <SubsectionGroup title="Auto fit">
+        <SliderRow
+          label="fit %"
+          value={grid.autoFitPercent}
+          min={80}
+          max={100}
+          step={1}
+          format={(v) => v.toFixed(0)}
+          info="Fraction of catalog points the next Auto fit keeps, evicting the farthest-from-median fringe."
+          onChange={(v) => dispatch(setAutoFitPercent(v))}
+          path="grid.autoFitPercent"
+        />
+        {/* Always rendered, so dragging fit % never moves the rows under the pointer. */}
+        <PanelRow
+          label={evictedCount > 0 ? `evicts ${evictedCount.toLocaleString()} pts` : 'keeps all pts'}
+        />
+        <PanelRow
+          label="padding (Mpc)"
+          info="Margin added on every side when Auto fit sets the box."
+        >
+          <input
+            type="number"
+            className={styles.field}
+            value={grid.paddingMpc}
+            onChange={(e) => dispatch(setPaddingMpc(parseFloat(e.target.value)))}
+          />
+        </PanelRow>
+        <PanelRow>
+          <Button
+            className={styles.autoFitButton}
+            disabled={!catalogBoundsMpc}
+            onClick={() => {
+              if (!catalogBoundsMpc) return;
+              dispatch(
+                fitBoxToCatalog(
+                  resolveAutoFitBounds(catalogPoints, catalogBoundsMpc, grid.autoFitPercent),
+                ),
+              );
+            }}
+          >
+            auto fit
+          </Button>
+        </PanelRow>
+      </SubsectionGroup>
     </>
   );
 }
