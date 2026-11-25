@@ -31,4 +31,19 @@ describe('TextureAtlas', () => {
     a.destroy();
     expect(texture.destroy).toHaveBeenCalledOnce();
   });
+
+  it('never allocates its reserved slots', () => {
+    // Bug caught: a reserved slot handed to a tile, which the reserver then overwrites.
+    const device = { createTexture: () => ({}) } as unknown as GPUDevice;
+    const a = new TextureAtlas(device, {
+      atlasSide: 256,
+      slotSide: SLOT_SIDE,
+      format: 'rgba8unorm-srgb',
+      label: 'test-atlas',
+      reservedSlots: 1,
+    });
+    const slots = Array.from({ length: 4 }, (_, i) => a.allocate(`tile-${i}`, 1));
+    expect(slots).not.toContain(0);
+    expect(slots.filter((slot) => slot !== null)).toHaveLength(3);
+  });
 });

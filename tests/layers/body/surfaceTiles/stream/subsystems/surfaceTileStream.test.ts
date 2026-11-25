@@ -33,8 +33,6 @@ import { IDLE_SURFACE_TILE_PLAN } from '../../../../../../src/layers/body/surfac
 import { fetchSurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchHeightTile';
-import { SURFACE_TILE_LANE_SPECS } from '../../../../../../src/layers/body/surfaceTiles/stream/data/surfaceTileLaneSpecs';
-import { TextureAtlas } from '../../../../../../src/services/gpu/resources/textureAtlas';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { derivePlannerParams } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTiles/format/utils/isSurfaceTileBodyId';
@@ -314,17 +312,6 @@ describe('surfaceTileStream lanes', () => {
     const stream = await engagedOn({ ...manifest, bands: [...manifest.bands, shallowNight] });
     expect(stream.getAtlasView('albedo')).not.toBeNull();
     expect(stream.getAtlasView('night')).toBeNull();
-  });
-
-  it('a lane never allocates its reserved slots', () => {
-    // Bug caught: a reserved slot handed to a tile, which the reserver then overwrites.
-    const atlas = new TextureAtlas(stubDevice(), {
-      ...SURFACE_TILE_LANE_SPECS.albedo,
-      reservedSlots: 1,
-    });
-    const slots = Array.from({ length: SLOT_COUNT }, (_, i) => atlas.allocate(`tile-${i}`, 1));
-    expect(slots).not.toContain(0);
-    expect(slots.filter((slot) => slot !== null)).toHaveLength(SLOT_COUNT - 1);
   });
 });
 
