@@ -23,7 +23,6 @@ import {
   setShowGalaxies,
 } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import FileActions from '../FileActions/FileActions';
 import EyeIcon from '../../../../../src/components/icons/EyeIcon/EyeIcon';
 import LoopPlayIcon from '../icons/LoopPlayIcon/LoopPlayIcon';
 import SpiralIcon from '../icons/SpiralIcon/SpiralIcon';
@@ -198,7 +197,6 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           />
         </PanelSection>
       </div>
-      <FileActions />
     </aside>
   );
 }

@@ -22,47 +22,81 @@
   }
 }
 
+/* Data, the canvas, the controls. The footer is the controls' last row but a
+   sibling of the scrolling column, not inside it, so the narrow layout can
+   give it a row of its own that nothing scrolls under. */
 .pair {
   composes: slide;
   position: absolute;
   inset: 0;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   pointer-events: none;
 }
 
-/* The scroll lives on `.sections`, so the wheel scrolls the controls instead of
-   reaching the viewport's zoom handler. No App-level wrapper carries an ambient
-   text style, so the colour and face are set here. */
-.sidebar {
-  composes: slide;
-  inline-size: var(--sidebar-inline-size);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-panel);
-  backdrop-filter: blur(var(--blur-panel));
+/* Both asides; dissolved here, the one scroll box in the narrow layout. */
+.column {
+  display: contents;
+}
+
+/* No App-level wrapper carries an ambient text style, so the colour and face
+   are set here. */
+.sidebar,
+.footer {
   color: var(--color-fg-base);
   font-family: var(--font-family-mono);
   pointer-events: auto;
 }
 
+/* The scroll lives on `.sections`, so the wheel scrolls the controls instead of
+   reaching the viewport's zoom handler. */
+.sidebar {
+  composes: slide;
+  grid-row: 1 / -1;
+  inline-size: var(--sidebar-inline-size);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+}
+
 .start {
   composes: sidebar;
+  grid-column: 1;
   border-inline-end: 1px solid var(--border-default);
 }
 
+/* Spans the footer's row too, so one surface lies behind both; its own
+   sections take the first row. */
 .end {
   composes: sidebar;
+  grid-column: -2;
+  display: grid;
+  grid-template-rows: subgrid;
   border-inline-start: 1px solid var(--border-default);
 }
 
-/* Hidden is `inert` on the aside: off screen, out of the tab order and the
-   accessibility tree, still mounted. */
+/* Over the controls aside, whose backdrop filter paints it in the positioned
+   layer; as wide as that aside's content box, inside its border. */
+.footer {
+  composes: slide;
+  composes: grid from './panelGrid.module.css';
+  grid-column: -2;
+  grid-row: -2;
+  justify-self: end;
+  inline-size: var(--sidebar-inline-size);
+  z-index: 1;
+}
+
+/* Hidden is `inert`: off screen, out of the tab order and the accessibility
+   tree, still mounted. */
 .start[inert] {
   translate: -100% 0;
 }
 
-.end[inert] {
+.end[inert],
+.footer[inert] {
   translate: 100% 0;
 }
 
@@ -97,8 +131,9 @@
 }
 
 .sidebar[inert],
+.footer[inert],
 .toggle:has([aria-expanded='false']),
-.pair:has(> .start[inert]):has(> .end[inert]) {
+.pair:has(.start[inert]):has(.end[inert]) {
   transition-duration: var(--duration-fast);
   transition-timing-function: ease-in;
 }
@@ -111,32 +146,30 @@
   padding-block: var(--space-10);
 }
 
-/* Below the scroll, always visible; opaque so scrolled-under rows don't show. */
+/* Below the scroll, always visible. */
 .pinned {
   composes: grid from './panelGrid.module.css';
   flex: none;
-  background: var(--surface-panel);
-}
-
-.pinnedSticky {
-  composes: pinned;
 }
 
 @container workbench (width < 900px) {
   .pair {
     inset-inline-start: auto;
     inline-size: var(--sidebar-inline-size);
-    display: block;
-    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr);
     pointer-events: auto;
     background: var(--surface-panel);
     backdrop-filter: blur(var(--blur-panel));
     border-inline-start: 1px solid var(--border-default);
   }
 
-  /* The asides dissolve so the pinned footer's sticky box is the scrolling
-     pair, not its own aside: inside an aside that starts below the fold it
-     could never pin. */
+  .column {
+    display: block;
+    min-block-size: 0;
+    overflow-y: auto;
+  }
+
+  /* The asides dissolve into the column; the pair draws the one surface. */
   .sidebar {
     display: contents;
   }
@@ -148,11 +181,17 @@
 
   /* One toggle hides the whole column; a sidebar hidden in the wide layout
      stays out of the column while the other shows. */
-  .pair:has(> .start[inert]):has(> .end[inert]) {
+  .pair:has(.start[inert]):has(.end[inert]) {
     translate: 100% 0;
   }
 
-  .pair:has(> .sidebar:not([inert])) > .sidebar[inert] {
+  /* The footer rides the pair's slide, not one of its own. */
+  .footer[inert] {
+    translate: none;
+  }
+
+  .column:has(> .sidebar:not([inert])) > .sidebar[inert],
+  .pair:has(.sidebar:not([inert])) > .footer[inert] {
     display: none;
   }
 
@@ -168,18 +207,5 @@
   .sections {
     overflow: visible;
     padding-block-end: 0;
-  }
-
-  .pinned {
-    background: none;
-  }
-
-  .pinnedSticky {
-    position: sticky;
-    inset-block-end: 0;
-    z-index: 1;
-    /* The translucent panel surface laid over the page ground: opaque, so
-       scrolled-under rows do not read through. */
-    background: linear-gradient(var(--surface-panel), var(--surface-panel)), var(--color-bg);
   }
 }

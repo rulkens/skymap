@@ -1,6 +1,8 @@
 /**
  * FileActions — the right sidebar's pinned footer: the two exports (trace,
- * .scfd) and the params preset save/load. The exports only request; the export
+ * .scfd) and the params preset save/load. App mounts it beside the scrolling
+ * column rather than in the controls aside, so it hides with the controls
+ * through its own `collapsed`. The exports only request; the export
  * saga's harness closure is the one place that can read the trace back. The
  * params preset is the same shape the trace sidecar's provenance.params rides
  * (exportParams), so it saves synchronously from the live store.
@@ -27,7 +29,11 @@ import { PARAMS_FILE_EXTENSION } from './utils/PARAMS_FILE_EXTENSION';
 
 const ICON_SIZE = 12;
 
-function FileActions(): ReactNode {
+export type FileActionsProps = {
+  readonly collapsed: boolean;
+};
+
+function FileActions({ collapsed }: FileActionsProps): ReactNode {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const exportLabelId = useId();
@@ -78,7 +84,7 @@ function FileActions(): ReactNode {
   // The visible label is the short word; the accessible name keeps the verb
   // and the group, which the probe and screen readers both rely on.
   return (
-    <div className={styles.root}>
+    <div className={styles.root} inert={collapsed}>
       <div className={styles.group} role="group" aria-labelledby={exportLabelId}>
         <span id={exportLabelId} className={styles.groupLabel}>
           export

@@ -3,8 +3,9 @@
  * redux `<Provider>` here (not `hooks.ts`) — the store's construction site,
  * exactly the role `src/main.tsx` plays for the main app's `<Provider>`.
  * The two sidebars sit over the WebGPU Viewport: data left, controls right.
- * Their toggles sit outside the pair, which scrolls and would clip them in the
- * narrow layout; the canvas fills the window either way, so hiding one resizes nothing.
+ * Their toggles sit outside the pair, whose column scrolls and would clip them in
+ * the narrow layout; the canvas fills the window either way, so hiding one resizes
+ * nothing. The controls' footer sits beside that column, so nothing scrolls under it.
  */
 import { useId, useMemo, useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
@@ -12,6 +13,7 @@ import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import DataPanel from '../DataPanel/DataPanel';
+import FileActions from '../FileActions/FileActions';
 import SidebarToggle from '../SidebarToggle/SidebarToggle';
 import Viewport from '../Viewport/Viewport';
 import styles from './App.module.css';
@@ -53,8 +55,11 @@ function App(): ReactNode {
           }}
         />
         <div className={styles.sidebars}>
-          <DataPanel id={dataId} collapsed={!dataOpen} />
-          <ControlsPanel id={controlsId} collapsed={!controlsOpen} />
+          <div className={styles.column}>
+            <DataPanel id={dataId} collapsed={!dataOpen} />
+            <ControlsPanel id={controlsId} collapsed={!controlsOpen} />
+          </div>
+          <FileActions collapsed={!controlsOpen} />
         </div>
       </div>
     </Provider>

@@ -2,7 +2,7 @@
    label above, its button pair on the control track. Both pairs share that
    track, so they line up and end on the edge every control ends on. */
 .root {
-  composes: pinnedSticky from '../sidebar.module.css';
+  composes: footer from '../sidebar.module.css';
   container: file-actions / inline-size;
   row-gap: var(--space-4);
   padding-block: var(--space-5);

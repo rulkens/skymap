@@ -9,3 +9,7 @@
 .sidebars {
   composes: pair from '../sidebar.module.css';
 }
+
+.column {
+  composes: column from '../sidebar.module.css';
+}
