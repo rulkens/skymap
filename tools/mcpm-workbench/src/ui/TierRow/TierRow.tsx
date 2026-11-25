@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { TIER_LADDER } from '../../../../../src/data/tierLadder';
 import PanelRow from '../PanelRow/PanelRow';
-import styles from './TierRow.module.css';
+import Select from '../Select/Select';
 
 export type TierRowProps = {
   readonly tier: Tier;
@@ -20,17 +20,7 @@ function TierRow({ tier, onChange }: TierRowProps): ReactNode {
       label="tier"
       info="How many galaxies each built-in catalog brings: small and medium keep the brightest, large is the whole catalog."
     >
-      <select
-        className={styles.select}
-        value={tier}
-        onChange={(e) => onChange(e.target.value as Tier)}
-      >
-        {TIER_LADDER.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
+      <Select value={tier} options={TIER_LADDER} onChange={onChange} />
     </PanelRow>
   );
 }

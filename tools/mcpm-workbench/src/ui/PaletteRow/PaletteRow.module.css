@@ -1,8 +1,0 @@
-/* PaletteSelect's `font: inherit` picks up the panel's 14px mono base here;
-   the main app's rows sit in a --font-size-sm context, so match it. Its
-   intrinsic width, not the shared 7.5rem floor, sizes the panel grid's control
-   column, which every label in the section shares. */
-.select {
-  font-size: var(--font-size-sm);
-  min-inline-size: 0;
-}

@@ -1,0 +1,8 @@
+/* As wide as its longest option, so a chosen value never clips and choosing one
+   never resizes the control track every row shares. */
+.root {
+  composes: control from '../../../../../src/components/common/shared.module.css';
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
