@@ -24,7 +24,7 @@ export function structureMarkersPlanner(
     name: 'structure-markers',
     scope: 'perView',
     fade: 'structureRing',
-    plan: (view, state, fade) => ({
+    plan: (view, state, _prev, fade) => ({
       value: produceStructureMarkers(runtime, state, view, fade),
       awake: false,
       settling: false,

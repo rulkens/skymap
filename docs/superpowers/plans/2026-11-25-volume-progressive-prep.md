@@ -533,21 +533,21 @@ How the memory works:
 
 Steps:
 
-- [ ] Types and `engine.ts` seed, then `runPlanSteps`, `renderFrame` and the per-view wrapper in
+- [x] Types and `engine.ts` seed, then `runPlanSteps`, `renderFrame` and the per-view wrapper in
       `gatePlannerByFade` (`:36-40`), which forwards `prev` ahead of the handed value.
-- [ ] `structureMarkersPlanner` takes `_prev` (`structure/frame.ts:27`). The compiler flags it,
+- [x] `structureMarkersPlanner` takes `_prev` (`structure/frame.ts:27`). The compiler flags it,
       because the old `fade` position is now contextually typed as `prev`.
-- [ ] Test in `renderFrame.plans.test.ts`: `a perView planner gets its own view id's previous
+- [x] Test in `renderFrame.plans.test.ts`: `a perView planner gets its own view id's previous
       value as prev, and undefined for an id absent last frame`.
   - The planner returns `(prev ?? 0) + 1`.
   - Run three `renderFrame` calls on one `state`, each with a fresh store, with views `[a, b]`,
     then `[a]`, then `[a, b]`.
   - Frame 3 reads a = 3, b = 1.
   - Give the fixture views ids: `makeView` builds none today.
-- [ ] Test in `gatePlannerByFade.test.ts`: `the per-view gate hands prev through ahead of the
+- [x] Test in `gatePlannerByFade.test.ts`: `the per-view gate hands prev through ahead of the
       handed value`. The inner `plan` receives `(view, state, prev, fade)` with the sentinel
       `prev` intact. A wrapper that drops `prev` still compiles, so only this test catches it.
-- [ ] `npm run typecheck:fast`, `npm test -- renderFrame gatePlannerByFade structure`.
+- [x] `npm run typecheck:fast`, `npm test -- renderFrame gatePlannerByFade structure`.
 
 **Done when:**
 

@@ -77,7 +77,24 @@ describe('gatePlannerByFade', () => {
     } as unknown as FrameContentPlanner<null>;
     const gated = gatePlannerByFade(planner, makeState());
     if (gated.scope !== 'perView') throw new Error('scope lost');
-    gated.plan(viewAt(2), S);
-    expect(plan.mock.calls[0]![2]).toBe(0);
+    gated.plan(viewAt(2), S, undefined);
+    expect(plan.mock.calls[0]![3]).toBe(0);
+  });
+
+  // A wrapper that drops `prev` still compiles: only this catches it.
+  it('the per-view gate hands prev through ahead of the handed value', () => {
+    const plan = vi.fn((..._args: unknown[]) => RESULT);
+    const planner = {
+      name: 'p',
+      scope: 'perView',
+      fade: 'probe',
+      plan,
+    } as unknown as FrameContentPlanner<{ readonly sentinel: string }>;
+    const gated = gatePlannerByFade(planner, makeState());
+    if (gated.scope !== 'perView') throw new Error('scope lost');
+    const view = viewAt(2);
+    const prev = { sentinel: 'last frame' };
+    gated.plan(view, S, prev);
+    expect(plan).toHaveBeenCalledWith(view, S, prev, 0);
   });
 });

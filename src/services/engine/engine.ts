@@ -247,6 +247,7 @@ export function createEngine(
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
     frameIndex: 0,
+    perViewPlanMemory: new Map(),
     // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
     // that getter, above, is the unrelated saga display cache.
     layers: [],

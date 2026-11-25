@@ -36,6 +36,7 @@ import type { GatedTrailGroup } from '../frame/GatedTrailGroup';
 import type { OrbitTrailGroup } from '../layer/OrbitTrailGroup';
 import type { SampledTrailGroup } from '../layer/SampledTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
+import type { PerViewPlanMemory } from '../frame/PerViewPlanMemory';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
@@ -46,6 +47,9 @@ export type EngineState = {
   viewRig: ViewRigKey;
   /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain. */
   frameIndex: number;
+  /** Last rendered frame's per-view planner values. `renderFrame` is its only writer. Empty before
+   *  the first frame. Engine-private: `PassState` does not pick it, so no pass or planner reaches it. */
+  perViewPlanMemory: PerViewPlanMemory;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
