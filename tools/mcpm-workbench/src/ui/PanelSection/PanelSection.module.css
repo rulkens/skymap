@@ -3,7 +3,6 @@
 .root {
   composes: row from '../panelGrid.module.css';
   align-items: start;
-  row-gap: var(--space-4);
   padding-block: var(--space-5) var(--space-4);
   border-block-start: 1px solid var(--border-divider);
 }
@@ -109,11 +108,31 @@
   margin: 0;
 }
 
-/* It mounts on unfold (the probe relies on a folded body being gone), so it
-   grows in rather than shoving the sections below in one jump. */
+/* Grows in on mount and folds up before it unmounts, so the sections below slide
+   both ways. No padding here: at zero height it is exactly the folded section. */
 .body {
   composes: row from '../panelGrid.module.css';
   composes: reveal from '../reveal.module.css';
+  transition:
+    block-size var(--duration-fast) ease-in,
+    opacity var(--duration-fast) ease-in;
+}
+
+.body[data-closing] {
+  block-size: 0;
+  opacity: 0;
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    transition: none;
+  }
+}
+
+/* The header-to-body gap lives here too, so it folds away with the rows. */
+.content {
+  composes: row from '../panelGrid.module.css';
   row-gap: var(--space-4);
-  padding-block-end: var(--space-3);
+  padding-block: var(--space-4) var(--space-3);
 }

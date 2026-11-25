@@ -1,6 +1,8 @@
 /* Grows a block in from zero height as it mounts, so what sits below slides
    instead of jumping. The clip lives only in the keyframes: once the animation
-   ends, tips and focus rings may overflow the block again. */
+   ends, tips and focus rings may overflow the block again. The end values are
+   spelled out so a reversed grow (PanelSection's fold mid-grow) shrinks from
+   the content's height, whatever the block's own style says by then. */
 .reveal {
   interpolate-size: allow-keywords;
   animation: reveal var(--duration-base) var(--ease-standard);
@@ -14,6 +16,8 @@
   }
 
   to {
+    block-size: auto;
+    opacity: 1;
     overflow: clip;
   }
 }

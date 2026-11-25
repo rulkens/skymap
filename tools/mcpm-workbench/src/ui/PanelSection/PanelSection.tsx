@@ -5,9 +5,10 @@
  * beside the fold button, never inside it, so the two stay separately focusable.
  * A folded section can show a one-line `summary` in its header; it is hidden from
  * assistive tech, since the body says the same and a live summary must not chatter.
- * Controlled: the caller owns `open`.
+ * Controlled: the caller owns `open`. A folded body is unmounted (the probe and the
+ * per-frame Stats and Histogram rely on it), but only once its fold-up has run.
  */
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import ChevronRightIcon from '../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import styles from './PanelSection.module.css';
 
@@ -38,6 +39,29 @@ function PanelSection({
   summary,
   children,
 }: PanelSectionProps): ReactNode {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  const closing = mounted && !open;
+
+  // Unmount when the fold-up ends; with nothing running (reduced motion, or a DOM
+  // without getAnimations) at once. A fold mid-grow plays the grow backwards, since
+  // the transition cannot start under it. Unfolding mid-way cancels the transitions
+  // (`finished` rejects) and turns a reversed grow forward again.
+  useLayoutEffect(() => {
+    if (!closing) return;
+    const running = bodyRef.current?.getAnimations?.() ?? [];
+    const grows = running.filter((a) => 'animationName' in a);
+    for (const grow of grows) grow.reverse();
+    Promise.all(running.map((a) => a.finished)).then(
+      () => setMounted(false),
+      () => {},
+    );
+    return () => {
+      for (const grow of grows) if (grow.playState === 'running') grow.reverse();
+    };
+  }, [closing]);
+
   return (
     <section className={styles.root}>
       <div className={styles.header}>
@@ -65,7 +89,16 @@ function PanelSection({
           />
         )}
       </div>
-      {open && <div className={styles.body}>{children}</div>}
+      {mounted && (
+        <div
+          ref={bodyRef}
+          className={styles.body}
+          data-closing={closing || undefined}
+          inert={closing}
+        >
+          <div className={styles.content}>{children}</div>
+        </div>
+      )}
     </section>
   );
 }
