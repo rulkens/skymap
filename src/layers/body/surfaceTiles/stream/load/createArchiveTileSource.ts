@@ -22,24 +22,27 @@ const FETCH_DEADLINE_MS = 10_000;
  * 200 means the edge ignored Range and sent the whole pack: warn once, skip.
  */
 export function createArchiveTileSource(prefix: string): SurfaceTileSource {
-  const indexes = new Map<string, Promise<SurfaceTileArchiveIndex | null>>();
+  // A memoised 'failed' is a corrupt index: a broken deploy, which no retry mends.
+  const indexes = new Map<string, Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'>>();
   let warnedNoRange = false;
 
-  async function fetchIndex(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | null> {
+  async function fetchIndex(
+    tile: SurfaceTileId,
+  ): Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'> {
     const url = dataUrl(`images/${surfaceTileArchivePath(prefix, tile.product, tile.z)}`);
     const res = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(FETCH_DEADLINE_MS) });
-    if (res.status === 404) return null;
+    if (res.status === 404) return 'missing';
     if (!res.ok) throw new Error(`archive index ${res.status}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
     try {
       return decodeSurfaceTileArchiveIndex(bytes);
     } catch {
-      // A malformed index will not mend on a retry: the level reads as empty.
-      return null;
+      // Never 'missing': a level that reads as missing must mean nothing was baked there.
+      return 'failed';
     }
   }
 
-  function indexOf(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | null> {
+  function indexOf(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'> {
     const id = `${tile.product}:${tile.z}`;
     let pending = indexes.get(id);
     if (!pending) {
@@ -58,7 +61,7 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
     async readTile(tile: SurfaceTileId): Promise<TileRead> {
       try {
         const index = await indexOf(tile);
-        if (!index) return { kind: 'missing' };
+        if (index === 'missing' || index === 'failed') return { kind: index };
         const entry = findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y));
         if (!entry) return { kind: 'missing' };
         // Answered without a fetch: `bytes=o-(o-1)` is not a valid Range.

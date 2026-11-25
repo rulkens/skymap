@@ -112,11 +112,12 @@ it('a short body reads failed', async () => {
   expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
 });
 
-it('a level whose index has a bad magic reads missing and is not refetched', async () => {
+it('a level whose index has a bad magic reads failed and is not refetched', async () => {
+  // Bug caught: a broken deploy passing as a level with nothing baked.
   fetchMock.mockImplementation(async () => ok(new Uint8Array(64)));
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toEqual(MISSING);
-  expect(await source.readTile(tile(2))).toEqual(MISSING);
+  expect(await source.readTile(tile(1))).toEqual(FAILED);
+  expect(await source.readTile(tile(2))).toEqual(FAILED);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 

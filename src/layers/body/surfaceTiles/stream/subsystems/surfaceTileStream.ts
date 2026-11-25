@@ -235,6 +235,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       const lane = engaged?.lanes[tile.product];
       if (engaged === null || lane === undefined) return false;
       const key = surfaceTilePath(tile, engaged.prefix);
+      // An empty key keeps its slot, never loaded, until LRU reclaims it.
+      if (lane.empty.has(key)) return false;
       return lane.stream.slots.slotOf(key) !== undefined && !lane.stream.isLoaded(key);
     },
     hasFailed: (tile) =>

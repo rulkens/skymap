@@ -351,7 +351,7 @@ describe('surfaceTileStream residency', () => {
     expect(stream.residency.residentSlot(albedo(0))).not.toBeNull();
   });
 
-  it('names a key read empty as empty: not failed, not resident, kept past eviction', async () => {
+  it('names a key read empty as empty: not in flight, failed or resident; kept past eviction', async () => {
     // Bug caught: an empty read memoised as failed, uploaded as a bitmap, or
     // forgotten when LRU reclaims its slot and so fetched again.
     const stream = await streamWithManifest();
@@ -360,6 +360,7 @@ describe('surfaceTileStream residency', () => {
     await tick();
 
     expect(stream.residency.isEmpty(albedo(0))).toBe(true);
+    expect(stream.residency.isInFlight(albedo(0))).toBe(false);
     expect(stream.residency.hasFailed(albedo(0))).toBe(false);
     expect(stream.residency.residentSlot(albedo(0))).toBeNull();
 
