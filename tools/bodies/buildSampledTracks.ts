@@ -6,13 +6,13 @@
  * sample is re-checked against the kept ones.
  */
 import { existsSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import { selectByIds } from '../utils/cli/selectByIds';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { hermiteTrackAt } from '../../src/utils/orbit/hermiteTrackAt';
 import { writeSampledTracks } from '../utils/io/writeSampledTracks';
 import { decimateHermiteSamples } from '../utils/math/decimateHermiteSamples';
@@ -23,13 +23,12 @@ import type { HorizonsBody } from './@types/HorizonsBody';
 const TOLERANCE_KM = 1;
 
 function readRawTrack(row: HorizonsBody): SampledTrack {
-  const dir = join(rawDataPath('horizons'), row.centre);
-  const densePath = join(dir, `${row.target}.dense.csv`);
+  const densePath = horizonsCsvPath(row, '.dense');
   if (row.dense && !existsSync(densePath))
     throw new Error(`${row.id}: dense windows ${densePath} are missing`);
   const rows = mergeHorizonsChunks([
     [
-      ...readHorizonsCsv(join(dir, `${row.target}.csv`)),
+      ...readHorizonsCsv(horizonsCsvPath(row)),
       ...(row.dense ? readHorizonsCsv(densePath) : []),
     ].sort((a, b) => a.jd - b.jd),
   ]);
