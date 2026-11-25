@@ -1,12 +1,11 @@
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { GridBox } from './GridBox';
-import type { GridBudget } from './GridBudget';
 import type { GridElement } from './GridElement';
 
 /**
  * GridSlice — the grid-box CONFIG (what the panel edits) plus the last
- * RESOLVED build's own facts; `resolvedElement`/`byteBudget` are null until
+ * RESOLVED build's element; `resolvedElement` is null until
  * the first successful build (the resolved box itself is re-derived from the
  * manual/imported fields via `deriveGridBox`, not stored). The manual path
  * (center + size
@@ -42,7 +41,6 @@ export type GridSlice = {
   readonly manualRotation: Readonly<Vec4>;
   readonly importedBox: GridBox | null;
   readonly resolvedElement: GridElement | null;
-  readonly byteBudget: GridBudget | null;
   readonly maxBufferBytes: number | null;
   /** Integer 80–100 (%): fraction of catalog points Auto fit keeps, evicting the
    * L∞-farthest-from-median fringe (see `denseFractionBounds`). */

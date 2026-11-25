@@ -1,7 +1,6 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import type { GridSlice } from '../../../@types/GridSlice';
 import type { GridBox } from '../../../@types/GridBox';
-import type { GridBudget } from '../../../@types/GridBudget';
 import type { GridElement } from '../../../@types/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../../src/@types/math/Vec4';
@@ -23,7 +22,6 @@ export const defaultGridSlice: GridSlice = {
   manualRotation: [0, 0, 0, 1],
   importedBox: null,
   resolvedElement: null,
-  byteBudget: null,
   maxBufferBytes: null,
   autoFitPercent: 97,
 };
@@ -109,13 +107,9 @@ export const gridSlice = createSlice({
       ];
       state.importedBox = null;
     },
-    /** Records a completed fit: the resolved element and its byte budget. */
-    setResolvedGrid: (
-      state,
-      action: PayloadAction<{ resolvedElement: GridElement; byteBudget: GridBudget }>,
-    ) => {
+    /** Records a completed build's element. */
+    setResolvedGrid: (state, action: PayloadAction<{ resolvedElement: GridElement }>) => {
       state.resolvedElement = action.payload.resolvedElement;
-      state.byteBudget = action.payload.byteBudget;
     },
     /**
      * setMaxBufferBytes — V2's device-limit setter, same shape as `setResolvedGrid`

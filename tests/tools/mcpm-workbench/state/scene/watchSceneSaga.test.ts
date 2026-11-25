@@ -14,7 +14,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/GridBox';
-import type { GridBudget } from '../../../../../tools/mcpm-workbench/@types/GridBudget';
 import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/gridShapeOf';
 import {
   catalogLoaded,
@@ -39,11 +38,6 @@ const SAMPLE_BOX: GridBox = {
   voxelSizeMpc: 1.171875,
   rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
 };
-const SAMPLE_BUDGET: GridBudget = {
-  perBufferBytes: { depositA: 1, depositB: 1, trace: 1, agents: 1 },
-  totalBytes: 4,
-  refusal: null,
-};
 
 // One fixture per grid action — the mapped type is the exhaustiveness check:
 // add a case reducer to gridSlice without adding a row here and this object
@@ -59,10 +53,7 @@ const GRID_FIXTURES: {
   installImportedBox: gridSlice.actions.installImportedBox(SAMPLE_BOX),
   fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({ min: [0, 0, 0], max: [10, 10, 10] }),
   setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
-  setResolvedGrid: gridSlice.actions.setResolvedGrid({
-    resolvedElement: 'f32',
-    byteBudget: SAMPLE_BUDGET,
-  }),
+  setResolvedGrid: gridSlice.actions.setResolvedGrid({ resolvedElement: 'f32' }),
   setMaxBufferBytes: gridSlice.actions.setMaxBufferBytes(123),
 };
 

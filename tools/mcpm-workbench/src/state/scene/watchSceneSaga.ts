@@ -26,7 +26,6 @@ import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { deriveGridBox } from '../../field/deriveGridBox';
 import { disposeScene, type RenderResources } from '../../render/renderResources';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
-import { planGridBudget } from '../../sim/planGridBudget';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import {
@@ -182,16 +181,7 @@ function* buildScene() {
     resources.harness = harness;
     resources.weights = weights;
 
-    // h.agents.nDataPoints, not points.count: createMcpmHarness culls out-of-box
-    // catalog points, so the harness's own buffers are already smaller whenever
-    // the box crops the catalog.
-    const budget = planGridBudget(
-      box,
-      harness.agents.nDataPoints + s.sim.agentCount,
-      harness.element,
-      harness.gpu.device.limits,
-    );
-    yield* put(setResolvedGrid({ resolvedElement: harness.element, byteBudget: budget }));
+    yield* put(setResolvedGrid({ resolvedElement: harness.element }));
     yield* put(setMaxBufferBytes(harness.gpu.device.limits.maxStorageBufferBindingSize));
     yield* put(resetStepCount());
     yield* put(resetHistogram());
