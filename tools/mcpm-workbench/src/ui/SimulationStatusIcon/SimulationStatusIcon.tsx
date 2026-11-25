@@ -18,8 +18,9 @@ type Props = {
 function SimulationStatusIcon({ size }: Props): ReactNode {
   // The zone on screen, which the next rate is judged against for the hysteresis.
   const shown = useRef<FrameRateZone>('normal');
-  const running = useAppSelector((s) => s.sim.running);
-  const zone = useAppSelector((s) => frameRateZone(shown.current, s.view.fps, s.sim.running));
+  // A lost device stops the frame loop but leaves `sim.running` set.
+  const running = useAppSelector((s) => s.sim.running && !s.view.deviceLost);
+  const zone = useAppSelector((s) => frameRateZone(shown.current, s.view.fps, running));
   useEffect(() => {
     shown.current = zone;
   }, [zone]);

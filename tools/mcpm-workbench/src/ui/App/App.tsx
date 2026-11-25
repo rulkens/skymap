@@ -13,6 +13,7 @@ import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../state/defaultAppState';
 import ControlsPanel from '../ControlsPanel/ControlsPanel';
 import DataPanel from '../DataPanel/DataPanel';
+import DeviceLostToast from '../DeviceLostToast/DeviceLostToast';
 import FileActions from '../FileActions/FileActions';
 import SidebarToggle from '../SidebarToggle/SidebarToggle';
 import Viewport from '../Viewport/Viewport';
@@ -61,6 +62,7 @@ function App(): ReactNode {
           </div>
           <FileActions collapsed={!controlsOpen} />
         </div>
+        <DeviceLostToast />
       </div>
     </Provider>
   );

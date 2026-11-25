@@ -19,12 +19,11 @@ import {
   cancelled,
 } from 'typed-redux-saga';
 
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
 import { initGpu } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveAgentWeights } from '../../field/deriveAgentWeights';
 import { deriveGridBox } from '../../field/deriveGridBox';
-import { disposeScene, type RenderResources } from '../../render/renderResources';
+import { disposeScene } from '../../render/renderResources';
 import { bufferLimitBytes } from '../../sim/bufferLimitBytes';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
 import type { WorkbenchSagaContext } from '../../store/sagaContext';
@@ -47,9 +46,10 @@ import {
 } from '../grid/gridSlice';
 import { resetHistogram } from '../histogram/histogramSlice';
 import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../sim/simSlice';
-import { deviceLost, setPreviewPacked } from '../view/viewSlice';
+import { setPreviewPacked } from '../view/viewSlice';
 import { acceptBuiltHarness } from './acceptBuiltHarness';
 import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
+import { watchDeviceLoss } from './watchDeviceLoss';
 
 // Same shape as Viewport's old acquireGpu — the propagate kernel's compute
 // limits, requested here since this is now the one call site.
@@ -91,23 +91,6 @@ export const SCENE_REBUILD_TRIGGERS = [
   setInitMode,
   setSeed,
 ];
-
-/**
- * Watches the device this specific build acquired. Detached (`spawn`, not
- * `fork`): a `fork`ed child is cancelled along with its parent, but this must
- * outlive the worker that started it — the device it watches often keeps
- * rendering for many rebuilds after this call returns. The `resources.gpu`
- * staleness check is the same guard Viewport's old `currentDevice` variable
- * gave: a device abandoned by a later rebuild (never explicitly destroyed,
- * same as before) can still independently be lost, and that must not clobber
- * the CURRENT device's status.
- */
-function* watchDeviceLoss(resources: RenderResources, gpu: GpuContext) {
-  const info = yield* call(() => gpu.device.lost);
-  if (resources.gpu?.device !== gpu.device || info.reason === 'destroyed') return;
-  yield* put(setCatalogStatusMessage(`GPU device lost (${info.reason}) — reload the page`));
-  yield* put(deviceLost());
-}
 
 /** `?probe`-gated boot signal (probeGpuErrors.ts) — was Viewport's own `buildFromPoints`
  * write; moved here since Viewport no longer builds a harness. Set ONLY on a completed
