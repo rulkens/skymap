@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { stillFramesOf } from '../../../src/utils/frame/stillFramesOf';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 const VP = Float32Array.from({ length: 16 }, (_, i) => i * 0.37 + 1) as unknown as Mat4;
 const SIZE = { width: 800, height: 600 };
-const PREVIOUS = { vp: VP, canvasSize: SIZE, stillFrames: 4 } as unknown as FrameView;
+const PREVIOUS = { vp: VP, canvasSize: SIZE, stillFrames: 4 };
 
 describe('stillFramesOf', () => {
   it('no previous derivation → 0', () => {

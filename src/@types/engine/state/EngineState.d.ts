@@ -46,13 +46,15 @@ export type EngineState = {
   tier: Tier;
   /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
   viewRig: ViewRigKey;
-  /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain. */
+  /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain and the volume
+   *  jitter, and paces the star planner's chunk plans and LRU clock. */
   frameIndex: number;
   /** Last rendered frame's per-view planner values. `renderFrame` is its only writer. Empty before
-   *  the first frame. Engine-private: `PassState` does not pick it, so no pass or planner reaches it. */
+   *  the first frame. Engine-private: `PassState` omits it, so no pass or planner sees it. */
   perViewPlanMemory: PerViewPlanMemory;
-  /** Last frame's derived views by id; `runFrame` is its only reader and writer. */
-  previousViews: ReadonlyMap<string, FrameView>;
+  /** Last frame's `stillFrames` inputs by view id, never whole views (they would pin last frame's
+   *  snapshot); `runFrame` is its only reader and writer. */
+  previousViews: ReadonlyMap<string, Pick<FrameView, 'vp' | 'canvasSize' | 'stillFrames'>>;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */

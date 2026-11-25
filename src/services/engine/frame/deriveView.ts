@@ -3,8 +3,8 @@
  * beside the snapshot — never read off `snapshot.cam`), turned and offset by
  * a `ViewSpec`, through that view's own frustum and size. The frame context
  * rides along by reference as `snapshot`, so every view of a frame shares its
- * clock, body states and stamps. `previous` (this view id's last derivation) feeds only
- * `stillFrames`.
+ * clock, body states and stamps. `previous` (this view id's last `vp`, size and
+ * `stillFrames`) feeds only `stillFrames`.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
@@ -36,7 +36,7 @@ export function deriveView(
   snapshot: ReadyFrameContext,
   cam: OrbitCamera,
   spec: ViewSpec,
-  previous?: FrameView,
+  previous?: Pick<FrameView, 'vp' | 'canvasSize' | 'stillFrames'>,
 ): FrameView {
   const { bodyStates, slabBodyCandidates, meshBodies, sceneBodies } = snapshot;
   const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;

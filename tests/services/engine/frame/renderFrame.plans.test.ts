@@ -28,6 +28,46 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 const VIEW_RIG_KEY = '__plansTest';
 
+/** The state `renderFrame` reads on the `VIEW_RIG_KEY` rig, with these rows registered. */
+function makeState(
+  planners: readonly FrameContentPlanner<unknown>[],
+  passes: readonly unknown[] = [],
+): EngineState {
+  return {
+    viewRig: VIEW_RIG_KEY,
+    frameIndex: 0,
+    perViewPlanMemory: new Map(),
+    gpu: { focusUniform: null },
+    settings: {
+      debug: { renderStrategy: 'auto' },
+      tonemap: { exposure: 1, curve: 0 },
+      hdr: { enabled: false, knee: 0, headroom: 0 },
+      bloom: { enabled: false },
+      film: { enabled: false },
+    },
+    passes,
+    planners,
+  } as unknown as EngineState;
+}
+
+/** One `renderFrame` over a mock device and swap chain. */
+function render(state: EngineState, canvas: FrameView, views: readonly FrameView[]): void {
+  renderFrame({
+    canvas,
+    views,
+    state,
+    device: {
+      createCommandEncoder: vi.fn(() => ({ finish: () => ({}) })),
+      queue: { submit: vi.fn() },
+    } as unknown as GPUDevice,
+    context: {
+      getCurrentTexture: () => ({ createView: () => ({}) }),
+    } as unknown as GPUCanvasContext,
+    timingService: createDisabledGpuTimingService(),
+    renderedTargets: new Set<string>(),
+  });
+}
+
 describe('renderFrame — plan rows', () => {
   let order: string[];
 
@@ -107,40 +147,12 @@ describe('renderFrame — plan rows', () => {
       ],
     };
 
-    const state = {
-      viewRig: VIEW_RIG_KEY,
-      frameIndex: 0,
-      perViewPlanMemory: new Map(),
-      gpu: { focusUniform: null },
-      settings: {
-        debug: { renderStrategy: 'auto' },
-        tonemap: { exposure: 1, curve: 0 },
-        hdr: { enabled: false, knee: 0, headroom: 0 },
-        bloom: { enabled: false },
-        film: { enabled: false },
-      },
-      passes: [stubPass],
-      planners: [oncePlanner, perViewPlanner],
-    } as unknown as EngineState;
-
-    const device = {
-      createCommandEncoder: vi.fn(() => ({ finish: () => ({}) })),
-      queue: { submit: vi.fn() },
-    } as unknown as GPUDevice;
-    const context = {
-      getCurrentTexture: () => ({ createView: () => ({}) }),
-    } as unknown as GPUCanvasContext;
+    const state = makeState([oncePlanner, perViewPlanner] as FrameContentPlanner<unknown>[], [
+      stubPass,
+    ]);
 
     try {
-      renderFrame({
-        canvas,
-        views: [view1, view2],
-        state,
-        device,
-        context,
-        timingService: createDisabledGpuTimingService(),
-        renderedTargets: new Set<string>(),
-      });
+      render(state, canvas, [view1, view2]);
     } finally {
       delete (VIEW_RIGS as Record<string, unknown>)[VIEW_RIG_KEY];
     }
@@ -175,28 +187,7 @@ describe('renderFrame — plan rows', () => {
       views: () => [],
       program: [{ scope: 'perView', steps: [{ kind: 'plan', name: 'counter' }] }],
     };
-    const state = {
-      viewRig: VIEW_RIG_KEY,
-      frameIndex: 0,
-      perViewPlanMemory: new Map(),
-      gpu: { focusUniform: null },
-      settings: {
-        debug: { renderStrategy: 'auto' },
-        tonemap: { exposure: 1, curve: 0 },
-        hdr: { enabled: false, knee: 0, headroom: 0 },
-        bloom: { enabled: false },
-        film: { enabled: false },
-      },
-      passes: [],
-      planners: [counter],
-    } as unknown as EngineState;
-    const device = {
-      createCommandEncoder: vi.fn(() => ({ finish: () => ({}) })),
-      queue: { submit: vi.fn() },
-    } as unknown as GPUDevice;
-    const context = {
-      getCurrentTexture: () => ({ createView: () => ({}) }),
-    } as unknown as GPUCanvasContext;
+    const state = makeState([counter] as FrameContentPlanner<unknown>[]);
 
     /** One frame over views with these ids, each frame on a fresh store; returns each id's value. */
     const frame = (ids: readonly string[]): Record<string, number> => {
@@ -206,15 +197,7 @@ describe('renderFrame — plan rows', () => {
         plans: createFramePlannerResultStore(),
       };
       const views = ids.map((id) => ({ id, snapshot, slabs: [] }) as unknown as FrameView);
-      renderFrame({
-        canvas: views[0]!,
-        views,
-        state,
-        device,
-        context,
-        timingService: createDisabledGpuTimingService(),
-        renderedTargets: new Set<string>(),
-      });
+      render(state, views[0]!, views);
       return Object.fromEntries(views.map((view) => [view.id, snapshot.plans.get(counter, view)]));
     };
 

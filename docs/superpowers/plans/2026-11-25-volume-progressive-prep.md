@@ -90,7 +90,7 @@ along, and no task cites it.
 **Contract.**
 
 ```ts
-// tests/helpers/wesl/WeslStructLayout.ts
+// tests/helpers/wesl/@types/WeslStructLayout.ts
 export type WeslStructLayout = {
   /** Declaration order; `offset` and `size` in bytes. */
   readonly fields: readonly {

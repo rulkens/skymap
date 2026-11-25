@@ -28,8 +28,10 @@ export type FrameView = {
   cam: OrbitCamera;
   /** Combined view-projection matrix, computed once per view. */
   vp: Mat4;
-  /** Frames since this view id's `vp` or `canvasSize` last changed; 0 on the frame it changed and on
-   *  a view with no previous derivation (capture faces, pick). Compared exactly: rest is exact. */
+  /** Frames since this view id's `vp` or `canvasSize` last changed; 0 on the frame it changed and
+   *  on a view with no previous derivation (capture faces, pick). Compared exactly: rest is exact.
+   *  `vp` is f32 and includes the eye, so near-field motion below f32 resolution leaves it bitwise
+   *  unchanged: right for readers whose GPU input is `vp`, not for near-field ones. */
   stillFrames: number;
   /** This view's slab table (`deriveSlabs`) — array position === `Slab.index`. */
   slabs: readonly Slab[];

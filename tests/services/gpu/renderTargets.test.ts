@@ -752,6 +752,21 @@ describe('createRenderTargets: a retained row', () => {
     expect(clearedViews).toEqual([targets.viewOf('accum', 'a'), targets.viewOf('accum', 'b')]);
   });
 
+  // A state-driven reallocation would clear the texture behind its planner's back.
+  it('construction rejects a retained row with a state-driven size or allocation', () => {
+    const state = stateWithDivisor(MW_DIVISOR);
+    for (const extra of [
+      { scale: () => 2 },
+      { fixedSizePx: { size: () => 64 } },
+      { allocateWhen: () => true },
+    ]) {
+      const row = { ...RETAINED, ...extra };
+      expect(() =>
+        createRenderTargets(mockDevice(), [...CORE_AND_LENS_ROWS, row], SIZE, state),
+      ).toThrow(/retained target 'accum'/);
+    }
+  });
+
   it('viewOf on a retained row throws without a view id', () => {
     const { state, targets } = setup();
     targets.reconcileViews(state, ['canvas']);

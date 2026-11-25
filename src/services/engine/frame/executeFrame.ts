@@ -48,9 +48,9 @@
  * enabled layers — a non-empty group always has a first layer to carry the
  * clear. A `retained` row keeps its contents across frames, so its first touch
  * loads unless the step's `restartPlanner` value says `restart`. A SEPARATE,
- * frame-wide fact — which targets hold this FRAME's content, for the overlay passes that sample `foreground:0` — lives on
- * `ctx.snapshot.renderedTargets` instead; see that field's own doc for why it
- * is not the same set as `touched`.
+ * frame-wide fact — which targets hold this FRAME's content, for the overlay
+ * passes that sample `foreground:0` — lives on `ctx.snapshot.renderedTargets`
+ * instead; see that field's own doc for why it is not the same set as `touched`.
  *
  * A capture render step (`step.capture !== undefined`) is the one exception: it
  * names a capture ROW, whose six faces are LAYERS of one texture, but `touched`
