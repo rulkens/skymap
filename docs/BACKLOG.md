@@ -268,6 +268,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
 - [ ] **mcpm-workbench: `compareTraceCubes.test.ts`'s hand-rolled `.npy` writer is supersedable by `writeNpy`** `ready` — pre-existing test-helper duplication.
 - [ ] **mcpm-workbench: `HistogramSlice.d.ts` exports two types** `ready` — the only file in the tool's `@types/` that does; `HistogramSample` wants its own file.
+- [ ] **mcpm-workbench: stream large catalog files** `ready` — files over 400 MB (full DESI samples) need a streamed parse and an unboxed median.
 - [ ] **Pick-debug overlay is off `FRAME_ORDER`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 - [ ] **Sun bloom inflates the solar disc against a transiting Moon** `needs-design` — geometry is correct (eclipse ratio ≈ 1.006); the emissive-12 disc seeds a bloom halo the lit-albedo Moon never gets. → [details](backlog/2026-08-21-sun-bloom-inflates-eclipse-disc.md)
 

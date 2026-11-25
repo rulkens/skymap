@@ -391,17 +391,17 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 `tests/tools/mcpm-workbench/export/emitTraceSidecar.test.ts`, `tools/mcpm-workbench/README.md`,
 `docs/BACKLOG.md`
 
-- [ ] `emitTraceSidecar` takes `userCatalog: Pick<UserCatalog, 'fileName' | 'settings'> & { nPoints: number } | null`
+- [x] `emitTraceSidecar` takes `userCatalog: Pick<UserCatalog, 'fileName' | 'settings'> & { nPoints: number } | null`
       and, when present, writes `provenance.catalog.user_file = { name, n_points, format, weight_kind, weight_scale?, h0_km_s_mpc?, omega_m? }`.
       `frame` stays `equatorial-cartesian`: the importer validates it against a closed list
       (`tools/parsers/polyphyTraceSidecar.ts:96`), and for an x,y,z file the frame is the user's claim.
-- [ ] Test `records the loaded file and its import settings`; test `omits user_file when no catalog is on`.
-- [ ] README: a "Load your own catalog" section — the two formats, the weight rule, the cosmology
+- [x] Test `records the loaded file and its import settings`; test `omits user_file when no catalog is on`.
+- [x] README: a "Load your own catalog" section — the two formats, the weight rule, the cosmology
       fields, the 400 MB limit, that 324,901 rows is the largest tested size, and that the RA/Dec
       format is workbench-only. Correct the "Validation" section's note that the packed loader is dev-only.
-- [ ] `docs/BACKLOG.md`: one index line, `mcpm-workbench: stream large catalog files` `ready` — files over
+- [x] `docs/BACKLOG.md`: one index line, `mcpm-workbench: stream large catalog files` `ready` — files over
       400 MB (full DESI samples) need a streamed parse and an unboxed median.
-- [ ] Commit.
+- [x] Commit.
 
 ## Definition of Done
 

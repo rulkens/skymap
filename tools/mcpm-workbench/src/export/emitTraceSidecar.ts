@@ -2,6 +2,7 @@ import type { AgentWeights } from '../../@types/AgentWeights';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
+import type { UserCatalog } from '../../@types/UserCatalog';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
@@ -42,8 +43,26 @@ export function emitTraceSidecar(input: {
   readonly steps: number;
   readonly seed: number;
   readonly producedAt: Date;
+  /** The loaded file while it is switched on; null otherwise. */
+  readonly userCatalog: (Pick<UserCatalog, 'fileName' | 'settings'> & { nPoints: number }) | null;
 }): string {
-  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt } = input;
+  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt, userCatalog } =
+    input;
+  // `frame` below stays 'equatorial-cartesian' with a file loaded: the importer
+  // checks it against a closed list, and for an x, y, z file it is the user's claim.
+  const userFile = userCatalog && {
+    name: userCatalog.fileName,
+    n_points: userCatalog.nPoints,
+    format: userCatalog.settings.format.kind,
+    weight_kind: userCatalog.settings.weight.kind,
+    ...(userCatalog.settings.weight.kind === 'linear' && {
+      weight_scale: userCatalog.settings.weight.scale,
+    }),
+    ...(userCatalog.settings.format.kind === 'raDecRedshift' && {
+      h0_km_s_mpc: userCatalog.settings.format.h0KmSMpc,
+      omega_m: userCatalog.settings.format.omegaM,
+    }),
+  };
   const half = boxHalfExtentMpc(box.sizeMpc);
   const originMpc = [
     box.centerMpc[0] - half[0],
@@ -74,6 +93,7 @@ export function emitTraceSidecar(input: {
         tier,
         n_points: points.count,
         nan_mass_filled: weights.nanCount,
+        ...(userFile && { user_file: userFile }),
       },
       // V3's exportParams preset carries the SAME object, via the same
       // buildParamsPayload — spec §10's "keep the two shapes identical".

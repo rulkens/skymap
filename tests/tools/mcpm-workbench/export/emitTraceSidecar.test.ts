@@ -77,6 +77,7 @@ describe('emitTraceSidecar', () => {
       steps: 5000,
       seed: 12345,
       producedAt,
+      userCatalog: null,
     });
 
     // The wire format itself, ahead of the parser: keys stay snake_case.
@@ -146,6 +147,7 @@ describe('emitTraceSidecar', () => {
       steps: 1000,
       seed: 1,
       producedAt: new Date(),
+      userCatalog: null,
     });
 
     const sidecar = parsePolyphyTraceSidecar(text);
@@ -161,5 +163,46 @@ describe('emitTraceSidecar', () => {
     expect(vx).toBe(vy);
     expect(vy).toBe(vz);
     expect(sidecar.dims).toEqual(box.dims);
+  });
+
+  const sidecarWith = (userCatalog: Parameters<typeof emitTraceSidecar>[0]['userCatalog']) =>
+    JSON.parse(
+      emitTraceSidecar({
+        box: autoFitGridBox({ min: [0, 0, 0], max: [100, 50, 30] }, 64, 4),
+        points: pointsFixture(),
+        weights: WEIGHTS,
+        tier: 'medium',
+        params: PARAMS,
+        agentCount: 5_000_000,
+        steps: 1000,
+        seed: 1,
+        producedAt: new Date(),
+        userCatalog,
+      }),
+    ) as { frame: string; provenance: { catalog: Record<string, unknown> } };
+
+  it('records the loaded file and its import settings', () => {
+    const sidecar = sidecarWith({
+      fileName: 'desi_bgs.csv',
+      nPoints: 2000,
+      settings: {
+        format: { kind: 'raDecRedshift', h0KmSMpc: 67.4, omegaM: 0.31 },
+        weight: { kind: 'linear', scale: 0.001 },
+      },
+    });
+    expect(sidecar.provenance.catalog.user_file).toEqual({
+      name: 'desi_bgs.csv',
+      n_points: 2000,
+      format: 'raDecRedshift',
+      weight_kind: 'linear',
+      weight_scale: 0.001,
+      h0_km_s_mpc: 67.4,
+      omega_m: 0.31,
+    });
+    expect(sidecar.frame).toBe('equatorial-cartesian');
+  });
+
+  it('omits user_file when no catalog is on', () => {
+    expect(sidecarWith(null).provenance.catalog).not.toHaveProperty('user_file');
   });
 });

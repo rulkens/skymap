@@ -22,6 +22,36 @@ npm run mcpm-workbench
 Then open <http://localhost:5500> (see `tools/utils/io/devPorts.ts` for the
 full port registry).
 
+## Load your own catalog
+
+**Load catalog** in the Data section reads a file in the browser; nothing is
+uploaded. Dropping the file on the page does the same. The loaded file becomes
+a row in the Data list, switched on, with every built-in catalog switched off;
+after that they toggle freely and can run together.
+
+- **CSV, `x, y, z, weight`**: positions in Mpc, equatorial cartesian, observer
+  at the origin. The native Polyphorm build reads the same file.
+- **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshift becomes
+  comoving distance in flat ΛCDM, with H0 and Ωm from the dialog (defaults 70
+  and 0.315). Workbench only: the native build does not read it.
+- **Packed `.bin` + `_metadata.txt`**: the Polyphorm fork's own catalog pair,
+  loaded as is.
+
+One galaxy per line. Fields are separated by commas, semicolons, tabs or
+spaces; a line that does not start with a number (header, `#` comment, blank)
+is skipped; columns after the fourth are ignored. A file with three columns is
+refused. A file that fails a check is refused at the first bad line, with the
+line number and an example of the chosen format.
+
+**Weight** is required, positive and linear. Built-in catalogs use stellar mass
+in 10¹² M☉, median about 0.02; a column in 10⁹ M☉ takes a weight scale of 0.001.
+A column of log₁₀ mass in M☉ can be declared as such and is converted on load
+(workbench only). The dialog shows the smallest, median and largest weight, and
+warns when the values look like logarithms or the median is far above 0.02.
+
+**Limits:** files over 400 MB are refused. 324,901 rows is the largest size
+tested.
+
 ## Architecture
 
 State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
@@ -112,7 +142,8 @@ orientation check passed during T18's fix round.
 
 2026-08-18. Numbers below are the **second correction** to this section —
 see "Comparator fix, round 2" below for what changed and why every row in
-the two main tables moved again. The dev-only packed-catalog loader (T21) fed
+the two main tables moved again. The packed-catalog loader (T21; dev-only
+then, now part of Load catalog) fed
 the fork's real VAC catalog (`sdssGalaxy_rsdCorr_dbscan_e2p0ms3_dz0p001_m10p0_t=0.0.bin`,
 324,901 points) through two independent headless runs at the anchor's exact
 grid box — center `(-239.469, -16.5618, 201.275)` Mpc, size
