@@ -37,6 +37,7 @@ import TierRow from '../TierRow/TierRow';
 import ToggleRow from '../ToggleRow/ToggleRow';
 import UserCatalogRow from '../UserCatalogRow/UserCatalogRow';
 import { formatDataSummary } from './utils/formatDataSummary';
+import { usePauseSimWhileOpen } from './usePauseSimWhileOpen';
 import { formatSelectionSummary } from './utils/formatSelectionSummary';
 import styles from './DataPanel.module.css';
 
@@ -54,6 +55,7 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
   const [statsOpen, setStatsOpen] = useState(false);
   const [histogramOpen, setHistogramOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  usePauseSimWhileOpen(dialogOpen);
 
   return (
     <>
