@@ -101,7 +101,10 @@ function GridBoxPanel(): ReactNode {
         onChange={(v) => dispatch(setAutoFitPercent(v))}
         path="grid.autoFitPercent"
       />
-      {evictedCount > 0 && <PanelRow label={`evicts ${evictedCount} pts`} />}
+      {/* Always rendered, so dragging fit % never moves the rows under the pointer. */}
+      <PanelRow
+        label={evictedCount > 0 ? `evicts ${evictedCount.toLocaleString()} pts` : 'keeps all pts'}
+      />
       <PanelRow>
         <Button
           className={styles.autoFitButton}
@@ -119,7 +122,14 @@ function GridBoxPanel(): ReactNode {
         </Button>
       </PanelRow>
       <PanelRow
-        label={`${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox · ${formatBytes(estimatedBytes)}`}
+        label={
+          // Two fixed lines: one line at the sidebar's width wrapped at some values.
+          <>
+            {`${box.dims[0]} × ${box.dims[1]} × ${box.dims[2]} vox · ${box.voxelSizeMpc.toFixed(2)} Mpc/vox`}
+            <br />
+            {`${formatBytes(estimatedBytes)} GPU memory`}
+          </>
+        }
       />
       <PanelRow label="padding (Mpc)" info="Margin added on every side when Auto fit sets the box.">
         <input

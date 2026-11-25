@@ -1,4 +1,5 @@
 .root {
+  composes: reveal from '../reveal.module.css';
   grid-column: content;
   margin: 0;
   padding-block: var(--space-4) 0;

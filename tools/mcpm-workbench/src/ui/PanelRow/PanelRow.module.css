@@ -31,6 +31,7 @@
   composes: labelText;
   grid-column: label-start / control-end;
   font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
   white-space: normal;
 }
 

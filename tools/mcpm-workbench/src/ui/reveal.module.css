@@ -1,0 +1,25 @@
+/* Grows a block in from zero height as it mounts, so what sits below slides
+   instead of jumping. The clip lives only in the keyframes: once the animation
+   ends, tips and focus rings may overflow the block again. */
+.reveal {
+  interpolate-size: allow-keywords;
+  animation: reveal var(--duration-base) var(--ease-standard);
+}
+
+@keyframes reveal {
+  from {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+  }
+
+  to {
+    overflow: clip;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}

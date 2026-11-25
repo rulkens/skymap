@@ -63,7 +63,7 @@
   inline-size: calc(100% + var(--panel-column-gap));
   display: flex;
   justify-content: center;
-  transition: transform 0.15s ease-out;
+  transition: var(--transition-chevron);
 }
 
 .fold[aria-expanded='true'] .chevron {
@@ -83,8 +83,11 @@
   margin: 0;
 }
 
+/* It mounts on unfold (the probe relies on a folded body being gone), so it
+   grows in rather than shoving the sections below in one jump. */
 .body {
   composes: row from '../panelGrid.module.css';
+  composes: reveal from '../reveal.module.css';
   row-gap: var(--space-4);
   padding-block-end: var(--space-3);
 }
