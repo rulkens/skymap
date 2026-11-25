@@ -1,5 +1,5 @@
 /**
- * packTexturedBodyUniforms: packer for the 176-byte `TexturedBodyUniforms` struct
+ * packTexturedBodyUniforms: packer for the 192-byte `TexturedBodyUniforms` struct
  * (`shaders/lib/sphere.wesl` holds the layout table). Reuses `packLitBodyUniforms`
  * for the 80-byte prefix so the layouts cannot drift, then overwrites its pad at 19
  * with `sunAngularRadiusRad` (the horizon shadow's penumbra); writes the ring ratios
@@ -9,10 +9,11 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec4 } from '../../../../@types/math/Vec4';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of the uniform struct. */
-export const TEXTURED_BODY_UNIFORM_FLOATS = 44;
+export const TEXTURED_BODY_UNIFORM_FLOATS = 48;
 
 export function packTexturedBodyUniforms(
   mvp: Float32Array,
@@ -25,6 +26,7 @@ export function packTexturedBodyUniforms(
   camAltitudeSq: number,
   vpCamRelLocal: Float32Array,
   sunAngularRadiusRad: number,
+  horizonRect: Readonly<Vec4>,
 ): Float32Array {
   const out = new Float32Array(TEXTURED_BODY_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // bytes 0..79
@@ -38,5 +40,6 @@ export function packTexturedBodyUniforms(
   out[26] = camPosLocal[2]; // byte 104
   out[27] = camAltitudeSq; // byte 108
   out.set(vpCamRelLocal.subarray(0, 16), 28); // bytes 112..175
+  out.set(horizonRect, 44); // bytes 176..191
   return out;
 }

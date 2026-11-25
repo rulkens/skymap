@@ -7,7 +7,7 @@
  *
  *   0..15 mvp  16..18 sunDirLocal  19 sunAngularRadiusRad  20 ringInnerRatio
  *   21 ringOuterRatio  22 limbStrength  23 limbExponent
- *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal
+ *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal  44..47 horizonRect
  */
 
 import { describe, it, expect } from 'vitest';
@@ -30,6 +30,7 @@ const LIMB_EXPONENT = 0.875; // 14/16
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
 const CAM_ALTITUDE_SQ = 0.375; // 6/16
 const SUN_RADIUS_RAD = 0.0625; // 1/16
+const HORIZON_RECT = [0.125, 0.25, 0.375, 0.5] as const;
 // 101..116, so no entry collides with the mvp's 1..16.
 const CAM_REL_VP = new Float32Array(16);
 for (let i = 0; i < 16; i++) CAM_REL_VP[i] = 101 + i;
@@ -47,10 +48,11 @@ describe('TexturedBodyUniforms byte offsets', () => {
       CAM_ALTITUDE_SQ,
       CAM_REL_VP,
       SUN_RADIUS_RAD,
+      HORIZON_RECT,
     );
     expect(out).toHaveLength(TEXTURED_BODY_UNIFORM_FLOATS);
-    expect(out.length).toBe(44); // 176 bytes
-    expect(out.byteLength).toBe(176);
+    expect(out.length).toBe(48); // 192 bytes
+    expect(out.byteLength).toBe(192);
 
     // The lit prefix is identical to packLitBodyUniforms; its pad at 19 is a real field here.
     const lit = packLitBodyUniforms(MVP, SUN_DIR);
@@ -66,11 +68,24 @@ describe('TexturedBodyUniforms byte offsets', () => {
     // camAltitudeSq at byte 108; the eye-relative vp occupies bytes 112..175.
     expect(out[27]).toBe(CAM_ALTITUDE_SQ);
     for (let i = 0; i < 16; i++) expect(out[28 + i]).toBe(CAM_REL_VP[i]);
+    expect([...out.subarray(44, 48)]).toEqual([...HORIZON_RECT]); // bytes 176..191
   });
 
   it('defaults to plain Lambert — limbStrength 0 is the identity the absent-row data-gate relies on', () => {
     // No Minnaert row packs strength 0: limb darkening collapses to 1.0 (plain Lambert), data not a code path.
-    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 0, [0, 0, 0], 0, CAM_REL_VP, 0);
+    const out = packTexturedBodyUniforms(
+      MVP,
+      SUN_DIR,
+      0,
+      0,
+      0,
+      0,
+      [0, 0, 0],
+      0,
+      CAM_REL_VP,
+      0,
+      [0, 0, 0, 0],
+    );
     expect(out[22]).toBe(0);
     expect(out[23]).toBe(0);
     expect([out[24], out[25], out[26]]).toEqual([0, 0, 0]);

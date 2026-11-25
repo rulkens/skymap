@@ -336,6 +336,10 @@ export function createEarthRenderer(
     return (committed.get(kind) ?? placeholders.get(kind)!).createView();
   }
 
+  function hasMap(kind: TextureKind): boolean {
+    return committed.has(kind);
+  }
+
   function draw(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
     pass.setPipeline(mirrored ? mirroredPipeline : pipeline);
@@ -366,6 +370,7 @@ export function createEarthRenderer(
     clearMap,
     setPlaceholderMap,
     getMapView,
+    hasMap,
     draw,
     destroy,
   };

@@ -69,8 +69,8 @@ struct PatchInstance {
   // drawing its own tile.
   heightCells: u32,
   // The leaf's sub-rect of its horizon tile ('SurfaceCutTile.standalone.horizon') in
-  // POST uv ('horizonPostRect.ts'), not slot uv like the rects above. Never zero:
-  // 'empty' and "none resident" both point at atlas slot 0, the lit sentinel.
+  // POST uv ('horizonPostRect.ts'), not slot uv like the rects above. All zero for
+  // 'empty' or "none resident": the lookup then reads fully lit.
   horizonRect: vec4<f32>,
 };
 

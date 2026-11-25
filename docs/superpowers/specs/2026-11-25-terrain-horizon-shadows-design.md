@@ -117,15 +117,16 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
   - fetched like height, as an `ImageBitmap` with `colorSpaceConversion: 'none'` and
     `premultiplyAlpha: 'none'` (`fetchHeightTile.ts:29-30`).
 - **Upload:** `copyExternalImageToTexture` only, never canvas `getImageData` (RENDERER.md:69).
-- **Sentinel.** Slot 0 is reserved at atlas creation and filled with byte 0 (−3°), which reads as
-  fully lit with the whole sky visible. A lane may reserve slots: a new optional
-  `reservedSlots: number` on the lane spec row.
+- **No data.** A zero rect means "no horizon data": the lookup skips the map and returns sun and
+  sky visibility 1, so the surface draws exactly as it does without horizon. Byte 0 (−3°) is not
+  enough: it still cuts the sun below −3.27° geometric elevation at the terminator. Tiles and
+  globe share this one convention, and no atlas slot is reserved.
 - **Residency** (one resolver for standalone products, prep 3):
-  - own tile `'empty'` → sentinel, and the walk stops;
+  - own tile `'empty'` → zero rect, and the walk stops;
   - own tile resident → its own rect;
   - otherwise the deepest resident ancestor's sub-rect, flattened like night's. An ancestor that
-    is `'empty'` → sentinel.
-  - Nothing resident, or the body has no `builtFrom.horizon` → sentinel.
+    is `'empty'` → zero rect.
+  - Nothing resident, or the body has no `builtFrom.horizon` → zero rect.
   - Horizon never gates the cut, and it never steers refinement.
 - **Instance record.** `PatchInstance` gains `horizonRect: vec4<f32>` (origin.xy, scale.xy in
   atlas UV), after `nightRect`. The stride goes 96 → 112, and the layout test
@@ -148,8 +149,7 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
 - **Bindings.** The horizon atlas is the lane row's `binding` (11, the next free slot after
   `surfaceTileShaderVariants.ts:14-18`), listed by every fragment variant, because horizon is
   unconditional and is not a `SurfaceEffect`. When the body has no horizon lane engaged, the
-  pass binds a 1×1 placeholder holding byte 0, so the draw reads fully lit, as night falls back to
-  Earth's global night map today (`surfaceTilesPass.ts:72-73`).
+  pass binds a 1×1 stand-in, which no fragment reads, since every rect is then zero.
 
 ## 6. Lighting
 
@@ -182,7 +182,8 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 | medium | z5 | 1024 × 512 | 2048 × 1024 |
 | large | z6 | 2048 × 1024 | 4096 × 2048, 32 MB GPU |
 
-- The placeholder is byte 0 (fully lit), so a missing or uncommitted map draws as today.
+- Until a map is committed the globe's uniform `horizonRect` is zero, so it draws as today; with
+  one it is (0, 0, 1, 1). The 1×1 placeholder is only something to bind.
 - Flat tiles repack as byte 0.
 - The globe shaders call the same `horizonLookup` functions, with the rect set to the whole globe.
 - The globe and the tiles read the same values at the hand-off, so nothing pops.
@@ -234,7 +235,7 @@ Per `testing.md`, only what can fail on a real bug:
 - **TileRead:** zero-length entry → `'empty'`; not in index → `'missing'`; a 404 or abort →
   `'failed'`. `'failed'` keeps today's session-long `failedKeys` rule. `'empty'` counts as
   resident, not failed, and never refetches.
-- **Resolver:** an own `'empty'` stops the walk at the sentinel even when the ancestor is
+- **Resolver:** an own `'empty'` stops the walk at the zero rect even when the ancestor is
   resident; a resident ancestor gives a flattened sub-rect.
 - **Layout:** the `PatchInstance` 112-byte stride and the `horizonRect` offset.
 - **Eye check:** shots of the five spike sites and the Moon terminator, against the spike's

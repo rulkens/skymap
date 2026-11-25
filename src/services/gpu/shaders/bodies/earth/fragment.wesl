@@ -139,16 +139,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowCoverage = textureSample(cloudTexture, earthSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme,
-  // with rect (0, 0, 1, 1), so globe and tiles read the same values at the hand-off.
+  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme, so
+  // globe and tiles read the same values at the hand-off. A zero rect (no map) reads lit.
   let equirectUv = dirToEquirectUv(surfacePos);
   let horizonUv = vec2<f32>(equirectUv.x, 1.0 - equirectUv.y);
-  let wholeGlobe = vec4<f32>(0.0, 0.0, 1.0, 1.0);
   let sunAngles = localSunAngles(surfacePos, sunDir);
   let sunVisibility = horizonSunVisibility(
-    horizonTexture, wholeGlobe, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
+    horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
   );
-  let skyVisibility = horizonSkyVisibility(horizonTexture, wholeGlobe, horizonUv);
+  let skyVisibility = horizonSkyVisibility(horizonTexture, uniforms.horizonRect, horizonUv);
   let colour = composeSurfaceLight(
     direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, sunVisibility, skyVisibility,
   );

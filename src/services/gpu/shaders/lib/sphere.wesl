@@ -63,7 +63,8 @@ struct LitBodyUniforms {
 //   offset 96..107:  camPosLocal    (vec3<f32>)
 //   offset 108..111: camAltitudeSq  (f32)
 //   offset 112..175: vpCamRelLocal  (mat4x4<f32>)
-//   total: 176 bytes (44 f32s). Packer: `layers/body/spheres/render/packTexturedBodyUniforms.ts`.
+//   offset 176..191: horizonRect    (vec4<f32>, `lib/horizonLookup.wesl`'s rect; zero = no map)
+//   total: 192 bytes (48 f32s). Packer: `layers/body/spheres/render/packTexturedBodyUniforms.ts`.
 
 struct TexturedBodyUniforms {
   mvp: mat4x4<f32>,
@@ -76,6 +77,7 @@ struct TexturedBodyUniforms {
   camPosLocal: vec3<f32>,
   camAltitudeSq: f32,
   vpCamRelLocal: mat4x4<f32>,
+  horizonRect: vec4<f32>,
 };
 
 // ── RingUniforms ─────────────────────────────────────────────────────
@@ -122,8 +124,9 @@ struct RingUniforms {
 //   offset 108..111: ambientLight        (f32, night-side floor)
 //   offset 112..115: oceanRoughness      (f32, open-water GGX roughness)
 //   offset 116..119: sunAngularRadiusRad (f32, the horizon shadow's penumbra)
-//   offset 120..123: _pad1               (f32, zeroed, round to 16-byte)
-//   total: 128 bytes (32 f32s). Packer: `layers/body/earth/render/packEarthSurfaceUniforms.ts`.
+//   offset 120..127: _pad1, _pad2        (f32, zeroed, align the vec4)
+//   offset 128..143: horizonRect         (vec4<f32>, `lib/horizonLookup.wesl`'s rect; zero = no map)
+//   total: 144 bytes (36 f32s). Packer: `layers/body/earth/render/packEarthSurfaceUniforms.ts`.
 
 struct EarthSurfaceUniforms {
   mvp: mat4x4<f32>,
@@ -138,6 +141,8 @@ struct EarthSurfaceUniforms {
   oceanRoughness: f32,
   sunAngularRadiusRad: f32,
   _pad1: f32,
+  _pad2: f32,
+  horizonRect: vec4<f32>,
 };
 
 // ── CloudShellUniforms ───────────────────────────────────────────────

@@ -37,8 +37,8 @@ The spike's runtime march, its side storage buffer and its z4 global height latt
 | Post packing | a 2×2 RGBA8 block per post; texel `(k>>2)&1, k>>3` within the block; channel `k&3` (R,G,B,A) |
 | Tile image | 66 × 66 lossless WebP, linear (no colour conversion) |
 | Flat tile | max horizon over all posts and sectors < 1° → zero-byte file → zero-length entry → `'empty'` |
-| Sentinel | atlas slot 0 reserved (`reservedSlots: 1`), filled with byte 0 (−3°) = fully lit, whole sky |
-| Lane row | `slotSide` 66, `atlasSide` 32 × 66 = 2112, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11, `reservedSlots` 1 |
+| No data | zero rect = no data: the lookup is skipped, sun and sky visibility 1 (tiles and globe alike; no reserved slot) |
+| Lane row | `slotSide` 66, `atlasSide` 32 × 66 = 2112, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11 |
 | Sun angular radius | `asin(SUN_RADIUS_M / sunDistanceM)` per frame; `SUN_RADIUS_M = 695_700_000` (IAU nominal) |
 | Perf budget | ≈ 1 ms GPU added at the Jezero pose, 4.4° sun (spike: +0.85–1.0 ms) |
 
@@ -196,6 +196,8 @@ Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `
 `'empty'` reads come from PR A's path untouched.
 
 - [x] Test `the horizon lane's slot 0 holds the lit sentinel and is never allocated`.
+  (Superseded in the review fix: the zero rect replaced the sentinel, and slot 0, `reservedSlots`
+  and this test were removed.)
 - [x] Implement; targeted tests and typecheck pass. Commit.
 
 ---
@@ -216,7 +218,7 @@ Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `
 | 0–95 | unchanged | |
 | 96–111 | `horizonRect` | `vec4<f32>`: atlas-UV origin.xy, scale.xy |
 
-`standalone.horizon` maps: a rect → itself; `'empty'` or `null` → slot 0's rect (the sentinel).
+`standalone.horizon` maps: a rect → itself (in post uv); `'empty'` or `null` → the zero rect (no data, lit).
 The vertex stage forwards it as one more `@interpolate(flat)` varying at the next free location.
 
 - [x] Layout test: stride 112, `horizonRect` at 96, the existing per-field offsets unchanged.
@@ -334,7 +336,7 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 
 ### Task 10: docs
 
-**Files:** `docs/RENDERER.md` (the horizon lane, sentinel, `horizonLookup`, `composeSurfaceLight`),
+**Files:** `docs/RENDERER.md` (the horizon lane, the zero rect, `horizonLookup`, `composeSurfaceLight`),
 `docs/DATA.md` (the horizon product, the bake order: height → horizon → pack, the re-bake rule:
 a height re-bake re-bakes horizon over the area grown by the search radius), `docs/BACKLOG.md`
 (remove nothing; the Moon polar double-shadow item stays).
@@ -346,7 +348,7 @@ a height re-bake re-bakes horizon over the area grown by the search radius), `do
 ## Review Focus
 
 - **A flat tile under a hilly ancestor must read lit.** `resolveStandaloneRect` stops at `'empty'`
-  (PR A); Task 5 maps it to the sentinel. A reviewer checks no path maps `'empty'` to the ancestor.
+  (PR A); Task 5 maps it to the zero rect. A reviewer checks no path maps `'empty'` to the ancestor.
 - **Post-to-texel order.** A wrong order gives plausible, wrong shadows. Task 1's `horizonTexelOf`
   test and parity test pin it; the shader must read through the same rule, not a re-derivation.
 - **Azimuth convention.** Clockwise from north in bake and shader; a mirrored convention puts

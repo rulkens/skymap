@@ -29,33 +29,19 @@ import {
   writePatchInstance,
   writeSurfaceTileUniforms,
 } from './surfaceTileLayout';
-import {
-  HEIGHT_ATLAS_SLOTS_PER_ROW,
-  HORIZON_TILE_ATLAS_SIDE,
-  HORIZON_TILE_PX,
-} from '../../format/data/surfaceTileParams';
+import { HEIGHT_ATLAS_SLOTS_PER_ROW } from '../../format/data/surfaceTileParams';
 import { surfaceTileFadeWeight } from '../subsystems/surfaceTileFadeWeight';
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import { horizonPostRect } from '../../horizon/utils/horizonPostRect';
+import { NO_HORIZON_RECT } from '../../../textures/data/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
 
 /** A leaf with no resident night tile: zero scale tells the fragment to read the global map. */
 const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
-
-/** Horizon atlas slot 0, the lit sentinel: an `'empty'` tile and "nothing resident" both read
- *  it, never an ancestor (a flat tile under a hilly ancestor must stay lit). The 1 × 1 stand-in
- *  bound when the lane is disengaged reads as the same sentinel through this rect. */
-const HORIZON_SENTINEL_RECT = horizonPostRect({
-  atlasUvOrigin: [0, 0],
-  atlasUvScale: [
-    HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
-    HORIZON_TILE_PX / HORIZON_TILE_ATLAS_SIDE,
-  ],
-});
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -90,8 +76,8 @@ export function createSurfaceTileRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // A body with no horizon lane still binds the horizon atlas: one zero texel reads as the
-  // lit sentinel everywhere. WebGPU zero-initialises, so no write.
+  // A body with no horizon lane still binds a horizon atlas; every rect is then
+  // `NO_HORIZON_RECT`, so this texel is never read.
   const horizonStandIn = device.createTexture({
     label: 'surface-tile-horizon-stand-in',
     size: [1, 1, 1],
@@ -327,10 +313,9 @@ export function createSurfaceTileRenderer(
           (tile.edgeCoarser[2] << 2) |
           (tile.edgeCoarser[3] << 3),
         heightCells: (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
+        // Never an ancestor's rect for 'empty': a flat tile under a hilly ancestor stays lit.
         horizonRect:
-          horizon === null || horizon === 'empty'
-            ? HORIZON_SENTINEL_RECT
-            : horizonPostRect(horizon),
+          horizon === null || horizon === 'empty' ? NO_HORIZON_RECT : horizonPostRect(horizon),
       });
     }
 

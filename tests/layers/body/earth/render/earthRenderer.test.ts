@@ -71,7 +71,7 @@ describe('createEarthRenderer', () => {
 
     expect(() => renderer.setMap('material', bitmap)).not.toThrow();
 
-    // draw writes the 112-byte EarthSurfaceUniforms record (28 f32) and records
+    // draw writes the EarthSurfaceUniforms record and records
     // the indexed draw against a stub pass.
     const pass = {
       setPipeline: vi.fn(),

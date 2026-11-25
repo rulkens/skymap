@@ -69,11 +69,8 @@ export const SURFACE_TILE_LANE_SPECS = {
     binding: 11,
     atlasSide: HORIZON_TILE_ATLAS_SIDE,
     slotSide: HORIZON_TILE_PX,
-    // Angle bytes, never `-srgb`. Slot 0 is the lit sentinel (byte 0 everywhere, so a
-    // missing tile reads as fully lit); WebGPU zero-initialises textures and the pool never
-    // hands slot 0 out, so nothing needs to write it.
+    // Angle bytes, never `-srgb`.
     format: 'rgba8unorm',
-    reservedSlots: 1,
     fetch: async (tile, source) => {
       const bitmap = await fetchHorizonTile(tile, source);
       if (bitmap === null || bitmap === 'empty') return bitmap;

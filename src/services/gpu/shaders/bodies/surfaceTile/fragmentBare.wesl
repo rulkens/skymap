@@ -18,7 +18,7 @@ import package::lib::horizonLookup::localSunAngles;
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
-// Horizon angles per post, slot 0 the lit sentinel (lib/horizonLookup.wesl reads it).
+// Horizon angles per post, read by lib/horizonLookup.wesl (a zero rect skips it).
 @group(0) @binding(11) var horizonAtlas: texture_2d<f32>;
 
 @fragment

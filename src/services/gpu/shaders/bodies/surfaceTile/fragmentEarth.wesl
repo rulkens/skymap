@@ -30,7 +30,7 @@ import package::lib::math::TAU;
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
 // Night tiles (z7 and shallower), drawn like the albedo atlas through 'atlasSampler'.
 @group(0) @binding(10) var nightAtlas: texture_2d<f32>;
-// Horizon angles per post, slot 0 the lit sentinel (lib/horizonLookup.wesl reads it).
+// Horizon angles per post, read by lib/horizonLookup.wesl (a zero rect skips it).
 @group(0) @binding(11) var horizonAtlas: texture_2d<f32>;
 
 // Inverse of 'equirectUvToDirection'. Duplicated from earth/fragment.wesl

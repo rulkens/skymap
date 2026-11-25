@@ -125,13 +125,12 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), surfaceNormal));
   let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
-  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme,
-  // with rect (0, 0, 1, 1), so globe and tiles read the same values at the hand-off.
+  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme, so
+  // globe and tiles read the same values at the hand-off. A zero rect (no map) reads lit.
   let horizonUv = vec2<f32>(fract(uv.x), 1.0 - uv.y);
   let sunAngles = localSunAngles(surfaceNormal, uniforms.sunDirLocal);
-  let wholeGlobe = vec4<f32>(0.0, 0.0, 1.0, 1.0);
   let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio)
-    * horizonSunVisibility(horizonTexture, wholeGlobe, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad);
+    * horizonSunVisibility(horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad);
   let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
   // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
   let viewDir = -rayDir;
@@ -141,7 +140,7 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
     albedo * bodyDirectShade(shadingNormal, uniforms.sunDirLocal) * limb,
     albedo * AMBIENT * limb,
     sunVis,
-    horizonSkyVisibility(horizonTexture, wholeGlobe, horizonUv),
+    horizonSkyVisibility(horizonTexture, uniforms.horizonRect, horizonUv),
   );
 
   var out: FSOut;

@@ -49,7 +49,7 @@ export const NIGHT_TILE_ATLAS_SIDE = 4096;
 export const HORIZON_TILE_PX = 2 * HORIZON_POSTS_PER_TILE;
 
 /** Physical edge of the HORIZON atlas: 32 x 32 slots of 66 px, 17.8 MB, the same slot count
- *  as height. Slot 0 is the lit sentinel, so 1023 hold tiles. */
+ *  as height. */
 export const HORIZON_TILE_ATLAS_SIDE = 32 * HORIZON_TILE_PX;
 
 /** Slots per row of the height atlas, row-major like `TextureAtlas`'s own

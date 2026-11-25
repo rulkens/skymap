@@ -172,9 +172,13 @@ function makeRuntime(
 ): BodyRuntime {
   return {
     pickCodes: PICK_CODES,
-    earthRenderer: parts.earthRenderer ?? {
-      draw: vi.fn(),
-      getMapView: vi.fn(() => ({}) as GPUTextureView),
+    // No horizon map committed: the pass packs the zero rect.
+    earthRenderer: {
+      hasMap: () => false,
+      ...(parts.earthRenderer ?? {
+        draw: vi.fn(),
+        getMapView: vi.fn(() => ({}) as GPUTextureView),
+      }),
     },
     surfaceTileRenderer: parts.surfaceTileRenderer ?? { draw: vi.fn() },
     surfaceTiles: parts.surfaceTiles ?? makeTiles({ cut: [], atlasView: null }),
@@ -290,7 +294,7 @@ describe('earthPass.draw', () => {
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![1]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
-    // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
+    // The renderer receives the pass + the packed length-36 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
     // sunIrradiance + cloudShadowStrength + cloudShellRadius + ambientLight +
     // oceanRoughness + 3 pad), not the bare 16-float MVP.
@@ -298,7 +302,7 @@ describe('earthPass.draw', () => {
     const [passArg, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(passArg).toBe(PASS_STUB);
     expect(uniforms).toBeInstanceOf(Float32Array);
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
@@ -313,7 +317,7 @@ describe('earthPass.draw', () => {
     globe.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
     const expected = sunDirLocal(
       SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
@@ -337,7 +341,7 @@ describe('earthPass.draw', () => {
     globe.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
-    expect(uniforms).toHaveLength(32);
+    expect(uniforms).toHaveLength(36);
 
     // MOCK_CAM_LOCAL is the mocked bodySlabCamLocal's fixed return value —
     // the layer must forward it byte-for-byte (f32-narrowed) into slots 20..22.
