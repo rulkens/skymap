@@ -433,7 +433,7 @@ each field's `VolumeFieldSettings`, its opacity and its cube stamp, plus the tie
 
 Steps:
 
-- [ ] `planVolumeAccumulation.test.ts`, hand values, `medium` (cap 16) unless named:
+- [x] `planVolumeAccumulation.test.ts`, hand values, `medium` (cap 16) unless named:
   - `a moving view restarts and does not vote loading`: `stillFrames` 0, prev sample 5 with the
     same key → sample 1, restart, draw, weight 1, awake, not loading.
   - `no previous value restarts, voting loading at rest`: `stillFrames` 3, no prev → sample 1,
@@ -449,7 +449,7 @@ Steps:
     freezes the grain while moving (`fragment.wesl`'s old temporal-seed note).
   - `nothing live: no draw and no votes, and going live restarts`: key `null` → no draw, not
     awake, not loading; then key `'k'` with that prev → sample 1, restart.
-- [ ] `densityAccumulationKey.test.ts`:
+- [x] `densityAccumulationKey.test.ts`:
   - `equal inputs give equal keys`: fresh copies of the same values.
   - `every settings member moves the key`:
     - Iterate `Object.keys` of a full `VolumeFieldSettings`.
@@ -458,8 +458,8 @@ Steps:
     - Expect a different key each time. A member missing from the key freezes the converged image
       on a slider change at rest, and iterating the keys covers a future member automatically.
   - `opacity, cube stamp and tier each move the key`.
-- [ ] Implement both.
-- [ ] `npm run typecheck:fast`, `npm test -- planVolumeAccumulation densityAccumulationKey`.
+- [x] Implement both.
+- [x] `npm run typecheck:fast`, `npm test -- planVolumeAccumulation densityAccumulationKey`.
 
 **Done when:** the fold and the key are pure, and every row of the table above is pinned by a test.
 
