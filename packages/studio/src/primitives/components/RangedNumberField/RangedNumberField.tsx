@@ -2,7 +2,7 @@ import { useId, useRef } from 'react';
 import Slider from '../../../../../../src/components/common/Slider/Slider';
 import { SLIDER_GESTURE_MS } from './RangedNumberField.constants';
 
-type Props = {
+type RangedNumberFieldProps = {
   readonly value: number;
   readonly label: string;
   readonly unit?: string;
@@ -13,7 +13,15 @@ type Props = {
 };
 
 /** The app's compact Slider; commits less than `SLIDER_GESTURE_MS` apart share one gesture (one history entry). */
-function RangedNumberField({ value, label, unit, step, min, max, onCommit }: Props) {
+function RangedNumberField({
+  value,
+  label,
+  unit,
+  step,
+  min,
+  max,
+  onCommit,
+}: RangedNumberFieldProps) {
   const id = useId();
   const sessions = useRef(0);
   const last = useRef({ at: -Infinity, gesture: '' });

@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import s from './InspectorPanel.module.css';
 
-type Props = { readonly label: string; readonly children: ReactNode };
+type InspectorPanelProps = { readonly label: string; readonly children: ReactNode };
 
 /** Owns the `label | control | reset` columns; rows join them through subgrid. */
-function InspectorPanel({ label, children }: Props) {
+function InspectorPanel({ label, children }: InspectorPanelProps) {
   return (
     <aside className={s.root} aria-label={label}>
       {children}

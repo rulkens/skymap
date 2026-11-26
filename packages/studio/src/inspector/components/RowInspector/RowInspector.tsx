@@ -17,7 +17,7 @@ import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import type { StudioResolution } from '../../../@types/session/StudioResolution';
 
-type Props = {
+type RowInspectorProps = {
   readonly row: TimelineRow;
   /** The full tree, nothing collapsed. */
   readonly rows: readonly TimelineRow[];
@@ -25,7 +25,7 @@ type Props = {
   readonly resolution: StudioResolution | null;
 };
 
-function RowInspector({ row, rows, draft, resolution }: Props) {
+function RowInspector({ row, rows, draft, resolution }: RowInspectorProps) {
   const spec = inspectorSpec(row.kind);
   const subject = rowSubject(draft, row.ref);
   const fields = subject === null ? [] : shownFields(spec.fields, subject);

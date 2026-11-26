@@ -6,10 +6,10 @@ import { STUDIO_KEYS } from '../../data/studioKeys';
 import { KEY_GROUPS } from './KeyHelp.constants';
 import s from './KeyHelp.module.css';
 
-type Props = { readonly onClose: () => void };
+type KeyHelpProps = { readonly onClose: () => void };
 
 /** The `?` overlay: every studio key from the same table the handler binds, by group. Escape closes it first. */
-function KeyHelp({ onClose }: Props) {
+function KeyHelp({ onClose }: KeyHelpProps) {
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => close.current?.focus(), []);
   const onKeyDown = (event: KeyboardEvent) => {

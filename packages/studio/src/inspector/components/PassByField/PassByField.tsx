@@ -9,14 +9,14 @@ import {
 import type { PassByConfig } from '../../../../../../src/@types/animation/PassByConfig';
 import type { PassByDir } from '../../../../../../src/@types/animation/PassByDir';
 
-type Props = {
+type PassByFieldProps = {
   readonly value: PassByConfig | undefined;
   readonly spaced?: boolean;
   readonly onChange: (value: PassByConfig, label: string, gesture: string | null) => void;
 };
 
 /** How far off each galaxy a Fly passes, and on which side; the side does nothing at 0. */
-function PassByField({ value = ABSENT_PASS_BY, spaced, onChange }: Props) {
+function PassByField({ value = ABSENT_PASS_BY, spaced, onChange }: PassByFieldProps) {
   const isDefaultSide = value.dir === DEFAULT_PASS_BY_DIR;
   const side = (dir: PassByDir) => onChange({ ...value, dir }, 'Side', null);
   return (

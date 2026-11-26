@@ -1,13 +1,13 @@
 import s from './PickField.module.css';
 
-type Props = {
+type PickFieldProps = {
   readonly value: string;
   readonly label: string;
   readonly options: readonly { readonly value: string; readonly text: string }[];
   readonly onChange: (value: string) => void;
 };
 
-function PickField({ value, label, options, onChange }: Props) {
+function PickField({ value, label, options, onChange }: PickFieldProps) {
   return (
     <select
       className={s.root}

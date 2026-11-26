@@ -3,7 +3,7 @@ import InspectorRow from '../../../primitives/components/InspectorRow/InspectorR
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import { formatQuantity } from '../../../utils/format/formatQuantity';
 
-type Props = {
+type ClipInspectorProps = {
   readonly label: string;
   /** Null while the draft is unresolved or invalid. */
   readonly durationSec: number | null;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 /** Nothing selected: the clip itself. */
-function ClipInspector({ label, durationSec, start }: Props) {
+function ClipInspector({ label, durationSec, start }: ClipInspectorProps) {
   return (
     <>
       <InspectorHead

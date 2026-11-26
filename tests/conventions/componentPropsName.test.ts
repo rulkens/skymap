@@ -19,6 +19,7 @@ type Scope = {
 };
 
 const SCOPES: readonly Scope[] = [
+  { name: 'clip studio', roots: ['packages/studio/src'], allowed: [] },
   { name: 'mcpm-workbench', roots: ['tools/mcpm-workbench/src/ui'], allowed: [] },
   {
     name: 'app components and layers',

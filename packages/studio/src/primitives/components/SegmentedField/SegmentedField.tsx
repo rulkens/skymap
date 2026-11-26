@@ -1,13 +1,13 @@
 import s from './SegmentedField.module.css';
 
-type Props = {
+type SegmentedFieldProps = {
   readonly value: string;
   readonly label: string;
   readonly options: readonly { readonly value: string; readonly text: string }[];
   readonly onChange: (value: string) => void;
 };
 
-function SegmentedField({ value, label, options, onChange }: Props) {
+function SegmentedField({ value, label, options, onChange }: SegmentedFieldProps) {
   return (
     <span className={s.root} role="radiogroup" aria-label={label}>
       {options.map((o) => (
