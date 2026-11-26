@@ -126,7 +126,7 @@ function TimelineTrack({
         className={styles.track}
         role="slider"
         tabIndex={0}
-        aria-label="Mission clock"
+        aria-label="Timeline clock"
         aria-valuemin={0}
         aria-valuemax={1000}
         aria-valuenow={Math.round(thumb * 1000)}
