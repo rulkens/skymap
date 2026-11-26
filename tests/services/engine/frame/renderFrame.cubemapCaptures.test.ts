@@ -59,7 +59,7 @@ import { starSpheresPass } from '../../../../src/layers/starCatalog/resolvedStar
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/resolvedStars/passes/fieldStarSpherePass';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -106,11 +106,7 @@ const PASSES = [
 // settling/awake" cases below seed their vote straight into `ctx.snapshot.plans`
 // instead (`makeCtx`), which OR-folds with these no-op votes fine.
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
-  {
-    name: 'structure-markers',
-    scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
-  },
+  ...stubPlannersFor(SCENE),
   ...stubPlannersFor(PRELUDE),
 ];
 

@@ -3,10 +3,11 @@
  * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). Each field owns its 3D
  * texture, palette LUT, bind groups, uniform buffer, matrices and per-cube statics; the user knobs
  * are read per frame through `settingsOf`, never mirrored, so the caller's settings stay the one
- * truth. The jitter index, step count and blend weight arrive per draw as `inputs`: this renderer
- * holds no frame counter. One shared pipeline means one bind-group layout, so field bind groups
- * are interchangeable. A palette change rewrites the field's LUT in place (views stay valid: one
- * queue write, zero rebinds).
+ * truth. The jitter index, step count and blend weight `w` arrive per draw as `inputs`: this
+ * renderer holds no frame counter. Below w = 1 one decay triangle scales the target by (1 − w),
+ * then every field adds at w, so the target holds a running mean. One shared march pipeline means
+ * one bind-group layout, so field bind groups are interchangeable. A palette change rewrites the
+ * field's LUT in place (views stay valid: one queue write, zero rebinds).
  */
 
 import { mat4 } from 'wgpu-matrix';
@@ -15,10 +16,13 @@ import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/Scalar
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
-import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/VolumeFieldRendererDeps';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
+import { BLUE_NOISE_MASK_SLICES } from '../../../../data/volume/blueNoiseMask';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
+import decayVsCode from '../../shaders/scalarVolume/vertexDecay.wesl?static';
+import decayFsCode from '../../shaders/scalarVolume/decayFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
@@ -27,15 +31,22 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 // struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 272;
 
-// Caps `inputs.jitterIndex` (never wrapped upstream) before it reaches the f32 hash seed. The cap
-// is loose: past ~1e5 the seed outgrows f32's fraction bits and the jitter's entropy thins.
-const JITTER_INDEX_WRAP = 1_000_000;
+// Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
+// A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
+const JITTER_INDEX_WRAP = BLUE_NOISE_MASK_SLICES * 62_500;
 
 // Each field's march adds in scaled by the pass's blend constant (`inputs.weight`); at 1 this
 // sums exactly as ADDITIVE_BLEND. Single site, so it stays here (blendStates.ts's rule).
 const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
   color: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
   alpha: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
+};
+
+// Once per draw, never per field (that would fade the fields drawn before it). Single site too.
+const DECAY_COMPONENT: GPUBlendComponent = {
+  srcFactor: 'zero',
+  dstFactor: 'one-minus-constant',
+  operation: 'add',
 };
 
 const CUBE_CORNERS = new Float32Array([
@@ -59,14 +70,13 @@ const CUBE_INDICES = new Uint16Array([
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createVolumeFieldRenderer<Id extends string>(
-  device: GPUDevice,
-  // The colour-target format the raymarch pipeline writes into — the HDR
-  // offscreen (`'rgba16float'`), NOT the swap chain. Handed over explicitly
-  // (never read off a `GpuContext.format`, which is always the swap format).
-  targetFormat: GPUTextureFormat,
-  fadeBgl: FadeUniformsBgl,
-): VolumeFieldRenderer<Id> {
+export function createVolumeFieldRenderer<Id extends string>({
+  device,
+  targetFormat,
+  fadeBgl,
+  jitterMask,
+}: VolumeFieldRendererDeps): VolumeFieldRenderer<Id> {
+  const jitterMaskView = jitterMask.createView();
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -92,7 +102,7 @@ export function createVolumeFieldRenderer<Id extends string>(
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
 
   // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
-  // + palette LUT 2D texture + sampler). Built from a manual BindGroupLayout
+  // + palette LUT 2D texture + sampler + jitter mask). Built from a manual BindGroupLayout
   // descriptor so the pipeline layout below can list it alongside the
   // canonical fadeBgl. The palette is an N x 1 2D texture rather than a
   // texture_1d — see createPaletteTexture and the shader binding for why.
@@ -116,6 +126,11 @@ export function createVolumeFieldRenderer<Id extends string>(
         texture: { sampleType: 'float', viewDimension: '2d' },
       },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      {
+        binding: 5,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d' },
+      },
     ],
   });
 
@@ -150,6 +165,24 @@ export function createVolumeFieldRenderer<Id extends string>(
     primitive: {
       topology: 'triangle-list',
       cullMode: 'front', // ← back faces only; see fragment.wesl module header
+    },
+  });
+  const decayPipeline = device.createRenderPipeline({
+    label: 'scalarVolume-decay-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'scalarVolume-decay-pipeline-layout',
+      bindGroupLayouts: [],
+    }),
+    vertex: {
+      module: createShaderModuleWithDevLog(device, decayVsCode, 'scalarVolume.vertexDecay'),
+      entryPoint: 'vs',
+    },
+    fragment: {
+      module: createShaderModuleWithDevLog(device, decayFsCode, 'scalarVolume.decayFragment'),
+      entryPoint: 'fs',
+      targets: [
+        { format: targetFormat, blend: { color: DECAY_COMPONENT, alpha: DECAY_COMPONENT } },
+      ],
     },
   });
   // The bind-group layout for @group(0). Derived from `group0Bgl` (the
@@ -251,6 +284,7 @@ export function createVolumeFieldRenderer<Id extends string>(
           { binding: 2, resource: volumeSampler },
           { binding: 3, resource: paletteTexture.createView() },
           { binding: 4, resource: paletteSampler },
+          { binding: 5, resource: jitterMaskView },
         ],
       });
       const fadeBuffer = device.createBuffer({
@@ -311,12 +345,17 @@ export function createVolumeFieldRenderer<Id extends string>(
       return false;
     },
     draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf, inputs) {
-      pass.setPipeline(pipeline);
-      pass.setVertexBuffer(0, cornerBuffer);
-      pass.setIndexBuffer(indexBuffer, 'uint16');
       // WebGPU's default blend constant is 0, which would erase every field.
       const w = inputs.weight;
       pass.setBlendConstant({ r: w, g: w, b: w, a: w });
+      // At w = 1 (a restart) the executor has just cleared the target, so the decay is skipped.
+      if (w < 1) {
+        pass.setPipeline(decayPipeline);
+        pass.draw(3);
+      }
+      pass.setPipeline(pipeline);
+      pass.setVertexBuffer(0, cornerBuffer);
+      pass.setIndexBuffer(indexBuffer, 'uint16');
       // Per-field uniform buffer layout (272 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)

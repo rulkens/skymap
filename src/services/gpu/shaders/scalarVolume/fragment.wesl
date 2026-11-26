@@ -24,7 +24,6 @@
 // the spec calls for.
 
 import package::lib::camera::CameraUniforms;
-import package::lib::util::hash21Hq;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::volumeRaymarch::localRayFromWorld;
 import package::lib::volumeRaymarch::intersectUnitAabb;
@@ -80,19 +79,14 @@ struct VolumeUniforms {
   // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
   // useful range for "fiery cosmic-web" looks.
   exposure: f32,
-  // User-tunable low-end cutoff in normalised LUT-coordinate space
-  // [0, 1].  Voxels with deviation-from-center less than 'trim' get
-  // hard-suppressed (visibility = 0).  Equivalent to Polyphorm's
-  // 'trim_density' knob but in normalised space rather than raw
-  // trace units.  Default 0 = no trim (every voxel contributes to
-  // the deadband as set by 'contrast').  Combined with the contrast-
-  // derived deadband by taking the max — user can crank trim past
-  // contrast's implicit deadband to suppress more, never less.
+  // Extra cut above the contrast deadband, in [0, 0.95]: the fraction
+  // of what survives that deadband which is also hard-suppressed.
+  // 0 = contrast's deadband alone.
   trim: f32,
   // Index into the jitter sequence: the engine frame index, so every
   // view of one frame (all five dome faces) shares a phase.  The CPU
-  // wraps it at 1e6, but the seed below loses fraction bits well before
-  // that: from ~1e5 frames the jitter's entropy thins gradually.
+  // wraps it at 1e6 (a multiple of the mask's slice count), so the
+  // integer is exact in f32.
   jitterIndex: f32,
   // March steps per ray (an integer, exact in f32).
   steps: f32,
@@ -111,6 +105,8 @@ struct VolumeUniforms {
 // filtering via the sampler.
 @group(0) @binding(3) var palette: texture_2d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
+// r8unorm blue-noise ranks: size wide, slices × size tall (see the jitter below).
+@group(0) @binding(5) var jitterMask: texture_2d<f32>;
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
@@ -167,11 +163,11 @@ struct FsIn {
 fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
-  // Deadband from contrast's implicit floor, OR'd with the explicit
-  // trim cutoff (max takes whichever is stricter).
+  // Trim cuts a fraction of what survives contrast's deadband, so it
+  // bites from just above 0.
   let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
   let trimDeadband = clamp(trim, 0.0, 0.95);
-  let deadband = max(contrastDeadband, trimDeadband);
+  let deadband = contrastDeadband + trimDeadband * (1.0 - contrastDeadband);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,
@@ -201,32 +197,25 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // Fixed-step march from tMin to tMax.  stepLength normalises against
   // the step count so opacity is invariant to it.
   let stepLength = (tMax - tMin) / uniforms.steps;
-  // Jitter the start offset by [0, stepLength) per fragment to break
-  // the visible step-grid moiré that would otherwise slide across the
-  // cube during camera motion.  Without jitter, the fixed sample
-  // positions along each ray show through as a coherent grid because
-  // every pixel uses the same step phase — at high densityScale
-  // (every shipping cube defaults to 18), per-step opacity is large
-  // enough to make that grid visible.  Per-fragment jitter decorrelates
-  // neighbouring rays:
-  // visible aliasing becomes high-frequency grain instead of a moving
-  // grid, and the accumulated integral stays unbiased (jitter averages
-  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
-  // used instead of the cheaper sin-based hash21 because the latter's
-  // diagonal banding is visible as a stationary screen-space pattern.
+  // Jitter the start offset by [0, stepLength) per fragment: with one shared
+  // step phase the sample positions show as a coherent grid that slides
+  // across the cube in motion (per-step opacity at densityScale 18 is
+  // large enough to see it). Jitter turns that into grain and keeps the
+  // integral unbiased.
   //
-  // Temporal seed: offsetting the hash input by jitterIndex * irrational
-  // constants decorrelates the dither pattern frame-to-frame, so the
-  // residual grain looks like film noise rather than a stationary
-  // screen-space pattern the eye can latch onto.  Without TAA this
-  // produces visible shimmer when stationary — accepted tradeoff,
-  // because the alternative (no temporal seed) means the same screen
-  // pixel always picks the same step phase, which is exactly the
-  // failure mode the user reported.  The constants 7.13 / 13.71 are
-  // arbitrary irrationals that don't share factors with anything in
-  // the hash mixer.
-  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.jitterIndex * 7.13, uniforms.jitterIndex * 13.71);
-  let jitter = hash21Hq(jitterSeed) * stepLength;
+  // The offset comes from a blue-noise mask (64² per slice, slices stacked
+  // vertically): each slice is spatially blue and each pixel's run through
+  // the slices is spread out, so the progressive running mean of
+  // consecutive frames converges in a few samples. The frame index picks
+  // the slice, so the grain still changes every frame in motion. The
+  // temporal kernel is toroidal: any run of `slices` consecutive frames
+  // reads each slice once, so no per-cycle shift is needed.
+  let maskDims = textureDimensions(jitterMask);
+  let slices = maskDims.y / maskDims.x;
+  let frame = u32(uniforms.jitterIndex);
+  let texel = vec2<u32>(fragCoord.xy) % vec2<u32>(maskDims.x);
+  let maskValue = textureLoad(jitterMask, vec2<u32>(texel.x, (frame % slices) * maskDims.x + texel.y), 0).r;
+  let jitter = maskValue * stepLength;
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
   for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {

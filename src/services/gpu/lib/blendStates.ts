@@ -39,6 +39,8 @@
  *     extinction (`T * dst`), test-pinned. A different algebra entirely.
  *   - `volumeFieldRenderer`'s weighted additive (`constant`/`one`) — each
  *     field's march scaled by the pass's blend constant; ADDITIVE at 1.
+ *   - `volumeFieldRenderer`'s decay (`zero`/`one-minus-constant`) — one
+ *     triangle scaling the running mean by (1 − w) ahead of the fields.
  *
  * Folding any of them into a shared "over"/"additive" name would invite a silent
  * visual bug, so they stay inline at their single call site.

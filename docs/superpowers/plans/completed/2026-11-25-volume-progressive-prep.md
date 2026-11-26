@@ -1,7 +1,7 @@
 # Progressive volume sampling: ground preparation (prep PR)
 
 **Goal.** Land the behaviour-neutral prep refactors of
-[the spec](../../specs/2026-11-25-progressive-volume-sampling-design.md) §4, so the feature PR (§5)
+[the spec](../../specs/completed/2026-11-25-progressive-volume-sampling-design.md) §4, so the feature PR (§5)
 only has to:
 
 - add a per-view planner;

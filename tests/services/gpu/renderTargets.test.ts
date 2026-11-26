@@ -14,7 +14,6 @@ import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/survey/render/starAggregatesTarget';
 import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/cloud/render/milkyWayAggregateTarget';
-import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SGR_A_STAR_LENSING_BAND } from '../../../src/layers/blackHoles/lensing/data/sgrAStarLensingBand';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
@@ -96,25 +95,33 @@ describe('renderTargetRows', () => {
   });
 });
 
-// The density Layer's reduced-res target: the tests below use it as the
-// scale-3 offscreen row, composed in as `composeRenderTargetRows` does at boot.
-const DENSITY_TARGETS = cosmicWebDensityLayer.targets!;
+// A plain scale-3 offscreen row, composed in as `composeRenderTargetRows` composes a Layer's
+// rows at boot. (The density Layer's own scale-3 row is retained: see the block at the end.)
+const REDUCED_TARGETS: readonly RenderTargetSpec[] = [
+  {
+    id: 'reduced',
+    format: 'rgba16float',
+    depth: null,
+    scale: 3,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
+];
 // The blackHoles Layer's `sky-cubemap` row, composed in beside core's as at boot.
 const LENS_TARGETS = blackHolesLayer.targets!;
 const CORE_AND_LENS_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS]);
-const DENSITY_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS, DENSITY_TARGETS]);
+const REDUCED_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS, REDUCED_TARGETS]);
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      DENSITY_ROWS,
+      REDUCED_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
-    expect(targets.viewOf('cosmic-web-density')).toBeDefined();
+    expect(targets.viewOf('reduced')).toBeDefined();
     // The swap chain is executor-resolved from the acquired frame view, not
     // allocated here — so it (and any unknown id) throws.
     expect(() => targets.viewOf('swap')).toThrow();
@@ -124,35 +131,32 @@ describe('createRenderTargets', () => {
   it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    // `star-aggregates`, `mw-aggregate` and `cosmic-web-density` are
-    // Layer-owned targets — composed in exactly as `composeRenderTargetRows`
-    // does at boot, so this test still exercises their scale/divisor math
-    // against the real rows.
+    // `star-aggregates` and `mw-aggregate` are Layer-owned targets — composed
+    // in exactly as `composeRenderTargetRows` does at boot, so this test still
+    // exercises their scale/divisor math against the real rows.
     const targets = createRenderTargets(
       device,
       composeRenderTargetRows(SWAP_FORMAT, [
         LENS_TARGETS,
         [STAR_AGGREGATES_TARGET],
         [MILKY_WAY_AGGREGATE_TARGET],
-        DENSITY_TARGETS,
+        REDUCED_TARGETS,
       ]),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // cosmic-web-density @ scale 3 (colour), star-aggregates @ scale 4 (colour),
+    // reduced @ scale 3 (colour), star-aggregates @ scale 4 (colour),
     // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
     // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
     // (colour only), and sky-cubemap @ fixedSizePx (colour) → 12 textures,
     // plus the far-depth placeholder (outside the spec table, never resized)
-    // → 13. hdr at full size, cosmic-web-density at floor(size/3), star-aggregates at
+    // → 13. hdr at full size, reduced at floor(size/3), star-aggregates at
     // floor(size/4), mw-aggregate at floor(size/2).
     expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
-    const volDesc = create.mock.calls.find(
-      (c) => c[0].label === 'render-target-cosmic-web-density',
-    )![0];
+    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-reduced')![0];
     const aggDesc = create.mock.calls.find(
       (c) => c[0].label === 'render-target-star-aggregates',
     )![0];
@@ -164,7 +168,7 @@ describe('createRenderTargets', () => {
     expect(aggDesc.format).toBe('rgba16float');
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('cosmic-web-density');
+    const volViewBefore = targets.viewOf('reduced');
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
@@ -176,7 +180,7 @@ describe('createRenderTargets', () => {
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
     const volResized = create.mock.calls
-      .filter((c) => c[0].label === 'render-target-cosmic-web-density')
+      .filter((c) => c[0].label === 'render-target-reduced')
       .at(-1)![0];
     const aggResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-star-aggregates')
@@ -186,7 +190,7 @@ describe('createRenderTargets', () => {
     expect(aggResized.size).toEqual({ width: 300, height: 225, depthOrArrayLayers: 1 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
-    expect(targets.viewOf('cosmic-web-density')).not.toBe(volViewBefore);
+    expect(targets.viewOf('reduced')).not.toBe(volViewBefore);
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
@@ -355,18 +359,18 @@ describe('createRenderTargets', () => {
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    // mw-aggregate is a Layer-owned target, composed in beside the density
-    // row so this test still exercises its state-driven divisor against the
-    // real row.
+    // mw-aggregate is a Layer-owned target, composed in beside a plain
+    // scale-3 row so this test still exercises its state-driven divisor
+    // against the real row.
     const targets = createRenderTargets(
       device,
-      composeRenderTargetRows(SWAP_FORMAT, [[MILKY_WAY_AGGREGATE_TARGET], DENSITY_TARGETS]),
+      composeRenderTargetRows(SWAP_FORMAT, [[MILKY_WAY_AGGREGATE_TARGET], REDUCED_TARGETS]),
       { width: 800, height: 600 },
       stateWithDivisor(2),
     );
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('cosmic-web-density');
+    const volViewBefore = targets.viewOf('reduced');
     const callsBefore = create.mock.calls.length;
 
     // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
@@ -383,7 +387,7 @@ describe('createRenderTargets', () => {
     // still the object its consumers resolved before the call.
     expect(create.mock.calls.length).toBe(callsBefore + 1);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
+    expect(targets.viewOf('reduced')).toBe(volViewBefore);
   });
 
   it('reconcile allocates nothing when neither the canvas size nor a resolved scale moved', () => {
@@ -405,18 +409,16 @@ describe('createRenderTargets', () => {
     expect(create.mock.calls.length).toBe(callsBefore);
   });
 
-  it('clamps cosmic-web-density to a 1 px minimum when floor(size/scale) is 0', () => {
+  it('clamps reduced to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     createRenderTargets(
       device,
-      DENSITY_ROWS,
+      REDUCED_ROWS,
       { width: 2, height: 2 },
       stateWithDivisor(MW_DIVISOR),
     );
-    const volDesc = create.mock.calls.find(
-      (c) => c[0].label === 'render-target-cosmic-web-density',
-    )![0];
+    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-reduced')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1, depthOrArrayLayers: 1 });
   });
@@ -486,17 +488,17 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      DENSITY_ROWS,
+      REDUCED_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     const specsBefore = targets.specs;
     const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
-    const volSpecBefore = specsBefore.find((s) => s.id === 'cosmic-web-density')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'reduced')!;
     const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('cosmic-web-density');
+    const volViewBefore = targets.viewOf('reduced');
     const fgViewBefore = targets.viewOf('foreground:0');
     const callsBefore = create.mock.calls.length;
 
@@ -511,11 +513,11 @@ describe('createRenderTargets', () => {
     // rebuilt — and has no new texture allocated (the swap row carries no
     // texture, so this is allocation-free).
     expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
-    expect(targets.specs.find((s) => s.id === 'cosmic-web-density')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'reduced')).toBe(volSpecBefore);
     expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
     expect(create.mock.calls.length).toBe(callsBefore);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
+    expect(targets.viewOf('reduced')).toBe(volViewBefore);
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
@@ -549,12 +551,12 @@ describe('createRenderTargets', () => {
   it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      DENSITY_ROWS,
+      REDUCED_ROWS,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
-    // cosmic-web-density @ scale 3 -> floor(900/3), floor(600/3).
-    expect(targets.sizeOf('cosmic-web-density')).toEqual({ width: 300, height: 200 });
+    // reduced @ scale 3 -> floor(900/3), floor(600/3).
+    expect(targets.sizeOf('reduced')).toEqual({ width: 300, height: 200 });
     expect(() => targets.sizeOf('swap')).toThrow();
     expect(() => targets.sizeOf('nope')).toThrow();
   });
