@@ -175,13 +175,13 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 - **Moon and Mars:** a row in `texturedBodyRenderer.ts:38-41` (binding 5 is free).
 - **Linear data:** `'horizon'` joins `isLinearTextureKind` (`src/utils/bodyTextures/isLinearTextureKind.ts:26`),
   the one home for that axis, which gives it the WebP name, the linear decode and `rgba8unorm`.
-- **Registry:** a `kinds.horizon` tier in each body's `bodyTextureRegistry.ts` row.
+- **Registry:** a `kinds.horizon` tier in each body's `bodyTextureRegistry.ts` row, one `medium`
+  ceiling for all three: there is no large globe image (§8).
 
 | Tier | Repacked from | Posts | Packed image |
 |---|---|---|---|
 | small | z4 C4 tiles | 512 × 256 | 1024 × 512 |
 | medium | z5 | 1024 × 512 | 2048 × 1024 |
-| large | z6 | 2048 × 1024 | 4096 × 2048, 32 MB GPU |
 
 - Until a map is committed the globe's uniform `horizonRect` is zero, so it draws as today; with
   one it is (0, 0, 1, 1). The 1×1 placeholder is only something to bind.
@@ -198,8 +198,9 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 
 ## 8. Deploy and size
 
-- **R2:** about 340 MB (Earth 111, Moon 129, Mars 100) plus the globe images, roughly 0.5 + 2 +
-  8 MB per body per tier.
+- **R2:** about 340 MB (Earth 111, Moon 129, Mars 100) plus the globe images: the Moon's small and
+  medium measure 1.4 and 6.0 MB. Large is capped at medium (a large request reads the medium
+  image), because surface tiles take over up close.
 - **Upload:** `collectSurfaceTiles.ts:26` reads products from `builtFrom`, and the offline
   inventory and cache rules (`tools/deploy/syncR2.ts:136-152`) need no edit. Sync with
   `npm run sync-r2-secure`.

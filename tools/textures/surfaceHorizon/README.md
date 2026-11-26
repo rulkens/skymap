@@ -18,9 +18,10 @@ npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]
   `horizon` archives and `builtFrom.horizon` (`sourceId: 'derived:height'`) are written, manifest last.
 - **Missing heights:** a read falls back to the deepest ancestor with the tile (Mars z9 lands on z7).
   Where no level has it, the height and the ceiling read 0 m.
-- **Globe images:** when a tier's whole source level is baked (small z4, medium z5, large z6) the tool
-  writes `public/data/images/textures/<body>-horizon-<px>.webp`. The name carries the tier's nominal
-  px (2048/4096/8192) but the image is half that wide (1024/2048/4096): posts, not texels, are the
-  tier's resolution. The scheme is kept, not renamed.
+- **Globe images:** when a tier's whole source level is baked (small z4, medium z5) the tool writes
+  `public/data/images/textures/<body>-horizon-<px>.webp`. The name carries the tier's nominal px
+  (2048/4096) but the image is half that wide (1024/2048): posts, not texels, are the tier's
+  resolution. The scheme is kept, not renamed. There is no large image: the horizon kind is capped
+  at medium on every body, since surface tiles take over up close. The Moon's measure 1.4 and 6.0 MB.
 - **Cost:** about 0.2–0.3 s per tile per thread on the Moon (z3–z7, measured 2026-11-26), far-field
   decodes and the re-marches they cause included; only a march that read an undecoded tile re-runs.
