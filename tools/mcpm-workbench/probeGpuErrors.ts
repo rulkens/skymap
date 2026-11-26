@@ -21,22 +21,21 @@ const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
 // every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
-// T20: watchHistogramSaga throttles the histogram READBACK to every 20 steps
+// watchHistogramSaga throttles the histogram READBACK to every 20 steps
 // (HISTOGRAM_INTERVAL_STEPS) — the dispatch itself runs every step (encodeStep.ts)
 // and so is already covered by every other settle above, but the readbackHistogram
 // mapAsync round trip needs a longer settle to guarantee it fires at least once.
 const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
-// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
+// 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
 // 'sim:energy-smoke' below rides 5 periodic histogram readbacks, not just the
 // first noisy one.
 const ENERGY_SMOKE_STEPS = 100;
 // Same margin as HISTOGRAM_SETTLE_FRAMES: settling only ENERGY_SMOKE_STEPS frames
 // races the LAST periodic readback's own mapAsync round trip.
 const ENERGY_SMOKE_SETTLE_FRAMES = ENERGY_SMOKE_STEPS + HISTOGRAM_SETTLE_FRAMES;
-// Band derivation (task-T25-brief.md's controller ruling — the tiny synthetic
-// catalog has no fork reference, so center/spread come from measurement at THIS
-// HEAD, post-T24 strip, not from T23's fork-vs-workbench floor). 5 consecutive
+// Band derivation: the tiny synthetic catalog has no fork reference, so center and
+// spread come from measurement, not from the fork-vs-workbench floor. 5 consecutive
 // `npx tsx tools/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
 // a fresh reset -> 100 steps: 4.969708, 4.986995, 4.956796, 4.991052, 4.985401
 // (mean 4.977991, max abs deviation from mean 0.021194 — run 3). Width = 6x that
@@ -312,7 +311,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T20: the histogram compute pass (uniform write, clearBuffer, dispatch, all
+      // The histogram compute pass (uniform write, clearBuffer, dispatch, all
       // three bind groups) already runs every step above; this step is the one that
       // forces its READBACK — jittered sampling toggled on then off (exercising
       // histogram.wesl's cfg.sampleRandomly branch both ways) with a long enough
@@ -337,7 +336,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T25 (spec §12): the energy smoke test — asserts the sim's actual output
+      // The energy smoke test — asserts the sim's actual output
       // MAGNITUDE, not just that it ran error-free (every other step here only
       // checks for GPU/console errors). Placed right after 'command:reset' so the
       // box/catalog are still exactly the `?probe` boot defaults (nothing before
@@ -349,7 +348,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // only ever be a band assertion; see the constants' own derivation comment.
       name: 'sim:energy-smoke',
       run: async (page) => {
-        // Task FLE: 'command:reset' (previous step) is a UI write — it arms Viewport's
+        // 'command:reset' (previous step) is a UI write — it arms Viewport's
         // interaction-priority quality window, which now throttles the sim step cadence
         // too (SETTLE_MS after the click). This step's step:frame ratio is exactly what
         // ENERGY_SMOKE_CENTER was calibrated against, so wait the boost out in real wall
@@ -385,7 +384,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // V3: the full save→load round trip through the real DOM — exportParams'
+      // The full save→load round trip through the real DOM — exportParams'
       // download, fed straight back into the hidden file input importParams
       // reads. The GPU-relevant half is what installImportedBox provokes: it's
       // one of watchSceneSaga's structural triggers, so this is the only step
@@ -404,12 +403,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // F2.5: rotate-ring drag — the last handle family with no automated coverage.
-      // Rotation has no SliderRow readout the way F1.6's translate arrow does, so the
-      // self-check reads the ACTUAL applied rotation via a real save-params round trip
-      // (the same download+parse 'gizmo:rotated-box' below uses), before vs after the
-      // drag — the F1.6 lesson: a step that can silently degrade to an inert orbit-drag
-      // must FAIL, not just run. Placement matters: runs right after 'params:save-load'
+      // Rotate-ring drag. Rotation has no SliderRow readout the way the translate
+      // arrow has, so the self-check reads the ACTUAL applied rotation via a real
+      // save-params round trip (the same download+parse 'gizmo:rotated-box' below
+      // uses), before vs after the drag: a step that can silently degrade to an
+      // inert orbit-drag must FAIL, not just run. Placement matters: runs right after 'params:save-load'
       // and BEFORE 'gizmo:rotated-box' mutates the box's rotation, and 'command:reset'
       // (two steps earlier) guarantees the camera is exactly defaultViewSlice.camera —
       // so this is the one point in the queue where the box is still perfectly at its
@@ -458,9 +456,8 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // F2.4: the only automated check that boxLines.wesl's oriented cornerPos
-      // reconstruction (center + halfExtents·basis, plan contract §5) is correct —
-      // no rotation UI exists yet (F2.5 adds the rotate rings), so this drives the
+      // The only automated check that boxLines.wesl's oriented cornerPos
+      // reconstruction (center + halfExtents·basis) is correct. This drives the
       // same real preset-load path 'params:save-load' above exercises, but mutates
       // the downloaded preset's gridBox.rotation to a non-identity quaternion before
       // feeding it back through the file input. installImportedBox (gridSlice.ts)
@@ -515,7 +512,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // F1.6: drives the REAL pointer path — hover sets hoverHandle, drag sets
+      // Drives the REAL pointer path — hover sets hoverHandle, drag sets
       // activeHandle (Viewport.tsx's gizmoDragging), both non-null together once the
       // drag starts, so drawBoxPreview's glyph shader runs the highlight branch for
       // both uniforms under error capture. Target: the +Y translate arrow tip,
@@ -530,7 +527,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         const handleX = 640;
         const handleY = 306;
-        // Self-check (F1.6 review MINOR): the aim above is a hardcoded pixel pair
+        // Self-check: the aim above is a hardcoded pixel pair
         // that would silently degrade to an inert orbit-drag if the boot box,
         // camera, viewport, or gizmoArrowLengthMpc's constant ever drift. The +Y translate
         // handle writes grid.manualCenterMpc[1], surfaced live by the already-open
@@ -571,7 +568,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T18: packs the live trace through the REAL packLogTraceVoxels and marches
+      // Packs the live trace through the REAL packLogTraceVoxels and marches
       // it via a second TracePass — exercises pipeline code (pack, upload, a
       // second f16/f32-specialized shader compile) that no other step reaches.
       // sim.running stays true here, so by the time the async pack lands the
@@ -644,7 +641,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         await setView(page, 'pathTracer', true);
         await settleFrames(page, SETTLE_FRAMES);
-        // V3: opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
+        // Opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
         // ensureReducedTex). Rendering is already open and now shows the path tracer's
         // rows; its slider keeps its own name, distinct from the raymarch's 'divisor'.
         const divisor = page.getByRole('slider', { name: 'path tracer divisor', exact: true });
