@@ -52,7 +52,12 @@ describe('VolumeUniforms layout', () => {
 
   it('every field the WGSL struct declares lands at its offset', () => {
     const device = mockDevice();
-    const renderer = createVolumeFieldRenderer(device, 'rgba16float', {} as never);
+    const renderer = createVolumeFieldRenderer({
+      device,
+      targetFormat: 'rgba16float',
+      fadeBgl: {} as never,
+      jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
+    });
     renderer.upload('field', CUBE, {
       paletteId: 'viridis',
       contrastCenter: 405,

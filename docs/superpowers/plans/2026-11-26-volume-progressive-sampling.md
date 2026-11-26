@@ -204,11 +204,11 @@ export function createVolumeFieldRenderer<Id extends string>(
 
 Steps:
 
-- [ ] Type, factory signature, and every call site (both test files pass a stub texture).
-- [ ] Shader and bind group, as above.
-- [ ] No new test. A missing binding fails pipeline validation on the first draw, and the
+- [x] Type, factory signature, and every call site (both test files pass a stub texture).
+- [x] Shader and bind group, as above.
+- [x] No new test. A missing binding fails pipeline validation on the first draw, and the
       layout parity test is unchanged (no uniform moves).
-- [ ] `npm run typecheck:fast`, `npm test -- volumeField`.
+- [x] `npm run typecheck:fast`, `npm test -- volumeField`.
 
 **Done when:** the march reads its start offset from the mask once per fragment, and the
 renderer holds no hash jitter.

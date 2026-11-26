@@ -5,6 +5,7 @@ import { MCPM_ENTRY } from '../../../../../src/layers/cosmicWebDensity/sources/m
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { VolumeFieldDrawInputs } from '../../../../../src/@types/rendering/VolumeFieldDrawInputs';
+import type { VolumeFieldRendererDeps } from '../../../../../src/@types/rendering/VolumeFieldRendererDeps';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {
@@ -59,6 +60,15 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
   } as unknown as GPUDevice;
 }
 
+function deps(device: GPUDevice): VolumeFieldRendererDeps {
+  return {
+    device,
+    targetFormat: 'bgra8unorm',
+    fadeBgl: {} as never,
+    jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
+  };
+}
+
 // ── Draw-path helpers ────────────────────────────────────────────────
 
 function makeFakePass() {
@@ -104,7 +114,7 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
 describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
@@ -133,7 +143,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // (a future dust volume on its own ids) possible without widening this
     // renderer's id union.
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     const statics = {
       paletteId: 'viridis' as const,
       contrastCenter: 0.5,
@@ -163,7 +173,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // the same changed palette — no further writeTexture (resident
     // now tracks the new id).
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock
       .calls.length;
@@ -216,7 +226,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // to 0 (the deep-zoom band) must not burn a raymarch. The old rule let
     // `enabled` override a zero opacity and drew anyway.
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
@@ -235,7 +245,7 @@ describe('createVolumeFieldRenderer draw', () => {
 
   it('draw packs jitterIndex modulo the wrap', () => {
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     r.draw(
       makeFakePass(),
@@ -252,7 +262,7 @@ describe('createVolumeFieldRenderer draw', () => {
 
   // WebGPU's default blend constant is 0: a missing call erases the volume.
   it('draw sets the blend constant to inputs.weight', () => {
-    const r = createVolumeFieldRenderer(mockDevice(), 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(mockDevice()));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
@@ -306,7 +316,7 @@ function fieldsDrawn(r: ReturnType<typeof createVolumeFieldRenderer>): number {
 describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("unload destroys the field's four GPU resources and drops it from the map", () => {
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     // upload() creates textures [volumeTexture, paletteTexture] (the only
     // createTexture calls) and, last among buffers, [uniformBuffer, fadeBuffer]
@@ -324,7 +334,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
 
   it("re-uploading the same id destroys the previous field's resources first", () => {
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const [volumeTexture, paletteTexture] = createdTextures(device);
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
@@ -344,7 +354,7 @@ describe('createVolumeFieldRenderer hasActiveFields', () => {
     // INACTIVE (deep zoom: deriveVolumeLiveness goes null, both volume
     // layers disable), while a disabled field mid-fade-out stays ACTIVE so
     // its tail draws to completion — both from the single opacity test.
-    const r = createVolumeFieldRenderer(mockDevice(), 'bgra8unorm', {} as never);
+    const r = createVolumeFieldRenderer(deps(mockDevice()));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     expect(
       r.hasActiveFields(

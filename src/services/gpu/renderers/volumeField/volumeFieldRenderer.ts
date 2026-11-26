@@ -15,7 +15,7 @@ import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/Scalar
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
-import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
+import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/VolumeFieldRendererDeps';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
@@ -27,8 +27,7 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 // struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 272;
 
-// Caps `inputs.jitterIndex` (never wrapped upstream) before it reaches the f32 hash seed. The cap
-// is loose: past ~1e5 the seed outgrows f32's fraction bits and the jitter's entropy thins.
+// Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
 const JITTER_INDEX_WRAP = 1_000_000;
 
 // Each field's march adds in scaled by the pass's blend constant (`inputs.weight`); at 1 this
@@ -59,14 +58,13 @@ const CUBE_INDICES = new Uint16Array([
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createVolumeFieldRenderer<Id extends string>(
-  device: GPUDevice,
-  // The colour-target format the raymarch pipeline writes into — the HDR
-  // offscreen (`'rgba16float'`), NOT the swap chain. Handed over explicitly
-  // (never read off a `GpuContext.format`, which is always the swap format).
-  targetFormat: GPUTextureFormat,
-  fadeBgl: FadeUniformsBgl,
-): VolumeFieldRenderer<Id> {
+export function createVolumeFieldRenderer<Id extends string>({
+  device,
+  targetFormat,
+  fadeBgl,
+  jitterMask,
+}: VolumeFieldRendererDeps): VolumeFieldRenderer<Id> {
+  const jitterMaskView = jitterMask.createView();
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -92,7 +90,7 @@ export function createVolumeFieldRenderer<Id extends string>(
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
 
   // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
-  // + palette LUT 2D texture + sampler). Built from a manual BindGroupLayout
+  // + palette LUT 2D texture + sampler + jitter mask). Built from a manual BindGroupLayout
   // descriptor so the pipeline layout below can list it alongside the
   // canonical fadeBgl. The palette is an N x 1 2D texture rather than a
   // texture_1d — see createPaletteTexture and the shader binding for why.
@@ -116,6 +114,11 @@ export function createVolumeFieldRenderer<Id extends string>(
         texture: { sampleType: 'float', viewDimension: '2d' },
       },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      {
+        binding: 5,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d' },
+      },
     ],
   });
 
@@ -251,6 +254,7 @@ export function createVolumeFieldRenderer<Id extends string>(
           { binding: 2, resource: volumeSampler },
           { binding: 3, resource: paletteTexture.createView() },
           { binding: 4, resource: paletteSampler },
+          { binding: 5, resource: jitterMaskView },
         ],
       });
       const fadeBuffer = device.createBuffer({

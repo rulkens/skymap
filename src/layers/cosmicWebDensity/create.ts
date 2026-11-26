@@ -10,6 +10,7 @@ import type { CosmicWebDensityFieldId } from './@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
+import { BLUE_NOISE_MASK_SIZE, BLUE_NOISE_MASK_SLICES } from '../../data/volume/blueNoiseMask';
 import { createVolumeFieldRenderer } from '../../services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';
 import { MCPM_ENTRY } from './sources/mcpm';
@@ -18,11 +19,17 @@ import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
 import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
-  const renderer = createVolumeFieldRenderer<CosmicWebDensityFieldId>(
-    deps.ctx.device,
-    HDR_TARGET_FORMAT,
-    deps.fadeBgl,
-  );
+  const renderer = createVolumeFieldRenderer<CosmicWebDensityFieldId>({
+    device: deps.ctx.device,
+    targetFormat: HDR_TARGET_FORMAT,
+    fadeBgl: deps.fadeBgl,
+    jitterMask: deps.ctx.device.createTexture({
+      label: 'scalarVolume-jitter-mask',
+      size: [BLUE_NOISE_MASK_SIZE, BLUE_NOISE_MASK_SIZE * BLUE_NOISE_MASK_SLICES],
+      format: 'r8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING,
+    }),
+  });
   return {
     renderer,
     upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),

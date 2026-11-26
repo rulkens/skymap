@@ -24,7 +24,6 @@
 // the spec calls for.
 
 import package::lib::camera::CameraUniforms;
-import package::lib::util::hash21Hq;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::volumeRaymarch::localRayFromWorld;
 import package::lib::volumeRaymarch::intersectUnitAabb;
@@ -91,8 +90,8 @@ struct VolumeUniforms {
   trim: f32,
   // Index into the jitter sequence: the engine frame index, so every
   // view of one frame (all five dome faces) shares a phase.  The CPU
-  // wraps it at 1e6, but the seed below loses fraction bits well before
-  // that: from ~1e5 frames the jitter's entropy thins gradually.
+  // wraps it at 1e6 (a multiple of the mask's slice count), so the
+  // integer is exact in f32.
   jitterIndex: f32,
   // March steps per ray (an integer, exact in f32).
   steps: f32,
@@ -111,6 +110,8 @@ struct VolumeUniforms {
 // filtering via the sampler.
 @group(0) @binding(3) var palette: texture_2d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
+// r8unorm blue-noise ranks: size wide, slices × size tall (see the jitter below).
+@group(0) @binding(5) var jitterMask: texture_2d<f32>;
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
@@ -201,32 +202,28 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // Fixed-step march from tMin to tMax.  stepLength normalises against
   // the step count so opacity is invariant to it.
   let stepLength = (tMax - tMin) / uniforms.steps;
-  // Jitter the start offset by [0, stepLength) per fragment to break
-  // the visible step-grid moiré that would otherwise slide across the
-  // cube during camera motion.  Without jitter, the fixed sample
-  // positions along each ray show through as a coherent grid because
-  // every pixel uses the same step phase — at high densityScale
-  // (every shipping cube defaults to 18), per-step opacity is large
-  // enough to make that grid visible.  Per-fragment jitter decorrelates
-  // neighbouring rays:
-  // visible aliasing becomes high-frequency grain instead of a moving
-  // grid, and the accumulated integral stays unbiased (jitter averages
-  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
-  // used instead of the cheaper sin-based hash21 because the latter's
-  // diagonal banding is visible as a stationary screen-space pattern.
+  // Jitter the start offset by [0, stepLength) per fragment: with one shared
+  // step phase the sample positions show as a coherent grid that slides
+  // across the cube in motion (per-step opacity at densityScale 18 is
+  // large enough to see it). Jitter turns that into grain and keeps the
+  // integral unbiased.
   //
-  // Temporal seed: offsetting the hash input by jitterIndex * irrational
-  // constants decorrelates the dither pattern frame-to-frame, so the
-  // residual grain looks like film noise rather than a stationary
-  // screen-space pattern the eye can latch onto.  Without TAA this
-  // produces visible shimmer when stationary — accepted tradeoff,
-  // because the alternative (no temporal seed) means the same screen
-  // pixel always picks the same step phase, which is exactly the
-  // failure mode the user reported.  The constants 7.13 / 13.71 are
-  // arbitrary irrationals that don't share factors with anything in
-  // the hash mixer.
-  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.jitterIndex * 7.13, uniforms.jitterIndex * 13.71);
-  let jitter = hash21Hq(jitterSeed) * stepLength;
+  // The offset comes from a blue-noise mask (64² per slice, slices stacked
+  // vertically): each slice is spatially blue and each pixel's run through
+  // the slices is spread out, so the progressive running mean of
+  // consecutive frames converges in a few samples. The frame index picks
+  // the slice, so the grain still changes every frame in motion (a fixed
+  // phase per pixel was the original complaint). Each full pass through
+  // the slices shifts by a golden-ratio step (0x9E3779B9 / 2³², exact in
+  // u32 where f32(cycle) * 0.618 would lose fraction bits), so a pixel's
+  // sequence does not repeat across cycles.
+  let maskDims = textureDimensions(jitterMask);
+  let slices = maskDims.y / maskDims.x;
+  let frame = u32(uniforms.jitterIndex);
+  let cycleShift = f32((frame / slices) * 0x9E3779B9u) / 4294967296.0;
+  let texel = vec2<u32>(fragCoord.xy) % vec2<u32>(maskDims.x);
+  let maskValue = textureLoad(jitterMask, vec2<u32>(texel.x, (frame % slices) * maskDims.x + texel.y), 0).r;
+  let jitter = fract(maskValue + cycleShift) * stepLength;
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
   for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {
