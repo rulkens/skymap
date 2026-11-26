@@ -6,8 +6,8 @@ import { initialState as structuresInitialState } from '../../../structure/state
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../../@types/settings/StructureItemSettings';
 
-/** Five weeks past the capture's end, so the rock is seen leaving. */
-export const END_ISO = '2027-01-15T00:00:00Z';
+/** The rock is as far from Earth as at the start (about 22 Moon distances), so leaving mirrors arriving. */
+export const END_ISO = '2027-03-01T00:00:00Z';
 
 /** High above the ecliptic (pitch positive is above), so the loop round Earth reads face on. */
 export const CRUISE = { yaw: 0, pitch: 1.2 };
