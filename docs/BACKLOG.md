@@ -120,7 +120,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Density volume timing acceptance** `ready` — per-draw bench at medium and large, small tier on the phone and volume arrival on a throttled link, deferred from #1178; opens the detail-region PR.
 - [ ] **Cloud bake: date-line join against the swaths** `needs-design` — the 24 h join is cut between the two mosaics only; a swath beside it ghosts (6 Nov) and mid-latitude paths stay straight. → [details](backlog/2026-11-13-cloud-dateline-join.md)
 - [ ] **Cloud bake: fixed transfer curve** `needs-design` — the per-day quantile match forces the same total cloud amount every day. → [details](backlog/2026-11-10-cloud-fixed-transfer-curve.md)
 - [ ] **Cloud shell borrows the globe's cloud texture** `ready` — the cloud map is uploaded twice (globe + shell); use `earthRenderer.getMapView('clouds')` as `surfaceTilesPass.ts` does. → [details](backlog/2026-11-16-cloud-shell-shares-globe-texture.md)
@@ -170,7 +169,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Body-texture store consolidation** `needs-design` — four renderers (textured, Earth, ring, cloud-shell) each hand-roll map storage + placeholder fallback separately. → [details](backlog/2026-07-24-body-texture-store-consolidation.md)
 - [ ] **Earth proxy-sphere meshes each hand-tune their own sag margin** `deferred` — surface cubesphere, cloud shell and atmosphere shell restate one invariant; trigger is a fourth shell. → [details](backlog/2026-07-19-photoreal-earth-followups.md)
 - [ ] **Surface-tile archive leftovers** `ready` — after the archive deploy: delete the loose `earth-tiles/v11` and `mars-tiles/v2` objects and the `data/_probe/range-probe-64m.bin` object from R2; remove the stray local backups in `public/data/images/earth-tiles/` (`index.pre-prune.txt`, `index.v8-backup.txt`, `manifest.v8-backup.json`, the `index-*.txt` files, `v10/`).
-- [ ] **Prune the six tiered volume `.scfd` from R2** `process` — not before one month after the deploy (date `<deploy date + 1 month>`, the owner fills it in at deploy): delete every hashed `mcpm-{small,medium,large}` and `polyphorm-2mrs-{small,medium,large}` `.scfd` under `scalar-field/v3/`; sync never deletes, and tabs opened before the deploy read them until then.
+- [ ] **Prune the six tiered volume `.scfd` from R2** `process` — not before 2026-12-26 (one month after #1178's deploy): delete every hashed `mcpm-{small,medium,large}` and `polyphorm-2mrs-{small,medium,large}` `.scfd` under `scalar-field/v3/`; sync never deletes, and tabs opened before the deploy read them until then.
 - [ ] **Mirror the 2MRS volume inputs to R2** `needs-design` — `build-2mrs` reads `polyphorm_2mrs_d{2,4,8}.npy`, which only the owner's machine has (the native Polyphorm export lives outside the repo); the d2 file (~430 MB) is over wrangler's cap, so MCPM's Extra-files route does not fit as it is.
 - [ ] **`ResidentLookupResult` to its own `@types/` file** `ready` — the type sits inline in `src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles.ts:21`, against the one-type-per-file rule.
 - [ ] **Night lights from EOX structure below z7** `needs-design` — a spike to shape z8+ night detail from the day tiles. → [details](backlog/2026-11-06-night-lights-from-eox-structure.md)
