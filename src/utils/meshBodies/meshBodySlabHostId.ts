@@ -8,12 +8,14 @@
  */
 
 import { bodyHostId } from '../../data/bodies/positionDrivers';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
+import { SCENE_EARTH_BODIES } from '../../data/bodies/sceneEarthBodies';
 import { SCENE_PLANETS } from '../../data/bodies/scenePlanets';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 
 // The bodies the body Layer declares a `body-m` row for (`BODY_SLAB_ROWS`).
-const SLAB_HOST_IDS = new Set<string>([SCENE_EARTH.id, ...SCENE_PLANETS.map((body) => body.id)]);
+const SLAB_HOST_IDS = new Set<string>(
+  [...SCENE_EARTH_BODIES, ...SCENE_PLANETS].map((body) => body.id),
+);
 
 export function meshBodySlabHostId(id: string): string {
   if (SLAB_HOST_IDS.has(id)) return id;

@@ -4,13 +4,6 @@ Surfaced during the final whole-branch review of the refactor CLI
 (`tools/refactor/` + `tools/utils/refactor/`). None blocks the branch; each is
 a scoped tidy or a gap in the extract closure worth capturing before it is lost.
 
-## Dispatch shape
-
-- **`runOp` dispatch table.** The subcommand handler is a 5-way `if`-chain over
-  the subcommand name, each arm running the same resolve → report → plan body
-  with a different planner. Fold to a table keyed by subcommand plus a hoisted
-  preview step (`/simplify` candidate). `tools/refactor/refactor.ts`.
-
 ## extract closure gaps
 
 - **Leading `//` line comments are dropped.** `getText(true)` keeps only JSDoc,
@@ -30,17 +23,10 @@ name`. The types were exported from the source file and used only in the
   target's signature; nothing carried them or refused. A type-only reference in
   the moved symbol's signature is the reproduction.
 
-## Refusal / dry ergonomics
-
-- **Blocked mutating ops print the ref list twice** — once in the stdout preview
-  and again in the thrown refusal. Suppress one side, and let `--dry` preview a
-  blocked op without throwing.
-
 ## Consolidation candidates
 
-- **`removeDeclaration`** — `planDelete` and `planInline` carry a near-duplicate
-  declaration-removal path; consolidate. The alias-follow idiom
-  (`resolvesToSameFile` / `declaringFileOf`) repeats too. Separately,
+- **Alias-follow idiom** (`resolvesToSameFile` / `declaringFileOf`) repeats in the
+  ts-morph planners; consolidate. Separately,
   `retargetSpecifier`'s `bringsInOnlyThis` lacks dedupe against an existing
   underlying import.
 

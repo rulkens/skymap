@@ -28,6 +28,7 @@ import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
+import { positionDriverById } from '../../../data/bodies/positionDrivers';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
@@ -36,7 +37,11 @@ import type { PositionedId } from '../../../@types/scene/PositionedId';
 // module load and replayed every instant: the per-frame cost stays one linear
 // pass, and a cycle or a dangling focus fails at import — where an authoring
 // mistake belongs — instead of on whichever frame first reaches the bad row.
-const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
+const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS).map((el) => {
+  const driver = positionDriverById(el.id);
+  if (driver.kind !== 'orbit') throw new Error(`deriveBodyStates: '${el.id}' has no orbit driver`);
+  return driver;
+});
 
 // The last computed snapshot, keyed by the instant and the registry version it
 // was computed at. A frame re-reads the same instant from several
@@ -71,11 +76,11 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, Bod
   // 1b — every element row, focus before dependant. The focus is already in
   // the map by construction of `FOCUS_ORDER`, which is also where an unknown
   // focus id throws — so the lookup here is total.
-  for (const el of FOCUS_ORDER) {
-    const focus = positions.get(el.focusId)!;
-    const { positionMpc: position, orbit: propagated } = orbitRowPlacement(el, focus, simDays);
-    positions.set(el.id, position);
-    orbits.set(el.id, propagated);
+  for (const driver of FOCUS_ORDER) {
+    const focus = positions.get(driver.elements.focusId)!;
+    const { positionMpc: position, orbit: propagated } = orbitRowPlacement(driver, focus, simDays);
+    positions.set(driver.id, position);
+    orbits.set(driver.id, propagated);
   }
 
   // 1c — sites pinned to a host's surface: the host's own spin carries them, so
@@ -106,7 +111,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, Bod
     positions.set(site.id, addVec3(hostPos, offsetMpc));
   }
 
-  // 1d — sampled craft, off the same walk the mission camera samples. With no track the
+  // 1d — sampled craft, off the same walk the timeline camera samples. With no track the
   // craft sits at Earth, so the state always exists (22 sites do `states.get(id)!`) and the
   // presence gate, not this phase, decides whether the craft is drawn.
   for (const { id } of SAMPLED_BODIES) positions.set(id, bodyPositionMpcAt(id, simDays));

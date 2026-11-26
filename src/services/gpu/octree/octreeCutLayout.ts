@@ -16,6 +16,7 @@ import {
   MAX_OWN_COUNT,
   NO_CHUNK_REF,
   OCTANT_BITS,
+  OFFSET_FRACTION_LEVELS,
 } from '../../../data/octree/octreeFormat';
 import { SELECTION_SOURCE_SHIFT } from '../../../data/selectionEncoding';
 import { mortonDecode3 } from '../../../utils/math/mortonDecode3';
@@ -89,7 +90,7 @@ export const FLOATS_PER_VIEW = PLANES_PER_VIEW * PLANE_FLOATS;
 
 /**
  * `struct CutUniforms`: an 80-byte head, then the planes. Word slots of the
- * head, in the order `cutIo.wesl` declares them (words 17–19 are pad).
+ * head, in the order `cutIo.wesl` declares them.
  */
 export const CAM_CELL_INT_INDEX = 0;
 export const CELL_EDGE_MPC_FLOAT_INDEX = 3;
@@ -103,13 +104,16 @@ export const VIEW_COUNT_U32_INDEX = 12;
 export const NODE_COUNT_U32_INDEX = 13;
 export const OPACITY_FLOAT_INDEX = 14;
 export const INDEX_NODES_U32_INDEX = 15;
-export const CHUNK_NODE_CAP_U32_INDEX = 16;
+export const CAM_SUB_FLOAT_INDEX = 16;
+export const CHUNK_NODE_CAP_U32_INDEX = 19;
 export const PLANES_FLOAT_INDEX = 20;
 const CUT_UNIFORM_HEAD_BYTES = PLANES_FLOAT_INDEX * WORD_BYTES;
 export const CUT_UNIFORM_BYTES =
   CUT_UNIFORM_HEAD_BYTES + CUT_MAX_VIEWS * FLOATS_PER_VIEW * WORD_BYTES;
 /** Far past the grid the cell split is immaterial; the clamp keeps it an i32. */
 const CAM_CELL_LIMIT = 2 ** 30;
+/** Cells `recordRelCamCells` sums in i32 sub-cells: `<< 16` stays inside i32. */
+export const EXACT_CELLS = 2 ** 14;
 
 /** Workgroup size of `histogram` and `emit`. */
 export const CUT_WORKGROUP = 64;
@@ -338,8 +342,11 @@ export function leafListCapacity(
 /**
  * Fill one source's `CutUniforms`. The camera splits into a whole leaf cell
  * plus a fraction HERE, in f64, so the shader's node-minus-camera is
- * integer-exact (see `cutIo.wesl`). `planes` holds `FLOATS_PER_VIEW` floats per
- * view; none means no prune.
+ * integer-exact (see `cutIo.wesl`). One f32 step of a ~23 pc cell's fraction is
+ * ~0.3 AU, a visible jump for a star a few AU away, so `camSub` adds what the
+ * shader's whole sub-cells of the f32 fraction miss, in sub-cells
+ * (`recordRelCamCells`). `planes` holds `FLOATS_PER_VIEW` floats per view; none
+ * means no prune.
  */
 export function writeOctreeCutUniforms(
   out: ArrayBuffer,
@@ -365,7 +372,11 @@ export function writeOctreeCutUniforms(
     const cells = (camPosMpc[a]! * mpcToUnit - octree.grid.origin[a]!) / octree.grid.cellEdge;
     const whole = Math.max(-CAM_CELL_LIMIT, Math.min(CAM_CELL_LIMIT, Math.floor(cells)));
     i32[CAM_CELL_INT_INDEX + a] = whole;
-    f32[CAM_FRAC_FLOAT_INDEX + a] = cells - whole;
+    const frac = cells - whole;
+    f32[CAM_FRAC_FLOAT_INDEX + a] = frac;
+    // The shader's floor of the f32 fraction, mirrored exactly (all ops exact).
+    const camWhole = Math.floor(Math.fround(frac) * OFFSET_FRACTION_LEVELS);
+    f32[CAM_SUB_FLOAT_INDEX + a] = frac * OFFSET_FRACTION_LEVELS - camWhole;
   }
   f32[CELL_EDGE_MPC_FLOAT_INDEX] = octree.grid.cellEdge * unitMpc;
   f32[REFINE_THRESHOLD_SQ_FLOAT_INDEX] = cut.refineThreshold * cut.refineThreshold;

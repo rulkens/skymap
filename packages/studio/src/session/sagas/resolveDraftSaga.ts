@@ -21,7 +21,7 @@ import {
 import { selectStudioState } from '../state/selectors';
 import { clipFociReady } from '../../../../../src/state/tour/clipFociReady';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
-import { resolveClipStart } from '../../../../../src/state/camera/cameraSlice';
+import { resolveClipStart } from '../../../../../src/state/camera/cameraIntentSlice';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import type { SagaContext } from '../../../../../src/store/types';

@@ -4,7 +4,8 @@
  * epoch window.
  */
 import { parseSatelliteCatalog } from '../../catalog/load/parseSatelliteCatalog';
-import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
+import { satelliteProfileCodes } from '../../points/subsystems/satelliteProfileCodes';
+import type { LoadedSatelliteCatalog } from '../@types/LoadedSatelliteCatalog';
 import type { SatellitePropagator } from '../@types/SatellitePropagator';
 import type { SatelliteSweep } from '../@types/SatelliteSweep';
 import type { SatelliteWorkerReply } from '../@types/SatelliteWorkerReply';
@@ -17,7 +18,7 @@ export function createSatellitePropagator(
   let worker: Worker | null = null;
   let ready = false;
   let inFlight = false;
-  let catalog: SatelliteCatalog | null = null;
+  let catalog: LoadedSatelliteCatalog | null = null;
   let latest: SatelliteSweep | null = null;
   // A release can land while the worker is still building satrecs; the slot's commit awaits
   // `start`, so it must settle then too, or every later commit queues behind it forever.
@@ -43,7 +44,7 @@ export function createSatellitePropagator(
       const cat = parseSatelliteCatalog(file);
       const w = new WorkerCtor();
       worker = w;
-      catalog = cat;
+      catalog = { ...cat, profileCodes: satelliteProfileCodes(cat) };
       return new Promise((resolve, reject) => {
         abortStart = reject;
         w.onerror = (event) => {

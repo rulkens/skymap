@@ -5,7 +5,7 @@
 
 import package::bodies::contactShadow::io::ContactShadowUniforms;
 
-@group(0) @binding(0) var<uniform> u: ContactShadowUniforms;
+@group(0) @binding(0) var<uniform> uniforms: ContactShadowUniforms;
 @group(0) @binding(1) var contactTexture: texture_2d<f32>;
 @group(0) @binding(2) var contactSampler: sampler;
 @group(0) @binding(3) var sceneDepth: texture_depth_2d;
@@ -16,25 +16,25 @@ const FADE_START: f32 = 0.5;
 
 @fragment
 fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
-  let d = textureLoad(sceneDepth, vec2<i32>(fragCoord.xy), 0);
+  let depth = textureLoad(sceneDepth, vec2<i32>(fragCoord.xy), 0);
   // Reversed-Z: depth 0 is the far plane AND the cleared sky; dropping it before
-  // the homogeneous divide keeps 'h.w' finite (it is for any d > 0).
-  if (d == 0.0) {
+  // the homogeneous divide keeps 'boxHomogeneous.w' finite (it is for any depth > 0).
+  if (depth == 0.0) {
     discard;
   }
   // Framebuffer y runs down, NDC y up.
   let ndc = fragCoord.xy / vec2<f32>(textureDimensions(sceneDepth)) * vec2<f32>(2.0, -2.0) +
     vec2<f32>(-1.0, 1.0);
-  let h = u.clipToBox * vec4<f32>(ndc, d, 1.0);
-  let p = h.xyz / h.w;
-  if (any(abs(p) > vec3<f32>(1.0))) {
+  let boxHomogeneous = uniforms.clipToBox * vec4<f32>(ndc, depth, 1.0);
+  let boxPos = boxHomogeneous.xyz / boxHomogeneous.w;
+  if (any(abs(boxPos) > vec3<f32>(1.0))) {
     discard;
   }
   // The bake's +v is the image's BOTTOM (Blender UVs), and the upload keeps the
   // PNG's top row at texel row 0 -- hence the y flip.
-  let uv = vec2<f32>(p.x, -p.y) * 0.5 + 0.5;
+  let uv = vec2<f32>(boxPos.x, -boxPos.y) * 0.5 + 0.5;
   // Level 0 explicitly: the discards above leave derivatives undefined here.
   let mask = textureSampleLevel(contactTexture, contactSampler, uv, 0.0).r;
-  let shade = mix(1.0, mask, 1.0 - smoothstep(FADE_START, 1.0, abs(p.z)));
+  let shade = mix(1.0, mask, 1.0 - smoothstep(FADE_START, 1.0, abs(boxPos.z)));
   return vec4<f32>(shade, shade, shade, 1.0);
 }

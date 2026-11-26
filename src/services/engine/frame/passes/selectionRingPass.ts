@@ -2,7 +2,7 @@
  * selectionRingPass — per-galaxy selection halo overlay.
  *
  * Lives at the HEAD of the swap-target layers (drawn post-tone-map) so
- * marker-lines and labels composite OVER the ring — labels carry information that should stay
+ * labels composite OVER the ring — labels carry information that should stay
  * legible when they overlap the stroke.
  *
  * ## CPU-side ringRadiusPx
@@ -38,7 +38,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { selectionHaloOf } from '../../helpers/selectionHaloOf';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
-import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
+import { sampledDepthOcclusion } from '../sampledDepthOcclusion';
 
 export const selectionRingPass: ContentPass = {
   name: 'selection-ring',
@@ -84,7 +84,7 @@ export const selectionRingPass: ContentPass = {
       { worldPos, ringRadiusPx, alpha: 1 },
       // The ring has no per-subject weight, so handing this over IS the
       // verdict: it attenuates wherever the coverage says a body covers it.
-      overlaySceneOcclusion(ctx, view),
+      sampledDepthOcclusion(ctx, view),
     );
   },
 };

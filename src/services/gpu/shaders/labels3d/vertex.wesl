@@ -20,7 +20,7 @@ import package::lib::camera::worldToClip;
 const ATLAS_EM_PX: f32 = 84.0;
 const TAU: f32 = 6.283185307179586;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<Label3DData>;
 
 @vertex
@@ -48,7 +48,7 @@ fn vs(input: VsIn) -> VsOut {
   let world = center + xAxis * cornerX - yAxis * cornerY;
 
   var out: VsOut;
-  out.pos = worldToClip(u.cam, world);
+  out.pos = worldToClip(uniforms.cam, world);
   out.uv = mix(input.uvRect.xy, input.uvRect.zw, input.corner);
   out.color = vec4<f32>(label.color.rgb * label.fadeAlpha, label.color.a * label.fadeAlpha);
   out.fontIndex = input.fontIndex;

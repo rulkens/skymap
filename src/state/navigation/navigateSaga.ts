@@ -16,6 +16,7 @@ import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
   clearSelection,
+  requestRetired,
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../selection/selectionSlice';
@@ -23,7 +24,7 @@ import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
-import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
+import { clipStarted, commitCameraPose } from '../camera/cameraIntentSlice';
 import { startClip } from '../camera/clipActions';
 import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { selectTakeoverSource } from '../takeover/selectors';
@@ -42,7 +43,7 @@ import { selectionKindOf } from '../../services/engine/selection/selectionKindOf
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
-import { clipFactories } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../compositions/appClips';
 import { isKeyOf } from '../../utils/object/isKeyOf';
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -64,17 +65,24 @@ function* commitSaga(pose: FramedCameraPose) {
 
 const isLoadIdle = (action: Action): boolean =>
   engineLoadProgressChanged.match(action) && action.payload === null;
+const isFocusRetired = (action: Action): boolean =>
+  requestRetired.match(action) && action.payload.slot === 'focus';
 
 // Commits in the same tick the focus row lands, so the frame that first
 // follows a moving body already reads the commit as its framing and owes no
-// approach. An id still unresolved once every load has gone quiet names
-// nothing the loaded catalogs hold.
+// approach. A retired request (an absent id), or an id still unresolved once
+// every load has gone quiet, names nothing the loaded catalogs hold.
 function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutcome> {
   while (
     (yield* select(selectPendingFocusId)) !== null ||
     (yield* select(selectFocusRow)) === null
   ) {
-    const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
+    const { idle, retired } = yield* race({
+      row: take(setSelectionRow),
+      idle: take(isLoadIdle),
+      retired: take(isFocusRetired),
+    });
+    if (retired !== undefined) return UNKNOWN_ID;
     if (idle === undefined) continue;
     // A catalog's count report, which resolves its ids, trails the idle
     // report it lands with by an async hop; a load that started in that hop
@@ -186,7 +194,7 @@ export function* navigateSaga(
       if (transition === 'cut') yield* call(homeSaga);
       return yield* call(firstClipSaga, startTour(view.id), transition);
     case 'clip':
-      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_CLIP_FACTORIES, view.id)) return UNKNOWN_ID;
       if (transition === 'cut') {
         yield* call(homeSaga);
         // A tour clears the seeded focus itself; a clip does not, so Earth's
@@ -195,7 +203,7 @@ export function* navigateSaga(
       }
       return yield* call(firstClipSaga, startClip(view.id), transition);
     case 'studio':
-      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_CLIP_FACTORIES, view.id)) return UNKNOWN_ID;
       // The studio pins the live pose as the preview start (Q7), so a cut lands home first.
       if (transition === 'cut') {
         yield* call(homeSaga);

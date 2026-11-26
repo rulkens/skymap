@@ -3,6 +3,7 @@
  * (mission or celestial) its identity lives in. `id` keys slot, renderer, state and pick.
  */
 import type { MeshAsset } from '../data/mesh/MeshAsset';
+import type { Tier } from '../data/Tier';
 import type { SceneBodyId } from './SceneBodyId';
 
 export type MeshPresentation = {
@@ -12,4 +13,8 @@ export type MeshPresentation = {
   readonly boundingRadiusM: number;
   /** See `MeshBody.buildMesh`. */
   readonly buildMesh?: () => Promise<MeshAsset>;
+  /** The body's own `resolvePx`: the mesh loads where its glint hands over. */
+  readonly resolvePx: number;
+  /** See `MeshBody.tierCeiling`. */
+  readonly tierCeiling?: Tier;
 };

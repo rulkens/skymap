@@ -66,15 +66,20 @@ export type AtmosphereShellRenderer = Renderer & {
   ): void;
 
   /**
-   * Bake body `bodyId`'s camera-local froxel volumes into the caller's compute
-   * pass (delegated to `AerialPerspectiveRenderer`). `uniforms` is the same record
-   * `draw` takes, and this is its only write for an inside-the-shell body.
+   * Write the record `draw` takes for an inside-the-shell body: its only write that
+   * frame (delegated to `AerialPerspectiveRenderer`).
    */
-  bakeAerialPerspective(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void;
+  writeAerialPerspectiveUniforms(bodyId: string, uniforms: Float32Array): void;
+
+  /**
+   * Bake body `bodyId`'s camera-local froxel volumes into the caller's compute
+   * pass (delegated to `AerialPerspectiveRenderer`), from the record just written.
+   */
+  bakeAerialPerspective(pass: GPUComputePassEncoder, bodyId: string): void;
 
   /**
    * Fog the open pass from inside body `bodyId`'s shell (delegated to
-   * `AerialPerspectiveRenderer`). Reads the record `bakeAerialPerspective` wrote
+   * `AerialPerspectiveRenderer`). Reads the record `writeAerialPerspectiveUniforms` wrote
    * this frame; `depthView` is `foreground:0`'s depth as a sampled texture.
    */
   drawAerialPerspective(

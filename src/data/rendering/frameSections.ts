@@ -34,6 +34,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'sky-view' },
     // Any line ahead of SCENE's star draws would do; inputs come from the `star-catalog` plan row.
     { kind: 'compute', name: 'star-cut' },
+    // Ahead of the POST_FOREGROUND `asteroids` dots, which read the positions it writes.
+    { kind: 'compute', name: 'asteroid-kepler' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
@@ -80,8 +82,8 @@ export const PRELUDE: FrameSection = {
       near0Passes: [],
       bodyPasses: [
         'atmosphere-probe-sky',
-        'earth',
         'surface-tiles',
+        'earth',
         'cloud-shell',
         'planets',
         'textured-bodies',
@@ -95,9 +97,11 @@ export const PRELUDE: FrameSection = {
 export const SCENE: FrameSection = {
   scope: 'perView',
   steps: [
-    // Plan row first (`checkFrameOrder`'s boot rule): this view's markers, sized and
-    // culled from its own eye, before its first GPU step (`runPlanSteps`).
+    // Plan rows first (`checkFrameOrder`'s boot rule): this view's markers, sized and
+    // culled from its own eye, and its density-mean step, before its first GPU step
+    // (`runPlanSteps`).
     { kind: 'plan', name: 'structure-markers' },
+    { kind: 'plan', name: 'cosmic-web-density-accumulation' },
     // Bakes the froxel volume its apply row (below) reads, once PER VIEW: each view is
     // its own submit, so the bake lands after the previous view's apply and before this
     // view's; no once-scope PRELUDE line could give that ordering.
@@ -106,8 +110,15 @@ export const SCENE: FrameSection = {
     // `milky-way-field` on the hdr NEAR0 line. Per view for the same reason.
     { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
-    // inside the hdr COSMO step below, so this render must precede that step.
-    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // inside the hdr COSMO step below, so this render must precede that step. Retained,
+    // restarted by the accumulation planner.
+    {
+      kind: 'render',
+      target: 'cosmic-web-density',
+      slab: COSMO,
+      passes: ['cosmic-web-density'],
+      restartPlanner: 'cosmic-web-density-accumulation',
+    },
     // Twin of the density render, into a 1/5-res offscreen merged by
     // `zone-of-avoidance-upsample`.
     { kind: 'render', target: 'zoa', slab: COSMO, passes: ['zone-of-avoidance'] },
@@ -219,7 +230,8 @@ export const SCENE: FrameSection = {
     // own) with body rows. Depth-tested opaque order is a listing choice, except:
     // `rings` writes no depth and blends OVER, so it follows every opaque sphere (the
     // far ring half is then occluded); `cloud-shell` is the same exception, placed
-    // right after the `earth` surface it depth-tests against.
+    // right after the `earth` surface it depth-tests against. `surface-tiles` leads
+    // `earth` for cost alone (see the roster).
     //
     // Mesh passes draw LAST, after the depth marker. Shells write no depth, so a late
     // mesh still depth-tests correctly and leaves its own distance in the depth the
@@ -229,10 +241,12 @@ export const SCENE: FrameSection = {
       target: 'foreground:0',
       near0Passes: ['star-spheres', 'field-star-sphere'],
       bodyPasses: [
-        'earth',
+        // Tiles BEFORE the globe: it sits at the inner bound, under every patch, so the
+        // depth test spares its shading wherever a patch already drew.
         'surface-tiles',
-        // Debug-only; right after the tiles because it writes analytic depth against
-        // the depth THEY stamped. Not in the probe roster: a cursor means nothing on a
+        'earth',
+        // Debug-only; after the surface because it writes analytic depth against
+        // the depth the tiles stamped. Not in the probe roster: a cursor means nothing on a
         // capture face.
         'terrain-pick-marker',
         'cloud-shell',
@@ -279,7 +293,14 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites'],
+      passes: [
+        'orbit-trails',
+        'sampled-trails',
+        'satellite-orbits',
+        'satellites',
+        'asteroid-orbits',
+        'asteroids',
+      ],
       slot: 'POST_FOREGROUND',
     },
   ],
@@ -304,45 +325,97 @@ export const POST: FrameSection = {
 // the whole row back into `hdr` for `POST`.
 export const SCENE_TO_DOME_CUBE: FrameSection = {
   scope: 'perView',
-  steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }],
+  steps: [
+    ...SCENE.steps,
+    { kind: 'copy', source: 'hdr' },
+    // What this face's foreground puts in front of an overlay, into the face's own
+    // layer (`ViewSpec.layer`). After the whole foreground chain, whose last row's depth
+    // it samples. The overlays read the resampled mask, never `foreground:0`: by the
+    // time they draw it holds the last face alone.
+    {
+      kind: 'render',
+      target: 'dome-cube-occlusion',
+      slab: NEAR0,
+      depth: { sample: 'foreground:0' },
+      passes: ['occlusion-mask'],
+    },
+  ],
 };
 
 export const DOME_RESAMPLE: FrameSection = {
   scope: 'once',
-  steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
-};
-
-export const OVERLAYS: FrameSection = {
-  scope: 'once',
   steps: [
-    // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
-    // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
-    // which goes incoherent across the per-layer timing pass boundaries (additive rows
-    // never read it). The Sun/Earth still occlude cosmological labels, via the
-    // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
-    // leads so lines and labels composite over its stroke.
-    //
-    // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
-    // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
-    // joint, so every pipeline binding it must fill its depth entries.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: COSMO,
-      depth: { sample: 'foreground:0' },
-      passes: ['selection-ring', 'marker-lines', 'labels-cosmo'],
-    },
-    // Near-field overlays, last, so scene-body captions land on top of the bodies.
-    // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
-    // would clip a picked survey star); each ring lands only in the slab whose frustum
-    // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
-    // painted last by intent.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: NEAR0,
-      depth: { sample: 'foreground:0' },
-      passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
-    },
+    { kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] },
+    // The masks follow the image through the same face choice, so a label hides
+    // exactly where the resampled body covers it.
+    { kind: 'render', target: 'dome-occlusion', slab: COSMO, passes: ['dome-occlusion-resample'] },
   ],
 };
+
+// The overlays, with the selection rings and the clip-path inspector or without them
+// (a rig with no single cursor, the dome); one builder so both keep one pass per slab
+// and one draw order. `occlusion` is what the two overlay lines are hidden by: the
+// `foreground:0` joint where the output IS the image the bodies drew in, or the mask
+// carried to the output where it is not (the dome, whose `foreground:0` holds the last
+// face only by the time these lines run).
+function overlays({
+  selectionRings,
+  occlusion,
+}: {
+  readonly selectionRings: boolean;
+  readonly occlusion: 'sampled-depth' | 'mask';
+}): FrameSection {
+  const occludedBy =
+    occlusion === 'mask'
+      ? { mask: { sample: 'dome-occlusion' } }
+      : { depth: { sample: 'foreground:0' } };
+  return {
+    scope: 'once',
+    steps: [
+      // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
+      // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
+      // which goes incoherent across the per-layer timing pass boundaries (additive rows
+      // never read it). The Sun/Earth still occlude cosmological labels, via the
+      // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
+      // leads so leaders and labels composite over its stroke.
+      //
+      // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
+      // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
+      // joint, so every pipeline binding it must fill its depth entries.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: COSMO,
+        ...occludedBy,
+        passes: selectionRings ? ['selection-ring', 'labels-cosmo'] : ['labels-cosmo'],
+      },
+      // Near-field overlays, last, so scene-body captions land on top of the bodies.
+      // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
+      // would clip a picked survey star); each ring lands only in the slab whose frustum
+      // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
+      // painted last by intent.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: NEAR0,
+        ...occludedBy,
+        passes: selectionRings
+          ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
+          : ['labels-near'],
+      },
+      // The film look's bars, after every overlay so they mask captions the way a real
+      // matte would. Its own line: it binds no depth, and the line above must fill the
+      // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+      { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
+    ],
+  };
+}
+
+export const OVERLAYS: FrameSection = overlays({
+  selectionRings: true,
+  occlusion: 'sampled-depth',
+});
+
+// Labels and their leaders, once, on the fisheye image itself: upright toward the
+// zenith at the dome's own pixel scale, which no per-face draw could give.
+export const DOME_OVERLAYS: FrameSection = overlays({ selectionRings: false, occlusion: 'mask' });

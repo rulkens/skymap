@@ -1438,6 +1438,42 @@ export const RAW_DATA = {
     source: 'committed',
     description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
   },
+
+  // ─── Moon surface sources — fetched by hand, no fetchers ───────────────
+  // Same COG + leaf-symlink arrangement as Mars; the strip originals are deleted.
+
+  'lroc.wacGlobal100m': {
+    path: 'data/raw/lroc/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence, Sun from the east west of lon -90 and from the west elsewhere.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif',
+    readme: 'lroc.readme',
+  },
+  'lroc.readme': {
+    path: 'data/raw/lroc/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the LROC WAC mosaic — upstream, grid, lighting, COG conversion.',
+  },
+  'lola.ldem118m': {
+    path: 'data/raw/lola/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LOLA 118 m global LDEM, Float32 tiled COG of the Int16 half-metre USGS mosaic (unscaled; sharp cannot read signed 16-bit): 92160x46080 metres above the 1,737,400 m sphere, NoData -32768, equirectangular, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif',
+    readme: 'lola.readme',
+  },
+  'lola.readme': {
+    path: 'data/raw/lola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the LOLA DEM — upstream, grid, vertical reference, COG conversion.',
+  },
   'hirise.gale.dtm': {
     path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
     kind: 'file',
@@ -2157,6 +2193,46 @@ export const RAW_DATA = {
       'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
   },
 
+  // ─── MPCORB — the Minor Planet Center orbit database (asteroids) ──────
+
+  mpcorb: {
+    path: 'data/raw/mpcorb/MPCORB.DAT.gz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MPCORB.DAT, gzipped: one 202-character line of osculating elements per minor planet, numbered objects first. Rewritten daily upstream; `build-asteroids` streams it through gunzip (no unpacked copy on disk).',
+    upstream: 'https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz',
+    fetcher: 'tools/fetch/fetchMpcorb.ts',
+    readme: 'mpcorb.readme',
+  },
+  'mpcorb.readme': {
+    path: 'data/raw/mpcorb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "MPC's export-format column table, the packed number and date rules, the orbit-type values and the header's terms, each with its source URL.",
+  },
+
+  // ─── JPL Small-Body Database (asteroid diameters for the card)
+
+  'sbdb.diameters': {
+    path: 'data/raw/sbdb/diameters.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The SBDB Query API answer, verbatim: every numbered asteroid with a diameter, fields `pdes` (the number), `diameter` (km), `albedo` and `diameter_sigma`, as strings or null. `build-asteroids` joins it to MPCORB by number.',
+    upstream: 'https://ssd-api.jpl.nasa.gov/sbdb_query.api',
+    fetcher: 'tools/fetch/fetchSbdbDiameters.ts',
+    readme: 'sbdb.readme',
+  },
+  'sbdb.readme': {
+    path: 'data/raw/sbdb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "The query, the response layout, JPL's fair-use policy and citation request, and the copy behind the bake.",
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
@@ -2164,7 +2240,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, Vesta, Ceres and Bennu, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100 (Bennu 2007–2054), UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-spacecraft-tracks`.',
+      'Holds `<centre>/<id>.csv` (`jd,x_km,y_km,z_km`, named by the row id, not its Horizons target): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, Vesta, Ceres and Bennu, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100 (Bennu 2007–2054), UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-sampled-tracks`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',

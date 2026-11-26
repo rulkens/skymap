@@ -70,7 +70,7 @@ struct PatchInstance {
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an
-// intra-tile uv, and a local normal/tangent pair for lighting parity with
+// intra-tile uv, and a local datum/shading normal pair for lighting parity with
 // the base globe's PBR path. 'normalLocal' is forwarded RAW (unnormalized)
 // the same way earth/vertex.wesl forwards its local position -- the fragment
 // renormalizes after interpolation. 'atlasUvOrigin'/'atlasUvScale' are
@@ -80,13 +80,15 @@ struct PatchInstance {
 // 'viewDirLocal' is NOT flat: it is 'worldPosRelCam' (small, f64-composed
 // then narrowed once) rotated into the local frame per vertex, forwarded
 // raw for the fragment to normalize -- the cancellation-free replacement
-// for 'camPosLocal - Ng', which subtracts two near-unit f32 vectors and
+// for 'camPosLocal - geometricNormal', which subtracts two near-unit f32 vectors and
 // degenerates at metre-scale altitude (see vertex.wesl).
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) normalLocal: vec3<f32>,
-  @location(2) tangent: vec3<f32>,
+  // The height-cell shading normal, taken per VERTEX and interpolated: per
+  // fragment it cost 16 height reads a pixel, over half the tile pass on a phone.
+  @location(2) shadingNormal: vec3<f32>,
   @location(3) @interpolate(flat) atlasUvOrigin: vec2<f32>,
   @location(4) @interpolate(flat) atlasUvScale: vec2<f32>,
   @location(5) viewDirLocal: vec3<f32>,
@@ -95,15 +97,8 @@ struct VSOut {
   @location(6) @interpolate(flat) fallbackUvOrigin: vec2<f32>,
   @location(7) @interpolate(flat) fallbackUvScale: vec2<f32>,
   @location(8) @interpolate(flat) fadeWeight: f32,
-  // What the fragment needs to take its normal from the height cell it lies
-  // in: the leaf's lattice as (origin.xy, cells) -- one location rather than
-  // two, since a sub-rect origin without its cell count addresses nothing --
-  // and the patch's (dLon, dLat) to turn a cell step into metres. Per-tile
-  // constants, so flat; a u32 cannot interpolate at all.
-  @location(9) @interpolate(flat) heightLattice: vec3<u32>,
-  @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
   // PatchInstance's 'nightRect', forwarded whole: (origin.xy, scale.xy).
-  @location(11) @interpolate(flat) nightRect: vec4<f32>,
+  @location(9) @interpolate(flat) nightRect: vec4<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

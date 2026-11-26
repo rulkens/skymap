@@ -1,25 +1,19 @@
 /**
- * Sgr A* lens pass tuning subsection (see `BlackHoleLensingTuning`'s own
- * docblock). Structural precedent: `src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx`.
- * `cubemapResolutionPx` gets a `<select>` (four meaningful values) instead of
- * riding the generic slider board — the same "bespoke control after the rows"
- * shape ZoA's colour pickers use.
+ * Sgr A* lens pass tuning subsection (see `BlackHoleLensingTuning`); structure follows
+ * `ZoneOfAvoidanceTuningSection`. `cubemapResolutionPx` gets a `<select>` (four meaningful
+ * values) after the slider rows, not a slider.
  *
- * 2048 costs ~192 MiB (2048² × 6 faces × 8 bytes/px rgba16float) — the row's
- * tooltip states the general formula rather than a per-option figure (no
- * precedent in this codebase labels individual `<option>`s with a computed
- * value), fine for a dev-only knob but worth knowing before dragging it up.
+ * 2048 costs ~192 MiB (2048² x 6 faces x 8 bytes/px rgba16float); the row's tooltip states the
+ * formula rather than a per-option figure. Fine for a dev-only knob, worth knowing before raising.
  */
 
 import type { ReactElement } from 'react';
 import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
-import type { HexString } from '../../../../@types/math/HexString';
-import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
 import {
   BLACK_HOLE_LENSING_SLIDER_FIELDS,
   blackHoleLensingSliderPatch,
 } from './blackHoleLensingSliderFields';
+import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 
@@ -59,22 +53,12 @@ export function BlackHoleLensingTuningSection({
           ))}
         </select>
       </div>
-      <div
-        className={sliderStyles.root}
+      <DebugColorRow
+        label="emissionTint"
         title="Overall tint multiplier on the annulus emission's summed output, linear RGB (picker speaks sRGB). [1,1,1] is a no-op."
-      >
-        <span className={sliderStyles.label}>emissionTint</span>
-        <span className={sliderStyles.readout}>{linearRgbToHex(tuning.emissionTint)}</span>
-        <input
-          type="color"
-          aria-label="emissionTint"
-          value={linearRgbToHex(tuning.emissionTint)}
-          onChange={(e) => {
-            const emissionTint = hexToLinearRgb(e.target.value as HexString);
-            onChange({ emissionTint });
-          }}
-        />
-      </div>
+        value={tuning.emissionTint}
+        onChange={(emissionTint) => onChange({ emissionTint })}
+      />
     </DebugTuningSection>
   );
 }

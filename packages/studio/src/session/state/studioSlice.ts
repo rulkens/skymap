@@ -1,5 +1,5 @@
 /**
- * studioSlice — the studio's one state home, injected into the app's root reducer (ADR 0016).
+ * studioSlice — the studio's one state home, injected into the app's root reducer (ADR 0017).
  * History reducers work on `original(state)`, the plain base, so drafts keep their identity:
  * undoing to the opened draft restores the baseline object itself, which is how clean is detected.
  * `revision` bumps whenever the resolved form could change (an edit, undo, redo, a re-pin, an open

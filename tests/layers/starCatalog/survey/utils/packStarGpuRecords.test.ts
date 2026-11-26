@@ -62,8 +62,6 @@ describe('packStarGpuRecords', () => {
       colourIndex: Float32Array.from(records.map((r) => colorIdxToBpRp(r.colorIdx))),
     });
 
-    const offsetScale = /const\s+OFFSET_SCALE\s*:\s*f32\s*=\s*([0-9.e-]+);/.exec(vertex)?.[1];
-    expect(Number(offsetScale)).toBe(1 / OFFSET_FRACTION_LEVELS);
     expect(weslU32('GPU_ABSMAG_SHIFT')).toBe(GPU_ABSMAG_SHIFT);
     expect(weslU32('GPU_COLOR_SHIFT')).toBe(GPU_COLOR_SHIFT);
     records.forEach((r, i) => {

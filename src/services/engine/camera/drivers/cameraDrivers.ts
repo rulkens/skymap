@@ -3,7 +3,7 @@
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
  * Priorities: clip 95 > orbitDrag 80 > tween 60 > (an exhibit row, lifted in by
- * `composeControlSchemes`; the mission's is 58) > followApproach 55 > autoRotate 20 >
+ * `composeControlSchemes`; the timeline's is 58) > followApproach 55 > autoRotate 20 >
  * followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
@@ -113,7 +113,7 @@ function followPose(
   const driver = selectionDriver(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
   if (focus === null || driver === null || driver.poseId === null || livePos === null) {
-    return { pose: s.camera.base, memory: mem };
+    return { pose: s.camera.intent.base, memory: mem };
   }
   // The pose eased TOWARD, in world terms whatever arm the regime is in — by
   // reference in the world arm, so its numbers are untouched. The produce stays
@@ -240,14 +240,14 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
     commitsOnEdge: 'register',
-    isActive: (s) => clipOwnsCamera(s.camera),
+    isActive: (s) => clipOwnsCamera(s.camera.intent),
     // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
     // tangents encode through — a fixed reference keeps `evaluateClip`'s
     // compile cache stable across an orientation switch; the result is
     // re-encoded into the CURRENT frame (by reference when the bases match).
     pose: (ctx, mem) => {
       const s = ctx.state;
-      const clip = s.camera.clip!;
+      const clip = s.camera.intent.clip!;
       const pinned = ORIENTATION_FRAMES[clip.frame];
       // `clip` IS this playback: a frame leg's start converts once against the
       // bodies of the frame the leg opens on, and a replay re-converts.
@@ -313,7 +313,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Arm-gated where the approach is not (spec §7): the ARM is the hold — a
     // state that co-rotates with the body keeps it centred structurally, and a
     // world pose re-asserted over it would only fight the arm's own channels.
-    isActive: (s) => isWorldArm(s.camera.base) && followsFocus(s),
+    isActive: (s) => isWorldArm(s.camera.intent.base) && followsFocus(s),
     pose: followPose,
   },
   {
@@ -324,13 +324,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Bakes the final pose on deactivation; it is already in the CURRENT
     // frame, so the commit never bakes a stale pinned-frame reading.
     commitsOnEdge: 'register',
-    isActive: (s) => s.camera.tween !== null,
+    isActive: (s) => s.camera.intent.tween !== null,
     // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
     // captured through; `focusMoveClip` memoises by reference so
     // `evaluateClip`'s compile cache reuses tracks across frames.
     pose: (ctx, mem) => {
       const s = ctx.state;
-      const tween = s.camera.tween!;
+      const tween = s.camera.intent.tween!;
       const pinned = ORIENTATION_FRAMES[tween.frame];
       const evaluated = evaluateFramedClip(focusMoveClip(tween), ctx.elapsedMs / 1000, {
         frameBasis: pinned,
@@ -345,9 +345,12 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         ctx.bodies,
         ctx.terrainHeightAt,
       );
+      // A lens leg (a fly out of the sky) drives the drawn lens as the clip row does.
+      const { fov } = evaluated.channels;
+      const lens = fov === undefined ? {} : { fovYRad: fov };
       const offset = tween.from.lookOffset;
       if (offset === undefined || !isWorldArm(framed))
-        return { pose: framed, memory: settledMemory(mem) };
+        return { pose: framed, memory: settledMemory(mem), ...lens };
       // Clips author no offset channel, so the start pose's eases out here, on
       // the same ease the clip gives every other term.
       const keep =
@@ -359,6 +362,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),
         memory: settledMemory(mem),
+        ...lens,
       };
     },
   },
@@ -370,16 +374,16 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
     // thing a body-fixed arm expresses.
-    isActive: (s) => s.camera.autoRotate.active && isWorldArm(s.camera.base),
+    isActive: (s) => s.camera.intent.autoRotate.active && isWorldArm(s.camera.intent.base),
     // Spins from the FROZEN base (it only changes on a commit edge), so yaw
     // advances at the cumulative rate, not a per-frame delta off a moving base.
     pose: (ctx, mem) => {
-      const base = ctx.state.camera.base;
+      const base = ctx.state.camera.intent.base;
       // The isActive gate restated as the narrowing TS needs.
       if (!isWorldArm(base)) return { pose: base, memory: mem };
       return {
         pose: absoluteArm(
-          spinAutoRotate(base.pose, ctx.state.camera.autoRotate.rate, ctx.elapsedMs),
+          spinAutoRotate(base.pose, ctx.state.camera.intent.autoRotate.rate, ctx.elapsedMs),
         ),
         memory: mem,
       };
@@ -391,7 +395,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Pivots too, so 'every orbit driver pivots on the focused body' holds without exception.
     pivotsOnFocusedBody: true,
     isActive: () => true,
-    pose: (ctx, mem) => ({ pose: ctx.state.camera.base, memory: mem }),
+    pose: (ctx, mem) => ({ pose: ctx.state.camera.intent.base, memory: mem }),
   },
 ];
 

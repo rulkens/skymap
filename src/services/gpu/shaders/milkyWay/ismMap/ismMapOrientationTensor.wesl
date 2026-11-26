@@ -49,16 +49,16 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Guards the degenerate 1-ring-grid divide-by-zero.
   let rSpan = f32(max(1, i32(rNext) - i32(rPrev)));
 
-  let gx = (textureLoad(srcTex, vec2<i32>(i32(aNext), i32(gid.y)), 0).x
+  let gradX = (textureLoad(srcTex, vec2<i32>(i32(aNext), i32(gid.y)), 0).x
     - textureLoad(srcTex, vec2<i32>(i32(aPrev), i32(gid.y)), 0).x) / 2.0;
-  let gyRaw = (textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(rNext)), 0).x
+  let gradYRaw = (textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(rNext)), 0).x
     - textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(rPrev)), 0).x) / rSpan;
-  let gy = gyRaw / aspect;
+  let gradY = gradYRaw / aspect;
 
-  // Blurring gx*gx (etc.), not gx/gy themselves, is what makes crest
+  // Blurring gradX*gradX (etc.), not gradX/gradY themselves, is what makes crest
   // orientation well-defined at a ridge peak where the raw gradient is ~0.
-  let jxx = gx * gx;
-  let jxy = gx * gy;
-  let jyy = gy * gy;
+  let jxx = gradX * gradX;
+  let jxy = gradX * gradY;
+  let jyy = gradY * gradY;
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(jxx, jxy, jyy, 0.0));
 }

@@ -17,6 +17,8 @@ import MobileSheet from '../MobileSheet/MobileSheet';
 import DockContainer from './DockContainer';
 import TimeBarContainer from './TimeBarContainer';
 import ScaleBracketContainer from './ScaleBracketContainer';
+import SkyEntryButtonContainer from './SkyEntryButtonContainer';
+import SkyHudContainer from './SkyHudContainer';
 import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -108,6 +110,12 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
       onCover={onCover}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
+      sky={
+        <>
+          <SkyEntryButtonContainer phone />
+          <SkyHudContainer phone />
+        </>
+      }
       timeRow={<TimeBarContainer hidden={hidden} row />}
       dock={
         <DockContainer

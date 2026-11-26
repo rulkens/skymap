@@ -12,7 +12,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFlyToLonLatSaga } from '../../../src/state/camera/watchFlyToLonLatSaga';
 import { flyToLonLat } from '../../../src/state/camera/flyToLonLatActions';
 import type { FlyToLonLatPayload } from '../../../src/state/camera/flyToLonLatActions';
-import { startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
@@ -67,7 +67,7 @@ function tweenOf(a: UnknownAction | undefined): CameraTweenDescriptor {
 
 describe('watchFlyToLonLatSaga', () => {
   it('over the focused body: tweens from the live pose to its centre, focus untouched', () => {
-    const puts = run({ lonDeg: 10, latDeg: 20, altKm: 900 });
+    const puts = run({ body: 'earth', lonDeg: 10, latDeg: 20, altKm: 900 });
     expect(puts).toHaveLength(1);
     const tween = tweenOf(puts[0]);
     expect(tween.from).toBe(FROM);
@@ -84,6 +84,6 @@ describe('watchFlyToLonLatSaga', () => {
   });
 
   it('does nothing before the camera exists', () => {
-    expect(run({ lonDeg: 10, latDeg: 20 }, null)).toEqual([]);
+    expect(run({ body: 'earth', lonDeg: 10, latDeg: 20 }, null)).toEqual([]);
   });
 });

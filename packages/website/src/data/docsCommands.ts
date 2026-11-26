@@ -66,6 +66,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-mpcorb',
+          'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
@@ -112,14 +114,19 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'data/raw/horizons/README.md',
       },
       {
-        scripts: ['build-spacecraft-tracks'],
-        does: 'Write the file of Voyager trails from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded.',
+        scripts: ['build-sampled-tracks', 'build-mission-events'],
+        does: 'Write one track file per Voyager and one for 2026 QQ8 from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded, and compile the Voyagers’ launch, flyby and milestone events. Body ids after -- write only those tracks.',
         manual: DATA,
       },
       {
-        scripts: ['build-satellites'],
-        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. A scheduled GitHub workflow runs both every day and uploads the file.',
+        scripts: ['build-satellites', 'live-satellites'],
+        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. live-satellites runs both; the Live datasets workflow runs it every day and uploads the file.',
         manual: DATA,
+      },
+      {
+        scripts: ['build-asteroids'],
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names, the Center’s terms and the diameters fetch-sbdb-diameters downloaded beside it.',
+        manual: 'data/raw/mpcorb/README.md',
       },
       {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
@@ -128,13 +135,18 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['fetch-cloud-inputs'],
-        does: 'Downloads the twelve Blue Marble months of 2004, about 360 MB, which the cloud bake matches its map to. It runs fetch-textures with --bmng-months and needs -- --confirm.',
+        does: 'Downloads the cloud bake’s fixed inputs, about 400 MB: the static cloud map it matches its map to and the twelve Blue Marble months of 2004 it cuts the ice mask from. It runs fetch-textures with --cloud-inputs and needs -- --confirm.',
         manual: 'data/raw/clouds/README.md',
       },
       {
         scripts: ['bake-clouds'],
         does: 'Bakes one day’s global cloud map from weather-satellite imagery with tools/cloud-bake-rs. Options: --date, --out and --offline.',
         manual: 'tools/cloud-bake-rs/README.md',
+      },
+      {
+        scripts: ['build-live-clouds'],
+        does: 'Bakes yesterday’s cloud map, writes it at the three data sizes under a dated folder and points the clouds pointer at it. The Live datasets workflow runs it every day and uploads the files.',
+        manual: DATA,
       },
       {
         scripts: ['import-mesh', 'prebake-mesh', 'build-meshes'],
@@ -147,8 +159,13 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SCENE,
       },
       {
-        scripts: ['build-fonts', 'build-env-brdf-lut', 'build-pgc-aliases'],
-        does: 'Write three small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, and the catalogue names the search knows a galaxy by.',
+        scripts: [
+          'build-fonts',
+          'build-env-brdf-lut',
+          'build-blue-noise-mask',
+          'build-pgc-aliases',
+        ],
+        does: 'Write four small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, a noise pattern that hides the step grid in the cosmic-web volume, and the catalogue names the search knows a galaxy by.',
         manual: DATA,
       },
       {
@@ -375,6 +392,10 @@ export const DOCS_COMMANDS_UNLISTED: readonly { why: string; scripts: readonly s
   {
     why: 'build runs them',
     scripts: ['galaxy-renderer:build', 'mcpm-workbench:build', 'flow-workbench:build'],
+  },
+  {
+    why: 'the Live datasets workflow runs them',
+    scripts: ['live-matrix', 'live-publish-list'],
   },
   {
     why: 'they publish, and need the owner’s keys',

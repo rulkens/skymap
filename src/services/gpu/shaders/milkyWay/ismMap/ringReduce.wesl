@@ -22,10 +22,10 @@ fn csRingMeans(
   @builtin(local_invocation_index) localIndex: u32,
 ) {
   let ring = wgid.x;
-  let az = textureDimensions(ismMapTex).x;
+  let azCount = textureDimensions(ismMapTex).x;
 
   var sum: f32 = 0.0;
-  for (var col = localIndex; col < az; col += RING_REDUCE_WORKGROUP_SIZE) {
+  for (var col = localIndex; col < azCount; col += RING_REDUCE_WORKGROUP_SIZE) {
     sum += textureLoad(ismMapTex, vec2<i32>(i32(col), i32(ring)), 0).w;
   }
   partialSums[localIndex] = sum;
@@ -41,7 +41,7 @@ fn csRingMeans(
   }
 
   if (localIndex == 0u) {
-    ringMeansBuf[ring] = partialSums[0] / f32(az);
+    ringMeansBuf[ring] = partialSums[0] / f32(azCount);
   }
 }
 
@@ -67,8 +67,8 @@ var<workgroup> survivorPartial: array<f32, RING_REDUCE_WORKGROUP_SIZE>;
 @compute @workgroup_size(RING_REDUCE_WORKGROUP_SIZE)
 fn csSurvivorSum(@builtin(local_invocation_index) localIndex: u32) {
   var sum: f32 = 0.0;
-  for (var i = localIndex; i < survivorParams.count; i += RING_REDUCE_WORKGROUP_SIZE) {
-    sum += massBuf[i];
+  for (var survivorIndex = localIndex; survivorIndex < survivorParams.count; survivorIndex += RING_REDUCE_WORKGROUP_SIZE) {
+    sum += massBuf[survivorIndex];
   }
   survivorPartial[localIndex] = sum;
   workgroupBarrier();
@@ -109,8 +109,8 @@ var<workgroup> armCloudFluxWeightPartial: array<f32, RING_REDUCE_WORKGROUP_SIZE>
 @compute @workgroup_size(RING_REDUCE_WORKGROUP_SIZE)
 fn csArmCloudFluxWeightSum(@builtin(local_invocation_index) localIndex: u32) {
   var sum: f32 = 0.0;
-  for (var i = localIndex; i < armCloudFluxWeightSumParams.count; i += RING_REDUCE_WORKGROUP_SIZE) {
-    sum += armCloudFluxWeightBuf[i];
+  for (var particleIndex = localIndex; particleIndex < armCloudFluxWeightSumParams.count; particleIndex += RING_REDUCE_WORKGROUP_SIZE) {
+    sum += armCloudFluxWeightBuf[particleIndex];
   }
   armCloudFluxWeightPartial[localIndex] = sum;
   workgroupBarrier();
@@ -140,8 +140,8 @@ var<workgroup> armSpurFluxWeightPartial: array<f32, RING_REDUCE_WORKGROUP_SIZE>;
 @compute @workgroup_size(RING_REDUCE_WORKGROUP_SIZE)
 fn csArmSpurFluxWeightSum(@builtin(local_invocation_index) localIndex: u32) {
   var sum: f32 = 0.0;
-  for (var i = localIndex; i < armSpurFluxWeightSumParams.count; i += RING_REDUCE_WORKGROUP_SIZE) {
-    sum += armSpurFluxWeightBuf[i];
+  for (var particleIndex = localIndex; particleIndex < armSpurFluxWeightSumParams.count; particleIndex += RING_REDUCE_WORKGROUP_SIZE) {
+    sum += armSpurFluxWeightBuf[particleIndex];
   }
   armSpurFluxWeightPartial[localIndex] = sum;
   workgroupBarrier();

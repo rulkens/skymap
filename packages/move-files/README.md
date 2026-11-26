@@ -16,6 +16,10 @@ Run from the repo root, inside a git repository (files are listed with `git ls-f
 `.gitignore` is respected, and a run from a subfolder is refused). Paths are relative to the
 root. Commit the pure move on its own so git's rename detection keeps history.
 
+A `from` that is a folder, in a manifest row or on the command line, stands for one move per
+file git lists under it, each to the same relative path under `to` (merged into `to` if that
+folder exists). Every check and companion then applies as if those rows had been written out.
+
 A moved `.tsx` takes its companions along (see config); a companion already named in the
 batch keeps its explicit destination. Chains and swaps (`a -> b`, `b -> a`) work because
 every reference is resolved against the old layout and spelled for the new one. The author's
@@ -24,8 +28,9 @@ Specifiers resolve as TypeScript's bundler mode does, plus an asset as written a
 `./data` for `data.json`.
 
 A batch is refused whole, with every reason listed, if a source is not a file git lists in
-that exact case, or a destination is taken, differs only by case from another file or its
-folder from another folder, is a folder, sits under a file, or holds a quote or backslash.
+that exact case or a folder holding one, or a destination is taken, differs only by case from
+another file or its folder from another folder, is a folder, sits under a file, or holds a
+quote or backslash.
 
 ## Config
 
@@ -91,8 +96,8 @@ Not seen at all, so check these by hand after a move:
 - `./x` for `x.mjs` or `x.mts`, which Vite accepts and TypeScript does not.
 - A specifier spelling the file name only through escapes (`'./\x61'` for `a.ts`).
 
-Directories cannot be moved, only files. Windows paths are not supported. A moved symlink
-stays a symlink with the same target text, so a relative one may need fixing.
+Windows paths are not supported. A moved symlink stays a symlink with the same target text,
+so a relative one may need fixing.
 
 ## On a case-insensitive disk (macOS)
 

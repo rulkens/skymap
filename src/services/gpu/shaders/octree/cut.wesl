@@ -40,7 +40,7 @@
 // 'instance >> 3' with no search and discards the last block's spare instances.
 //
 // ## Bindings: writer -> reader
-//   u         CPU each frame -> all three entry points, and vertex.wesl
+//   uniforms  CPU each frame -> all three entry points, and vertex.wesl
 //   nodes     CPU at upload  -> all three entry points, and vertex.wesl
 //   nodes     CPU at chunk land/evict: the slot's rows, then every root's row
 //   slotRows  CPU at chunk land/evict -> histogram, emit: a slot's live rows
@@ -80,7 +80,7 @@ const AGG_INSTANCES: u32 = DRAW_RECORD_WORDS + LEAF_INSTANCES;
 const MIN_DIST_SQ: f32 = 1e-15;
 const HALF_DIAGONAL: f32 = 0.8660254;
 
-@group(0) @binding(0) var<uniform> u: CutUniforms;
+@group(0) @binding(0) var<uniform> uniforms: CutUniforms;
 @group(0) @binding(1) var<storage, read> nodes: array<CutNode>;
 @group(0) @binding(2) var<storage, read_write> opacity: array<f32>;
 @group(0) @binding(3) var<storage, read_write> leafList: array<u32>;
@@ -94,48 +94,48 @@ const HALF_DIAGONAL: f32 = 0.8660254;
 // A slot is sized to the row bound, so most pool rows are padding: ruling
 // them out from this small table, before touching 'nodes' or 'opacity', is
 // what keeps the cut's memory traffic at the live rows'.
-fn isPadding(i: u32) -> bool {
-  if (i < u.indexNodes) { return false; }
-  let local = i - u.indexNodes;
-  return local % u.chunkNodeCap >= slotRows[local / u.chunkNodeCap];
+fn isPadding(row: u32) -> bool {
+  if (row < uniforms.indexNodes) { return false; }
+  let local = row - uniforms.indexNodes;
+  return local % uniforms.chunkNodeCap >= slotRows[local / uniforms.chunkNodeCap];
 }
 
-fn proxyOf(i: u32) -> f32 {
-  let edge = nodeEdgeCells(nodes[i].bits);
-  let lo = nodeMinCells(nodes[i].grid, u.camCell, u.camFrac);
-  let d = max(max(lo, -(lo + vec3<f32>(edge))), vec3<f32>(0.0));
-  return edge * edge / max(dot(d, d), MIN_DIST_SQ);
+fn proxyOf(row: u32) -> f32 {
+  let edge = nodeEdgeCells(nodes[row].bits);
+  let minCorner = nodeMinCells(nodes[row].grid, uniforms.camCell, uniforms.camFrac);
+  let toBox = max(max(minCorner, -(minCorner + vec3<f32>(edge))), vec3<f32>(0.0));
+  return edge * edge / max(dot(toBox, toBox), MIN_DIST_SQ);
 }
 
 fn binOf(proxy: f32) -> u32 {
-  let octaves = log2(proxy / u.refineThresholdSq);
+  let octaves = log2(proxy / uniforms.refineThresholdSq);
   return u32(clamp(octaves * CUT_BINS_PER_OCTAVE, 0.0, f32(CUT_BINS - 1u)));
 }
 
 // A refine candidate, before the budget: childful, children in the pool, and
 // above the user's Detail.
-fn wantsRefine(i: u32, proxy: f32) -> bool {
-  let bits = nodes[i].bits;
-  return nodeHasBlob(bits) && nodeChildrenResident(bits) && proxy >= u.refineThresholdSq;
+fn wantsRefine(row: u32, proxy: f32) -> bool {
+  let bits = nodes[row].bits;
+  return nodeHasBlob(bits) && nodeChildrenResident(bits) && proxy >= uniforms.refineThresholdSq;
 }
 
 // Outside every view's frustum. The sphere is the box grown by what it can
 // paint past its own edge: a blob's glow spread (world), an own record's
 // fixed-pixel dot (angular) — it may only ever over-keep.
-fn offScreen(i: u32, isBlob: bool) -> bool {
-  if (u.viewCount == 0u) { return false; }
-  let edge = nodeEdgeCells(nodes[i].bits);
-  let center = (nodeMinCells(nodes[i].grid, u.camCell, u.camFrac) + vec3<f32>(edge * 0.5)) * u.cellEdgeMpc;
-  let halfDiag = edge * u.cellEdgeMpc * HALF_DIAGONAL;
+fn offScreen(row: u32, isBlob: bool) -> bool {
+  if (uniforms.viewCount == 0u) { return false; }
+  let edge = nodeEdgeCells(nodes[row].bits);
+  let center = (nodeMinCells(nodes[row].grid, uniforms.camCell, uniforms.camFrac) + vec3<f32>(edge * 0.5)) * uniforms.cellEdgeMpc;
+  let halfDiag = edge * uniforms.cellEdgeMpc * HALF_DIAGONAL;
   let radius = select(
-    halfDiag + length(center) * u.leafMarginRad,
-    halfDiag * u.worldSpread,
+    halfDiag + length(center) * uniforms.leafMarginRad,
+    halfDiag * uniforms.worldSpread,
     isBlob,
   );
-  for (var v = 0u; v < u.viewCount; v = v + 1u) {
+  for (var view = 0u; view < uniforms.viewCount; view = view + 1u) {
     var outside = false;
-    for (var p = v * 6u; p < v * 6u + 6u; p = p + 1u) {
-      let plane = u.planes[p];
+    for (var planeIndex = view * 6u; planeIndex < view * 6u + 6u; planeIndex = planeIndex + 1u) {
+      let plane = uniforms.planes[planeIndex];
       if (dot(plane.xyz, center) + plane.w < -radius) {
         outside = true;
         break;
@@ -148,26 +148,26 @@ fn offScreen(i: u32, isBlob: bool) -> bool {
 
 @compute @workgroup_size(64)
 fn histogram(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= u.nodeCount || isPadding(i)) { return; }
-  if (nodes[i].refineDelta == 0u) { return; }
-  let proxy = proxyOf(i);
-  if (!wantsRefine(i, proxy) || offScreen(i, true)) { return; }
-  atomicAdd(&hist[binOf(proxy)], nodes[i].refineDelta);
+  let row = gid.x;
+  if (row >= uniforms.nodeCount || isPadding(row)) { return; }
+  if (nodes[row].refineDelta == 0u) { return; }
+  let proxy = proxyOf(row);
+  if (!wantsRefine(row, proxy) || offScreen(row, true)) { return; }
+  atomicAdd(&hist[binOf(proxy)], nodes[row].refineDelta);
 }
 
 @compute @workgroup_size(1)
 fn pickThreshold() {
   // The root's own records and blob are the cut before any refine.
-  let rootBits = nodes[rootNode(u.indexNodes)].bits;
+  let rootBits = nodes[rootNode(uniforms.indexNodes)].bits;
   var instances = nodeOwnCount(rootBits) + select(0u, 1u, nodeHasBlob(rootBits));
   var cutBin = 0u;
   var spent = false;
-  for (var b = CUT_BINS; b > 0u; b = b - 1u) {
-    let cost = atomicExchange(&hist[b - 1u], 0u);
+  for (var binsLeft = CUT_BINS; binsLeft > 0u; binsLeft = binsLeft - 1u) {
+    let cost = atomicExchange(&hist[binsLeft - 1u], 0u);
     if (spent) { continue; }
-    if (instances >= u.drawBudget) {
-      cutBin = b;
+    if (instances >= uniforms.drawBudget) {
+      cutBin = binsLeft;
       spent = true;
       continue;
     }
@@ -178,37 +178,37 @@ fn pickThreshold() {
   atomicStore(&draws[AGG_INSTANCES], 0u);
 }
 
-fn refines(i: u32, cutBin: u32) -> bool {
-  let j = select(i, nodes[i].parent, nodeFolded(nodes[i].bits));
-  let proxy = proxyOf(j);
-  return wantsRefine(j, proxy) && binOf(proxy) >= cutBin;
+fn refines(row: u32, cutBin: u32) -> bool {
+  let governingRow = select(row, nodes[row].parent, nodeFolded(nodes[row].bits));
+  let proxy = proxyOf(governingRow);
+  return wantsRefine(governingRow, proxy) && binOf(proxy) >= cutBin;
 }
 
 @compute @workgroup_size(64)
 fn emit(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= u.nodeCount || isPadding(i)) { return; }
+  let row = gid.x;
+  if (row >= uniforms.nodeCount || isPadding(row)) { return; }
   let cutBin = atomicLoad(&hist[CUT_BINS]);
 
-  let bits = nodes[i].bits;
-  let drawOwn = i == rootNode(u.indexNodes) || refines(nodes[i].parent, cutBin);
-  let drawBlob = drawOwn && !refines(i, cutBin);
-  let o = i * OPACITY_CHANNELS;
+  let bits = nodes[row].bits;
+  let drawOwn = row == rootNode(uniforms.indexNodes) || refines(nodes[row].parent, cutBin);
+  let drawBlob = drawOwn && !refines(row, cutBin);
+  let opacityBase = row * OPACITY_CHANNELS;
   let ownGoal = select(0.0, 1.0, drawOwn);
   let blobGoal = select(0.0, 1.0, drawBlob);
-  let ownOp = opacity[o + OWN_OPACITY] + clamp(ownGoal - opacity[o + OWN_OPACITY], -u.fadeStep, u.fadeStep);
-  let blobOp = opacity[o + BLOB_OPACITY] + clamp(blobGoal - opacity[o + BLOB_OPACITY], -u.fadeStep, u.fadeStep);
-  opacity[o + OWN_OPACITY] = ownOp;
-  opacity[o + BLOB_OPACITY] = blobOp;
+  let ownOp = opacity[opacityBase + OWN_OPACITY] + clamp(ownGoal - opacity[opacityBase + OWN_OPACITY], -uniforms.fadeStep, uniforms.fadeStep);
+  let blobOp = opacity[opacityBase + BLOB_OPACITY] + clamp(blobGoal - opacity[opacityBase + BLOB_OPACITY], -uniforms.fadeStep, uniforms.fadeStep);
+  opacity[opacityBase + OWN_OPACITY] = ownOp;
+  opacity[opacityBase + BLOB_OPACITY] = blobOp;
 
-  if (blobOp > 0.0 && nodeHasBlob(bits) && !offScreen(i, true)) {
-    aggList[atomicAdd(&draws[AGG_INSTANCES], 1u)] = i;
+  if (blobOp > 0.0 && nodeHasBlob(bits) && !offScreen(row, true)) {
+    aggList[atomicAdd(&draws[AGG_INSTANCES], 1u)] = row;
   }
   let own = nodeOwnCount(bits);
-  if (ownOp <= 0.0 || own == 0u || offScreen(i, false)) { return; }
+  if (ownOp <= 0.0 || own == 0u || offScreen(row, false)) { return; }
   let blocks = (own + (1u << LEAF_BLOCK_SHIFT) - 1u) >> LEAF_BLOCK_SHIFT;
   let first = atomicAdd(&draws[LEAF_INSTANCES], blocks << LEAF_BLOCK_SHIFT) >> LEAF_BLOCK_SHIFT;
-  for (var k = 0u; k < blocks; k = k + 1u) {
-    leafList[first + k] = packLeafEntry(i, k);
+  for (var block = 0u; block < blocks; block = block + 1u) {
+    leafList[first + block] = packLeafEntry(row, block);
   }
 }

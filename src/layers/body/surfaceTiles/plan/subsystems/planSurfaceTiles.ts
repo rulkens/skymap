@@ -60,6 +60,7 @@ export function planSurfaceTiles(
   // under this body's ids, and its failures would block this body's fetches.
   const own = engaged === bodyId;
   const residentSlot = own ? residency.residentSlot : () => null;
+  const isEmpty = own ? residency.isEmpty : () => false;
   // Datum, not a bound: tiles displace off the datum sphere, so the camera
   // scale and the radius the cut is planned against must be that same number.
   const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, bodyId, 'planSurfaceTiles');
@@ -70,6 +71,7 @@ export function planSurfaceTiles(
     radiusM: surface.datumRadiusM,
     reliefM: surface.reliefM,
     residentSlot,
+    isEmpty,
   });
   // Both sides of engagement live here: a drive-site `if` once left stale
   // tiles drawing after the camera pulled back out.
@@ -82,6 +84,8 @@ export function planSurfaceTiles(
   let misses = 0;
   for (const request of demand.requests) {
     const { tile } = request;
+    // Stored empty: an answer, not a miss. Untouched, its slot ages out of the LRU.
+    if (isEmpty(tile)) continue;
     const landed = residentSlot(tile) !== null;
     if (!landed) misses++;
     // Before touching: a touched failed tile keeps its LRU stamp fresh forever,

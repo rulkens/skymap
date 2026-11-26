@@ -10,7 +10,7 @@ import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { pause, setSimDays } from '../../../../../src/state/time/timeSlice';
 import { selectOrientation } from '../../../../../src/state/settings/selectors';
-import { clipFactories } from '../../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../../../../src/compositions/appClips';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { all, dollyTo, focus } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
@@ -34,6 +34,7 @@ import {
 } from '../../../src/session/state/selectors';
 import { PICK_TIMEOUT_MS } from '../../../src/session/data/studioLimits';
 import { refKey } from '../../../../../src/utils/selection/refKey';
+import { refOfResolution } from '../../../../../src/utils/selection/refOfResolution';
 import { selectionResolverOver } from '../../../../../tests/support/selectionResolverOver';
 import { installAppSelectionKinds } from '../../../../../tests/support/installAppSelectionKinds';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
@@ -100,8 +101,8 @@ describe('studioSessionSaga', () => {
 
     const state = h.store.getState();
     // earthFlyout bakes Earth's position at the instant it is built for.
-    expect(selectDraft(state)).toEqual(clipFactories.earthFlyout(sim).data);
-    expect(selectDraft(state)).not.toEqual(clipFactories.earthFlyout(CONST_J2000).data);
+    expect(selectDraft(state)).toEqual(APP_CLIP_FACTORIES.earthFlyout(sim).data);
+    expect(selectDraft(state)).not.toEqual(APP_CLIP_FACTORIES.earthFlyout(CONST_J2000).data);
     expect(selectPreview(state)).toEqual({
       startPose: RUNTIME.from,
       simDays: sim,
@@ -147,7 +148,7 @@ describe('studioSessionSaga', () => {
     let ready = false;
     const h = harness({
       ...FIXTURE,
-      resolveFocusId: (id) => (ready ? FIXTURE.resolveFocusId(id) : null),
+      resolveFocusId: (id) => (ready ? FIXTURE.resolveFocusId(id) : { kind: 'pending' }),
     });
     h.run('flyout');
     await vi.advanceTimersByTimeAsync(0);
@@ -184,7 +185,10 @@ describe('studioSessionSaga', () => {
     await flush();
 
     const { simDays } = selectPreview(h.store.getState())!;
-    const mars = FIXTURE.extractRow(FIXTURE.resolveFocusId('body-mars'), simDays) as PlacedRow;
+    const mars = FIXTURE.extractRow(
+      refOfResolution(FIXTURE.resolveFocusId('body-mars')),
+      simDays,
+    ) as PlacedRow;
     expect(selectDraft(h.store.getState())!.start).toMatchObject({ target: mars.positionMpc });
     expect(selectPick(h.store.getState())).toBeNull();
     h.store.dispatch(undone());
@@ -211,7 +215,7 @@ describe('studioSessionSaga', () => {
     );
     await flush();
 
-    const mars = FIXTURE.resolveFocusId('body-mars')!;
+    const mars = refOfResolution(FIXTURE.resolveFocusId('body-mars'))!;
     expect(selectDraft(h.store.getState())!.timeline[0]).toEqual({ kind: 'focus', ref: mars });
     expect(selectRefNames(h.store.getState())).toEqual({ [refKey(mars)]: 'Mars' });
     h.store.dispatch(undone());

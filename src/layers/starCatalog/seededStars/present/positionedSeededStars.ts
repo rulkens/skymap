@@ -6,7 +6,7 @@
 
 import type { PositionedSceneBody } from '../../../../@types/engine/frame/PositionedSceneBody';
 import type { PositionedStar } from '../@types/PositionedStar';
-import { SEEDED_STAR_CATALOGS } from '../../../../data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../data/seededStarCatalogs';
 import { SEEDED_STAR_REFS } from './seededStarRefs';
 
 export function positionedSeededStars(

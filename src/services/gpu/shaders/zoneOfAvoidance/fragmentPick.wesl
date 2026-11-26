@@ -23,7 +23,7 @@ const PICK_FALLBACK_DEPTH: f32 = 0.999999;
 // PERCEPTIBLE band and doesn't shrink/grow with the intensity slider.
 const DENSITY_MASK_FLOOR: f32 = 0.02;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 struct PickFSOut {
   @location(0) id: vec4<u32>,
@@ -32,17 +32,17 @@ struct PickFSOut {
 
 @fragment
 fn fsPick(input: VsOut) -> PickFSOut {
-  let densityMask = bandDensityMask(u, input.ndc, input.clipPos.xy);
+  let densityMask = bandDensityMask(uniforms, input.ndc, input.clipPos.xy);
   if (densityMask <= DENSITY_MASK_FLOOR) {
     discard;
   }
-  let alpha = applyFade(u.intensity * densityMask, u.fadeAlpha);
+  let alpha = applyFade(uniforms.intensity * densityMask, uniforms.fadeAlpha);
   if (alpha <= 0.0) {
     discard;
   }
 
   var out: PickFSOut;
-  out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
+  out.id = vec4<u32>(uniforms.packedId, 0u, 0u, 0u);
   out.depth = PICK_FALLBACK_DEPTH;
   return out;
 }

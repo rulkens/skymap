@@ -1,121 +1,82 @@
-import { describe, it, expect } from 'vitest';
-import { Project } from 'ts-morph';
+import { afterAll, describe, it, expect } from 'vitest';
 import { collectRefs } from '../../../../tools/utils/refactor/collectRefs';
-import type { RefEntry } from '../../../../tools/utils/refactor/collectRefs';
-import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
+import { engineFixture } from '../../../helpers/refactor/engineFixture';
 
-// In-memory Projects seed a tiny module graph and let us assert on how each
-// reference is classified without touching disk (the applyMoves.test.ts pattern).
-// `skipLoadingLibFiles` drops the lib.d.ts parse (~150 ms per Project, the bulk
-// of this file's cost); nothing here resolves a global type.
-function projectWith(files: Record<string, string>): Project {
-  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
-  for (const [path, content] of Object.entries(files)) {
-    project.createSourceFile(path, content);
-  }
-  return project;
-}
+const FILES = {
+  'src/target.ts': 'export function target() { return 1; }',
+  'src/lonely.ts': 'export const lonely = 1;',
+  'src/importer.ts':
+    "import { target } from './target';\nexport function useTarget() { return target(); }",
+  'tests/target.test.ts': "import { target } from '../src/target';\nexport const r = target();",
+};
 
-function refFor(
-  project: Project,
-  file: string,
-  symbol: string,
-): {
-  find: (predicate: (entry: RefEntry) => boolean) => RefEntry | undefined;
-  entries: readonly RefEntry[];
-  report: ReturnType<typeof collectRefs>;
-} {
-  const report = collectRefs(project, resolveSymbol(project, { file, symbol }));
-  return {
-    report,
-    entries: report.refs,
-    find: (predicate) => report.refs.find(predicate),
-  };
+const fixture = engineFixture(FILES);
+afterAll(fixture.dispose);
+
+function refsOf(symbolFile: string, symbol: string) {
+  const found = collectRefs({
+    address: { file: symbolFile, symbol },
+    engine: fixture.engine,
+    read: (file) => FILES[file.slice(fixture.root.length + 1) as keyof typeof FILES] ?? '',
+  });
+  if (!found.ok) throw new Error(found.refusal);
+  return found.report;
 }
 
 describe('collectRefs', () => {
-  it('classifies an import-only reference as import', () => {
-    const project = projectWith({
-      '/src/target.ts': 'export function target() { return 1; }',
-      '/src/importer.ts':
-        "import { target } from './target';\nexport function useTarget() { return target(); }",
-    });
-
-    const { find } = refFor(project, '/src/target.ts', 'target');
-    const importRef = find((entry) => entry.kind === 'import');
-
-    expect(importRef).toBeDefined();
-    expect(importRef?.enclosing).toBe('<module>');
+  it("a call inside tests/ is kind 'call' with inTest true", () => {
+    const report = refsOf('src/target.ts', 'target');
+    const inTests = report.refs.filter((r) => r.filePath === 'tests/target.test.ts');
+    expect(inTests.map((r) => r.kind).sort()).toEqual(['call', 'import']);
+    expect(inTests.every((r) => r.inTest)).toBe(true);
   });
 
-  it('classifies a call site as call with the enclosing declaration name', () => {
-    const project = projectWith({
-      '/src/target.ts': 'export function target() { return 1; }',
-      '/src/importer.ts':
-        "import { target } from './target';\nexport function useTarget() { return target(); }",
-    });
-
-    const { find } = refFor(project, '/src/target.ts', 'target');
-    const callRef = find((entry) => entry.kind === 'call');
-
-    expect(callRef).toBeDefined();
-    expect(callRef?.enclosing).toBe('function useTarget');
+  it('labels the enclosing declaration of a call', () => {
+    const call = refsOf('src/target.ts', 'target').refs.find(
+      (r) => r.filePath === 'src/importer.ts' && r.kind === 'call',
+    );
+    expect(call?.enclosing).toBe('function useTarget');
   });
 
-  it('classifies a type-position use as type-position', () => {
-    const project = projectWith({
-      '/src/types.ts': 'export type Vec3 = { x: number };',
-      '/src/consumer.ts':
-        "import type { Vec3 } from './types';\nexport function consume(a: Vec3) { return a.x; }",
-    });
-
-    const { find } = refFor(project, '/src/types.ts', 'Vec3');
-    const typeRef = find((entry) => entry.kind === 'type-position');
-
-    expect(typeRef).toBeDefined();
-    expect(typeRef?.enclosing).toBe('function consume');
+  it('the declaration is not counted', () => {
+    expect(refsOf('src/lonely.ts', 'lonely').refs).toHaveLength(0);
   });
 
-  it('classifies a re-export as re-export', () => {
-    const project = projectWith({
-      '/src/target.ts': 'export function target() { return 1; }',
-      '/src/reexport.ts': "export { target } from './target';",
-    });
-
-    const { find } = refFor(project, '/src/target.ts', 'target');
-    const reExportRef = find((entry) => entry.kind === 're-export');
-
-    expect(reExportRef).toBeDefined();
-  });
-
-  it('counts references under tests/ as tests', () => {
-    const project = projectWith({
-      '/src/target.ts': 'export function target() { return 1; }',
-      '/src/importer.ts':
-        "import { target } from './target';\nexport function useTarget() { return target(); }",
-      '/tests/target.test.ts':
-        "import { target } from '../src/target';\nexport const r = target();",
-    });
-
-    const { report } = refFor(project, '/src/target.ts', 'target');
-
-    // The tests/ file contributes an import specifier AND a call — both classify
-    // as 'test' (tests/ wins over the finer kinds), which is exactly what makes
-    // testCount a one-line count.
-    expect(report.refs.filter((entry) => entry.kind === 'test')).toHaveLength(2);
-    expect(report.testCount).toBe(2);
-    // Distinct referrer files: importer.ts + target.test.ts. The declaration file
-    // itself contributes no reference (its only mention is the excluded decl).
+  it('fileCount and testCount match the entries', () => {
+    const report = refsOf('src/target.ts', 'target');
     expect(report.fileCount).toBe(2);
+    expect(report.testCount).toBe(2);
+    expect(report.refs).toHaveLength(4);
   });
 
-  it('excludes the declaration site itself from the refs', () => {
-    const project = projectWith({
-      '/src/lonely.ts': 'export const lonely = 1;',
+  it('refuses a symbol the file does not export', () => {
+    const found = collectRefs({
+      address: { file: 'src/target.ts', symbol: 'nope' },
+      engine: fixture.engine,
+      read: () => FILES['src/target.ts'],
     });
+    expect(found.ok).toBe(false);
+  });
+});
 
-    const { report } = refFor(project, '/src/lonely.ts', 'lonely');
+describe('collectRefs outside every project', () => {
+  const OUTSIDE = {
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: { strict: true },
+      include: ['src/**/*.ts'],
+    }),
+    'src/in.ts': 'export const inside = 1;',
+    'outside/out.ts': 'export const outside = 1;',
+  };
+  const lonely = engineFixture(OUTSIDE);
+  afterAll(lonely.dispose);
 
-    expect(report.refs).toHaveLength(0);
+  it('refuses a file in none of the engine projects instead of reporting 0 references', () => {
+    const found = collectRefs({
+      address: { file: 'outside/out.ts', symbol: 'outside' },
+      engine: lonely.engine,
+      read: () => OUTSIDE['outside/out.ts'],
+    });
+    expect(found).toEqual({ ok: false, refusal: expect.stringContaining('none of the engine') });
   });
 });

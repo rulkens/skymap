@@ -46,7 +46,7 @@ import {
   setAutoRotate,
   commitCameraPose,
   clipStarted,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../../src/state/settings/core/orientationSlice';
 import { setEasedDuration } from '../../../../../src/state/settings/core/focusMovesSlice';
@@ -101,9 +101,9 @@ const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, di
 /** The row `winnerEpoch` names started at `nowMs`, as the step's advance leaves it. */
 function epochsAt(s: RootState, winnerEpoch: EpochRow, nowMs: number) {
   return advanceEpochs(UNSTARTED_EPOCHS, {
-    intent: s.camera,
+    intent: s.camera.intent,
     focus: s.selectionRows.focus,
-    clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.clip, nowMs),
+    clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.intent.clip, nowMs),
     winnerEpoch,
     nowMs,
   });
@@ -210,7 +210,9 @@ describe('CAMERA_DRIVERS — clip pins the frame it started under', () => {
   it('a clip playing across an orientation switch keeps its world aim', () => {
     const store = makeStore();
     store.dispatch(setOrientation('ecliptic'));
-    store.dispatch(clipStarted({ data: CLIP_WITH_AIM, frame: 'ecliptic', atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: CLIP_WITH_AIM, frame: 'ecliptic', by: 'player', atEnd: 'revert' }),
+    );
     const elapsed = 2;
 
     // Sample #1: settings.orientation still matches the pinned frame.
@@ -333,7 +335,9 @@ describe('pickWinner', () => {
     // clip@95 outranks orbitDrag@80.
     const store = makeStore();
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
-    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
     expect(pickWinner(drivers, s, APPROACHING).id).toBe('clip');
@@ -342,7 +346,7 @@ describe('pickWinner', () => {
 
 describe('the mission row, lifted from the timeline kind', () => {
   const drivers = composeControlSchemes(Object.values(APP_EXHIBIT_REGISTRY)).skymap.drivers;
-  const mission = drivers.find((d) => d.id === 'mission')!;
+  const mission = drivers.find((d) => d.id === 'timeline')!;
   const inExhibit = (id: ExhibitId) => {
     const store = makeStore();
     store.dispatch(takeoverStarted({ kind: 'exhibit', id, entry: 'cut' }));
@@ -375,7 +379,7 @@ describe('the mission row, lifted from the timeline kind', () => {
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
     const claimed = { ...APPROACHING, dragClaimed: true };
-    expect(pickWinner(drivers, s, claimed).id).toBe('mission');
+    expect(pickWinner(drivers, s, claimed).id).toBe('timeline');
   });
 });
 
@@ -454,7 +458,10 @@ describe("the winner's elapsed", () => {
 
     // Force resting to win by ensuring default state has autoRotate inactive.
     // (DEFAULT_AUTO_ROTATE is false, so resting wins by default.)
-    const poseSpy = vi.fn<CameraDriver['pose']>(() => ({ pose: s.camera.base, memory: null }));
+    const poseSpy = vi.fn<CameraDriver['pose']>(() => ({
+      pose: s.camera.intent.base,
+      memory: null,
+    }));
     const patchedDrivers = drivers.map((d) => (d.id === 'resting' ? { ...d, pose: poseSpy } : d));
 
     runAtWinner(patchedDrivers, s, UNSTARTED_EPOCHS, 9999);
@@ -473,7 +480,9 @@ describe("the winner's elapsed", () => {
       timeline: [{ kind: 'set', ch: 'yaw', to: 2, over: 3, ease: 'linear', space: 'lin' }],
     };
     const store = makeStore();
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
     const installMs = 1000;
@@ -546,7 +555,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
 
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const s = store.getState() as unknown as RootState;
 
     const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
@@ -564,7 +573,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // while a follow row owns the distance; a follow pose that drops roll would
     // pin a followed approach to scene-frame up until the engage edge.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     store.dispatch(commitCameraPose(absoluteArm({ ...BASE_POSE, roll: 0.6 })));
     const s = store.getState() as unknown as RootState;
 
@@ -577,7 +586,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
   it('followApproach eases lookOffset to zero', () => {
     // The committed base carries no offset, so the follow ease lands centre-looking.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const s = store.getState() as unknown as RootState;
     const produceFollow = makeFollowProduce({
       state: s,
@@ -612,7 +621,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(pickWinner(drivers, s, APPROACHING).id).toBe('resting');
 
     // A non-body focus (Milky Way) → still inactive.
-    store.dispatch(setSelectionRow({ slot: 'focus', row: MILKY_WAY_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: MILKY_WAY_ROW, id: null }));
     s = store.getState() as unknown as RootState;
     expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
       false,
@@ -622,7 +631,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // A body focus present in the snapshot → active, and follow wins over
     // resting. A saturated approach is the ONLY thing that separates the two
     // rows: before it the approach authors, after it the hold does.
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     s = store.getState() as unknown as RootState;
     expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
       true,
@@ -633,7 +642,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(pickWinner(drivers, s, APPROACH_DONE).id).toBe('followHold');
 
     // Focus leaves the body again → deactivates → hands back to resting.
-    store.dispatch(setSelectionRow({ slot: 'focus', row: null, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: null, id: null }));
     s = store.getState() as unknown as RootState;
     expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
       false,
@@ -651,7 +660,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
 
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const s = store.getState() as unknown as RootState;
 
     const produceFollow = makeFollowProduce({ state: s, from: FROM });
@@ -680,7 +689,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
 
   it('a duration captured at activation survives a mid-approach settings change', () => {
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
     const produceAt = (elapsedMs: number, mem: FollowMemory | null) =>
       follow.pose(
@@ -719,7 +728,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
       radiusMpc: bodyDriverGeometry('mars').footprintRadiusM * SCALE_UNITS.M_TO_MPC,
     };
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: marsRow, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: marsRow, id: null }));
     const s = store.getState() as unknown as RootState;
 
     const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
@@ -746,7 +755,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     const COMMITTED_DIST = 500;
 
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     // Commit the post-drag pose into base (this is what orbitDrag's gesture-end
     // bakes). Only `distance` matters for the assertion.
     store.dispatch(
@@ -781,7 +790,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // the resting driver that renders `base` is not the winner.
     const NOTCH_TARGET = 250;
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     store.dispatch(
       commitCameraPose(
         absoluteArm({ target: [0, 0, 0], yaw: 1.2, pitch: 0.3, distance: BASE_DISTANCE }),
@@ -802,7 +811,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(memory!.distanceTarget).toBe(NOTCH_TARGET);
     expect(worldArmOf(pose).distance).toBeCloseTo(NOTCH_TARGET, 9);
     // The base is untouched — the notch never went near it.
-    expect(worldArmOf(store.getState().camera.base).distance).toBe(BASE_DISTANCE);
+    expect(worldArmOf(store.getState().camera.intent.base).distance).toBe(BASE_DISTANCE);
   });
 });
 
@@ -818,7 +827,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
 describe('CAMERA_DRIVERS — follow priority under body focus', () => {
   it('autoRotate outranks the follow hold, but not the approach (button not blocked)', () => {
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
     const s = store.getState() as unknown as RootState;
 
@@ -833,7 +842,7 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
 
   it('yaw advances over frames while auto-rotating a focused body', () => {
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     store.dispatch(commitCameraPose(absoluteArm(BASE_POSE)));
     store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
     const s = store.getState() as unknown as RootState;
@@ -853,7 +862,7 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
 describe('the follow produce — the capture is returned, not written', () => {
   it('leaves the memory it was handed untouched and re-derives the same capture', () => {
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const ctx = makeDriverCtx({
       state: store.getState() as unknown as RootState,
       simDays: FOLLOW_SIM_DAYS,

@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
+import { galaxyCatalogRequest } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogRequest';
 import { createAssetSlot } from '../../../../src/services/loading/AssetSlot';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';

@@ -2,7 +2,8 @@
  * SURFACE_TILE_SHADER_VARIANTS — one fragment entry per `surfaceEffectsKey`,
  * with the fragment-only bindings it declares. Bindings 0/1/2/4 are shared
  * with the vertex stage and every variant; 8 stays a hole (the base globe's
- * normal map). A registry row whose key is missing here fails a test.
+ * normal map). Atlas bindings (5, 10) are the lane rows' `binding`s, listed here
+ * so the layout declares them. A registry row whose key is missing here fails a test.
  */
 
 import fragmentBare from '../../../../../services/gpu/shaders/bodies/surfaceTile/fragmentBare.wesl?static';

@@ -9,3 +9,9 @@ it('prints one mantissa decimal, drops ".0", and carries a rounded-up mantissa i
   expect(formatScientific(1.4e12)).toBe('1.4 × 10¹²');
   expect(formatScientific(2.5e-3)).toBe('2.5 × 10⁻³');
 });
+
+it('drops trailing decimal zeros at any precision, never a whole mantissa', () => {
+  expect(formatScientific(2.5e4, 2)).toBe('2.5 × 10⁴');
+  expect(formatScientific(7.35e22, 2)).toBe('7.35 × 10²²');
+  expect(formatScientific(0, 0)).toBe('0 × 10⁰');
+});

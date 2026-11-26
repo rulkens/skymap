@@ -3,7 +3,7 @@
 //
 // This is the 'interface' module of the constellation renderer family: the
 // structs the vertex and fragment stages must agree on byte-for-byte. It
-// mirrors 'filaments/io.wesl' and 'markerLines/io.wesl' — the two existing
+// mirrors 'filaments/io.wesl' and 'debugLines/io.wesl' — the two existing
 // instanced-quad thick-line renderers — because a constellation figure is the
 // same primitive: one instance per line segment, expanded into a screen-aligned
 // quad in the vertex stage (WebGPU's 'line-list' is 1-pixel-wide only, by spec).
@@ -50,7 +50,7 @@ struct Uniforms {
 
 // ── per-vertex + per-instance attributes ───────────────────────────
 //
-// Two-buffer layout matching filaments'/markerLines': location 0 is
+// Two-buffer layout matching filaments'/debugLines': location 0 is
 // per-quad-vertex (the shared unit-quad UV), locations 1..4 are per-instance
 // (the segment's two endpoints + their apparent magnitudes). One instance per
 // constellation line segment; 6 vertices per instance (two triangles forming

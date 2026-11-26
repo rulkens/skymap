@@ -423,7 +423,7 @@ Owner feedback while smoke testing (2026-11-10):
 - **Q47** Selecting a block marks the steps inside it, and selecting a step marks the blocks around it. Rows unrelated to the selection are not dimmed.
 
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
-`combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
+`combineSlices().inject` (ADR 0017). Q14 is ruled (Q32).
 
 ## Q48–Q53: S3 spec asks (owner, 2026-11-10)
 

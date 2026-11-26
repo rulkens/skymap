@@ -1,12 +1,12 @@
 # JPL Horizons vectors
 
 Input to `npm run build-ephemeris-corrections`, which fits each body's `Horizons − Kepler`
-residual into `src/data/bodies/ephemerisCorrections.generated.ts`. The CSVs are gitignored;
+residual into `src/layers/body/bodies/ephemerisCorrections.generated.ts`. The CSVs are gitignored;
 regenerate with `npm run fetch-horizons`.
 
 - **Upstream:** JPL Horizons API, `https://ssd.jpl.nasa.gov/api/horizons.api` (JPL DE ephemeris; no licence is stated for the service's output, and JPL asks that its Solar System Dynamics site be cited).
 - **Body table:** `tools/bodies/horizonsBodies.ts` (`HORIZONS_BODIES`). Each row names its target, its centre, its span, its raw step in minutes and `vectors` (`position` or `state`). The fit's per-body `fitStep` and out-of-span policy live in `tools/bodies/fittedBodies.ts` (`FITTED_BODIES`).
-- **Files:** `<centre>/<target>.csv`, columns `jd,x_km,y_km,z_km` (`vectors: 'state'` rows add `vx_kms,vy_kms,vz_kms`), over the row's span (1900-01-01 to 2100-01-01 unless noted) at the row's step.
+- **Files:** `<centre>/<id>.csv`, named by the row's id (`mercury.csv`, `2026-qq8.csv`), never its Horizons target; columns `jd,x_km,y_km,z_km` (`vectors: 'state'` rows add `vx_kms,vy_kms,vz_kms`), over the row's span (1900-01-01 to 2100-01-01 unless noted) at the row's step.
 - **`500@10/`** (Sun body centre), 1-day step, ~3 MB each: Mercury `199`, Venus `299`, Earth–Moon barycentre `3`, then the system barycentres `4`–`8` (Mars through Neptune). The small bodies Vesta `4;`, Ceres `1;` and Bennu `101955;` (the `;` makes Horizons read an asteroid number, not a NAIF planet id) sit beside them; Bennu spans only 2007-01-01 to 2054-01-01, between two Earth encounters that step its orbit.
 - **`500@599/`** (Jupiter body centre): Io `501` (144 min), Europa `502` (288 min), Ganymede `503` (480 min), Callisto `504` (1 day).
 - **`500@699/`** (Saturn body centre): Mimas `601` (80 min), Enceladus `602` (120 min), Tethys `603` (160 min), Dione `604` (240 min), Rhea `605` (360 min), Titan `606` (720 min), Iapetus `608` (1 day).
@@ -14,7 +14,8 @@ regenerate with `npm run fetch-horizons`.
 - **`500@799/`** (Uranus body centre): Miranda `705` (120 min), Ariel `701` (180 min), Umbriel `702` (360 min), Titania `703` and Oberon `704` (720 min). Puck `715` is not fetched: Horizons has no ephemeris for it before 1900-01-02.
 - A moon's step is ≤ P/16 and divides a day, so every piece below starts on the row's grid. The moons total ~8.5M rows, ~550 MB.
 
-- **Voyagers**: `500@10/-31.csv` and `-32.csv`, daily Sun-chain state vectors from the first midnight after Horizons' first sample (1977-09-06 / 1977-08-21) to 2099-12-31; `500@10/<target>.dense.csv` adds the first sample after launch (13:59 / 15:32 UT) and 1 h (±60 d) / 1 min (±2 d) rows around each encounter. For DE441 consistency each encounter also has `500@<5-8>/<target>.csv` (craft vs system barycentre, state, 1 h ±120 d + 1 min ±2 d), `500@10/<5-8>.<date>.csv` (barycentre vs Sun, same grid) and `500@<599|699|606|799|899>/<target>.csv` (craft vs body centre, position, 1 min ±2 d). `npm run fetch-voyager-windows` writes all but the daily files; the fit does not read any of them.
+- **2026 QQ8**: `500@10/2026-qq8.csv`, daily Sun-centred state vectors 2026-02-01 to 2027-03-31 (target `DES=2026 QQ8;`, SPK 54668182: it has no number yet). `build-sampled-tracks -- 2026-qq8` turns it alone into `sampledTrack.2026-qq8.bin`.
+- **Voyagers**: `500@10/voyager1.csv` and `voyager2.csv` (targets `-31` and `-32`), daily Sun-chain state vectors from the first midnight after Horizons' first sample (1977-09-06 / 1977-08-21) to 2099-12-31; `500@10/<id>.dense.csv` adds the first sample after launch (13:59 / 15:32 UT) and 1 h (±60 d) / 1 min (±2 d) rows around each encounter. For DE441 consistency each encounter also has `500@<5-8>/<id>.csv` (craft vs system barycentre, state, 1 h ±120 d + 1 min ±2 d), `500@10/<5-8>.<date>.csv` (barycentre vs Sun, same grid) and `500@<599|699|606|799|899>/<id>.csv` (craft vs body centre, position, 1 min ±2 d). `npm run fetch-voyager-windows` writes all but the daily files; the fit does not read any of them.
 
 ## Query
 

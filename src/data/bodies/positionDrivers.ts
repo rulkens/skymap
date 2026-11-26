@@ -1,15 +1,17 @@
 /**
  * positionDrivers — the authored position tables read as one tagged union.
  * Derived, never authored: the source tables stay the single source of truth,
- * and an orbit driver carries its element row whole.
+ * and an orbit driver carries its row's elements and correction whole, its pair as a reflex.
  */
 
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { SAMPLED_BODIES } from './sampledBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
 import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
+import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export const POSITION_DRIVERS: readonly PositionDriver[] = [
@@ -20,9 +22,16 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
       positionMpc: anchor.positionMpc,
     }),
   ),
-  ...ORBITAL_ELEMENTS.map(
-    (elements): PositionDriver => ({ kind: 'orbit', id: elements.id, elements }),
-  ),
+  ...APP_BODY_REGISTRY.flatMap(({ position }): PositionDriver[] => {
+    if (position.kind !== 'orbit') return [];
+    const { elements, correction, pair } = position;
+    // A misspelt secondary throws.
+    const reflex = pair && {
+      secondary: findByIdOrThrow(ORBITAL_ELEMENTS, pair.secondaryId, 'positionDrivers'),
+      k: pair.secondaryMassFraction,
+    };
+    return [{ kind: 'orbit', id: elements.id, elements, correction, reflex }];
+  }),
   ...SAMPLED_BODIES.map(
     (body): PositionDriver => ({ kind: 'sampled', id: body.id, focusId: asSceneBodyId('sun') }),
   ),

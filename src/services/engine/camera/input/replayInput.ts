@@ -6,7 +6,8 @@
  * reducer — so a step sees the commit the step before it made, exactly as the
  * incumbent's fresh `getState()` per step did. The store commits only at
  * gesture end and per at-rest notch; a following camera's notch rides the
- * return as `followDistanceTarget`.
+ * return as `followDistanceTarget`. Whether a notch an arm reports at its zoom
+ * limit pushes it is decided here, once, off the `fresh` its source stamped.
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -21,11 +22,15 @@ import { rowFor } from '../arms/rowFor';
 import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
+import { zoomLimitPressStep } from './utils/zoomLimitPressStep';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { clipOwnsCamera } from '../../../../utils/camera/clipOwnsCamera';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraSlice';
+import cameraIntentReducer, {
+  commitCameraPose,
+  setFovYRad,
+} from '../../../../state/camera/cameraIntentSlice';
 import { zoomLimitPushed } from '../../../../state/camera/zoomLimitPushed';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
@@ -35,6 +40,9 @@ import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
 import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { InputStep } from '../../../../@types/camera/input/InputStep';
+import type { RawInputStep } from '../../../../@types/camera/input/RawInputStep';
+import type { ZoomLimitPush } from '../../../../@types/camera/arms/ZoomLimitPush';
+import type { ZoomLimitPress } from '../../../../@types/camera/input/ZoomLimitPress';
 import type { MemOf } from '../../../../@types/camera/arms/MemOf';
 import type { NavStep } from '../@types/NavStep';
 import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
@@ -48,8 +56,9 @@ export function replayInput(
     readonly gesture: MemOf[CameraArmKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
+    readonly zoomLimitPress: ZoomLimitPress | null;
   },
-  steps: readonly InputStep[],
+  steps: readonly RawInputStep[],
   args: {
     readonly ctx: CameraArmCtx;
     /** The step clock, ms, for the spin epoch. */
@@ -68,6 +77,7 @@ export function replayInput(
   readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
+  readonly zoomLimitPress: ZoomLimitPress | null;
   readonly actions: readonly UnknownAction[];
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
   readonly navSteps: readonly NavStep[];
@@ -86,16 +96,19 @@ export function replayInput(
   let tilt = prev.tilt;
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
+  let zoomLimitPress = prev.zoomLimitPress;
+  // What the arm reported pressed against its zoom limit, written by `stepRow`, per step.
+  let pressed: ZoomLimitPush | undefined;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
   let autoRotateEpoch = args.autoRotateEpoch;
-  let camera = rootState.camera;
+  let camera = rootState.camera.intent;
   const actions: UnknownAction[] = [];
   const navSteps: NavStep[] = [];
   let navAuthors = args.navOwns;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
-    camera = cameraReducer(camera, action);
+    camera = cameraIntentReducer(camera, action);
   };
 
   /**
@@ -114,7 +127,7 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
-    if (stepped.pushed !== undefined) emit(zoomLimitPushed(stepped.pushed));
+    pressed = stepped.pressed;
     return { frame: framed.frame, pose: stepped.pose };
   };
 
@@ -134,9 +147,12 @@ export function replayInput(
     // A pose-moving step is swallowed while a clip owns the camera (the driver
     // table's rule, both arms) or while a body arm's host is unresolved — the
     // cell's `hostOrThrow` would throw. The pointer edges still reach the arm:
-    // the latch tracks the POINTER, and they re-tag nothing.
+    // the latch tracks the POINTER, and they re-tag nothing. The clip still owns
+    // its hand-off frame: its end pose rides the register until this frame's edge
+    // bakes it, so a step from the stale `base` would be baked in its place.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
-    if (moves && (clipOwnsCamera(camera) || (!worldArm && hostOf(base.frame, ctx) === null))) {
+    const clipOwns = clipOwnsCamera(camera) || winnerLastFrame === 'clip';
+    if (moves && (clipOwns || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
     // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
@@ -196,6 +212,7 @@ export function replayInput(
   };
 
   for (const step of steps) {
+    pressed = undefined;
     switch (step.kind) {
       case 'gestureStart':
         // The latch itself is the arm's; the first drag step takes it, carrying
@@ -223,6 +240,7 @@ export function replayInput(
       }
 
       case 'drag':
+      case 'liftOff':
         stepRegister(step);
         break;
 
@@ -247,7 +265,10 @@ export function replayInput(
         // While the navigator owns the camera, `base` is the last commit, not the
         // view: an at-rest notch would zoom that stale pose and snap back to it.
         // It rides the live register instead, as a held gesture's does.
-        const notch: InputStep = { ...step, duringGesture: args.navOwns || step.duringGesture };
+        const notch: InputStep = {
+          ...step,
+          duringGesture: args.navOwns || step.duringGesture,
+        };
         if (!ridesTheFollow && stepRegister(notch)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
@@ -302,6 +323,13 @@ export function replayInput(
         break;
       }
     }
+    const limit = zoomLimitPressStep(
+      zoomLimitPress,
+      pressed,
+      step.kind === 'zoom' ? { lnZoom: Math.abs(Math.log(step.factor)), fresh: step.fresh } : null,
+    );
+    zoomLimitPress = limit.press;
+    if (limit.push !== null) emit(zoomLimitPushed(limit.push));
   }
 
   return {
@@ -310,6 +338,7 @@ export function replayInput(
     tilt,
     follow,
     followDistanceTarget,
+    zoomLimitPress,
     actions,
     navSteps,
   };

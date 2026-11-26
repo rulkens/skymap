@@ -8,6 +8,6 @@ export const missionTrailsSlice = createSlice({
   name: 'settings/missionTrails',
   reducerPath: 'missionTrails',
   initialState,
-  // No reducer: `setVisibility` writes the switch, the only field.
+  // No reducer: `setVisibility` writes the switch, and only an exhibit's settings set `nearPlanets`.
   reducers: {},
 });

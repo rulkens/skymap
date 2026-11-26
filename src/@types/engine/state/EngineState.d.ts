@@ -32,8 +32,12 @@ import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
-import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
+import type { GatedTrailGroup } from '../frame/GatedTrailGroup';
+import type { OrbitTrailGroup } from '../layer/OrbitTrailGroup';
+import type { SampledTrailGroup } from '../layer/SampledTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
+import type { PerViewPlanMemory } from '../frame/PerViewPlanMemory';
+import type { FrameView } from '../frame/FrameView';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
@@ -42,6 +46,15 @@ export type EngineState = {
   tier: Tier;
   /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
   viewRig: ViewRigKey;
+  /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain and the volume
+   *  jitter, and paces the star planner's chunk plans and LRU clock. */
+  frameIndex: number;
+  /** Last rendered frame's per-view planner values. `renderFrame` is its only writer. Empty before
+   *  the first frame. Engine-private: `PassState` omits it, so no pass or planner sees it. */
+  perViewPlanMemory: PerViewPlanMemory;
+  /** Last frame's `stillFrames` inputs by view id, never whole views (they would pin last frame's
+   *  snapshot); `runFrame` is its only reader and writer. */
+  previousViews: ReadonlyMap<string, Pick<FrameView, 'vp' | 'canvasSize' | 'stillFrames'>>;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
@@ -72,14 +85,14 @@ export type EngineState = {
   layerSagaTasks: readonly Task[];
   /**
    * Composed once by `createLayers` (core's constants, then each Layer's). Runtime readers
-   * walk these, not `CONTENT_PASSES` / `CORE_COMPUTES` / `meshAssetRows` (core's halves only).
+   * walk these, not `CONTENT_PASSES` / `CORE_COMPUTES` (core's halves only).
    */
   passes: readonly ContentPass[];
   /** `executeFrame` resolves a `'compute'` step's name here; an absent name drops rather than throws. */
   computes: readonly ContentCompute[];
   /** `runPlanSteps` resolves a `'plan'` step's name here; unlike `computes`, a `plan` line naming nothing throws. */
   planners: readonly FrameContentPlanner<unknown>[];
-  /** Companion-expanded fold over core's and every Layer's asset rows. */
+  /** Companion-expanded fold over every Layer's asset rows. */
   assetRows: readonly AssetWiringRow[];
   /** `deriveFrameContext` folds the band-open ones in beside core's own hostless-mesh-body rows. */
   slabRows: readonly SlabRow[];
@@ -90,8 +103,10 @@ export type EngineState = {
   /** Each asset row's slot, indexed by key. */
   slotsByKey: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   label3DProducers: readonly Label3DProducer[];
-  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade bound. */
-  orbitTrailGroups: readonly GatedOrbitTrailGroup[];
+  /** Every Layer's `guides.orbitTrails` group, each with its fade bound. */
+  orbitTrailGroups: readonly GatedTrailGroup<OrbitTrailGroup>[];
+  /** Every Layer's `guides.sampledTrails` group, each with its fade bound. */
+  sampledTrailGroups: readonly GatedTrailGroup<SampledTrailGroup>[];
   /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `heightAt`. */
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */

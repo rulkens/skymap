@@ -11,7 +11,7 @@ import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::trailOcclusion::trailClearance;
 
-@group(0) @binding(2) var<uniform> u: SatelliteUniforms;
+@group(0) @binding(2) var<uniform> uniforms: SatelliteUniforms;
 
 const W_EPS: f32 = 0.01;
 // Mid-range in either depth convention, so every caption stamp (pinned at the near end) out-picks
@@ -21,16 +21,16 @@ const PICK_DEPTH: f32 = 0.5;
 @vertex
 fn vsPick(@builtin(vertex_index) vid: u32, sat: SatelliteInstance) -> PickOut {
   var out: PickOut;
-  let p = projectSatellite(u, sat);
-  if (p.centre.w < W_EPS || u.classOpacity[min(sat.classCode, 2u)] <= 0.0) {
+  let projected = projectSatellite(uniforms, sat);
+  if (projected.centre.w < W_EPS || uniforms.classOpacity[min(sat.classCode, 2u)] <= 0.0) {
     return out;
   }
   let corner = quadCorner(vid);
-  let offset = expandBillboardScreen(u.cam, p.centre, u.sizePx, corner);
-  out.clip = vec4<f32>(p.centre.xy + offset, PICK_DEPTH * p.centre.w, p.centre.w);
-  out.relKm = p.relKm;
+  let offset = expandBillboardScreen(uniforms.cam, projected.centre, uniforms.sizePx, corner);
+  out.clip = vec4<f32>(projected.centre.xy + offset, PICK_DEPTH * projected.centre.w, projected.centre.w);
+  out.relKm = projected.relKm;
   out.corner = corner;
-  out.word = u.pickBase + sat.catalogIndex;
+  out.word = uniforms.pickBase + sat.catalogIndex;
   return out;
 }
 

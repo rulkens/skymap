@@ -8,9 +8,8 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
  *
  * This is the byte order `buildRhizomeVolume.ts`'s default
  * `packLogTraceVoxels(values, dims)` call expects from a `.npy` — the
- * convention a real PolyPhy-fork export already satisfies (T19 ground
- * truth: the shipped MCPM volumes, built from real fork/VAC `.npy`
- * pairs, render correctly). `exportScfd.ts` skips this because it packs
+ * convention a real PolyPhy-fork export already satisfies (the shipped MCPM
+ * volumes, built from real fork/VAC `.npy` pairs, render correctly). `exportScfd.ts` skips this because it packs
  * straight to SCFD's own x-fastest voxel order; `exportNpy.ts` needs it
  * because a `.npy`'s bytes ARE its layout — there is no header field to
  * declare "x-fastest" instead.

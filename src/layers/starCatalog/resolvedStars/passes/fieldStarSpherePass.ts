@@ -1,6 +1,6 @@
 /**
  * fieldStarSpherePass — the true-scale sphere for the ONE Gaia star the camera
- * is resolving (its sprite is retired in-shader up close, where f32 swims).
+ * is resolving (its sprite dissolves in-shader as the sphere resolves).
  * Presence is PROXIMITY, never selection: `enabled` stores the nearest
  * resolvable star, under a hysteresis band (ON at `STAR_RESOLVE_PX`, OFF below
  * `OFF_FRACTION` of it); `draw`/`drawPick` read it. The f64 slab VP goes through
@@ -15,11 +15,11 @@ import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { STAR_RESOLVE_PX } from '../../../../data/bodies/starResolvePx';
+import { STAR_RESOLVE_PX } from '../../bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../utils/nearestResolvableStar';
@@ -174,10 +174,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf(loaded.source),
-          poolIndex + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packPickWord(runtime.pickCodes.pickCodeOf(loaded.source), poolIndex),
       });
     },
   };

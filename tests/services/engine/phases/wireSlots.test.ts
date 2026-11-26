@@ -11,20 +11,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
-import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
-import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
-import { structureVisibility } from '../../../../src/layers/structure/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
+import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
-import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
@@ -32,22 +27,8 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceId } from '../../../../src/@types/data/SourceId';
 
 // Every fetcher is a no-op resolved Promise: slots whose `.load()` fires inside wireSlots
-// (famousGalaxiesMeta, filaments, the density cubes) just need to reach `ready`. The per-source point
+// (the structure catalog, the density cubes) just need to reach `ready`. The per-source point
 // slots, the only ones with a commit step, are injected as fakes.
-
-vi.mock('../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher', () => ({
-  filamentFetcher: vi.fn(async () => ({
-    stripCount: 0,
-    vertexCount: 0,
-    strips: [] as unknown[],
-  })),
-}));
-
-// famousStarsMeta demands unconditionally at boot, so its fetcher fires inside
-// every wireSlots run; mock it so the test doesn't network.
-vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () => ({
-  famousStarsMetaFetcher: vi.fn(async () => ({ meta: [] })),
-}));
 
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough: only whether it
@@ -103,7 +84,8 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 }));
 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
+import { meshAssetRow } from '../../../../src/services/engine/wiring/meshAssetRow';
+import { MESH_PRESENTATIONS } from '../../../../src/data/bodies/meshPresentations';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
@@ -114,11 +96,9 @@ import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDens
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 /** A fake `AssetSlot` whose lifecycle the test drives: `fire(state)` notifies every subscriber
@@ -182,18 +162,9 @@ const readyValue = (count: number): LoadState<unknown> => ({
   loadedAtMs: 0,
 });
 
-const errorValue = (msg: string): LoadState<unknown> => ({
-  kind: 'error',
-  req: {},
-  error: new Error(msg),
-  finalAttempt: 1,
-});
-
-/** Minimal post-`initGpu` `EngineState`: GPU renderers present (commit subscribers don't NPE),
- *  per-source slot map empty (per case), galaxy catalogs all-enabled via `GALAXY_CATALOG_IDS`, which is
- *  deliberately BROADER than the boot seed (default-off desiDeep is left out) so the demand loop demands
- *  every catalog a test provides a slot for. Volume fields match the boot literal so the MCPM
- *  predicate reads true. */
+/** A post-`createLayers` `EngineState` over a hand-picked subset of asset rows (the mesh rows, the
+ *  galaxy catalog on fake slots, the density cubes, the structure catalog) and the REAL settings
+ *  root and visibility registry, so a new Layer, slot or setting needs no edit here. */
 function makeState(
   overrides: Partial<{
     points: Map<SourceId, ReturnType<typeof makeFakeSlot>>;
@@ -219,7 +190,7 @@ function makeState(
     slots: Object.fromEntries(
       COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
         entry.id,
-        createCosmicWebDensitySlot(entry, densityRenderer),
+        createCosmicWebDensitySlot(entry, densityRenderer, Promise.resolve()),
       ]),
     ),
   } as unknown as CosmicWebDensityRuntime;
@@ -240,89 +211,29 @@ function makeState(
   for (const cat of STRUCTURE_IDS) {
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
-  // Pull the singleton-overlay + star-catalog clusters from `INITIAL_SETTINGS`
-  // so the demand loop's `settings.flow.enabled` /
-  // `settings.constellations.enabled` / `settings.starCatalogs.enabled` reads
-  // resolve instead of throwing on an undefined slice (which reevaluateDemand
-  // would swallow as a per-row warn). Flow + constellations default OFF, so no
-  // overlay load fires. starCatalogs is forced OFF here (Gaia boots enabled,
-  // so leaving the master gate on would demand a real star-bin fetch this
-  // fixture provides no slot for).
   const state = {
     tier: 'medium',
-    ui: { paletteOpen: false } as never,
+    ui: { paletteOpen: false },
+    // The real settings root, so every demand predicate and fade seed resolves
+    // whatever Layers exist; the two deviations are what the cases below turn on.
     settings: {
-      galaxyCatalogs: {
-        enabled: true,
-        sizePx: 2.5,
-        brightness: 1.0,
-        depthFade: true,
-        provenance: DEFAULT_GALAXY_PROVENANCE,
-        // All galaxy catalogs enabled (a uniform test scenario; the real
-        // boot literal leaves desiDeep off) — galaxy catalog demand reads
-        // these `enabled` bits (not `sources.drawMask`), so the boot-load
-        // expectations for sdss/2mrs/glade hang off this seed.
-        items: Object.fromEntries(
-          GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-        ),
-      },
-      tonemap: { exposure: 1.0, curve: 'reinhard' },
-      bias: { mode: 'off', absMagLimit: -18 },
-      thumbnails: { enabled: true },
-      milkyWay: { enabled: true, labelEnabled: true },
-      zoneOfAvoidance: INITIAL_SETTINGS.zoneOfAvoidance,
-      cosmicWebFilaments: { enabled: false, intensity: 1.0 },
-      orbitTrails: { enabled: true },
-      missionTrails: { enabled: false },
-      sStarTrails: { enabled: true },
-      cosmicWebDensity: {
-        enabled: true,
-        items: {
-          mcpm: { enabled: true },
-          'polyphorm-2mrs': { enabled: false },
-          'mcpm-workbench': { enabled: false },
-        },
-      },
-      bodies: {
-        items: Object.fromEntries(
-          BODY_SOURCE_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-        ),
-      },
-      // Overridable so a test can hide every category and pin the bug-fix
+      ...INITIAL_SETTINGS,
+      // Every catalog on (boot leaves desiDeep off): demand reads these `enabled`
+      // bits, so each catalog a case provides a slot for is demanded.
+      galaxyCatalogs: { ...INITIAL_SETTINGS.galaxyCatalogs, items: makeGalaxyCatalogItems() },
+      // Overridable so a case can hide the categories and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
       structures: { enabled: true, items: structureItems },
-      flow: INITIAL_SETTINGS.flow,
-      constellations: INITIAL_SETTINGS.constellations,
-      starCatalogs: { ...INITIAL_SETTINGS.starCatalogs, enabled: false },
     },
-    bias: {} as never,
-    requests: new Set(),
-    picking: {} as never,
-    gpu: {
-      renderTargets: null,
-      labelRendererCosmo: null,
-      markerLineRendererCosmo: null,
-      texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
-    },
+    // Read at commit time by the mesh rows' slots; no mesh loads from this pose.
+    gpu: {},
     subsystems: {
-      scheduler: { requestRender: vi.fn() } as never,
+      scheduler: { requestRender: vi.fn() },
       // `wireSlots` ends with `reevaluateDemand`, which enqueues onto this
       // rather than calling `slot.load()` directly.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
-      loadProgress: null,
-      fades: {
-        register: vi.fn(),
-        fadeTo: vi.fn(),
-        setImmediate: vi.fn(),
-        targetOf: vi.fn(() => null),
-        opacityOf: vi.fn(() => 1),
-        isAnyAnimating: vi.fn(() => false),
-        tick: vi.fn(),
-        destroy: vi.fn(),
-        label: 'fadeRegistry',
-      },
-    } as never,
-    booted: false,
+      fades: { register: vi.fn(), fadeTo: vi.fn(), targetOf: vi.fn(() => null) },
+    },
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay
@@ -339,15 +250,11 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    visibilityEntries: [
-      ...galaxyCatalogVisibility,
-      ...cosmicWebDensityVisibility,
-      ...structureVisibility,
-    ],
+    visibilityEntries: APP_VISIBILITY_REGISTRY,
     selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
-    ...meshAssetRows(state),
+    ...MESH_PRESENTATIONS.map((p) => meshAssetRow({ setMesh: () => {}, clearMesh: () => {} }, p)),
     ...galaxyCatalogAssetRows(galaxyRuntime),
     ...cosmicWebDensityAssetRows(densityRuntime),
     ...structureAssetRows(structureRuntime),
@@ -356,34 +263,12 @@ function makeState(
   return state;
 }
 
+/** Only what the phase reads: the store it dispatches to and the registry it fills. */
 function makeDeps(): BootstrapDeps {
-  const cb: EngineCallbacks = {
-    store: createAppStore().store,
-    setSagaContext: vi.fn<() => void>() as never,
-    runSaga: vi.fn<() => void>() as never,
-  };
   return {
-    canvas: { width: 800, height: 600 } as HTMLCanvasElement,
-    cb,
-    readRoot: () => cb.store.getState(),
-    composition: STUB_COMPOSITION,
-    frameRef: { current: () => {} },
-    handleRef: { current: null },
+    cb: { store: createAppStore().store },
     allSlots: new Map(),
-    selection: {
-      resolvePick: () => null,
-      extractRow: () => null,
-      resolveFocusId: () => null,
-      claimedKind: () => null,
-      focusIdOf: () => null,
-    },
-    phaseLocals: {
-      device: {} as GPUDevice,
-      context: {} as GPUCanvasContext,
-      format: 'bgra8unorm' as GPUTextureFormat,
-      unwatchHdrCapability: () => {},
-    },
-  };
+  } as unknown as BootstrapDeps;
 }
 
 describe('wireSlots', () => {
@@ -483,7 +368,6 @@ describe('wireSlots', () => {
     // fetcher, cleared first because module-scoped mocks persist across tests. (mcpm-boots /
     // polyphorm-2mrs-idle coverage lives in demandTable.test and cosmicWebDensityAssetRows.test.)
     vi.mocked(structureCatalogFetcher).mockClear();
-    vi.mocked(filamentFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
@@ -494,7 +378,6 @@ describe('wireSlots', () => {
     // Default-on / structures-visible => fetched; the famous-meta sidecar is the Layer's slot, observed on the stub.
     expect(structureCatalogFetcher).toHaveBeenCalled();
     expect(state.slotsByKey.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
-    expect(filamentFetcher).not.toHaveBeenCalled();
     expect(state.slotsByKey.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 
@@ -566,7 +449,7 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Asserted as a superset so additive changes don't break the test for the wrong reason: the Layer's
-    // slots, the structure Layer's catalog slot, and core's mesh slots.
+    // slots, the structure Layer's catalog slot, and the mesh Layers' mesh slots.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);

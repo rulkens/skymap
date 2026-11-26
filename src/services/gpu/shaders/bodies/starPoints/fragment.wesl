@@ -50,16 +50,16 @@ import package::lib::starPhotometry::starGlowProfile;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let r2 = dot(in.uv, in.uv);
+  let radiusSq = dot(in.uv, in.uv);
   // Discard the billboard's corners so the dot is round.
-  if (r2 > 1.0) { discard; }
+  if (radiusSq > 1.0) { discard; }
   // Rim-zeroed Gaussian profile (starGlowProfile, lib/starPhotometry.wesl):
-  // reaches exactly 0 at the rim (r2 = 1) so saturated peaks show no hard edge,
-  // while g(0) = 1.
-  let g = starGlowProfile(r2);
-  let I = in.intensity * g;
+  // reaches exactly 0 at the rim (radiusSq = 1) so saturated peaks show no hard edge,
+  // while glow(0) = 1.
+  let glow = starGlowProfile(radiusSq);
+  let intensity = in.intensity * glow;
   // Hue-preserving soft-knee on the SCALAR, tint applied AFTER, so the tint's
   // channel ratios survive any exposure instead of clipping toward white.
-  let a = starKnee(I);
-  return vec4<f32>(in.color * a, a);
+  let kneeIntensity = starKnee(intensity);
+  return vec4<f32>(in.color * kneeIntensity, kneeIntensity);
 }

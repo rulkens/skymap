@@ -68,6 +68,7 @@ function engages(
     tilePx: SURFACE_TILE_PX,
     lodBias: SURFACE_TILE_LOD_BIAS,
     residentSlot: () => null,
+    isEmpty: () => false,
   });
   return requests.zWin > BASE;
 }

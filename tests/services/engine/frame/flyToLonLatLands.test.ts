@@ -138,7 +138,7 @@ describe('flyToLonLat through the frame loop', () => {
   it('lands and holds over Earth while Earth is the followed focus', () => {
     const { h, fly } = setup();
     h.frame(5);
-    flyAndHold(h, () => fly({ lonDeg: 12, latDeg: 55, altKm: 900 }), 'earth', {
+    flyAndHold(h, () => fly({ body: 'earth', lonDeg: 12, latDeg: 55, altKm: 900 }), 'earth', {
       lonDeg: 12,
       latDeg: 55,
       altM: 900_000,
@@ -149,20 +149,25 @@ describe('flyToLonLat through the frame loop', () => {
   it('carries an explicit heading through the landing', () => {
     const { h, fly } = setup();
     h.frame(5);
-    flyAndHold(h, () => fly({ lonDeg: -70, latDeg: -20, altKm: 500, headingRad: 1.1 }), 'earth', {
-      lonDeg: -70,
-      latDeg: -20,
-      altM: 500_000,
-      headingRad: 1.1,
-    });
+    flyAndHold(
+      h,
+      () => fly({ body: 'earth', lonDeg: -70, latDeg: -20, altKm: 500, headingRad: 1.1 }),
+      'earth',
+      {
+        lonDeg: -70,
+        latDeg: -20,
+        altM: 500_000,
+        headingRad: 1.1,
+      },
+    );
   });
 
   it('keeps the current altitude and heading when they are omitted on the same body', () => {
     const { h, fly } = setup();
     h.frame(5);
-    fly({ lonDeg: 0, latDeg: 10, altKm: 1500, headingRad: 0.7 });
+    fly({ body: 'earth', lonDeg: 0, latDeg: 10, altKm: 1500, headingRad: 0.7 });
     h.frame(FLIGHT_FRAMES);
-    flyAndHold(h, () => fly({ lonDeg: 30, latDeg: 40 }), 'earth', {
+    flyAndHold(h, () => fly({ body: 'earth', lonDeg: 30, latDeg: 40 }), 'earth', {
       lonDeg: 30,
       latDeg: 40,
       altM: 1_500_000,
@@ -198,7 +203,7 @@ describe('flyToLonLat through the frame loop', () => {
     h.store.dispatch(resume({ nowMs: h.nowMs() }));
     h.frame(5);
 
-    fly({ lonDeg: 12, latDeg: 55, altKm: 6 });
+    fly({ body: 'earth', lonDeg: 12, latDeg: 55, altKm: 6 });
     h.frame(FLIGHT_FRAMES);
 
     const simDays = deriveSimDays(selectTimeState(h.store.getState()), h.nowMs());

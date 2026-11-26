@@ -26,8 +26,8 @@
  * tour as done; the harness records takes strictly one at a time anyway.
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
- * `camera.clip` is only set by `clipStarted`, which `playClip` and the sky exit
- * (`watchZoomLimitSaga`) dispatch; `clipTransportSet` and `clipDataReplaced` edit
+ * `camera.intent.clip` is only written by `clipStarted`, which `playClip` and the sky
+ * exit (`watchZoomLimitSaga`) dispatch; `clipTransportSet` and `clipDataReplaced` edit
  * only a clip already live. `playClip` dispatches it only
  * AFTER `clipBodySaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
@@ -42,7 +42,7 @@
  * and cleared on every settle path, covering the pre-activation window the
  * store check misses. `selectClipActive` stays in the check too: a tour beat's
  * clip (`visitBeatSaga` calls the `playClip` seam directly, bypassing the
- * `startClip` action) can flip `camera.clip` without ever touching
+ * `startClip` action) can flip `camera.intent.clip` without ever touching
  * `clipInFlight`, and the guard still needs to refuse a standalone start
  * while that's in flight.
  *
@@ -98,13 +98,13 @@ export function installRecorderHook(store: AppStore): void {
   let clipInFlight = false;
 
   // Same seen-active latch `runTour` uses, guarding against `clipBodySaga`'s
-  // foci/runtime `waitUntilSaga` gate: `camera.clip` stays null across however
+  // foci/runtime `waitUntilSaga` gate: `camera.intent.clip` stays null across however
   // many store updates land before the clip activates, so a latch that
   // resolved on any inactive reading would resolve instantly and film zero
   // frames. Single-flight checks BOTH `clipInFlight` (covers this window) AND
   // `selectClipActive` (covers a clip started elsewhere — `visitBeatSaga`
   // calls the `playClip` seam directly, bypassing the `startClip` action
-  // entirely, so a tour beat's clip flips `camera.clip` without ever touching
+  // entirely, so a tour beat's clip flips `camera.intent.clip` without ever touching
   // `clipInFlight`). `clipInFlight` is set before dispatch and cleared in
   // `finally` so it covers rejection paths too, not just the resolve one.
   function runClip(id: ClipId): Promise<void> {

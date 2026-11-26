@@ -9,5 +9,13 @@ import type { EngineState } from '../state/EngineState';
 
 export type PassState = Pick<
   EngineState,
-  'settings' | 'tier' | 'selection' | 'selectionRows' | 'orbitTrailGroups' | 'gpu' | 'subsystems'
+  | 'settings'
+  | 'tier'
+  | 'selection'
+  | 'selectionRows'
+  | 'orbitTrailGroups'
+  | 'sampledTrailGroups'
+  | 'gpu'
+  | 'subsystems'
+  | 'frameIndex'
 >;

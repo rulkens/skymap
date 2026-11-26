@@ -27,7 +27,7 @@ import {
   clipEnded,
   clipTransportSet,
   startFrameTween,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
@@ -54,7 +54,7 @@ const bodyArm: FramedCameraPose = {
 };
 
 const clipData: ClipData = { timeline: [] };
-const clip = { data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' } as const;
+const clip = { data: clipData, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' } as const;
 
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },

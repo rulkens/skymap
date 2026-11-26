@@ -72,7 +72,7 @@ renderers/
   bodies/           the true-scale solar-system foreground: earth, planet, star,
                     starPoint, orbitTrail
   milkyWay/         cloud + pick — the pick footprint must match the cloud
-  labels/           labelRenderer + markerLineRenderer (label stems) — one feeder
+  labels/           labelRenderer + labelPickRenderer (text and leaders, one feeder)
   filaments/        filamentRenderer + its pure CPU instance builder
   devTools/         debugLineRenderer — a debug draw that is a renderer
   volumeField/  flowField/  horizonShell/  selectionRing/  structureMarker/
@@ -97,9 +97,8 @@ Two rules follow from that:
   Dirs that already **name themselves** stay flat: `selectionRing/`, `structureMarker/`,
   `horizonShell/` need no parent folder to be unambiguous, and wrapping them in one would
   only add a path segment that repeats the prefix. Dirs **shared across
-  families** cannot nest at all without lying about ownership — `shaders/markerLines/` is
-  consumed by both `labels/markerLineRenderer.ts` and `devTools/debugLineRenderer.ts`, so
-  filing it under either family would mislead the next reader who greps for its other caller.
+  families** cannot nest at all without lying about ownership: filing a shader dir under one of
+  its two families would mislead the next reader who greps for the other caller.
   `milkyWay/sprites/` is not that case despite two callers: its draw pair is
   the milkyWay Layer's `render/milkyWayCloudRenderer.ts` and its three generation shaders are
   `engine/galaxyGenerator/v1/`'s, but both are the one point-cloud tier — a renderer and the

@@ -24,7 +24,7 @@ import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
 import type { ClipPathTuningActive } from '../../@types/settings/ClipPathTuningActive';
 import type { ClipPathTuningKnob } from '../../@types/settings/ClipPathTuningKnob';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../compositions/appClips';
 import styles from './ClipPathInspectorSection.module.css';
 
 export type ClipPathInspectorSectionProps = {
@@ -85,7 +85,7 @@ export type ClipPathInspectorSectionProps = {
 };
 
 // Registry rows → dropdown options. A new clip is a new option, no edit here.
-const CLIPS = Object.values(clipRegistry);
+const CLIPS = Object.values(APP_CLIP_REGISTRY);
 
 export function ClipPathInspectorSection({
   inspectId,

@@ -9,7 +9,7 @@ import type { Tier } from '../../@types/data/Tier';
 
 export type MeshAssetRow = {
   readonly key: string;
-  /** The highest tier this body ships; `meshBodyRow.req` clamps to it. */
+  /** The highest tier this body ships; the request `meshAssetRow` builds clamps to it. */
   readonly tierCeiling: Tier;
   readonly boundingRadiusM: number;
   /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,

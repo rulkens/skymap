@@ -14,28 +14,28 @@ import { createServer, type ViteDevServer } from 'vite';
 import { createServer as createNetServer } from 'node:net';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { SETTLE_MS } from './src/render/effectiveVolpathDivisor';
+import type { RendererId } from './@types/view/RendererId';
+import { SETTLE_MS } from './src/render/settleMs.constant';
 
 const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so
 // every step lets a few frames encode before its errors are drained.
 const SETTLE_FRAMES = 6;
-// T20: watchHistogramSaga throttles the histogram READBACK to every 20 steps
+// watchHistogramSaga throttles the histogram READBACK to every 20 steps
 // (HISTOGRAM_INTERVAL_STEPS) — the dispatch itself runs every step (encodeStep.ts)
 // and so is already covered by every other settle above, but the readbackHistogram
 // mapAsync round trip needs a longer settle to guarantee it fires at least once.
 const HISTOGRAM_SETTLE_FRAMES = 21;
 const BOOT_TIMEOUT_MS = 60_000;
-// T25 (spec §12): 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
+// 5x HISTOGRAM_INTERVAL_STEPS (watchHistogramSaga) so
 // 'sim:energy-smoke' below rides 5 periodic histogram readbacks, not just the
 // first noisy one.
 const ENERGY_SMOKE_STEPS = 100;
 // Same margin as HISTOGRAM_SETTLE_FRAMES: settling only ENERGY_SMOKE_STEPS frames
 // races the LAST periodic readback's own mapAsync round trip.
 const ENERGY_SMOKE_SETTLE_FRAMES = ENERGY_SMOKE_STEPS + HISTOGRAM_SETTLE_FRAMES;
-// Band derivation (task-T25-brief.md's controller ruling — the tiny synthetic
-// catalog has no fork reference, so center/spread come from measurement at THIS
-// HEAD, post-T24 strip, not from T23's fork-vs-workbench floor). 5 consecutive
+// Band derivation: the tiny synthetic catalog has no fork reference, so center and
+// spread come from measurement, not from the fork-vs-workbench floor. 5 consecutive
 // `npx tsx tools/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
 // a fresh reset -> 100 steps: 4.969708, 4.986995, 4.956796, 4.991052, 4.985401
 // (mean 4.977991, max abs deviation from mean 0.021194 — run 3). Width = 6x that
@@ -236,16 +236,22 @@ async function settleFrames(page: Page, count: number): Promise<void> {
 }
 
 /**
- * Drive the layer switches to an exact configuration. `check`/`uncheck` and not
- * `click`, so a step states the state it wants rather than a delta off whatever
- * the previous one left behind.
+ * Set the renderer and the galaxy overlay to an exact configuration — the Rendering
+ * section's header dropdown and the Galaxies pill. `check`/`uncheck` and not `click`,
+ * so a step states the state it wants rather than a delta off the previous one.
  */
-async function setLayers(page: Page, layers: Record<string, boolean>): Promise<void> {
-  for (const [title, on] of Object.entries(layers)) {
-    const pill = page.getByRole('checkbox', { name: `Toggle ${title}`, exact: true });
-    if (on) await pill.check();
-    else await pill.uncheck();
-  }
+async function setView(page: Page, renderer: RendererId, galaxies: boolean): Promise<void> {
+  await page.getByRole('combobox', { name: 'Renderer', exact: true }).selectOption(renderer);
+  const pill = page.getByRole('checkbox', { name: 'Toggle Galaxies', exact: true });
+  if (galaxies) await pill.check();
+  else await pill.uncheck();
+}
+
+/** Unfold a PanelSection by its title; a no-op when it is already open, where a
+ * bare click would fold it and unmount the controls the step is about to drive. */
+async function openSection(page: Page, title: string): Promise<void> {
+  const fold = page.getByRole('button', { name: title, exact: true });
+  if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();
 }
 
 /** Drive a `role="slider"` pill by keyboard — Slider.tsx has no native input to set
@@ -257,13 +263,11 @@ async function pressSlider(page: Page, label: string, keys: readonly string[]): 
 
 /**
  * The exercise: boot, drive the run/reset/clear-trace commands that rebuild
- * bind groups or clear buffers outside the steady state, then the render
- * layers in every combination that opens a distinct pass set — agents alone,
- * all three, none at all. Layers are switched through each section's header
- * checkbox (CollapsibleSection renders it with `aria-label="Toggle <title>"`).
- * Order matters once: `resize` runs last, with all layers on, so it covers the
- * splat's screen-sized accumulation buffer as well as the graph's own target.
- * Track V's path tracer appends its step here.
+ * bind groups or clear buffers outside the steady state, then each renderer with
+ * and without the galaxy overlay — every distinct pass set (see `setView`).
+ * Order matters once: `resize` runs last and draws both the path tracer and the
+ * splat at a new size, so it covers their screen-sized accumulation buffers as
+ * well as the graph's own target.
  */
 function buildSteps(url: string): readonly ExerciseStep[] {
   return [
@@ -307,7 +311,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T20: the histogram compute pass (uniform write, clearBuffer, dispatch, all
+      // The histogram compute pass (uniform write, clearBuffer, dispatch, all
       // three bind groups) already runs every step above; this step is the one that
       // forces its READBACK — jittered sampling toggled on then off (exercising
       // histogram.wesl's cfg.sampleRandomly branch both ways) with a long enough
@@ -332,7 +336,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T25 (spec §12): the energy smoke test — asserts the sim's actual output
+      // The energy smoke test — asserts the sim's actual output
       // MAGNITUDE, not just that it ran error-free (every other step here only
       // checks for GPU/console errors). Placed right after 'command:reset' so the
       // box/catalog are still exactly the `?probe` boot defaults (nothing before
@@ -344,7 +348,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // only ever be a band assertion; see the constants' own derivation comment.
       name: 'sim:energy-smoke',
       run: async (page) => {
-        // Task FLE: 'command:reset' (previous step) is a UI write — it arms Viewport's
+        // 'command:reset' (previous step) is a UI write — it arms Viewport's
         // interaction-priority quality window, which now throttles the sim step cadence
         // too (SETTLE_MS after the click). This step's step:frame ratio is exactly what
         // ENERGY_SMOKE_CENTER was calibrated against, so wait the boost out in real wall
@@ -380,7 +384,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // V3: the full save→load round trip through the real DOM — exportParams'
+      // The full save→load round trip through the real DOM — exportParams'
       // download, fed straight back into the hidden file input importParams
       // reads. The GPU-relevant half is what installImportedBox provokes: it's
       // one of watchSceneSaga's structural triggers, so this is the only step
@@ -394,17 +398,16 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         ]);
         const path = await download.path();
         if (!path) throw new Error('params:save-load: download produced no local path');
-        await page.locator('input[type="file"]').setInputFiles(path);
+        await page.getByLabel('load params file').setInputFiles(path);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      // F2.5: rotate-ring drag — the last handle family with no automated coverage.
-      // Rotation has no ParamSlider readout the way F1.6's translate arrow does, so the
-      // self-check reads the ACTUAL applied rotation via a real save-params round trip
-      // (the same download+parse 'gizmo:rotated-box' below uses), before vs after the
-      // drag — the F1.6 lesson: a step that can silently degrade to an inert orbit-drag
-      // must FAIL, not just run. Placement matters: runs right after 'params:save-load'
+      // Rotate-ring drag. Rotation has no SliderRow readout the way the translate
+      // arrow has, so the self-check reads the ACTUAL applied rotation via a real
+      // save-params round trip (the same download+parse 'gizmo:rotated-box' below
+      // uses), before vs after the drag: a step that can silently degrade to an
+      // inert orbit-drag must FAIL, not just run. Placement matters: runs right after 'params:save-load'
       // and BEFORE 'gizmo:rotated-box' mutates the box's rotation, and 'command:reset'
       // (two steps earlier) guarantees the camera is exactly defaultViewSlice.camera —
       // so this is the one point in the queue where the box is still perfectly at its
@@ -453,16 +456,14 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // F2.4: the only automated check that boxLines.wesl's oriented cornerPos
-      // reconstruction (center + halfExtents·basis, plan contract §5) is correct —
-      // no rotation UI exists yet (F2.5 adds the rotate rings), so this drives the
+      // The only automated check that boxLines.wesl's oriented cornerPos
+      // reconstruction (center + halfExtents·basis) is correct. This drives the
       // same real preset-load path 'params:save-load' above exercises, but mutates
       // the downloaded preset's gridBox.rotation to a non-identity quaternion before
       // feeding it back through the file input. installImportedBox (gridSlice.ts)
       // then makes deriveGridBox return that box VERBATIM, rotation included.
-      // grid.showGridBox defaults true (gridSlice.ts), so the wireframe is already
-      // drawn every frame regardless of the 200ms preview timer — no voxel-size/manual-
-      // bounds nudge needed to make this rotated box actually render.
+      // The wireframe has no off switch, so no voxel-size/manual-bounds nudge is
+      // needed to make this rotated box actually render.
       name: 'gizmo:rotated-box',
       run: async (page) => {
         const [download] = await Promise.all([
@@ -479,18 +480,17 @@ function buildSteps(url: string): readonly ExerciseStep[] {
         preset.gridBox.rotation = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
         const rotatedPath = `${path}.rotated.json`;
         await writeFile(rotatedPath, JSON.stringify(preset));
-        await page.locator('input[type="file"]').setInputFiles(rotatedPath);
+        await page.getByLabel('load params file').setInputFiles(rotatedPath);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
       // drawBoxPreview only runs while `now < boxPreviewUntil`, armed by a change to any
       // of gridShapeKeyFor's five fields (Viewport.tsx) — no other step here ever touches
-      // one, so this is the only render layer none of the other gates exercise. The "Grid
-      // box" CollapsibleSection defaults OPEN (ControlsPanel.tsx's `gridBoxOpen` starts
-      // true, since 14e095c75) — no fold click needed; a click here would instead TOGGLE
-      // it closed and take 'gizmo:hover-drag' below down with it (same slider group).
-      // GridBoxPanel's "voxel size" ParamSlider is deriveGridBox's one resolution lever,
+      // one, so this is the only render layer none of the other gates exercise. The
+      // "Selection" PanelSection starts folded (its body unmounted), so this step opens
+      // it and leaves it open for 'gizmo:hover-drag' below (same slider group).
+      // SelectionControls's "voxel size" SliderRow is deriveGridBox's one resolution lever,
       // regardless of how the box's center/size got set. Its accessible name is distinct
       // from the raymarch preview's own "divisor" slider (see raymarch:divisor below) — a
       // role="slider" with a different name, so no probe selector or screen-reader name
@@ -500,6 +500,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       // 200ms; SETTLE_FRAMES worth of frames comfortably outlasts it.
       name: 'grid:box-preview',
       run: async (page) => {
+        await openSection(page, 'Selection');
         const voxelSize = page.getByRole('slider', { name: 'voxel size', exact: true });
         const before = await voxelSize.getAttribute('aria-valuenow');
         await pressSlider(page, 'voxel size', ['End']);
@@ -511,7 +512,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // F1.6: drives the REAL pointer path — hover sets hoverHandle, drag sets
+      // Drives the REAL pointer path — hover sets hoverHandle, drag sets
       // activeHandle (Viewport.tsx's gizmoDragging), both non-null together once the
       // drag starts, so drawBoxPreview's glyph shader runs the highlight branch for
       // both uniforms under error capture. Target: the +Y translate arrow tip,
@@ -526,11 +527,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       run: async (page) => {
         const handleX = 640;
         const handleY = 306;
-        // Self-check (F1.6 review MINOR): the aim above is a hardcoded pixel pair
+        // Self-check: the aim above is a hardcoded pixel pair
         // that would silently degrade to an inert orbit-drag if the boot box,
         // camera, viewport, or gizmoArrowLengthMpc's constant ever drift. The +Y translate
         // handle writes grid.manualCenterMpc[1], surfaced live by the already-open
-        // GridBoxPanel's "center y" ParamSlider (role="slider", aria-valuenow) —
+        // SelectionControls's "center y" SliderRow (role="slider", aria-valuenow) —
         // reading it before/after is how the aim was empirically verified during
         // development (0 -> 4.920103375067377); asserting it here keeps that proof
         // running instead of relying on the drag being silently correct forever.
@@ -554,9 +555,11 @@ function buildSteps(url: string): readonly ExerciseStep[] {
     {
       // The raymarch's own composite (an in-fragment choice, unrelated to the pass-level
       // blend). It defaults ON, so only turning it off reaches the fork-parity 'over'
-      // branch of the march loop at all.
+      // branch of the march loop at all. Rendering starts folded; opened here, it stays
+      // open for every step after this one, showing the chosen renderer's rows.
       name: 'toggle:additive',
       run: async (page) => {
+        await openSection(page, 'Rendering');
         const additive = page.getByRole('checkbox', { name: 'additive blend', exact: true });
         await additive.uncheck();
         await settleFrames(page, SETTLE_FRAMES);
@@ -565,7 +568,7 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // T18: packs the live trace through the REAL packLogTraceVoxels and marches
+      // Packs the live trace through the REAL packLogTraceVoxels and marches
       // it via a second TracePass — exercises pipeline code (pack, upload, a
       // second f16/f32-specialized shader compile) that no other step reaches.
       // sim.running stays true here, so by the time the async pack lands the
@@ -598,74 +601,55 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // Agents joins the two default-on layers: all three passes encode into one frame.
-      name: 'layers:agents-on',
+      // The splat with the galaxy dots over it.
+      name: 'renderer:agents',
       run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await setView(page, 'agents', true);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      // The splat alone over the graph's clear — the only frame that proves the layer
-      // renders without a base layer underneath it.
-      name: 'layers:agents-only',
+      // The splat alone over the graph's clear — the only frame that proves it
+      // renders with nothing else drawn.
+      name: 'renderer:agents-only',
       run: async (page) => {
-        await setLayers(page, { Raymarch: false, Agents: true, Galaxies: false });
+        await setView(page, 'agents', false);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      name: 'layers:all-on',
+      // The raymarch alone, then back with the overlay: the transition out of the
+      // splat is a distinct bind-group/draw-call sequence from settling there at boot.
+      name: 'renderer:raymarch-only',
       run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
+        await setView(page, 'raymarch', false);
+        await settleFrames(page, SETTLE_FRAMES);
+        await setView(page, 'raymarch', true);
         await settleFrames(page, SETTLE_FRAMES);
       },
     },
     {
-      // Nothing but the clear pass: a frame with no draws at all still has to encode.
-      name: 'layers:all-off',
-      run: async (page) => {
-        await setLayers(page, { Raymarch: false, Agents: false, Galaxies: false });
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // Configuration-identical to layers:all-on above — only the TRANSITION out of
-      // layers:all-off is new (a distinct bind-group/draw-call sequence than settling
-      // into the same state from boot).
-      name: 'layers:back-on',
-      run: async (page) => {
-        await setLayers(page, { Raymarch: true, Agents: true, Galaxies: true });
-        await settleFrames(page, SETTLE_FRAMES);
-      },
-    },
-    {
-      // Track V's path tracer: off by default, so this is the only step that ever
-      // compiles/dispatches its pass — the compute-heavy layer this probe is most
-      // likely to be the first to notice broke. Left on for the resize step below
-      // too, so its accumulator buffer gets resized exactly like the splat's.
+      // Track V's path tracer: never the default, so this is the only step that ever
+      // compiles/dispatches its pass — the compute-heavy renderer this probe is most
+      // likely to be the first to notice broke. Kept for the resize step below too.
       // NOTE: grid element (f16 vs f32) is chosen from `device.features.has('shader-f16')`
       // in createMcpmHarness, not a UI lever — this probe's headless Chromium always
       // resolves one of the two, and there is no existing step that flips it, so the
       // f16 kernel variant (task-V2A-report.md's open concern) is exercised only when
       // the probe's own GPU adapter happens to support shader-f16.
-      name: 'layers:path-tracer-on',
+      name: 'renderer:path-tracer',
       run: async (page) => {
-        await setLayers(page, { 'Path tracer': true });
+        await setView(page, 'pathTracer', true);
         await settleFrames(page, SETTLE_FRAMES);
-        // V3: opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
-        // ensureReducedTex) — the layer's own toggle above doesn't expand the section,
-        // CollapsibleSection unmounts its body while folded (grid:box-preview's own
-        // note above). Named 'path tracer divisor', not 'divisor', to stay distinct
-        // from the raymarch section's own slider of that name — both sections are open
-        // simultaneously from here on, so a shared name would be an ambiguous locator.
-        await page.getByRole('button', { name: 'Path tracer', exact: true }).click();
+        // Opens the divisor>1 offscreen resolve+upsample leg (VolpathPass's
+        // ensureReducedTex). Rendering is already open and now shows the path tracer's
+        // rows; its slider keeps its own name, distinct from the raymarch's 'divisor'.
         const divisor = page.getByRole('slider', { name: 'path tracer divisor', exact: true });
         const before = await divisor.getAttribute('aria-valuenow');
         await pressSlider(page, 'path tracer divisor', ['End']);
         const after = await divisor.getAttribute('aria-valuenow');
         if (after === before) {
-          throw new Error('layers:path-tracer-on divisor slider did not move — aim stale');
+          throw new Error('renderer:path-tracer divisor slider did not move — aim stale');
         }
         await settleFrames(page, SETTLE_FRAMES);
         await pressSlider(page, 'path tracer divisor', ['Home']);
@@ -673,12 +657,15 @@ function buildSteps(url: string): readonly ExerciseStep[] {
       },
     },
     {
-      // Canvas resize rebuilds the accum target, the blit's `layout:'auto'` bind group
-      // and — because every layer is on here — the splat's screen-sized accumulation
-      // buffer, which a stale size would index straight past the end of.
+      // Canvas resize rebuilds the accum target and the blit's `layout:'auto'` bind
+      // group. The path tracer draws at the new size first, then the splat — whose
+      // screen-sized accumulation buffer a stale size would index straight past the
+      // end of — draws there and through the resize back.
       name: 'resize',
       run: async (page) => {
         await page.setViewportSize({ width: 900, height: 620 });
+        await settleFrames(page, SETTLE_FRAMES);
+        await setView(page, 'agents', true);
         await settleFrames(page, SETTLE_FRAMES);
         await page.setViewportSize(VIEWPORT);
         await settleFrames(page, SETTLE_FRAMES);

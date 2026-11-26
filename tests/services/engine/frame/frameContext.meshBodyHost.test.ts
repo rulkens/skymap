@@ -9,8 +9,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Every craft present, so the hostless Voyager rows exist without loading their tracks.
-vi.mock('../../../../src/utils/scene/spacecraftPresent', () => ({
-  spacecraftPresent: () => true,
+vi.mock('../../../../src/utils/scene/bodyPresent', () => ({
+  bodyPresent: () => true,
 }));
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';

@@ -45,6 +45,6 @@
 
 const KNEE: f32 = 8.0;
 
-fn starKnee(i: f32) -> f32 {
-  return KNEE * (1.0 - exp(-i / KNEE));
+fn starKnee(intensity: f32) -> f32 {
+  return KNEE * (1.0 - exp(-intensity / KNEE));
 }

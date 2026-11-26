@@ -24,7 +24,7 @@ import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
 
-@group(0) @binding(0) var<uniform> u: CameraUniforms;
+@group(0) @binding(0) var<uniform> camera: CameraUniforms;
 // No @group(1) — see halo.wesl.
 
 // Ring width in CSS pixels (full visible band, halved for the AA
@@ -42,14 +42,14 @@ const RING_QUAD_MARGIN: f32 = 1.1;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  // ii (instance_index) is forwarded into VsOut.structureIndex so the
+  @builtin(vertex_index) vertexIndex: u32,
+  // instanceIndex is forwarded into VsOut.structureIndex so the
   // companion ringPick.wesl pick fragment can pack it into the pick
   // texture identity.  The visual ring fragment ignores the field;
   // it costs one flat-interpolated u32 per vertex output and lets
   // both pipelines share one VsOut struct (see io.wesl's docstring
   // on the structureIndex slot).
-  @builtin(instance_index) ii: u32,
+  @builtin(instance_index) instanceIndex: u32,
   input: VsIn,
 ) -> VsOut {
   let worldPos = input.positionAndRadius.xyz;
@@ -64,11 +64,11 @@ fn vs(
   // the eye correctly in homogeneous space, which is what makes two
   // dome faces rasterise the same world curve at their shared seam.
   let half = radiusMpc * MARKER_RADIUS_RETUNE * RING_QUAD_MARGIN;
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u, worldPos + offset);
+  out.pos = worldToClip(camera, worldPos + offset);
   // d == 1 is still the marker radius: RING_QUAD_MARGIN scales the
   // geometry (above) and the uv (here) together, so they cancel.
   out.uv = corner * RING_QUAD_MARGIN;
@@ -81,7 +81,7 @@ fn vs(
   // Per-instance structure index forwarded for the ringPick fragment.  The
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
-  out.structureIndex = ii;
+  out.structureIndex = instanceIndex;
   out.pickable = input.pickable;
   return out;
 }
@@ -96,26 +96,26 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // blend; discarding early skips the band + AA math for those fragments.
   if (input.alpha <= 0.0) { discard; }
 
-  let d = length(input.uv);
+  let uvRadius = length(input.uv);
 
   // UV units per screen pixel at this fragment, from the rasteriser's own
   // derivatives — exact for any projection, so the band is RING_PX_WIDTH
   // wide in whichever view draws it. Capped at 1: a sub-pixel ring fills
   // its quad instead of aliasing to one fragment.
-  let uvPerPx = min(length(vec2<f32>(dpdx(d), dpdy(d))), 1.0);
+  let uvPerPx = min(length(vec2<f32>(dpdx(uvRadius), dpdy(uvRadius))), 1.0);
   let bandHalfUv = RING_PX_WIDTH * 0.5 * uvPerPx;
   let aaUv = RING_AA_WIDTH * uvPerPx;
 
   // Distance from the |uv| == 1 ring centre line.
-  let distFromRing = abs(d - 1.0);
+  let distFromRing = abs(uvRadius - 1.0);
 
   // 1.0 inside the band, smoothly to 0 at (band edge + AA width).
   let bandInner = bandHalfUv;
   let bandOuter = bandHalfUv + aaUv;
   let bandAlpha = 1.0 - smoothstep(bandInner, bandOuter, distFromRing);
 
-  let a = bandAlpha * input.alpha;
+  let alpha = bandAlpha * input.alpha;
   // Premultiplied alpha — pipeline blend state is OVER:
   //   (src.color * 1, dst.color * (1 - src.alpha)).
-  return vec4<f32>(input.color * a, a);
+  return vec4<f32>(input.color * alpha, alpha);
 }

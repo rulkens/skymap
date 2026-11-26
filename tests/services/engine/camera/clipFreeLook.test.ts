@@ -11,7 +11,7 @@ import {
   clipStarted,
   clipTransportSet,
   resolveClipStart,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -35,7 +35,9 @@ describe('free look over a paused clip', () => {
       { timeline: [tween('yaw', { to: 1, over: 4, ease: 'linear' })] },
       START,
     );
-    h.store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+    h.store.dispatch(
+      clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     h.store.dispatch(clipTransportSet({ kind: 'paused', atSec: 2, camera: 'clip' }));
     h.frame(2);
     const atT = liveWorldPose(h.state);

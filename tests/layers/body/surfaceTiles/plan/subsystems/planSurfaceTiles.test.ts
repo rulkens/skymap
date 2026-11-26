@@ -65,7 +65,11 @@ function manifestOf(prefix: string): SurfaceTileManifest {
     ],
   };
 }
-const MANIFESTS = { earth: manifestOf('earth-tiles/v8'), mars: manifestOf('mars-tiles/v2') };
+const MANIFESTS = {
+  earth: manifestOf('earth-tiles/v8'),
+  mars: manifestOf('mars-tiles/v2'),
+  moon: manifestOf('moon-tiles/v1'),
+};
 
 const SLOT = {
   slot: 0,
@@ -81,6 +85,7 @@ function residency(over: Partial<SurfaceTileResidency> = {}): SurfaceTileResiden
     residentSlot: () => null,
     isInFlight: () => false,
     hasFailed: () => false,
+    isEmpty: () => false,
     inFlightCount: () => 0,
     engagedBodyId: () => EARTH,
     ...over,
@@ -203,6 +208,22 @@ describe('planSurfaceTiles', () => {
     // In flight holds a slot the stream must stamp; failed holds nothing worth one.
     expect(plan.touched).toEqual([tiles[1]]);
     expect(plan.lastPlan).toEqual({ requestCount: 3, zWin: BASE + 1, misses: 3 });
+  });
+
+  it('an empty tile is neither touched, requested nor counted a miss', () => {
+    // Bug caught: a stored-empty tile refetched every frame, or its slot pinned by a fresh stamp.
+    const tiles = [tile(0), tile(1)];
+    walk.demand = engagedDemand(tiles);
+    const plan = planSurfaceTiles(
+      [SEES_EARTH],
+      overBody(EARTH),
+      residency({ isEmpty: (t) => t === tiles[0], isInFlight: (t) => t === tiles[0] }),
+      LARGE,
+    );
+
+    expect(plan.touched).toEqual([]);
+    expect(plan.requests.map((r) => r.tile)).toEqual([tiles[1]]);
+    expect(plan.lastPlan).toEqual({ requestCount: 2, zWin: BASE + 1, misses: 1 });
   });
 
   it('asks for a missing manifest and plans nothing until it lands; never re-asks after a 404', () => {

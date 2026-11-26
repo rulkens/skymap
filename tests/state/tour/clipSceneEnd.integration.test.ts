@@ -48,7 +48,7 @@ function makeEngine(boot: readonly Action[] = []) {
     getCameraRuntime: () => {
       throw new Error('no frame roll here');
     },
-    extractFocusRow: () => ({ row: null, focusId: null }),
+    extractFocusRow: () => ({ row: null, id: null }),
     syncVisibility: (settings, overMs) => syncVisibilityTargets({ ...state, settings }, overMs),
     visibilityTargets: (settings) => visibilityTargetTable(state, settings),
     getFades: () => fades,
@@ -74,7 +74,7 @@ describe("a clip's scene at its end", () => {
     tick(1000);
     tick(2000);
     await entered;
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
 
     void playClip(dwell, DEFAULT_ORIENTATION, 'keep');
     tick(3000);
@@ -101,7 +101,7 @@ describe("a clip's scene at its end", () => {
       getCameraRuntime: () => {
         throw new Error('no frame roll here');
       },
-      extractFocusRow: () => ({ row: null, focusId: null }),
+      extractFocusRow: () => ({ row: null, id: null }),
       syncVisibility: () => {},
       visibilityTargets: () => [],
       getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
@@ -120,7 +120,7 @@ describe("a clip's scene at its end", () => {
     player.tick(epoch, 1000);
 
     store.dispatch({ type: SKIP });
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
     expect(store.getState().selection.focus).toEqual(VIRGO);
     expect(extractRow).not.toHaveBeenCalled();
   });

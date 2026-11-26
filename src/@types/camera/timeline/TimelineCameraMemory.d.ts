@@ -1,0 +1,30 @@
+/**
+ * TimelineCameraMemory — the timeline driver's private slot (`CameraRuntime.own`). `aim` is the
+ * re-aim token `view` belongs to: a new one (entry, step, craft switch) restarts the view, whose
+ * times are on that token's epoch, ms. `offsets` are the visitor's orbit and zoom as of their last
+ * input; an easing re-aim keeps them, an entry drops them. `craft` is the lane's body and where
+ * it stood last frame, Mpc, which an ease's start pose is carried by. In `view`, `stop` / `cruise`
+ * are the view last shown; `from` the pose an in-progress ease started on at `easeAtMs`, with
+ * `shortfall` its distance over the craft's fit (≤ 1, 1 = the craft was in view); `distance` the
+ * exact distance last written, Mpc, which a zoomed-in view holds as the frame shrinks.
+ */
+
+import type { CameraAim } from '../pose/CameraAim';
+import type { CameraPose } from '../pose/CameraPose';
+import type { Vec3 } from '../../math/Vec3';
+import type { TimelineOffsets } from './TimelineOffsets';
+import type { TimelineStop } from './TimelineStop';
+
+export type TimelineCameraMemory = {
+  readonly aim: CameraAim | null;
+  readonly offsets: TimelineOffsets;
+  readonly craft: { readonly id: string; readonly positionMpc: Readonly<Vec3> } | null;
+  readonly view: {
+    readonly stop: TimelineStop | null;
+    readonly cruise: boolean;
+    readonly from: CameraPose | null;
+    readonly easeAtMs: number;
+    readonly shortfall: number;
+    readonly distance: number;
+  } | null;
+};

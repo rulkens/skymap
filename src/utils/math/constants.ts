@@ -26,6 +26,9 @@ export const H0_KM_S_MPC = 70;
  */
 export const HUBBLE_DISTANCE_MPC = C_KM_S / H0_KM_S_MPC;
 
+/** Ω_m at z = 0, Planck 2018 (TT,TE,EE+lowE+lensing); Ω_Λ = 1 − Ω_m keeps the universe flat. */
+export const OMEGA_M = 0.315;
+
 /**
  * Cosmology toggle for the redshift ↔ distance conversion.
  *

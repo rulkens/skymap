@@ -39,7 +39,7 @@ import package::lib::fadeUniforms::applyFade;
 // smoothstep(1-fade, 1, x))' below.
 import package::lib::masks::edgeBandMask;
 
-@group(0) @binding(0) var<uniform> u : Uniforms;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(1) @binding(0) var<uniform> fade : FadeUniforms;
 
 @fragment
@@ -91,16 +91,16 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
 
   // The tint-ramp endpoints are uniforms the CPU packs from 'FILAMENT_BASE_TINT'
   // and 'FILAMENT_HOT_TINT' in 'filamentsPass.ts' (the one home for the layer's
-  // palette): 'u.baseTint' the dim cool-purple tendrils, 'u.hotTint' the bright
+  // palette): 'uniforms.baseTint' the dim cool-purple tendrils, 'uniforms.hotTint' the bright
   // near-white-violet spine.
-  let tint = mix(u.baseTint, u.hotTint, in.density);
+  let tint = mix(uniforms.baseTint, uniforms.hotTint, in.density);
 
   // Per-cloud fade-in (opacity uniform written each frame from JS).
   // 'applyFade' (lib/fadeUniforms.wesl) is the documented place that
   // says 'never multiply opacity into RGB' — it's a scalar helper that
   // folds opacity into 'alpha' alongside the other modulators here.
   let alpha = applyFade(
-    edgeFade * 0.6 * densityBoost * u.intensityScale,
+    edgeFade * 0.6 * densityBoost * uniforms.intensityScale,
     fade.opacity,
   );
   return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha

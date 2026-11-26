@@ -75,8 +75,13 @@ while the exhibit runs, handed the section's data) and a `cameraDriver`
 (`ExhibitCameraDriver`: core lifts it into the driver table, turns it on only while an
 exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
 drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
-read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
-exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
+read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. A kind
+two Layers' exhibits share is core's, beside the others in
+`src/components/ExhibitOverlay/kinds/`: the timeline kind (`timelineKind`, its hold in
+`src/state/exhibits/timeline/`, its camera row's geometry in `src/utils/camera/timeline/`)
+plays any exhibit whose sampled bodies have dated events, its lane and clock speed in core's
+`settings.timeline`. An
+exhibit states its id in its type (`Exhibit<'solarSystem'>`); `ExhibitId` follows from the rows.
 
 **`subsystems/` vs `render/`.** Both stay, inside a module. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A module with no per-frame decision state has no `subsystems/` folder.
 
@@ -114,15 +119,16 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
-`milkyWay`, `lightTime`, `cosmicHorizon`, `structure`, `missions` and `body` are formed.
+`milkyWay`, `lightTime`, `cosmicHorizon`, `structure`, `stellarStreams`, `satellites`, `asteroids`,
+`probeSpheres`, `missions` and `body` are formed.
 `cosmicHorizon` draws the particle-horizon shell and carries the Observable Universe exhibit. `body` draws
 Earth, the planets, moons and rings: its own renderers, texture slots, passes and
 atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its
-shape-model moons go through core's one mesh handle. It also streams and plans the
+shape-model moons (rows with `shapeModel`, declared by adding the id to `body/bodies/shapeModelBodyIds.ts` and its mesh facts to `MESH_ASSETS`) are returned from its `assets` member as mesh rows; their slots load into and clear from core's one mesh renderer through `deps.meshBodies`. It also streams and plans the
 surface tiles, and its `heightAt` is the ground core's camera reads. It declares its identity: the body rows in `body/bodies/`, the
-`body` selection kind and card, palette rows, name captions, orbit trails and the
+`body` selection kind and card, palette rows, name captions, orbit trails (`guides.orbitTrails`) and the
 Solar System exhibit. `missions` draws its craft: the rows live in
-`missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
-through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
-join the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh through core's one mesh handle, its
+`missions/bodies/`; it returns each craft's mesh row from `assets`, and its own mesh,
+contact-shadow and glint passes draw through core's one mesh renderer, which its mesh slots load into through `deps.meshBodies`. It loads its craft's tracks (`loadSampledTracksSaga(MISSION_TRACK_IDS)`) and hands their trail rows to core through `guides.sampledTrails`; core draws them. `earthScenes` declares the Earth scene rows (they
+join the tables), its own `earthScene` selection kind and palette row, and draws Søndermarken: its mesh row returned from `assets` (the slot loads into core's one mesh renderer through `deps.meshBodies`, and its pass draws through that renderer), its
 glint through its own renderer.

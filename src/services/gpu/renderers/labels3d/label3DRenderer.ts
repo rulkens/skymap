@@ -242,8 +242,7 @@ export function createLabel3DRenderer(
       labelF32[base + 10] = p.referenceDir[2];
       labelF32[base + 11] = p.startAngleRad;
 
-      // Straight RGBA -> premultiplied at the write boundary, same
-      // producer-facing convention as labelRenderer's Label2D.color.
+      // Straight RGBA -> premultiplied at the write boundary.
       const ca = label.color[3];
       labelF32[base + 12] = label.color[0] * ca;
       labelF32[base + 13] = label.color[1] * ca;

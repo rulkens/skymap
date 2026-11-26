@@ -6,18 +6,18 @@
 // 'AtmosphereUniforms'. The caller's 'composeBodyMvp' scales the unit sphere to
 // the ATMOSPHERE-TOP radius and places it in Earth's frame, so in this mesh's
 // local frame the atmosphere top is the UNIT sphere and the ground sphere has
-// radius 'u.bottomRadius' in (0, 1). This stage stays a plain matrix multiply
+// radius 'uniforms.bottomRadius' in (0, 1). This stage stays a plain matrix multiply
 // and forwards the unit-atmosphere-top LOCAL position to the fragment, which
-// reconstructs the view ray from it and 'u.camPosLocal'.
+// reconstructs the view ray from it and 'uniforms.camPosLocal'.
 //
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'AtmosphereUniforms' (176 bytes: the mat4x4<f32>
 // MVP, body-local sun direction, bottomRadius, camPosLocal, exposure, ring
 // ratios, and the inverse MVP), visible in BOTH stages. The vertex reads only
-// 'u.mvp'; the fragment reads the rest. The '@group/@binding' declaration is
-// module-local (WESL has no global state), so we declare 'u' here and pass
-// 'u.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
+// 'uniforms.mvp'; the fragment reads the rest. The '@group/@binding' declaration is
+// module-local (WESL has no global state), so we declare 'uniforms' here and pass
+// 'uniforms.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
 // capture' idiom.
 //
 // ## Attribute layout
@@ -37,7 +37,7 @@
 import package::lib::sphere::AtmosphereUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AtmosphereUniforms;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
@@ -50,7 +50,7 @@ struct VsOut {
 @vertex
 fn vs(@location(0) position: vec3<f32>) -> VsOut {
   var out: VsOut;
-  out.clip = clip_from_local(u.mvp, position);
+  out.clip = clip_from_local(uniforms.mvp, position);
   out.localPos = position;
   return out;
 }

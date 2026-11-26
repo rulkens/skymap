@@ -41,10 +41,14 @@ import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/sym
 import { angleBetween } from '../../../../../helpers/math/angleBetween';
 import { requestBandsOf } from '../../../../../support/requestBandsOf';
 
+/** Nothing here is stored-empty unless a test says so (`resolveStandaloneRect.test.ts` owns that). */
+const cutNoEmpties = (input: Omit<Parameters<typeof cutSurfaceTiles>[0], 'isEmpty'>) =>
+  cutSurfaceTiles({ isEmpty: () => false, ...input });
+
 /** Every product requests over the fixture's `bands`, as `derivePlannerParams`
  *  builds them while albedo and height share one rule. */
-function cutWithSharedBands(input: Omit<Parameters<typeof cutSurfaceTiles>[0], 'requestBands'>) {
-  return cutSurfaceTiles({ ...input, requestBands: requestBandsOf(input.bands) });
+function cutWithSharedBands(input: Omit<Parameters<typeof cutNoEmpties>[0], 'requestBands'>) {
+  return cutNoEmpties({ ...input, requestBands: requestBandsOf(input.bands) });
 }
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
@@ -64,6 +68,7 @@ const WHOLE_ATLAS = {
   atlasUvOrigin: [0, 0] as const,
   atlasUvScale: [1, 1] as const,
   readyAtMs: 0,
+  subtreeRangeM: null,
 };
 
 /** The default fixture band: one whole-globe pyramid from `MIN_TILE_LEVEL`. */
@@ -345,6 +350,7 @@ describe('cutSurfaceTiles', () => {
               atlasUvOrigin: [0.25, 0.5] as const,
               atlasUvScale: [0.125, 0.125] as const,
               readyAtMs: 42_000,
+              subtreeRangeM: null,
             }
           : null,
       );
@@ -378,9 +384,9 @@ describe('cutSurfaceTiles', () => {
       };
       const residentSlot = withHeight((tile: SurfaceTileId) => {
         if (tile.z === z && tile.x === x && tile.y === y)
-          return { slot: 7, ...leafRect, readyAtMs: 5_000 };
+          return { slot: 7, ...leafRect, readyAtMs: 5_000, subtreeRangeM: null };
         if (tile.z === parentZ && tile.x === parentX && tile.y === parentY)
-          return { slot: 3, ...parentRect, readyAtMs: 1_000 };
+          return { slot: 3, ...parentRect, readyAtMs: 1_000, subtreeRangeM: null };
         return null;
       });
 
@@ -433,7 +439,7 @@ describe('cutSurfaceTiles', () => {
       };
       const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
-          ? { slot: 3, ...ancestorRect, readyAtMs: 9_000 }
+          ? { slot: 3, ...ancestorRect, readyAtMs: 9_000, subtreeRangeM: null }
           : null,
       );
 
@@ -478,6 +484,7 @@ describe('cutSurfaceTiles', () => {
               atlasUvOrigin: [0, 0] as const,
               atlasUvScale: [1, 1] as const,
               readyAtMs: 0,
+              subtreeRangeM: null,
             }
           : null,
       );
@@ -523,7 +530,7 @@ describe('cutSurfaceTiles', () => {
         tile.product === 'height'
           ? heights(tile)
           : tile.z === z7 && tile.x === z7x && tile.y === z7y
-            ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
+            ? { slot: 3, ...ancestorRect, readyAtMs: 3_000, subtreeRangeM: null }
             : null;
 
       const result = cutWithSharedBands({ ...nadirAt(1000), bands, residentSlot });
@@ -582,6 +589,7 @@ describe('cutSurfaceTiles', () => {
                 atlasUvOrigin: [0, 0] as const,
                 atlasUvScale: [1, 1] as const,
                 readyAtMs: 0,
+                subtreeRangeM: null,
               }
             : null,
         input.bands,
@@ -729,16 +737,16 @@ describe('cutSurfaceTiles', () => {
     // 1000 km reaches z8; five halvings reach the bands' z13.
     const LEAF_ALTITUDE_KM = 1000 / 32;
 
-    function cutWithNight(input: Omit<Parameters<typeof cutSurfaceTiles>[0], 'requestBands'>) {
-      return cutSurfaceTiles({
+    function cutWithNight(input: Omit<Parameters<typeof cutNoEmpties>[0], 'requestBands'>) {
+      return cutNoEmpties({
         ...input,
         requestBands: { ...requestBandsOf(input.bands), night: NIGHT_BANDS },
       });
     }
     /** Albedo and height resident everywhere the bake has them; night per `night`. */
     function residentWithNight(
-      night: Parameters<typeof cutSurfaceTiles>[0]['residentSlot'],
-    ): Parameters<typeof cutSurfaceTiles>[0]['residentSlot'] {
+      night: Parameters<typeof cutNoEmpties>[0]['residentSlot'],
+    ): Parameters<typeof cutNoEmpties>[0]['residentSlot'] {
       return (tile: SurfaceTileId) =>
         tile.product === 'height'
           ? HEIGHT_ONLY(tile)
@@ -760,6 +768,7 @@ describe('cutSurfaceTiles', () => {
               atlasUvOrigin: [0.25, 0.5] as const,
               atlasUvScale: [ancestorScale, ancestorScale] as const,
               readyAtMs: 0,
+              subtreeRangeM: null,
             }
           : null,
       );
@@ -769,11 +778,14 @@ describe('cutSurfaceTiles', () => {
       expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       const span = 1 << d;
       const scale = ancestorScale / span;
-      expect(leaf!.night).not.toBeNull();
-      expect(leaf!.night!.atlasUvScale[0]).toBeCloseTo(scale, 12);
-      expect(leaf!.night!.atlasUvScale[1]).toBeCloseTo(scale, 12);
-      expect(leaf!.night!.atlasUvOrigin[0]).toBeCloseTo(0.25 + (x & (span - 1)) * scale, 12);
-      expect(leaf!.night!.atlasUvOrigin[1]).toBeCloseTo(0.5 + (y & (span - 1)) * scale, 12);
+      const night = leaf!.standalone.night;
+      expect(night).not.toBeNull();
+      expect(night).not.toBe('empty');
+      const rect = night as Exclude<typeof night, 'empty' | null>;
+      expect(rect.atlasUvScale[0]).toBeCloseTo(scale, 12);
+      expect(rect.atlasUvScale[1]).toBeCloseTo(scale, 12);
+      expect(rect.atlasUvOrigin[0]).toBeCloseTo(0.25 + (x & (span - 1)) * scale, 12);
+      expect(rect.atlasUvOrigin[1]).toBeCloseTo(0.5 + (y & (span - 1)) * scale, 12);
     });
 
     it('night never asks for a tile below the night bands', () => {
@@ -807,7 +819,7 @@ describe('cutSurfaceTiles', () => {
       });
       const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
       expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
-      expect(leaf!.night).toBeNull();
+      expect(leaf!.standalone.night).toBeNull();
     });
   });
 
@@ -1169,7 +1181,7 @@ describe('cutSurfaceTiles', () => {
     function everestResidentSlot(range: readonly [number, number]) {
       return (tile: SurfaceTileId) => ({
         ...WHOLE_ATLAS,
-        subtreeRangeM: tile.product === 'height' ? range : undefined,
+        subtreeRangeM: tile.product === 'height' ? range : null,
       });
     }
 
@@ -1296,6 +1308,7 @@ describe('cutSurfaceTiles', () => {
           atlasUvOrigin: [0, 0] as const,
           atlasUvScale: [1, 1] as const,
           readyAtMs: 0,
+          subtreeRangeM: null,
         };
       }
       return null;

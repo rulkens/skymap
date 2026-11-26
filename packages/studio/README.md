@@ -1,6 +1,6 @@
 # studio
 
-The clip studio: a timeline editor for registry clips. It opens any clip in `clipRegistry`, shows
+The clip studio: a timeline editor for registry clips. It opens any clip in `APP_CLIP_REGISTRY`, shows
 its structure and the compiler's timing as an outline beside tracks, and edits step parameters with
 undo, and previews the clip in the 3D view at the playhead: scrubbing seeks camera and scene,
 Play/Pause/Loop run it (S4). It does not save yet; the plan and its later slices are in
@@ -47,7 +47,7 @@ The app knows the package only by two dynamic `import()`s of `studioEntry.ts`:
 (the React host). The package deep-imports app types, engine and store modules by relative path;
 those live in the main chunk, so the lazy chunk depends on main and never the reverse.
 
-Its state is a slice injected into the app's root reducer when the chunk loads (ADR 0016): the
+Its state is a slice injected into the app's root reducer when the chunk loads (ADR 0017): the
 selectors module calls `injectInto`, and every read goes through those selectors, since the app's
 `RootState` does not know the slice.
 Components read the store through `src/store/hooks.ts`, never `react-redux`, and nothing imports

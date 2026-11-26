@@ -1,7 +1,8 @@
 /**
  * The cosmicWebDensity Layer: the Physarum density cubes (MCPM, Polyphorm
  * 2MRS, the MCPM workbench export) — one renderer holding every cube, its
- * additive upsample, both passes, the `cosmic-web-density` render target, one
+ * additive upsample, the accumulation planner, both passes, the retained
+ * `cosmic-web-density` render target, one
  * slot and asset row per source row, its one show entry, and
  * both its SettingsPanel and DebugPanel sections.
  */
@@ -13,6 +14,7 @@ import { cosmicWebDensityVisibility } from './visibility';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
+import { cosmicWebDensityAccumulationPlanner } from './frame';
 import { cosmicWebDensityPass } from './densityCubes/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from './densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './densityCubes/load/cosmicWebDensityAssetRows';
@@ -33,11 +35,19 @@ export const cosmicWebDensityLayer = defineLayer({
       // the cubes are bandlimited and dithered, so the upsample loses nothing.
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      // The running mean lives in the target across frames, one texture per view.
+      retained: true,
     },
   ],
   create,
   destroy,
-  passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
+  planners: (runtime) => [cosmicWebDensityAccumulationPlanner(runtime)],
+  // The second planner instance is only a typed handle: the result store keys by
+  // planner name, so it reads the one above's value.
+  passes: (runtime) => [
+    cosmicWebDensityPass(runtime, cosmicWebDensityAccumulationPlanner(runtime)),
+    cosmicWebDensityUpsamplePass(runtime),
+  ],
   assets: cosmicWebDensityAssetRows,
   ui: [
     {

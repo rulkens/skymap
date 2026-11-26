@@ -24,7 +24,7 @@ import { installRecorderHook } from '../../../src/state/recorder/installRecorder
 import { startTour } from '../../../src/state/tour/tourActions';
 import { takeoverStarted, takeoverEnded } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
-import { clipStarted, clipEnded } from '../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded } from '../../../src/state/camera/cameraIntentSlice';
 import { engineLoadProgressChanged } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
@@ -161,7 +161,9 @@ describe('installRecorderHook', () => {
     expect(dispatched?.payload).toBe('flyout');
 
     // Activation must not resolve it...
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     await Promise.resolve();
     expect(settled).toBe(false);
 
@@ -198,7 +200,9 @@ describe('installRecorderHook', () => {
 
     const clipData: ClipData = { timeline: [] };
     // Clip A is running (the player's activation write, driven directly).
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
 
     await expect(hook.startClip('earthFlyout')).rejects.toThrow(

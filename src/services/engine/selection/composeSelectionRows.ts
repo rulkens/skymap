@@ -1,16 +1,10 @@
 /**
  * composeSelectionRows — the one `SelectionResolver` the saga context and the
- * pick path both read (D5, Ruling 4). `rowsOf` is called per resolution, not
- * cached, so a Layer row `createLayers` appends after this resolver is built
- * is visible immediately. Focus ids resolve by claim-then-decode
- * (see `claimingSelectionRow`).
- *
- * `pickingOff` gates `resolvePick` ONLY — a deep link, a command-palette
- * row, or a restored URL selection must still resolve a kind a scene click
- * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated. It
- * is required rather than defaulting to none: a caller that forgot it would
- * silently ignore every view's pick restriction, which no test or type would
- * catch. Tests that do not exercise the gate pass `tests/support/noKindsOff`.
+ * pick path read (D5). `rowsOf` is read per call, so rows `createLayers` appends
+ * later are seen; focus ids resolve claim-then-decode (`claimingSelectionRow`).
+ * `pickingOff` gates `resolvePick` only: a deep link must still reach a kind a
+ * click cannot. It is required, not defaulted, so a caller can't silently drop
+ * every view's pick restriction (tests pass `tests/support/noKindsOff`).
  */
 
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
@@ -42,8 +36,8 @@ export function composeSelectionRows(
     },
 
     resolveFocusId(focusId) {
-      if (!focusId) return null;
-      return claimingRow(focusId)?.focusId!.decode(focusId) ?? null;
+      const row = focusId ? claimingRow(focusId) : null;
+      return row ? row.focusId!.decode(focusId) : { kind: 'absent' };
     },
 
     claimedKind(focusId) {

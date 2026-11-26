@@ -29,7 +29,7 @@ import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBound
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/layers/body/clouds/data/cloudShellParams';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -408,8 +408,8 @@ describe('surfaceTilesPass', () => {
   ];
   const ATLAS_VIEW = {} as GPUTextureView;
 
-  it('is ordered immediately after the base globe in every roster that draws it', () => {
-    // The tile pipeline's depth compare needs the globe's depth already written: an ordering fact.
+  it('is ordered immediately before the base globe in every roster that draws it', () => {
+    // The globe lies under every patch; drawn second, the depth test skips its covered pixels.
     const rosters = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground'
         ? [step.bodyPasses]
@@ -419,7 +419,7 @@ describe('surfaceTilesPass', () => {
     ).filter((roster) => roster.includes('surface-tiles'));
     expect(rosters.length).toBeGreaterThan(0);
     for (const roster of rosters) {
-      expect(roster.indexOf('surface-tiles')).toBe(roster.indexOf('earth') + 1);
+      expect(roster.indexOf('earth')).toBe(roster.indexOf('surface-tiles') + 1);
     }
   });
 
@@ -440,8 +440,8 @@ describe('surfaceTilesPass', () => {
     const [pass, args] = tileDraw.mock.calls[0]!;
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
-    expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
-    expect(args.heightAtlasView).toBe(HEIGHT_ATLAS_VIEW);
+    expect(args.atlasViews.albedo).toBe(ATLAS_VIEW);
+    expect(args.atlasViews.height).toBe(HEIGHT_ATLAS_VIEW);
     // No rebase: the tile vp is the slab's own eye-relative f32 `view.vp`.
     expect(args.vp).toBe(view.vp);
     expect(args.radiusM).toBe(SEEDED_EARTH.surface.datumRadiusM);
@@ -586,9 +586,7 @@ describe('earthPass.drawPick', () => {
       { mvp: Float32Array; camPosLocal: Vec3; packedId: number },
     ];
     expect(pass).toBe(PASS_STUB);
-    expect(args.packedId).toBe(
-      packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
-    );
+    expect(args.packedId).toBe(packPickWord(PICK_CODES.pickCodeOf('earth'), 0));
 
     // The mvp and camLocal MUST share one floored radius (drawFlooredSpherePick's invariant).
     expect(mvpMock).toHaveBeenCalledTimes(1);

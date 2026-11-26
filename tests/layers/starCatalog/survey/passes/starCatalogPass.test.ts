@@ -15,6 +15,8 @@ import { starCatalogPass } from '../../../../../src/layers/starCatalog/survey/pa
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { makeSlab } from '../../../../fixtures/makeSlab';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
@@ -37,7 +39,13 @@ function camAtPc(distPc: number): Vec3 {
 
 function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
-    snapshot: { nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: {
+      nowMs: 0,
+      focus: ZERO_FOCUS,
+      bodyStates: deriveBodyStates(CONST_J2000),
+      sceneBodies: [],
+    },
+    slabs: [makeSlab()],
     drawCamPos: camPos,
     viewKind: 'frame',
     viewSlot: 3,

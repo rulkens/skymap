@@ -1,26 +1,26 @@
 /**
  * delightedImagerySource — wrap a photographic `SurfaceImagerySource` (a
  * mosaic with its own baked-in sun) so it reads flat under the renderer's
- * real-time lighting, then apply a `ColourGrade`. Maths and constants are the
- * albedo bench's, landed verbatim (`AlbedoDelight`'s doc comment); a later PR
- * replaces this with a shared implementation. Identity fields are `source`'s.
+ * real-time lighting, then apply a `ColourGrade`. Maths and constants come from
+ * the albedo bench (`AlbedoDelight`'s doc comment), plus a per-cell photo Sun
+ * (`PhotoSun`). Identity fields are `source`'s.
  *
  * `S` (relief-shading removal) and `B` (low-pass of the delit luminance) are
  * LOW-frequency fields, built ONCE on a whole-globe coarse grid and sampled
  * bilinearly per output pixel — building them per tile would decode the
- * mosaic and MOLA thousands of times over.
+ * mosaic and the DEM thousands of times over.
  */
 
 import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { ColourGrade } from '../../src/layers/body/textures/@types/ColourGrade';
-import { MARS_IAU_SPHERE_RADIUS_M } from '../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import type { AlbedoDelight } from './@types/AlbedoDelight';
 import type { HeightSource } from './@types/HeightSource';
+import type { PhotoSun } from './@types/PhotoSun';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
-/** The coarse field's level: fine enough to resolve MOLA's own relief, coarse
+/** The coarse field's level: fine enough to resolve the DEM's own relief, coarse
  *  enough that a whole-globe field is a few million cells, not billions. */
 const COARSE_LEVEL = 5;
 
@@ -43,11 +43,31 @@ const smoothstep = (e0: number, e1: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/** Azimuth clockwise from north, as the bench's photographic sun is specified. */
-function sunDirection(azDeg: number, elDeg: number): readonly [number, number, number] {
-  const az = (azDeg * Math.PI) / 180;
-  const el = (elDeg * Math.PI) / 180;
-  return [Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)];
+/** Floor on the photo Sun's up component (sin 5°): a subsolar Sun sinks to
+ *  the horizon toward the poles, and dividing by its height there turns any
+ *  slope into an unbounded relief ratio. */
+const MIN_PHOTO_SUN_UP = 0.087;
+
+/** Unit vector (east, north, up) toward the photo Sun from a cell. */
+function photoSunDirection(
+  sun: PhotoSun,
+  lonDeg: number,
+  latDeg: number,
+): readonly [number, number, number] {
+  if (sun.kind === 'fixed') {
+    const az = (sun.azDeg * Math.PI) / 180;
+    const el = (sun.elDeg * Math.PI) / 180;
+    return [Math.sin(az) * Math.cos(el), Math.cos(az) * Math.cos(el), Math.sin(el)];
+  }
+  // Toward an equatorial subsolar point `offsetDeg` east or west of the cell.
+  const offset = (sun.offsetDeg * Math.PI) / 180;
+  const lat = (latDeg * Math.PI) / 180;
+  const east = lonDeg < sun.seamLonDeg ? 1 : -1;
+  return [
+    east * Math.sin(offset),
+    -Math.sin(lat) * Math.cos(offset),
+    Math.cos(lat) * Math.cos(offset),
+  ];
 }
 
 /** A pixel needs no de-lighting work at all when every knob that reads the
@@ -56,7 +76,7 @@ function needsDelight(delight: AlbedoDelight): boolean {
   return delight.reliefShade > 0 || delight.flatten > 0 || delight.tame > 0;
 }
 
-/** `1 + (lit - 1) * hs` per coarse cell, from MOLA normals at `hex` exaggeration
+/** `1 + (lit - 1) * hs` per coarse cell, from height normals at `hex` exaggeration
  *  against the photographic sun — the ratio flat ground would need to read as
  *  it does under that sun, so dividing luminance by it removes the sun's relief. */
 async function buildReliefShadeField(
@@ -65,6 +85,7 @@ async function buildReliefShadeField(
   width: number,
   gridHeight: number,
   stepDeg: number,
+  sphereRadiusM: number,
 ): Promise<Float32Array> {
   const posts = await height.readGrid(COARSE_LEVEL, 0, 0, width + 1, gridHeight + 1);
   if (posts === null) {
@@ -83,8 +104,7 @@ async function buildReliefShadeField(
     }
   }
 
-  const dy = MARS_IAU_SPHERE_RADIUS_M * ((stepDeg * Math.PI) / 180);
-  const light = sunDirection(delight.photoSunAzDeg, delight.photoSunElDeg);
+  const dy = sphereRadiusM * ((stepDeg * Math.PI) / 180);
   const hex = delight.reliefExaggeration;
   const hs = delight.reliefShade;
   const field = new Float32Array(width * gridHeight);
@@ -104,7 +124,9 @@ async function buildReliefShadeField(
       const nx = -gx * inv;
       const ny = -gy * inv;
       const nz = inv;
-      const lit = Math.max(0.15, (nx * light[0] + ny * light[1] + nz * light[2]) / light[2]);
+      const light = photoSunDirection(delight.photoSun, -180 + (i + 0.5) * stepDeg, lat);
+      const up = Math.max(MIN_PHOTO_SUN_UP, light[2]);
+      const lit = Math.max(0.15, (nx * light[0] + ny * light[1] + nz * light[2]) / up);
       field[j * width + i] = 1 + (lit - 1) * hs;
     }
   }
@@ -198,13 +220,14 @@ async function buildCoarseFields(
   source: SurfaceImagerySource,
   height: HeightSource,
   delight: AlbedoDelight,
+  sphereRadiusM: number,
 ): Promise<CoarseFields> {
   const stepDeg = heightLatticeStepDeg(COARSE_LEVEL);
   const width = Math.round(360 / stepDeg);
   const gridHeight = Math.round(180 / stepDeg);
   const relightRatio =
     delight.reliefShade > 0
-      ? await buildReliefShadeField(height, delight, width, gridHeight, stepDeg)
+      ? await buildReliefShadeField(height, delight, width, gridHeight, stepDeg, sphereRadiusM)
       : new Float32Array(width * gridHeight).fill(1);
   let lowPass: Float32Array = new Float32Array(0);
   if (delight.flatten > 0) {
@@ -250,6 +273,7 @@ export function delightedImagerySource(
   height: HeightSource,
   delight: AlbedoDelight,
   grade: ColourGrade,
+  sphereRadiusM: number,
 ): SurfaceImagerySource {
   let fields: Promise<CoarseFields> | undefined;
 
@@ -266,7 +290,7 @@ export function delightedImagerySource(
       const out = new Uint8Array(raster);
 
       if (needsDelight(delight)) {
-        fields ??= buildCoarseFields(source, height, delight);
+        fields ??= buildCoarseFields(source, height, delight, sphereRadiusM);
         const { width, height: fieldHeight, relightRatio, lowPass } = await fields;
         const span = Math.max(1e-3, 1 - delight.knee);
         for (let py = 0; py < heightPx; py++) {

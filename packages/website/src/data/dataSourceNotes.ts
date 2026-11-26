@@ -285,7 +285,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'JPL’s positions for 8 planets and 18 moons from 1900 to 2100, which our orbits are corrected to.',
     about:
-      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it.',
+      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it, and so is the path of the asteroid 2026 QQ8 through 2026, the year Earth temporarily captured it.',
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
     shows: 'No switch. It corrects the positions of the planets and moons between 1900 and 2100.',
     scene: 'planets-and-their-moons',
@@ -298,6 +298,21 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'CelesTrak publishes the orbit of every tracked object the US Space Force releases, as the mean elements its SGP4 model needs. Once a day we download the active satellites, three debris clouds and the last month’s launches, drop the orbits SGP4 cannot run and store the rest in our own compact file.',
     shows:
       'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
+  },
+  mpcorb: {
+    description:
+      'The Minor Planet Center’s orbits of every numbered asteroid, about 896,000 of them, rewritten daily.',
+    about:
+      'The Minor Planet Center collects the world’s observations of asteroids and comets and publishes an orbit for each object. We take the numbered asteroids out to Jupiter’s trojans, store their orbits in our own compact file and ship the file’s header with it, as the Center asks.',
+    shows:
+      'The asteroids layer: every numbered asteroid out to Jupiter’s trojans as a point, placed from its orbit for the date on the clock.',
+  },
+  'sbdb-diameters': {
+    title: 'Asteroid diameters',
+    description:
+      'JPL’s measured diameters and albedos of about 135,000 numbered asteroids, most from the NEOWISE telescope.',
+    shows:
+      'The diameter and albedo on an asteroid’s card. An asteroid without one shows a range estimated from its brightness.',
   },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
@@ -402,11 +417,11 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   'nasa-blue-marble': {
     description:
-      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights, clouds and water.',
+      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights and water.',
     about:
-      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights, the clouds and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
+      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
     facts: ['sci-earth-clouds', 'sci-surfaces'],
-    shows: 'Earth’s surface from far away and down to tile level 7, its night side and its clouds.',
+    shows: 'Earth’s surface from far away and down to tile level 7, and its night side.',
     scene: 'earth-and-its-surface',
     figure: 'earth-terminator',
   },
@@ -414,8 +429,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Daily NASA GIBS and EUMETSAT weather-satellite imagery that tools/cloud-bake-rs turns into a cloud-opacity map.',
     about:
-      'A separate tool, not yet shipped in the app, turns a day of weather-satellite frames into one global cloud-opacity map: VIIRS on NOAA-20 and NOAA-21, GOES-East and GOES-West and Himawari through NASA GIBS, and Meteosat MTG and IODC through EUMETSAT’s EUMETView.',
-    shows: 'Nothing yet. The clouds on Earth are still the Blue Marble ones.',
+      'Polar satellites see each place about once a day; geostationary ones watch one half of the globe all day. Each night a tool joins a day of frames from both into one global map of cloud: VIIRS on NOAA-20 and NOAA-21, GOES-East, GOES-West and Himawari through NASA GIBS, and Meteosat through EUMETSAT.',
+    shows: 'Earth’s clouds, in the web app.',
     scene: 'earth-and-its-surface',
   },
   eox: {
@@ -446,6 +461,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
     figure: 'data-spirit',
   },
+  'lroc-wac': {
+    description:
+      'The Lunar Reconnaissance Orbiter’s wide-angle mosaic of the whole Moon, 100 metres per pixel.',
+    shows: 'The ground of the Moon as you come down to it, with the Sun’s shading taken out.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
+  },
 
   // Terrain
   etopo: {
@@ -475,6 +497,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The height of the ground of Mars.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
+  },
+  'lola-ldem': {
+    description:
+      'The height of the ground of the Moon, measured by the LOLA laser altimeter, 118 metres per pixel.',
+    shows: 'The height of the ground of the Moon.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
   },
   'hirise-gale': {
     description:

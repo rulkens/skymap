@@ -20,10 +20,10 @@ import package::bodies::bodyGlint::io::VSOut;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let r2 = dot(in.uv, in.uv);
+  let radiusSq = dot(in.uv, in.uv);
   // Discard the billboard's corners so the dot is round.
-  if (r2 > 1.0) { discard; }
+  if (radiusSq > 1.0) { discard; }
   // Gaussian-like falloff — the glint's own soft-dot profile.
-  let alpha = exp(-r2 * 4.0);
+  let alpha = exp(-radiusSq * 4.0);
   return vec4<f32>(in.color * alpha, alpha);
 }

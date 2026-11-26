@@ -21,7 +21,7 @@ import {
   WHY_46_BILLION,
 } from './observableUniverse.copy';
 
-export const observableUniverse: Exhibit = {
+export const observableUniverse: Exhibit<'observableUniverse'> = {
   id: 'observableUniverse',
   label: LABEL,
   settings: { cosmicHorizon: { enabled: true } },

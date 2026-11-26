@@ -22,8 +22,10 @@ import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
-import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
+import { outputProjectionOf } from '../../../../../src/utils/labels/outputProjectionOf';
+import { projectLabel } from '../../../../../src/utils/labels/projectLabel';
+import type { ProjectedLabel } from '../../../../../src/@types/rendering/ProjectedLabel';
+import { VIEW_RIGS } from '../../../../../src/data/rendering/viewRigs';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -121,6 +123,8 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     },
     slabs,
     bodyPose,
+    cam,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     canvasSize: { width: VIEWPORT[0], height: VIEWPORT[1] },
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
@@ -157,17 +161,14 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;
   const ringCall = ringDraw.mock.calls[0];
 
-  // The caption's own seam: `meshBodyCaption`'s world position made
-  // camera-relative (`produceMissionCaptions`'s compose, which needs the
-  // settings/fade graph this harness has no use for) projected through
-  // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
-  // leader line and `labelPickQuads` all consume.
-  const caption = meshBodyCaption(body, bodyState.positionMpc, 0);
-  const camRelAnchor: Vec3 = [
-    caption.worldPos[0] - ctx.drawCamPos[0],
-    caption.worldPos[1] - ctx.drawCamPos[1],
-    caption.worldPos[2] - ctx.drawCamPos[2],
-  ];
+  // The caption's own seam: the craft's anchor (its body state) through the label projection
+  // `projectRecords` and the label shader read.
+  const projection = outputProjectionOf(ctx, VIEW_RIGS.mono);
+  const m = projection.viewFromWorld;
+  const d = [0, 1, 2].map((k) => bodyState.positionMpc[k]! - ctx.drawCamPos[k]!);
+  const v = [0, 1, 2].map((r) => m[r]! * d[0]! + m[3 + r]! * d[1]! + m[6 + r]! * d[2]!) as Vec3;
+  const projected: ProjectedLabel = { px: [0, 0], up: [0, 0], pxPerRad: 0, visible: false };
+  projectLabel(v, projection, projected);
 
   return {
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
@@ -178,8 +179,13 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       unknown,
       { worldPos: Vec3; alpha: number },
     ],
-    captionClip: clipOf(near0LabelProjection(ctx).vpF32, camRelAnchor),
+    captionClip: captionClipOf(projected.px),
   };
+}
+
+/** A projected px as the w = 1 clip point `offsetPx` compares. */
+function captionClipOf(px: readonly number[]): number[] {
+  return [(px[0]! / VIEWPORT[0]) * 2 - 1, 1 - (px[1]! / VIEWPORT[1]) * 2, 0, 1];
 }
 
 function offsetPx(a: readonly number[], b: readonly number[]): number {

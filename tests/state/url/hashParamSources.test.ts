@@ -22,6 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { setFilmEnabled } from '../../../src/state/settings/core/filmSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
@@ -34,10 +35,24 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
 import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
+import type { EngineHomeConfig } from '../../../src/@types/engine/EngineHomeConfig';
+import { APP_HOME } from '../../../src/compositions/appHome';
+
+// Lets one case swap the composition's home; every other case reads the real APP_HOME.
+const homeOverride = vi.hoisted(() => ({ value: null as EngineHomeConfig | null }));
+vi.mock('../../../src/compositions/appHome', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/compositions/appHome')>();
+  return {
+    get APP_HOME() {
+      return homeOverride.value ?? actual.APP_HOME;
+    },
+  };
+});
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const filmSource = HASH_PARAM_SOURCES.find((source) => source.key === 'film')!;
 const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
@@ -56,12 +71,15 @@ const virgoRow = placedStructureRow({
 
 const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
+// The URL reads only the id, so any ref stands in for the one it was encoded from.
 function focusedOn(row: SelectionRowBase, focusId: string): RootState {
-  return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
+  const id = { id: focusId, ref: { type: row.type } };
+  return stateAfter(setSelectionRow({ slot: 'focus', row, id }));
 }
 
 afterEach(() => {
   vi.useRealTimers();
+  homeOverride.value = null;
 });
 
 describe('focus row', () => {
@@ -91,14 +109,24 @@ describe('focus row', () => {
     // still resolved would otherwise republish the OLD id until the new one
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({
+        slot: 'focus',
+        row: virgoRow,
+        id: { id: 'cluster-virgo-m87', ref: { type: 'structure', id: 'cluster-virgo-m87' } },
+      }),
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');
   });
 
-  it('writes nothing for the Earth home body (a bare URL is home)', () => {
-    expect(focusSource.write(focusedOn(earthRow, 'body-earth'))).toBeNull();
+  it("a focus that is the composition's home composes no param", () => {
+    const homeId = APP_HOME.focus!.ref.id;
+    expect(focusSource.write(focusedOn(bodyRowAt(homeId, [0, 0, 0]), `body-${homeId}`))).toBeNull();
+  });
+
+  it('with a null-focus home, a focused body composes its param', () => {
+    homeOverride.value = { focus: null, seedSelection: false };
+    expect(focusSource.write(focusedOn(earthRow, 'body-earth'))).toBe('body-earth');
   });
 });
 
@@ -145,6 +173,16 @@ describe('orientation row', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('film row', () => {
+  it('film writes 1 only while on, reads 1 as on, and absent turns it off', () => {
+    expect(filmSource.write(stateAfter(setFilmEnabled(true)))).toBe('1');
+    expect(filmSource.write(stateAfter(setFilmEnabled(false)))).toBeNull();
+    expect(filmSource.read('1')).toEqual({ film: true });
+    expect(filmSource.read('0')).toEqual({});
+    expect(filmSource.readAbsent()).toEqual([setFilmEnabled(false)]);
   });
 });
 

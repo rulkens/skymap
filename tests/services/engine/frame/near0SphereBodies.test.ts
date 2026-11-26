@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { near0SphereBodies } from '../../../../src/services/engine/frame/near0SphereBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../../src/layers/starCatalog/bodies/sceneStars';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 

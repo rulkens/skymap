@@ -41,9 +41,9 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { webShowcase } from '../../../src/data/animation/tours/webShowcase';
+import { webShowcase } from '../../../src/compositions/tours/webShowcase';
 import { resolveClipFoci } from '../../../src/services/engine/animation/resolveClipFoci';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
@@ -216,8 +216,10 @@ describe('webShowcase dive invariants', () => {
 
     // Activate a clip so camera.clip !== null.
     const beat2Clip = webShowcase.beats[1]!.enterClip!;
-    store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
-    expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
+    store.dispatch(
+      clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
+    expect(store.getState().camera.intent.clip).not.toBeNull(); // guard: clip is active
 
     // Dispatch a focus update — what a `keep` clip's end commit dispatches
     // while the clip is still active.
@@ -227,6 +229,6 @@ describe('webShowcase dive invariants', () => {
     await flush();
 
     // tween must remain null — suspendDuringClip short-circuited the worker.
-    expect(store.getState().camera.tween).toBeNull();
+    expect(store.getState().camera.intent.tween).toBeNull();
   });
 });

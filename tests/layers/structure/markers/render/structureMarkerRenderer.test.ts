@@ -12,7 +12,7 @@ import { structurePickCodes } from '../../../../support/layerPickCodes';
 
 const CODE_OF = structurePickCodes().pickCodeOf;
 
-// Null-device pattern, mirrors markerLineRenderer.test.ts.
+// Null-device pattern, mirrors labelRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
   const ctx = {
     device: null as unknown as GPUDevice,

@@ -16,11 +16,18 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
-import { startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
+import { APP_HOME } from '../../../src/compositions/appHome';
+import { homePose } from '../../../src/services/engine/camera/framing/homePose';
+import {
+  updateSelectionFocus,
+  updateSelectionSelect,
+} from '../../../src/state/selection/selectionSlice';
+import type { EngineHomeConfig } from '../../../src/@types/engine/EngineHomeConfig';
 import { bodyHomePose } from '../../../src/services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { selectOrientation } from '../../../src/state/settings/selectors';
@@ -54,7 +61,7 @@ describe('watchGoHomeSaga', () => {
   // Every planted tween, in order: the reducer keeps only the last.
   let tweens: CameraTweenDescriptor[];
 
-  function build() {
+  function build(home: EngineHomeConfig = APP_HOME) {
     const mw = createSagaMiddleware();
     const recordTweens: Middleware = () => (next) => (action) => {
       if (startCameraTween.match(action)) tweens.push(action.payload);
@@ -80,6 +87,7 @@ describe('watchGoHomeSaga', () => {
         () => [bodySelectionRow({ pickCodes: bodyPickCodes() })],
         () => NO_KINDS_OFF,
       ),
+      home,
     });
     return s;
   }
@@ -108,7 +116,7 @@ describe('watchGoHomeSaga', () => {
     expect(selection.select).toEqual(EARTH_REF);
     expect(selection.focus).toEqual(EARTH_REF);
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
 
@@ -131,7 +139,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
     expect(store.getState()[selectionRoute].select).toBeNull();
     expect(store.getState()[selectionRoute].focus).toBeNull();
   });
@@ -142,7 +150,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween!.motion).toEqual({
+    expect(store.getState()[cameraRoute].intent.tween!.motion).toEqual({
       style: 'eased',
       durationMs: 1234,
       ease: 'easeOutCubic',
@@ -164,5 +172,23 @@ describe('watchGoHomeSaga', () => {
     expect(tweens).toHaveLength(1);
     expect(tweens[0]!.motion.style).toBe('geodesic');
     expect(tweens[0]!.to).toEqual(bodyHomePose(asSceneBodyId('earth'), simDays, FOV, frameBasis));
+  });
+
+  it('a null-focus home clears the selection and tweens to the fixed home pose', async () => {
+    const nullHome: EngineHomeConfig = { focus: null, seedSelection: false };
+    store = build(nullHome);
+    store.dispatch(updateSelectionSelect(EARTH_REF));
+    store.dispatch(updateSelectionFocus(EARTH_REF, 'cut'));
+    tweens = [];
+
+    store.dispatch(goHome());
+    await flush();
+
+    expect(store.getState()[selectionRoute].select).toBeNull();
+    expect(store.getState()[selectionRoute].focus).toBeNull();
+    const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
+    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    expect(tweens).toHaveLength(1);
+    expect(tweens[0]!.to).toEqual(homePose(nullHome, FOV, simDays, frameBasis).pose);
   });
 });

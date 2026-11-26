@@ -26,9 +26,8 @@ import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptu
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createLabel2DDirector } from './subsystems/label2DDirector';
-import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
-import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
+import { createLabelDirectorState } from './labels/createLabelDirectorState';
+import { LABEL_DIRECTORS } from '../../data/labels/labelDirectors';
 import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { syncVisibilityTargets } from './wiring/syncVisibilityTargets';
@@ -101,7 +100,8 @@ export function createEngine(
     // At the last drawn sim instant, never a wall-clock read (the recorder steps the clock).
     extractFocusRow: (ref) => {
       const row = selection.extractRow(ref, state.cameraRuntime.outputs.simDays);
-      return { row, focusId: (ref && row && selection.focusIdOf(ref)) || null };
+      const encoded = ref && row ? selection.focusIdOf(ref) : null;
+      return { row, id: ref && encoded ? { id: encoded, ref } : null };
     },
     syncVisibility: (settings, overMs) =>
       syncVisibilityTargets(
@@ -195,12 +195,11 @@ export function createEngine(
       fontAtlases: null,
       uiCtx: null,
       labelRendererCosmo: null,
-      markerLineRendererCosmo: null,
       labelRendererNear: null,
-      markerLineRendererNear: null,
       labelPickRendererCosmo: null,
       labelPickRendererNear: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
@@ -208,19 +207,20 @@ export function createEngine(
       bloomPyramid: null,
       pickDebugOverlay: null,
       // Lit triangle-mesh bodies attached to a host body's slab;
-      // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
+      // the Layers' mesh slots reach it through `LayerCoreDeps.meshBodies`.
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
+      occlusionMaskRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
+      sampledTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
       // initGpu swaps in the device-aware service. Consumers gate on `.enabled`.
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
-      foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
 
       recedingFocus: createRecedingFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),
@@ -272,6 +272,9 @@ export function createEngine(
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
+    frameIndex: 0,
+    perViewPlanMemory: new Map(),
+    previousViews: new Map(),
     // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
     // that getter, above, is the unrelated saga display cache.
     layers: [],
@@ -291,6 +294,7 @@ export function createEngine(
     visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailGroups: [],
+    sampledTrailGroups: [],
     terrainHeightAt: datumOnlyTerrainHeight,
   };
 
@@ -315,9 +319,8 @@ export function createEngine(
 
   // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
   // createLayers fills it once, in tuple order. `selection` reads it lazily (never
-  // rebuilds a list), so a deep link or the home ref seen before createLayers
-  // resolves nothing yet and waits on the engineStatusChanged pulse
-  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
+  // rebuilds a list). Before createLayers a focus id answers absent and its request
+  // retires; the home ref waits on the engineStatusChanged pulse (watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.off,
@@ -405,8 +408,6 @@ export function createEngine(
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 
-    state.subsystems.cosmoLabelDirector.destroy();
-    state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.recedingFocus.destroy();
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
@@ -432,7 +433,7 @@ export function createEngine(
 
   const unsettled = (): string[] => [
     ...(frameStats.threw ? ['last frame threw'] : []),
-    ...viewUnsettledReasons(state, readRoot().camera),
+    ...viewUnsettledReasons(state, readRoot().camera.intent),
   ];
 
   // The engine's only public surface: imperative operations only — store writes go
@@ -487,7 +488,7 @@ export function createEngine(
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays);
         return cameraDebugSnapshotOf({
-          storedFrame: rootState.camera.base.frame,
+          storedFrame: rootState.camera.intent.base.frame,
           renderedPose: outputs.displayed,
           worldPose: liveWorldPose(state),
           poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
@@ -502,7 +503,7 @@ export function createEngine(
           gesture:
             gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
-          tuning: rootState.camera.tuning,
+          tuning: rootState.camera.intent.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: state.terrainHeightAt,
         });

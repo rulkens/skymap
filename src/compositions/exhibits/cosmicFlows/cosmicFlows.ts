@@ -28,7 +28,7 @@ import {
   WHAT_YOURE_SEEING,
 } from './cosmicFlows.copy';
 
-export const cosmicFlows: Exhibit = {
+export const cosmicFlows: Exhibit<'cosmicFlows'> = {
   id: 'cosmicFlows',
   label: LABEL,
   settings: {

@@ -13,7 +13,7 @@ import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { GalaxyCatalogReq } from '../../../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
 import type { GalaxyPointRenderer } from '../../pointSprites/@types/GalaxyPointRenderer';
 import type { GalaxyCatalogFacts } from '../../@types/GalaxyCatalogFacts';
 

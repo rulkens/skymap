@@ -11,7 +11,7 @@ import { useFocusRescue } from '../../hooks/useFocusRescue';
 import { useKeysOverlay } from '../../hooks/useKeysOverlay';
 import { useNoSwipeBack } from '../../hooks/useNoSwipeBack';
 import { useStudioKeys } from '../../hooks/useStudioKeys';
-import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../../../../src/compositions/appClips';
 import { useIsMobile } from '../../../../../../src/hooks/useIsMobile';
 import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
 import s from './StudioDock.module.css';
@@ -36,7 +36,7 @@ function StudioDock({ clipId }: Props) {
       className={s.dock}
       style={{ height: `${fraction * 100}%` }}
       tabIndex={-1}
-      aria-label={`Clip studio: ${clipRegistry[clipId].label}`}
+      aria-label={`Clip studio: ${APP_CLIP_REGISTRY[clipId].label}`}
       onKeyDown={onKeyDown}
     >
       <DockGrabber fraction={fraction} onChange={setFraction} />

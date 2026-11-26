@@ -51,7 +51,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-not-here',
     about: 'app',
-    text: 'There are no asteroids or comets in the scene, no dwarf planet other than Pluto, and no planets of other stars.',
+    text: 'There are no comets in the scene, no unnumbered asteroids, no centaurs or objects beyond Neptune apart from Pluto, and no planets of other stars.',
     source: `${REPO_BLOB}/src/layers/body/bodies/`,
     sourceLabel: `the list of planets and moons, ${IN_REPO}`,
     checked: CHECKED,
@@ -100,7 +100,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
     id: 'scene-s-stars',
     about: 'app',
     text: 'Forty stars move around Sagittarius A* on orbits published from years of tracking them.',
-    source: `${REPO_BLOB}/src/data/bodies/sStarElements.ts`,
+    source: `${REPO_BLOB}/src/layers/starCatalog/bodies/sStarElements.ts`,
     sourceLabel: `the orbits of those stars, ${IN_REPO}`,
     checked: CHECKED,
   },

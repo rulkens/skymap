@@ -18,7 +18,7 @@ import {
   clipTransportSet,
   commitCameraPose,
   setAutoRotate,
-} from '../camera/cameraSlice';
+} from '../camera/cameraIntentSlice';
 import { startClip } from '../camera/clipActions';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { compileClip } from '../../services/engine/animation/compileClip';
@@ -138,12 +138,12 @@ async function scrubClip(
   frames: number,
 ): Promise<Record<string, number>[]> {
   store.dispatch(startClip(id));
-  for (let i = 0; store.getState().camera.clip === null; i++) {
+  for (let i = 0; store.getState().camera.intent.clip === null; i++) {
     if (i === CLIP_START_FRAMES) throw new Error(`perf: clip '${id}' never started`);
     engine.debug.requestRender();
     await engine.nextFrame();
   }
-  const { durationSec } = compileClip(store.getState().camera.clip!.data);
+  const { durationSec } = compileClip(store.getState().camera.intent.clip!.data);
   const out: Record<string, number>[] = [];
   cpuSpans.on = true;
   try {

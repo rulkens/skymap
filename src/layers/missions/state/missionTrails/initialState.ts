@@ -4,4 +4,5 @@ import type { MissionTrailsSettings } from '../../@types/MissionTrailsSettings';
 
 export const initialState: MissionTrailsSettings = {
   enabled: false,
+  nearPlanets: false,
 };

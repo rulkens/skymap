@@ -21,7 +21,7 @@ function SurfaceTileAtlasSectionContainer(): ReactElement {
   const onFlyToLonLat = useCallback(
     // `altKm` omitted keeps the camera's current altitude — what the text box
     // wants (fly there, stay as high as I am); the landmark buttons pass one.
-    (lonDeg: number, latDeg: number, body?: string, altKm?: number) =>
+    (lonDeg: number, latDeg: number, body: string, altKm?: number) =>
       dispatch(flyToLonLat({ lonDeg, latDeg, body, altKm })),
     [dispatch],
   );

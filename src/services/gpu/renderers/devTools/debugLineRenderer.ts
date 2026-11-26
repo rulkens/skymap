@@ -1,27 +1,11 @@
 /**
  * debugLineRenderer — the dedicated debug-draw pass's screen-space thick-line
- * renderer.
- *
- * ## Why a near-twin of markerLineRenderer rather than reuse it?
- *
- * The marker-line renderer is owned by the label director: its `setLines` is
- * the flush target of the producer-merge / declutter / fade machinery, and its
- * input `MarkerLine` carries id + fadeAlpha to support that reconcile. The
- * clip-path inspector wanted none of that — it precomputes a snapshot on a
- * button click and the pass uploads the whole speed-coloured route wholesale
- * each frame. Routing it through the label director (the approach we backed
- * out of) forced id-keying hacks because the director's change-signature
- * excludes positions. A second tiny renderer keyed off the leaner `DebugLine`
- * keeps the debug overlay fully decoupled from labels.
- *
- * The GPU technique is identical, so this REUSES the marker-line WESL shaders
- * (`shaders/markerLines/{vertex,fragment}.wesl`) and the same 80-byte
- * CameraUniforms prefix + instance layout. The only divergences are the
- * input type (no id/fade) and a larger default `maxLines` — a clip path is
- * hundreds of route segments, not the 1–3 lines a marker overlay carries.
- *
- * See `markerLineRenderer.ts` for the full uniform-layout / blend-mode
- * rationale; it is not repeated here.
+ * renderer (`shaders/debugLines/`): world segments as screen-aligned quads over
+ * the 80-byte CameraUniforms prefix, premultiplied OVER. The clip-path
+ * inspector precomputes a snapshot on a button click and the pass uploads the
+ * whole speed-coloured route each frame, so `DebugLine` carries no id or fade
+ * and nothing here reconciles. A clip path is hundreds of route segments,
+ * hence the large default `maxLines`.
  */
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
@@ -29,15 +13,15 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { DebugLine } from '../../../../@types/rendering/DebugLine';
 import type { DebugLineRenderer } from '../../../../@types/rendering/DebugLineRenderer';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import vsCode from '../../shaders/markerLines/vertex.wesl?static';
-import fsCode from '../../shaders/markerLines/fragment.wesl?static';
+import vsCode from '../../shaders/debugLines/vertex.wesl?static';
+import fsCode from '../../shaders/debugLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-import { MARKER_LINE_INSTANCE_LAYOUT } from '../../lib/markerLineInstanceLayout';
+import { DEBUG_LINE_INSTANCE_LAYOUT } from '../../lib/debugLineInstanceLayout';
 
-const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
+const LINE_INSTANCE_BYTES = DEBUG_LINE_INSTANCE_LAYOUT.arrayStride;
 
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
 
@@ -54,7 +38,7 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
  * `maxLines` defaults to 1024: a clip-path snapshot draws one route segment AND
  * one target-path segment per sample pair (2·(n−1), hundreds each at the
  * inspector's sampleCount) plus the 9-line scrub gizmo, so the buffer must be
- * far larger than the marker overlay's 64. `setLines` clamps silently, so this
+ * large. `setLines` clamps silently, so this
  * ceiling must stay above 2·(sampleCount−1)+9.
  */
 export function createDebugLineRenderer(
@@ -92,7 +76,7 @@ export function createDebugLineRenderer(
       vertex: {
         module: vsModule,
         entryPoint: 'vs',
-        buffers: [UNIT_QUAD_VERTEX_LAYOUT, MARKER_LINE_INSTANCE_LAYOUT],
+        buffers: [UNIT_QUAD_VERTEX_LAYOUT, DEBUG_LINE_INSTANCE_LAYOUT],
       },
       fragment: {
         module: fsModule,
@@ -148,15 +132,10 @@ export function createDebugLineRenderer(
       instanceBuf[base + 4] = line.to[0];
       instanceBuf[base + 5] = line.to[1];
       instanceBuf[base + 6] = line.to[2];
-      // fadeAlpha slot — debug lines never fade, so a constant 1.0.
-      instanceBuf[base + 7] = 1;
       instanceBuf[base + 8] = line.color[0]!;
       instanceBuf[base + 9] = line.color[1]!;
       instanceBuf[base + 10] = line.color[2]!;
       instanceBuf[base + 11] = line.color[3]!;
-      // occludeWeight / occludeNearKm: the plain `vs` pipeline never occludes.
-      instanceBuf[base + 12] = 0;
-      instanceBuf[base + 13] = 0;
       currentLineCount++;
     }
 

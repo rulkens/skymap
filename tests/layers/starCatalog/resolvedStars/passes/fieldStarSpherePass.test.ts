@@ -32,7 +32,7 @@ import type { Octree } from '../../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { STAR_RESOLVE_PX } from '../../../../../src/data/bodies/starResolvePx';
+import { STAR_RESOLVE_PX } from '../../../../../src/layers/starCatalog/bodies/starResolvePx';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';

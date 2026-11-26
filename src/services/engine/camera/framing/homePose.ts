@@ -9,7 +9,7 @@ import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbi
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { GALACTIC_DISC_FORWARD, INITIAL_DISTANCE_MPC } from './cameraFraming';
 import type { EngineHomeConfig } from '../../../../@types/engine/EngineHomeConfig';
-import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
@@ -18,7 +18,7 @@ export function homePose(
   fovYRad: number,
   simDays: number,
   frameBasis: Mat3,
-): FramedCameraPose {
+): FramedPose<'absolute'> {
   // The home distance is `arrivalFraming`'s deliberately UNCLAMPED body-scale
   // value — no `clampDistance` here: it takes a pivot radius the boot pose
   // hasn't resolved yet, and the absolute floor alone would swallow the framing

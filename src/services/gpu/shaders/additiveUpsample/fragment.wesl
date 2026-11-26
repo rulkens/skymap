@@ -10,11 +10,10 @@
 // signal, because each texel now covers several screen pixels.
 //
 // The scalar-volume raymarch is the sharpest instance of that.  It
-// jitters its step phase per fragment via
-// 'hash21Hq(fragCoord + frame * irrationals)' to break the otherwise-
-// visible step grid — an unbiased-integral trick where the jitter
-// averages out across many rays but shows up on any single fragment as
-// grain.  Aggressive downsampling then magnifies the grain.  Other
+// jitters its step phase per fragment from a blue-noise mask to break
+// the otherwise-visible step grid — an unbiased-integral trick where the
+// jitter averages out across many rays but shows up on any single
+// fragment as grain.  Aggressive downsampling then magnifies it.  Other
 // sources arrive with their own error term (a sparse sum of glow
 // billboards is noisy wherever the sprite count per texel is low), so
 // the filter is not volume-specific bookkeeping; it is what makes
@@ -51,23 +50,23 @@
 
 import package::additiveUpsample::io::VSOut;
 
-@group(0) @binding(0) var halfTex: texture_2d<f32>;
-@group(0) @binding(1) var halfSamp: sampler;
+@group(0) @binding(0) var offscreenTex: texture_2d<f32>;
+@group(0) @binding(1) var offscreenSampler: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // 1 / textureDimensions == size of one texel in [0,1] uv space.
   // textureDimensions returns the LOD-0 size for a non-mipmapped 2D
   // texture, matching what the linear sampler sees.
-  let dims = vec2<f32>(textureDimensions(halfTex));
+  let dims = vec2<f32>(textureDimensions(offscreenTex));
   let texel = vec2<f32>(1.0) / dims;
   // Rotated-grid offsets at ±0.5 texel.  Each lands at a texel corner,
   // so the linear sampler reads a 2×2 block of texels per tap; four
   // such taps overlap into a ~3×3 effective box filter.
-  let o = 0.5 * texel;
-  let s0 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( o.x,  o.y));
-  let s1 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( o.x, -o.y));
-  let s2 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-o.x,  o.y));
-  let s3 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-o.x, -o.y));
-  return 0.25 * (s0 + s1 + s2 + s3);
+  let tapOffset = 0.5 * texel;
+  let tapBottomRight = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>( tapOffset.x,  tapOffset.y));
+  let tapTopRight = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>( tapOffset.x, -tapOffset.y));
+  let tapBottomLeft = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>(-tapOffset.x,  tapOffset.y));
+  let tapTopLeft = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>(-tapOffset.x, -tapOffset.y));
+  return 0.25 * (tapBottomRight + tapTopRight + tapBottomLeft + tapTopLeft);
 }

@@ -2,13 +2,14 @@
  * bodySelectionRow — the body Layer's `body` selection kind: Earth, the planets and the moons
  * (the craft are the missions Layer's `craft` kind, Søndermarken the earthScenes Layer's
  * `earthScene` kind, Sgr A* the blackHoles Layer's `blackHole` kind). A star is a `starCatalog`
- * ref wherever it comes from (spec §7), so `body-sirius` does not decode. Position is
- * re-derived at `extractRow`'s own `simDays`, never cached.
+ * ref wherever it comes from (spec §7), so `body-sirius` does not decode. A meshed asteroid's
+ * `asteroid-<n>` link decodes to its body. Position is re-derived at `extractRow`'s own `simDays`.
  */
 
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
+import { MESH_ASTEROID_BODIES } from '../../../data/asteroids/meshAsteroidBodies';
 import { BODY_SOURCE_ROWS } from '../sources/bodySourceRows';
 import { bodyCodeOf } from './present/bodyCodeOf';
 import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
@@ -19,14 +20,20 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyRef } from '../../../@types/engine/selection/BodyRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
+
+const MESH_ASTEROID_ID = /^asteroid-([1-9]\d*)$/;
 
 export function bodySelectionRow(
   runtime: Pick<BodyRuntime, 'pickCodes'>,
 ): SelectionKindRow<BodyRef> {
   const { pickCodes } = runtime;
   const codeOf = bodyCodeOf(pickCodes);
-  // Exact, not the whole prefix: a craft's or an Earth scene's `body-<id>` is its own kind's claim.
   const decode = (id: string): BodyRef | null => {
+    const meshed = MESH_ASTEROID_ID.exec(id);
+    const asteroidBody = meshed ? MESH_ASTEROID_BODIES.get(Number(meshed[1])) : undefined;
+    if (asteroidBody !== undefined) return { type: 'body', id: asteroidBody };
+    // Exact, not the whole prefix: a craft's or an Earth scene's `body-<id>` is its own kind's claim.
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
     const bodyId = id.slice(BODY_FOCUS_PREFIX.length);
     return isBodyKindId(bodyId) ? { type: 'body', id: bodyId } : null;
@@ -49,7 +56,7 @@ export function bodySelectionRow(
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

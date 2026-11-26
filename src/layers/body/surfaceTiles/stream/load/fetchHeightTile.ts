@@ -10,17 +10,19 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 
 /**
  * fetchHeightTile — one Terrain-RGB WebP height tile as header + still-encoded
- * bitmap, or `null` if the source has no such tile or the bytes lack a valid `SHGT`
- * chunk. Pixels are never read back on the
+ * bitmap, `'empty'` if stored empty, or `null` if the source has no such tile or the
+ * bytes lack a valid `SHGT` chunk. Pixels are never read back on the
  * CPU: Brave, Safari and Firefox perturb canvas readback, so the shader decodes.
  */
 export async function fetchHeightTile(
   tile: SurfaceTileId,
   source: SurfaceTileSource,
-): Promise<HeightTileImage | null> {
+): Promise<HeightTileImage | 'empty' | null> {
   try {
-    const bytes = await source.readTile(tile);
-    if (bytes === null) return null;
+    const read = await source.readTile(tile);
+    if (read.kind === 'empty') return 'empty';
+    if (read.kind !== 'bytes') return null;
+    const { bytes } = read;
     const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
     if (chunk === null) return null;
     const header = decodeHeightTileHeader(chunk);

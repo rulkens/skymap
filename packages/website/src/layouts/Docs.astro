@@ -21,13 +21,12 @@ import DocsLayout from './DocsLayout/DocsLayout.tsx';
 type Props = {
   path: string;
   description: string;
-  image?: string;
   job?: string;
   headings: readonly MarkdownHeading[];
   factIds: readonly string[];
 };
 
-const { path, description, image, job, headings, factIds } = Astro.props;
+const { path, description, job, headings, factIds } = Astro.props;
 const tree = await loadDocsTree();
 const place = docsPlace(tree, path);
 const { title } = place.page;
@@ -39,7 +38,6 @@ const sections = tocSections(headings);
 <Base
   title={`${title} | Skymap docs`}
   description={description}
-  image={image}
   job={job ?? rowJob}
   jobSetIn={job === undefined && rowJob !== undefined ? 'docsTree.ts' : undefined}
   skipTo="page"

@@ -1,6 +1,6 @@
 /**
  * The studio's read seam: the slice's own selectors over the app's `RootState`, through
- * `injectInto` (ADR 0016, plan A3). Importing this module injects the slice; until its first action
+ * `injectInto` (ADR 0017, plan A3). Importing this module injects the slice; until its first action
  * lands, its key is absent and RTK's `selectSlice` reads `initialState`. `RootState` does not name
  * the injected key, so `selectStudioState` widens it once and every other selector builds on it.
  */

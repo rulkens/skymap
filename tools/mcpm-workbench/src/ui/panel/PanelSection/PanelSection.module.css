@@ -1,0 +1,8 @@
+/* The header is a 24px hit target; these spaces keep the title's caps where a
+   bare text line put them, folded or open. */
+.root {
+  composes: row from '../panelGrid.module.css';
+  align-items: start;
+  padding-block: var(--space-5) var(--space-4);
+  border-block-start: 1px solid var(--border-divider);
+}

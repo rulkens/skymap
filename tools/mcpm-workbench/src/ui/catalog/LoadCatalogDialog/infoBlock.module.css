@@ -1,0 +1,44 @@
+/* The two blocks of LoadInfo share this look: a dim label column and a value
+   column, both LoadInfo's tracks through subgrid, one line per row with no gap,
+   as a table, so the eye runs down a column. */
+.block {
+  display: grid;
+  grid-template-columns: subgrid;
+  align-content: start;
+  padding-block: var(--space-4);
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* The same dim as an inactive form row. */
+.block[data-stale='true'] {
+  opacity: 0.45;
+}
+
+.list {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  margin: 0;
+}
+
+.label {
+  grid-column: 1;
+  color: var(--color-fg-tertiary);
+}
+
+/* One line each, so a long value never changes the block's height. */
+.value {
+  grid-column: 2;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block {
+    transition: none;
+  }
+}

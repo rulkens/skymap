@@ -32,7 +32,7 @@ describe('craftSelectionRow', () => {
     for (const id of MISSION_CRAFT_IDS) {
       const ref = { type: 'craft', id } as const;
       expect(resolver.resolvePick(unpackPick(craftPickId(id, missions)!))).toEqual(ref);
-      expect(resolver.resolveFocusId(resolver.focusIdOf(ref)!)).toEqual(ref);
+      expect(resolver.resolveFocusId(resolver.focusIdOf(ref)!)).toEqual({ kind: 'hit', ref });
     }
   });
 

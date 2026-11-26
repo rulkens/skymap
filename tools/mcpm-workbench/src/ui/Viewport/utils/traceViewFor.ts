@@ -1,6 +1,6 @@
-import type { GridBox } from '../../../../@types/GridBox';
-import type { TraceView } from '../../../render/tracePass';
-import type { McpmCameraView } from '../../../render/writeMcpmCamera';
+import type { GridBox } from '../../../../@types/grid/GridBox';
+import type { TraceView } from '../../../render/passes/tracePass';
+import type { McpmCameraView } from '../../../../@types/render/camera/McpmCameraView';
 import type { RootState } from '../../../store/types';
 
 export function traceViewFor(s: RootState, box: GridBox, cam: McpmCameraView): TraceView {

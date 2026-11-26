@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../src/layers/starCatalog/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { raDecDistToCartesian } from '../../../src/utils/math/raDecDistToCartesian';
 

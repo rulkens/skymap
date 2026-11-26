@@ -21,11 +21,13 @@ import { packScatteringParams, SCATTERING_PARAMS_BYTES } from './packScatteringP
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
+import { DUAL_SOURCE_BLEND, DUAL_SOURCE_FEATURE } from '../../../../data/rendering/dualSourceBlend';
 import transmittanceCode from '../../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../../../services/gpu/shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../../../services/gpu/shaders/atmosphere/skyViewLut.wesl?static';
 import shellVsCode from '../../../../services/gpu/shaders/atmosphere/shell/vertex.wesl?static';
 import shellFsCode from '../../../../services/gpu/shaders/atmosphere/shell/fragment.wesl?static';
+import shellDualSourceCode from '../../../../services/gpu/shaders/atmosphere/shell/fragmentDualSource.wesl?static';
 
 /** 128x64. Only the proxy's far wall rasterises, so its silhouette IS the limb, and a
  *  coarse UV sphere polygonises it inward by ~cos(pi/SEGMENTS). Sized off the THINNEST
@@ -48,9 +50,10 @@ const LUT_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /** `SkyViewParams`: 4 f32 (see `skyViewLut.wesl`). */
 const SKY_VIEW_PARAMS_BYTES = 16;
-/** Sun-zenith cosine change that still reuses the sky-view LUT: about 0.0006° of sun
- *  motion, about 0.06% radiance at twilight. */
-const SKY_VIEW_SUN_ZENITH_EPSILON = 1e-5;
+/** Sun-zenith cosine change that still reuses the sky-view LUT. A dragged camera moves the
+ *  cosine ~1e-4 per frame, so the gate sits above that or dragging re-bakes every frame;
+ *  1e-3 (~0.06° of sun at the horizon) leaves a table at most ~3/255 off (Mars sunset glow). */
+const SKY_VIEW_SUN_ZENITH_EPSILON = 1e-3;
 /** Derived from the packer's f32 count. */
 const ATMOSPHERE_UNIFORM_BYTES = ATMOSPHERE_UNIFORM_FLOATS * 4;
 
@@ -293,12 +296,13 @@ export function createAtmosphereShellRenderer(
     entryPoint: string,
     blend: GPUBlendState,
     depthStencil?: GPUDepthStencilState,
+    fragmentModule: GPUShaderModule = shellFsModule,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
       vertex: shellVertexState,
-      fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
+      fragment: { module: fragmentModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: shellPrimitiveState,
       ...(depthStencil === undefined ? {} : { depthStencil }),
     });
@@ -322,6 +326,23 @@ export function createAtmosphereShellRenderer(
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
   const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
+  // One draw where the device blends two sources, so `sampleShell` runs once per
+  // pixel, not twice; the pair is the fallback. In draw order either way.
+  const shellPipelines = device.features.has(DUAL_SOURCE_FEATURE)
+    ? [
+        createShellPipeline(
+          'atmosphere-shell-dual-source-pipeline',
+          'fsDualSource',
+          DUAL_SOURCE_BLEND,
+          undefined,
+          createShaderModuleWithDevLog(
+            device,
+            shellDualSourceCode,
+            'atmosphere.shell.fragmentDualSource',
+          ),
+        ),
+      ]
+    : [shellMultiplyPipeline, shellAddPipeline];
   const probeShellMultiplyPipeline = createShellPipeline(
     'atmosphere-probe-shell-multiply-pipeline',
     'fsMultiply',
@@ -565,8 +586,8 @@ export function createAtmosphereShellRenderer(
     device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
     // The bake is a pure function of this record and the texture (its other inputs are
     // baked once), so a matching record would redraw the same table. Only sun zenith gets
-    // a tolerance: the live clock drifts it every frame for a body-fixed camera. It is
-    // measured from the last BAKE, so slow drift still re-bakes.
+    // a tolerance: the live clock drifts it every frame and a dragged camera moves it. It
+    // is measured from the last BAKE, so slow drift still re-bakes.
     const baked = bundle.skyViewBaked;
     if (
       baked?.texture === bundle.skyViewTex &&
@@ -645,20 +666,20 @@ export function createAtmosphereShellRenderer(
     device.queue.writeBuffer(buffer, 0, depthScratch);
   }
 
-  function drawShellPair(
+  function drawShell(
     pass: GPURenderPassEncoder,
     bindGroup: GPUBindGroup,
-    multiplyPipeline: GPURenderPipeline,
-    addPipeline: GPURenderPipeline,
+    pipelines: readonly GPURenderPipeline[],
   ): void {
     pass.setBindGroup(0, bindGroup);
-    // MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this body's own in-scatter.
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
-    pass.setPipeline(multiplyPipeline);
-    pass.drawIndexed(indexCount);
-    pass.setPipeline(addPipeline);
-    pass.drawIndexed(indexCount);
+    // A pair is MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this
+    // body's own in-scatter.
+    for (const pipeline of pipelines) {
+      pass.setPipeline(pipeline);
+      pass.drawIndexed(indexCount);
+    }
   }
 
   function draw(
@@ -680,7 +701,7 @@ export function createAtmosphereShellRenderer(
         depth.view,
       );
     }
-    drawShellPair(pass, bundle.shellBindGroup, shellMultiplyPipeline, shellAddPipeline);
+    drawShell(pass, bundle.shellBindGroup, shellPipelines);
   }
 
   // With FAR depth every pixel takes the far wall, and the analytic ground sphere ends the
@@ -711,15 +732,15 @@ export function createAtmosphereShellRenderer(
         farDepthView,
       );
     }
-    drawShellPair(pass, bundle.probeBindGroup, probeShellMultiplyPipeline, probeShellAddPipeline);
+    drawShell(pass, bundle.probeBindGroup, [probeShellMultiplyPipeline, probeShellAddPipeline]);
   }
 
-  function bakeAerialPerspective(
-    pass: GPUComputePassEncoder,
-    bodyId: string,
-    uniforms: Float32Array,
-  ): void {
-    aerial.bake(pass, bodyId, uniforms);
+  function writeAerialPerspectiveUniforms(bodyId: string, uniforms: Float32Array): void {
+    aerial.writeUniforms(bodyId, uniforms);
+  }
+
+  function bakeAerialPerspective(pass: GPUComputePassEncoder, bodyId: string): void {
+    aerial.bake(pass, bodyId);
   }
 
   function drawAerialPerspective(
@@ -764,6 +785,7 @@ export function createAtmosphereShellRenderer(
     dispatchSkyView,
     setRingTexture,
     draw,
+    writeAerialPerspectiveUniforms,
     bakeAerialPerspective,
     drawAerialPerspective,
     drawProbeSky,

@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
@@ -64,7 +64,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       getCameraRuntime: () => {
         throw new Error('cosmicFlows rolls no frame');
       },
-      extractFocusRow: () => ({ row: null, focusId: null }),
+      extractFocusRow: () => ({ row: null, id: null }),
       syncVisibility: () => {},
       visibilityTargets: () => [],
       getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
@@ -72,7 +72,12 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.
     store.dispatch(
-      clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }),
+      clipStarted({
+        data: cosmicFlows.data,
+        frame: DEFAULT_ORIENTATION,
+        by: 'player',
+        atEnd: 'revert',
+      }),
     );
 
     // Threads the epoch across ticks, as `runFrame` does through the runtime.

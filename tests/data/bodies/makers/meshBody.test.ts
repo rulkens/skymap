@@ -6,6 +6,7 @@ vi.mock('../../../../src/data/bodies/meshAssets.generated', () => ({
   MESH_ASSETS: {
     'test-mesh': {
       key: 'test-mesh',
+      tierCeiling: 'medium',
       path: 'meshes/test-mesh.mesh',
       boundingRadiusM: 12345,
       meanAlbedo: [0.1, 0.2, 0.3],
@@ -32,6 +33,7 @@ describe('meshBody()', () => {
       id: 'x',
       label: 'X',
       meshKey: 'test-mesh',
+      tierCeiling: 'medium',
       boundingRadiusM: 12345,
       albedo: [0.1, 0.2, 0.3],
       standoffRadii: 2,

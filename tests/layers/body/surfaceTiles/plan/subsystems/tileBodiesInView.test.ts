@@ -1,5 +1,5 @@
 /**
- * tileBodiesInView — names exactly the tiling body the view gives a `body-m`
+ * tileBodiesInView — names exactly the tiling bodies the view gives a `body-m`
  * slab, over the 1 px edge, a body behind the eye and a host only a mesh body
  * re-admits.
  */
@@ -19,17 +19,17 @@ import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 
 const STATES = deriveBodyStates(CONST_J2000);
 const NEAR_DISTANCE_MPC = 1e-12;
-const firstTileBody = (view: FrameView) => tileBodiesInView(view)[0] ?? null;
+const tileBodies = (view: FrameView) => [...tileBodiesInView(view)].sort();
 
-/** What `deriveSlabs` built: the first tiling host's slab. */
-function slabAnswer(view: FrameView): string | null {
-  const hosts = view.slabs.flatMap((slab) =>
-    slab.frame.kind === 'body-m' && isSurfaceTileBodyId(slab.frame.hostId)
-      ? [slab.frame.hostId]
-      : [],
-  );
-  expect(hosts.length).toBeLessThanOrEqual(1);
-  return hosts[0] ?? null;
+/** What `deriveSlabs` built: every tiling host's slab (Earth's views can hold the Moon's too). */
+function slabHosts(view: FrameView): string[] {
+  return view.slabs
+    .flatMap((slab) =>
+      slab.frame.kind === 'body-m' && isSurfaceTileBodyId(slab.frame.hostId)
+        ? [slab.frame.hostId]
+        : [],
+    )
+    .sort();
 }
 
 /** Eye `distanceM` from `bodyId` along `dir`, looking at it (or away). */
@@ -51,17 +51,17 @@ describe('tileBodiesInView', () => {
       ['earth', 6.371e6],
       ['mars', 3.39e6],
     ] as const) {
-      const outcomes = new Set<string | null>();
+      const outcomes = new Set<boolean>();
       // Geometric steps from low orbit out past the 1 px edge.
       for (let distanceM = 1.5 * radiusM; distanceM < 1e5 * radiusM; distanceM *= 1.3) {
         for (const lookAway of [false, true]) {
           const view = viewNear(bodyId, dir, distanceM, lookAway);
-          const expected = slabAnswer(view);
-          expect(firstTileBody(view), `${bodyId} at ${distanceM} m`).toBe(expected);
-          outcomes.add(expected);
+          const expected = slabHosts(view);
+          expect(tileBodies(view), `${bodyId} at ${distanceM} m`).toEqual(expected);
+          outcomes.add(expected.includes(bodyId));
         }
       }
-      expect(outcomes).toEqual(new Set([bodyId, null]));
+      expect(outcomes).toEqual(new Set([true, false]));
     }
   });
 
@@ -77,7 +77,7 @@ describe('tileBodiesInView', () => {
       forward: out,
       distanceMpc: NEAR_DISTANCE_MPC,
     });
-    expect(slabAnswer(view!)).toBe('earth');
-    expect(firstTileBody(view!)).toBe('earth');
+    expect(slabHosts(view!)).toContain('earth');
+    expect(tileBodies(view!)).toEqual(slabHosts(view!));
   });
 });

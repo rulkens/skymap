@@ -7,7 +7,7 @@
 // splat's own closest-approach point — so the pattern parallaxes with the
 // splats instead of stamping one flat decal across the whole depth column.
 
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 
 // One hot texel over a dead 8x8 block ratios near 30; uncapped that turns a
@@ -20,7 +20,7 @@ const DETAIL_MAX: f32 = 8.0;
 // the one scalar the affine UV below needs. rMin stays in the struct only to
 // match gridUbo's byte layout (written once per ISM-map rebuild, not read here).
 
-// Binding numbers: dustMap.wesl's own closure is io's 0/1 (u/comps), its
+// Binding numbers: dustMap.wesl's own closure is io's 0/1 (uniforms/comps), its
 // dust-noise volume 4/5, and these three — collision-free there, which is
 // the only constraint that mattered picking them. Binding 9 (a packed map's
 // blur divisor) is absent: the bake consumes it upstream, so no render
@@ -33,12 +33,12 @@ const DETAIL_MAX: f32 = 8.0;
 // dst texel centers are laid out the same way, in reverse) — ONE home for
 // the transform since two consumers (this file's own dustDetailMultiplier
 // and hiiSplat/youngFragment.wesl's young-stars read) both need it.
-fn ismCartesianUv(p: vec3<f32>) -> vec2<f32> {
-  return p.xz / (2.0 * grid.rMax) + vec2<f32>(0.5, 0.5);
+fn ismCartesianUv(worldPos: vec3<f32>) -> vec2<f32> {
+  return worldPos.xz / (2.0 * grid.rMax) + vec2<f32>(0.5, 0.5);
 }
 
-// p: the world-space point to sample at — the caller's splat's own
-// closest-approach point (o + d*tPeak in dustMap.wesl's fs), not a
+// worldPos: the world-space point to sample at — the caller's splat's own
+// closest-approach point (rayOrigin + rayDir*tPeak in dustMap.wesl's fs), not a
 // re-derived ray/plane hit, so detail rides each component's own depth
 // instead of one shared disc-plane intersection.
 // breakup: a mean-1 vertical decorrelation weight supplied by the caller —
@@ -46,16 +46,16 @@ fn ismCartesianUv(p: vec3<f32>) -> vec2<f32> {
 // into vertical curtains through a 3D cloud; scaling the DEVIATION by a
 // mean-1 field preserves the column ratio in expectation while breaking the
 // vertical coherence. Callers with no noise in reach pass 1.0.
-fn dustDetailMultiplier(p: vec3<f32>, breakup: f32) -> f32 {
-  if (u.dustDetail.x <= 0.0) {
+fn dustDetailMultiplier(worldPos: vec3<f32>, breakup: f32) -> f32 {
+  if (uniforms.dustDetail.x <= 0.0) {
     return 1.0;
   }
   // No in-range test: the bake fills every texel outside the disc with a
   // neutral R=1 (ismMapCartesianBake.wesl), and ismCartesianSmp's
-  // clamp-to-edge addressing sends any p past the square itself to that
+  // clamp-to-edge addressing sends any worldPos past the square itself to that
   // same neutral border — both paths land on a no-op detail ratio, same as
   // the old ismMapUv guard's 1.0 fallback.
-  let uv = ismCartesianUv(p);
+  let uv = ismCartesianUv(worldPos);
   let detail = textureSampleLevel(ismCartesianTex, ismCartesianSmp, uv, 0.0).r;
-  return clamp(1.0 + u.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);
+  return clamp(1.0 + uniforms.dustDetail.x * (detail - 1.0) * breakup, 0.0, DETAIL_MAX);
 }

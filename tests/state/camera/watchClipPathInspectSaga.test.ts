@@ -4,7 +4,7 @@
  *
  * The saga routes the settings-slice `inspectClipPath` / `clearClipPath` actions
  * to the injected `clipPathInspect` seam (read from saga context): resolve the id
- * against `clipRegistry`, resolve its foci, and call `compute` on inspect; call
+ * against `APP_CLIP_REGISTRY`, resolve its foci, and call `compute` on inspect; call
  * `clear` on clear. The seam is stubbed, so these tests assert the routing
  * contract, not the sampling.
  */
@@ -20,7 +20,7 @@ import {
   recalcClipPath,
   clearClipPath,
 } from '../../../src/state/settings/core/debugSlice';
-import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../src/compositions/appClips';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import {
@@ -36,7 +36,7 @@ import type { OrientationFrameId } from '../../../src/@types/camera/orientation/
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const CLIP_ID: ClipId = 'flyout';
-const EXPECTED = clipRegistry[CLIP_ID].data;
+const EXPECTED = APP_CLIP_REGISTRY[CLIP_ID].data;
 // The saga resolves `ORIENTATION_FRAMES[settings.orientation]` and threads it
 // into the seam call — the default store's orientation seeds `DEFAULT_ORIENTATION`.
 const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

@@ -12,7 +12,10 @@ import type { Task } from 'redux-saga';
 import { freeLookStarted, playheadFollowed } from '../state/studioSlice';
 import { selectPreview, selectTransport } from '../state/selectors';
 import { selectPlayableData } from '../state/selectPlayableData';
-import { clipDataReplaced, clipTransportSet } from '../../../../../src/state/camera/cameraSlice';
+import {
+  clipDataReplaced,
+  clipTransportSet,
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputMoved } from '../../../../../src/state/input/inputSlice';
 import type { SagaContext } from '../../../../../src/store/types';
 

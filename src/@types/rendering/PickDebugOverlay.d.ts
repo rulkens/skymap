@@ -18,7 +18,7 @@
  * ### Blend semantics
  *
  * Premultiplied OVER ('srcFactor: "one", dstFactor: "one-minus-src-
- * alpha"') against the swap chain.  Matches the marker-lines / labels /
+ * alpha"') against the swap chain.  Matches the labels /
  * structureMarker overlay convention so future composite changes only
  * have to consider one blend mode.
  *

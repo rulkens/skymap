@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
-import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../../src/data/bodies/barycentricPairs';
+import { EARTH } from '../../../../src/layers/body/bodies/planets/earth';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_STARS } from '../../../../src/layers/starCatalog/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
-import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorrections.generated';
+import { EPHEMERIS_CORRECTIONS } from '../../../../src/layers/body/bodies/ephemerisCorrections.generated';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
@@ -154,7 +154,8 @@ describe('deriveBodyStates', () => {
   it('Earth–Moon reflex keeps the barycentre and the separation', () => {
     // Earth's row is the barycentre: weighting Earth and Moon by mass must land back
     // on the corrected row position, and the Moon's offset from Earth stays raw Kepler.
-    const k = BARYCENTRIC_REFLEX_BY_PRIMARY.get('earth')!.k;
+    if (EARTH.position.kind !== 'orbit') throw new Error('Earth is an orbit row');
+    const k = EARTH.position.pair!.secondaryMassFraction;
     for (const t of SPAN_DATES) {
       const snap = deriveBodyStates(t);
       const earth = snap.get(asSceneBodyId('earth'))!.positionMpc;

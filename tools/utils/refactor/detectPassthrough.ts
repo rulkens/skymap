@@ -41,7 +41,7 @@ import type {
   ParameterDeclaration,
   VariableDeclaration,
 } from 'ts-morph';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export type PassthroughTarget = {
   readonly kind: 'alias' | 'wrapper' | 're-export';

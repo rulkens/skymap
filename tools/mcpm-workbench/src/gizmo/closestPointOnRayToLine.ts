@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Ray } from '../../@types/Ray';
+import type { Ray } from '../../@types/gizmo/Ray';
 
 /**
  * closestPointOnRayToLine — the classic skew-line closest-point solve

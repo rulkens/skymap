@@ -16,7 +16,7 @@ serial head-of-line delay before any other asset fetch begins.
   (documented in the file's own header, lines 35-45).
 - `src/services/engine/phases/initGpu.ts` awaits `loadFontAtlases()` (paired
   with `loadEnvBrdfLut`) at lines 73-76. Everything constructed after that line in `initGpu` blocks on
-  it: the label/marker-line/debug-line/selection-ring/structure-marker/
+  it: the label/debug-line/selection-ring/structure-marker/
   Milky-Way-pick renderers built immediately after, the
   `GALAXY_CATALOG_SOURCE_REGISTRY` fetch loop that kicks off the big
   per-catalog `.bin` downloads, and every renderer built further

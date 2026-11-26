@@ -13,7 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../../src/layers/starCatalog/seededStars/passes/starPointsPass';
-import { gateOrbitTrailGroup } from '../../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { gateTrailGroup } from '../../../../../src/services/engine/layer/gateTrailGroup';
 import { gatePassByFade } from '../../../../../src/services/engine/layer/gatePassByFade';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes/index';
@@ -23,15 +23,15 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/f
 import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/layers/starCatalog/photometry/utils/starExposureRamp';
-import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticCentre';
-import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
+import { SCENE_S_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneSStars';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { positionedSeededStars } from '../../../../../src/layers/starCatalog/seededStars/present/positionedSeededStars';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projection/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -43,7 +43,7 @@ import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { SeededStarCatalogId } from '../../../../../src/@types/data/starCatalog/SeededStarCatalogId';
+import type { SeededStarCatalogId } from '../../../../../src/layers/starCatalog/@types/SeededStarCatalogId';
 import type { StarCatalogSettings } from '../../../../../src/layers/starCatalog/@types/StarCatalogSettings';
 import type { PositionedStar } from '../../../../../src/layers/starCatalog/seededStars/@types/PositionedStar';
 import type { PositionedSceneBody } from '../../../../../src/@types/engine/frame/PositionedSceneBody';
@@ -82,7 +82,7 @@ const ALL_STARS = positionedSeededStars(sceneBodiesOf(EVERY_SEEDED));
 const positioned = (id: string): PositionedStar => ALL_STARS.find((s) => s.id === id)!;
 
 const packedIdOf = (star: PositionedStar): number =>
-  packSelection(PICK_CODES.pickCodeOf(star.source), star.seedIndex + PICK_SENTINEL_OFFSET);
+  packPickWord(PICK_CODES.pickCodeOf(star.source), star.seedIndex);
 
 const SUN = positioned('sun');
 const PROXIMA = positioned('proxima-centauri');
@@ -225,16 +225,16 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // The milky-way impostor and constellation overlay ride this group but their visibility
       // windows are far wider than the foreground gate, so they are toggled off to pin the STAR
       // rows' skip. orbit-trails' enabled() reads the visibility intent and `orbitTrailGroups`,
-      // so the fixture carries both.
+      // so the fixture carries both; sampled-trails' reads `sampledTrailGroups`, empty here.
       settings: {
         milkyWay: { enabled: false },
         starCatalogs: STAR_CATALOG_SETTINGS,
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
-        missionTrails: { enabled: false },
       },
-      orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
+      orbitTrailGroups: [gateTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
+      sampledTrailGroups: [],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const hdrNear0 = FRAME_ORDER.flatMap((step) =>
@@ -483,9 +483,7 @@ describe('the Galactic Centre footprint exclusion', () => {
 
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
     SCENE_S_STARS.filter((star, seedIndex) =>
-      stamped.includes(
-        packSelection(PICK_CODES.pickCodeOf('sStar'), seedIndex + PICK_SENTINEL_OFFSET),
-      ),
+      stamped.includes(packPickWord(PICK_CODES.pickCodeOf('sStar'), seedIndex)),
     ).map((star) => star.id);
 
   it('an S-star inside the galactic-centre footprint is not stamped', () => {

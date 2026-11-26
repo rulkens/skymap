@@ -22,10 +22,13 @@ import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga'
 import { watchRequestViewSaga } from '../state/selection/watchRequestViewSaga';
 import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
+import { watchClockToSaga } from '../state/tour/watchClockToSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchFlyToLonLatSaga } from '../state/camera/watchFlyToLonLatSaga';
 import { watchZoomLimitSaga } from '../state/camera/watchZoomLimitSaga';
 import { watchTakeoverSaga } from '../state/takeover/watchTakeoverSaga';
+import { watchEnterSkyHereSaga } from '../state/sky/sagas/watchEnterSkyHereSaga';
+import { watchSkyClockToSaga } from '../state/sky/sagas/watchSkyClockToSaga';
 import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchInputWakeSaga } from '../state/input/watchInputWakeSaga';
 import { watchGestureLearnedSaga } from '../state/ui/watchGestureLearnedSaga';
@@ -50,10 +53,13 @@ export function* mainSaga() {
     watchRequestViewSaga(),
     watchRequestSelectSaga(),
     watchFocusTweenSaga(),
+    watchClockToSaga(),
     watchOrientationChangeSaga(),
     watchFlyToLonLatSaga(),
     watchZoomLimitSaga(),
     watchTakeoverSaga(),
+    watchEnterSkyHereSaga(),
+    watchSkyClockToSaga(),
     watchKeyboardEventsSaga(),
     watchInputWakeSaga(),
     watchGestureLearnedSaga(),

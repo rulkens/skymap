@@ -18,7 +18,7 @@ import {
   selectUndoLabel,
   selectViewport,
 } from '../../../src/session/state/selectors';
-import { clipStarted } from '../../../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../../../src/state/camera/cameraIntentSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
 afterEach(cleanup);
@@ -138,7 +138,9 @@ describe('useStudioKeys', () => {
   it('Space at End plays from 0; Space while playing pauses', () => {
     const { store, dock } = mount();
     // The preview is live: Play waits for it.
-    store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: { timeline: [] }, frame: 'equatorial', by: 'player', atEnd: 'revert' }),
+    );
     store.dispatch(playheadSet(8));
 
     fireEvent.keyDown(dock, { key: ' ' });
@@ -176,7 +178,9 @@ describe('useStudioKeys', () => {
 
   it("holding Space toggles once; the auto-repeat is swallowed, not the page's", () => {
     const { store, dock } = mount();
-    store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' }));
+    store.dispatch(
+      clipStarted({ data: { timeline: [] }, frame: 'equatorial', by: 'player', atEnd: 'revert' }),
+    );
 
     fireEvent.keyDown(dock, { key: ' ' });
     const repeatKept = fireEvent.keyDown(dock, { key: ' ', repeat: true });

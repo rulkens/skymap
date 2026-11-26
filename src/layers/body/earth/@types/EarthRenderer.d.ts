@@ -16,10 +16,10 @@ import type { TextureKind } from '../../../../@types/data/TextureKind';
 export type EarthRenderer = Renderer & {
   /**
    * Install a texture map by kind, uploaded into a fresh texture sized to the
-   * bitmap (format from `isLinearTextureKind`: sRGB for surface/night/clouds,
-   * linear for material/normal), mips generated, fragment bind group rebuilt.
-   * Placeholders: surface mid-blue, material all-land, night black (no emissive),
-   * normal flat, clouds transparent (alpha 0).
+   * bitmap (format from `bodyTextureFormat`: sRGB for surface/night, linear for
+   * material/normal, one grey channel for clouds), mips generated, fragment bind
+   * group rebuilt. Placeholders: surface mid-blue, material all-land, night black
+   * (no emissive), normal flat, clouds coverage 0.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
   /** Destroy a kind's committed map (no-op if none); its placeholder binds again. */
@@ -28,7 +28,7 @@ export type EarthRenderer = Renderer & {
    * Seed a kind's PLACEHOLDER from one tile of the shared low-resolution body
    * atlas. `rect` is in UNFLIPPED source coordinates (top-left origin, y down, as
    * `atlasTileRect` returns). Only that rect is copied, in the kind's format
-   * (`isLinearTextureKind`, shared with `setMap`); the atlas is never a bound
+   * (`bodyTextureFormat`, shared with `setMap`); the atlas is never a bound
    * texture. Frees the placeholder it replaces and never touches a committed map.
    * Only `'surface'` has an atlas tile.
    */

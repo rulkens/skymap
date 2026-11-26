@@ -9,7 +9,11 @@ import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { dollyTo, hold, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { createPlayClip } from '../../../../../src/services/engine/animation/playClip';
-import { clipEnded } from '../../../../../src/state/camera/cameraSlice';
+import {
+  clipEnded,
+  clipStarted,
+  clipTransportSet,
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputMoved } from '../../../../../src/state/input/inputSlice';
 import { previewSaga } from '../../../src/session/sagas/previewSaga';
 import {
@@ -88,10 +92,10 @@ function harness() {
 describe('previewSaga', () => {
   it('the preview starts paused at the head once the draft resolves', () => {
     const h = harness();
-    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.intent.clip).toBeNull();
 
     h.resolve();
-    const { clip } = h.store.getState().camera;
+    const { clip } = h.store.getState().camera.intent;
     expect(clip?.data.timeline).toEqual(DRAFT.timeline);
     expect(clip?.atEnd).toBe('revert');
     expect(clip?.transport).toBe(selectTransport(h.store.getState()));
@@ -104,8 +108,8 @@ describe('previewSaga', () => {
     h.clear();
 
     h.store.dispatch(playheadSet(2));
-    expect(h.types()).toEqual(['studio/playheadSet', 'camera/clipTransportSet']);
-    expect(h.store.getState().camera.clip?.transport).toEqual({
+    expect(h.types()).toEqual(['studio/playheadSet', clipTransportSet.type]);
+    expect(h.store.getState().camera.intent.clip?.transport).toEqual({
       kind: 'paused',
       atSec: 2,
       camera: 'clip',
@@ -115,13 +119,13 @@ describe('previewSaga', () => {
   it('an edit swaps the data into the live play', () => {
     const h = harness();
     h.resolve();
-    const transport = h.store.getState().camera.clip!.transport;
+    const transport = h.store.getState().camera.intent.clip!.transport;
     h.store.dispatch(EDIT);
     h.resolve();
 
-    expect(h.types().filter((t) => t === 'camera/clipStarted')).toHaveLength(1);
-    expect(h.types()).not.toContain('camera/clipEnded');
-    const { clip } = h.store.getState().camera;
+    expect(h.types().filter((t) => t === clipStarted.type)).toHaveLength(1);
+    expect(h.types()).not.toContain(clipEnded.type);
+    const { clip } = h.store.getState().camera.intent;
     expect(clip?.data).toBe(selectDraft(h.store.getState()));
     expect(clip?.transport).toBe(transport);
   });
@@ -129,12 +133,12 @@ describe('previewSaga', () => {
   it('a failed resolution keeps the last good data', () => {
     const h = harness();
     h.resolve();
-    const good = h.store.getState().camera.clip!.data;
+    const good = h.store.getState().camera.intent.clip!.data;
     h.store.dispatch(EDIT);
     h.store.dispatch(
       draftResolved({ revision: selectRevision(h.store.getState()), message: 'no' }),
     );
-    expect(h.store.getState().camera.clip!.data).toBe(good);
+    expect(h.store.getState().camera.intent.clip!.data).toBe(good);
   });
 
   it('while playing, each frame follows the drawn t; pausing stops the follow', async () => {
@@ -161,7 +165,7 @@ describe('previewSaga', () => {
     h.resolve();
     h.store.dispatch(played({ fromSec: 4, loop: null }));
     await h.drawFrame(5, true);
-    expect(h.store.getState().camera.clip?.transport).toEqual({
+    expect(h.store.getState().camera.intent.clip?.transport).toEqual({
       kind: 'paused',
       atSec: 5,
       camera: 'clip',
@@ -181,7 +185,7 @@ describe('previewSaga', () => {
       eventMs: 0,
     } as const;
     h.store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
-    expect(h.store.getState().camera.clip?.transport).toEqual({
+    expect(h.store.getState().camera.intent.clip?.transport).toEqual({
       kind: 'paused',
       atSec: 0,
       camera: 'free',
@@ -193,6 +197,6 @@ describe('previewSaga', () => {
     h.resolve();
     h.task.cancel();
     expect(h.stop).toHaveBeenCalledTimes(1);
-    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.intent.clip).toBeNull();
   });
 });

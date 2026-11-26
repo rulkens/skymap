@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { HistogramSlice } from '../../../@types/HistogramSlice';
-import { HISTOGRAM_BINS } from '../../sim/createGridBuffers';
+import type { HistogramSlice } from '../../../@types/sim/HistogramSlice';
+import { HISTOGRAM_BINS } from '../../sim/histogramBins.constant';
 import { meanLogTraceAtPoints } from '../../sim/meanLogTraceAtPoints';
 
 // Caps the convergence plot's x-axis span rather than growing it unbounded over a
@@ -43,7 +43,7 @@ export const histogramSlice = createSlice({
         { stepCount, meanLogTraceAtPoints: meanLogTraceAtPointsValue },
       ].slice(-MAX_HISTORY);
     },
-    /** T20: jittered-position samples and data-point samples are differently-defined
+    /** Jittered-position samples and data-point samples are differently-defined
      * statistics under the same `meanLogTraceAtPoints` name — every toggle edge resets
      * the rest of the slice so the two never ride the same convergence curve. */
     setSampleRandomly: (state, action: PayloadAction<boolean>) => {
@@ -52,7 +52,7 @@ export const histogramSlice = createSlice({
     },
     /** Called alongside `resetStepCount` (watchSceneSaga, watchSimCommandsSaga) — old
      * history entries would otherwise show larger step counts than the freshly zeroed
-     * HUD counter. */
+     * step counter. */
     resetHistogram: (state) => {
       const { sampleRandomly } = state;
       Object.assign(state, defaultHistogramSlice);

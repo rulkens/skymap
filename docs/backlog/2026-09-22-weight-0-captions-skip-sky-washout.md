@@ -9,19 +9,16 @@ aerial apply write `1 - transmittance` there
 (`shaders/atmosphere/aerialPerspective/fragment.wesl:66-71`), and the
 compositor uses it to wash stars and deep space out of a daytime sky.
 
-Caption and leader-line fragments dim by the same alpha through
+Label glyph and leader fragments dim by the same alpha through
 `sceneTransmittance`, but only in proportion to `occludeWeight`
-(`shaders/labels/fragmentOcclude.wesl:14`,
-`shaders/markerLines/fragmentOcclude.wesl:13`):
+(`shaders/labels/fragmentOcclude.wesl`):
 
 ```wgsl
 shaded * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight)
 ```
 
-`occludeWeight` is the CPU sphere verdict from
-`produceSceneBodyCaptions.ts:128`: 1 when the subject sits behind a body,
-else 0. The vertex stage folds in the terrain verdict, which can only raise
-it. So a caption whose subject is in the open draws at full brightness over
+`occludeWeight` is the sampled-depth verdict from `shaders/labels/vertexOcclude.wesl`:
+1 when the subject sits behind what the depth buffer holds, else 0. So a caption whose subject is in the open draws at full brightness over
 a hazy daytime sky, while a neighbour whose subject happens to be behind a
 body is dimmed by the haze. Two captions in the same sky, two brightnesses,
 decided by something unrelated to the sky.

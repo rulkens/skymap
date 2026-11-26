@@ -14,7 +14,7 @@
  * function zooms is pivoted on that body just as much as the follow driver's
  * is.
  *
- * Pure by design: the wheel handler reads `camera.base` from the store, hands
+ * Pure by design: the wheel handler reads `camera.intent.base` from the store, hands
  * it here, and dispatches the result — so the zoom arithmetic (and its clamp
  * behaviour) is unit-testable without a store, a canvas, or a render loop.
  */

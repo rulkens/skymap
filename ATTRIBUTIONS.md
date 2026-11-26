@@ -476,7 +476,9 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>; the cross-match
   table comes from the Gaia archive (`gea.esac.esa.int`).
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/hip2.dat` →
-  `tools/parsers/hipparcos2.ts`.
+  `tools/parsers/hipparcos2.ts`. The website's star field is baked from the
+  same file (`tools/site/buildStarField.ts` →
+  `packages/website/src/assets/starField.bin`).
 - **Modified:** Yes. Merged into the star set in place of the matching Gaia rows.
 - **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
   <https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe>,
@@ -510,7 +512,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** No licence stated
 - **Attribution:** Cite Gillessen et al. 2017.
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJ/837/30>
-- **Enters skymap:** typed by hand into `src/data/bodies/sStarElements.ts`
+- **Enters skymap:** typed by hand into `src/layers/starCatalog/bodies/sStarElements.ts`
   (one source line per row) and `tests/fixtures/sStarAstrometry.json`.
 - **Modified:** No values changed. The 40th published row, S111, is left out as
   unbound.
@@ -533,7 +535,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** Reference only
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://arxiv.org/abs/2607.12664>
-- **Enters skymap:** one row of `src/data/bodies/sStarElements.ts`.
+- **Enters skymap:** one row of `src/layers/starCatalog/bodies/sStarElements.ts`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1038/s41586-026-10894-w>
   and <https://export.arxiv.org/abs/2607.12664> (the reference: authors, title,
@@ -552,7 +554,7 @@ unclear, and no entry here reads them as a licence.
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://doi.org/10.1051/0004-6361/201935656> (A&A 625, L10).
 - **Enters skymap:** `src/data/bodies/sgrAStarMassSolar.ts`,
-  `src/data/bodies/sStarOrbitInfo.ts` and the S-star scale.
+  `src/layers/starCatalog/bodies/sStarOrbitInfo.ts` and the S-star scale.
 - **Modified:** No.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1051/0004-6361/201935656>
   (the reference: authors, title, volume and page).
@@ -569,7 +571,7 @@ unclear, and no entry here reads them as a licence.
 - **Use:** Reference only
 - **Attribution:** Cite the paper.
 - **Upstream:** <https://doi.org/10.1088/0067-0049/208/1/9> (ApJS 208, 9).
-- **Enters skymap:** `src/data/bodies/sStarAppearance.ts`.
+- **Enters skymap:** `src/layers/starCatalog/bodies/sStarAppearance.ts`.
 - **Modified:** The values in the file are our own representative table, not
   the paper's.
 - **Checked:** 2026-10-07: <https://api.crossref.org/works/10.1088/0067-0049/208/1/9>
@@ -592,8 +594,9 @@ unclear, and no entry here reads them as a licence.
   permission", with the credit line "Courtesy NASA/JPL-Caltech".
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
   <https://ssd.jpl.nasa.gov/sats/elem/>
 - **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
@@ -612,12 +615,13 @@ unclear, and no entry here reads them as a licence.
 - **Licence:** Not stated for the service's output on the pages read.
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
-  `src/data/bodies/ephemerisCorrections.generated.ts`. Also the orbit rows of
+  `src/layers/body/bodies/ephemerisCorrections.generated.ts`. Also the orbit rows of
   the spacecraft bodies (see each model's README).
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
@@ -638,14 +642,71 @@ unclear, and no entry here reads them as a licence.
 - **Use:** No licence stated
 - **Attribution:** None asked on the pages read; skymap credits CelesTrak.
 - **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
-- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+- **Enters skymap:** the daily `.github/workflows/live-datasets.yml` (or
   `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
-  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
+  `npm run build-satellites` → a dated `satellites.satg` under `live/v1/` on R2.
 - **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
   dropped, and re-encoded; the element values are copied unchanged.
 - **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
   <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
   <https://celestrak.org/NORAD/elements/>
+
+### MPC Orbit Database (MPCORB)
+
+<!-- attribution: id=mpcorb; keys=mpcorb,mpcorb.readme -->
+
+- **What:** Osculating orbital elements, absolute magnitudes and orbit types
+  of every numbered minor planet (about 896,000 on 2026-11-12).
+- **By:** The IAU Minor Planet Center, hosted by the Center for Astrophysics,
+  Harvard & Smithsonian; each orbit by the computer its record names.
+- **Licence:** The file's header: "Software programs may include this
+  datafile amongst their datasets, as long as this header is included (it is
+  acceptable if it is contained in a file separate from the actual data) and
+  that proper attribution to the Minor Planet Center is given. [...]
+  Information on how to obtain updated copies of the datafile must also be
+  included." The website use policy: "Data files are copyrighted entities and
+  may be redistributed as long as the source for the data is clearly
+  specified."
+- **Use:** Conditions apply
+- **Attribution:** The Minor Planet Center, with the MPCORB header shipped
+  beside the data and the address of updated copies
+  (<https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT>).
+- **Upstream:** <https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz>
+- **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
+  `asteroid-names.bin` and `mpcorb-header.txt` on R2.
+- **Modified:** Yes. Numbered rows only, without the centaurs and the objects
+  beyond Neptune (orbit type 10), quantized to a columnar file, and the few rows
+  at another epoch propagated to the shared one by two-body motion.
+- **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,
+  <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
+  <https://www.minorplanetcenter.net/iau/WWWPolicy.html>
+
+### JPL Small-Body Database (asteroid diameters)
+
+<!-- attribution: id=sbdb-diameters; keys=sbdb.* -->
+
+- **What:** Diameters and geometric albedos of the numbered asteroids that
+  have one (135,476 on 2026-11-16), most from NEOWISE.
+- **By:** The JPL Solar System Dynamics group (the Small-Body Database), from
+  the published measurement each row cites.
+- **Licence:** Not stated on the pages read. The API fair-use policy limits
+  how the service is called ("You agree to submit only one API request at a
+  time (no simultaneous requests)", "You may not embed these APIs in your
+  website (per NASA CORS policy)") and says nothing on republishing.
+- **Use:** No licence stated
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd-api.jpl.nasa.gov/sbdb_query.api>
+- **Enters skymap:** `npm run fetch-sbdb-diameters` → `data/raw/sbdb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroid-diameters.bin` on R2.
+- **Modified:** Yes. Only the asteroids the asteroids Layer draws, with
+  diameter and albedo as 32-bit floats; the uncertainties are left out.
+- **Checked:** 2026-11-16: <https://ssd-api.jpl.nasa.gov/>,
+  <https://ssd-api.jpl.nasa.gov/doc/sbdb_query.html>,
+  <https://ssd.jpl.nasa.gov/about/>
 
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
@@ -1793,9 +1854,9 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Black Marble, the water mask and the cloud composite (the pages need a
   script to show them).
 
-### Live cloud bake inputs (NASA GIBS and EUMETSAT)
+### Live cloud bake inputs (NASA GIBS, EUMETSAT and JMA Himawari)
 
-<!-- attribution: id=cloud-bake; keys=clouds.* -->
+<!-- attribution: id=cloud-bake; keys=clouds.*; hosts=www.earthdata.nasa.gov,www.eumetsat.int,www.jma.go.jp -->
 
 - **What:** The daily satellite imagery `tools/cloud-bake-rs` turns into a
   global cloud-opacity map: VIIRS (NOAA-20, NOAA-21) swaths and mosaics and
@@ -1805,21 +1866,42 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Meteorological Agency (Himawari).
 - **Licence:** GIBS imagery from VIIRS and GOES: free to use, commercial use
   included, with credit to NASA/GIBS. EUMETView WMS visualisations: CC BY 4.0.
-  Himawari frames come through GIBS and are subject to JMA's terms, which have
-  not been checked; treated as a medium risk until they are.
+  Himawari frames reach GIBS through NOAA, whose terms on the AWS open-data
+  registry (<https://registry.opendata.aws/noaa-himawari/>) read: "Himawari
+  data is produced and managed by JMA. NOAA has rights to distribute this data
+  freely and openly to the public … NOAA and JMA request attribution for the
+  use or dissemination of unaltered data. However, it is not permissible to
+  state or imply endorsement by or affiliation with NOAA or JMA. If you modify
+  these data, you may not state or imply that it is original, unaltered data."
+  Commercial use of the Himawari part is pending JMA's answer; the maintainer
+  asked JMA on 2026-11-16. Meanwhile the web app uses it, with the credit
+  lines below; the desktop kiosk waits on the answer (it mirrors no live
+  files, so it shows the built-in cloud map).
 - **Use:** Per item
-- **Attribution:** EUMETSAT: "Contains modified EUMETSAT Meteosat data 2026"
-  (the year of the data). NASA: credit NASA GIBS.
+- **Attribution:** For EUMETSAT, required verbatim with the year of the data:
+  "Contains modified EUMETSAT Meteosat data 2026". For Himawari: "Contains
+  modified Himawari-9 data, Japan Meteorological Agency, via NOAA and NASA GIBS; not
+  original or endorsed by JMA". For GIBS: "We acknowledge the use of imagery
+  provided by services from NASA's Global Imagery Browse Services (GIBS), part
+  of NASA's Earth Science Data and Information System (ESDIS)." These lines are
+  shown on the website's data page for this source and on its credits page;
+  the app's splash and the desktop About name NASA GIBS, EUMETSAT and JMA
+  Himawari.
 - **Upstream:** <https://gibs.earthdata.nasa.gov/> and
   <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
-- **Enters skymap:** `npm run bake-clouds` → one cloud map per day. Nothing is
-  shipped yet; the output has no publish path.
+- **Enters skymap:** `npm run build-live-clouds`, run nightly by the Live
+  datasets workflow, bakes yesterday's map and uploads three grey tiers under
+  a dated `data/live/v1/files/clouds/` folder on R2, behind the
+  `live/v1/clouds.json` pointer. The web app's Earth cloud shell loads the
+  newest of them, falling back to the built-in Blue Marble cloud map. The
+  desktop kiosk mirrors no live keys, so it always shows the built-in map.
 - **Modified:** Yes. Mosaicked, seam-blended, gap-filled and matched to the
   static cloud map.
-- **Checked:** 2026-11-10, from the maintainer's notes of the terms; the
-  pages were not re-opened for this entry.
-- **Not verified:** JMA's terms for Himawari; the exact credit wording NASA
-  asks of GIBS users.
+- **Checked:** 2026-11-16, the NOAA Himawari page on the AWS open-data
+  registry; the GIBS and EUMETView terms on 2026-11-10, from the maintainer's
+  notes, not re-opened for this entry.
+- **Not verified:** JMA's terms for commercial use of Himawari; the exact
+  credit wording NASA asks of GIBS users beyond the acknowledgement above.
 
 ### EOxCloudless (Sentinel-2), layer s2cloudless-2025
 
@@ -2093,6 +2175,52 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
 - **Checked:** 2026-10-07: no record could be opened (the STAC collection
   addresses tried answered 404).
 - **Not verified:** the CC0 statement as it stands on 2026-10-07.
+
+## Moon surface
+
+Baked by `npm run build-surface-tiles -- --body moon` into `moon-tiles/`.
+
+### LROC WAC global mosaic
+
+<!-- attribution: id=lroc-wac; keys=lroc.* -->
+
+- **What:** Lunar LRO LROC WAC Global Morphologic Mosaic, 100 m.
+- **By:** Speyerer et al., LROC team (NASA/GSFC/Arizona State University);
+  publisher USGS Astrogeology Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LROC WAC mosaic: NASA/GSFC/Arizona State
+  University, USGS Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lroc/README.md`) →
+  `tools/textures/surfaceBodies/moonSurfaceBake.ts`.
+- **Modified:** Yes. Re-tiled, de-lit against LOLA and tinted to the base
+  globe's colour.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lroc_wac_global_morphologic_mosaic_100m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
+### LOLA global heights
+
+<!-- attribution: id=lola-ldem; keys=lola.* -->
+
+- **What:** Lunar LRO LOLA Global LDEM, 118 m.
+- **By:** Smith et al., NASA/GSFC LOLA team; publisher USGS Astrogeology
+  Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LOLA 118 m DEM: NASA/GSFC LOLA team, USGS
+  Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lola/README.md`) →
+  `moonSurfaceBake.ts`.
+- **Modified:** Yes. Converted to Float32 metres, re-gridded, raised 400 m to
+  the scene's datum.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lola_global_ldem_118m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
 
 ## 3D models
 
@@ -2627,7 +2755,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
 
 <!-- attribution: id=helland; hosts=tannerhelland.com -->
 
-- **What:** The piecewise fit in `src/utils/color/temperatureToLinearRgb.ts`
+- **What:** The piecewise fit in `src/layers/starCatalog/bodies/utils/temperatureToLinearRgb.ts`
   that gives a star its colour from its temperature.
 - **By:** Tanner Helland, "How to Convert Temperature (K) to RGB: Algorithm
   and Sample Code", 2012.
@@ -3148,19 +3276,22 @@ and where they come from".
 
 <!-- attribution: id=npm-dependencies -->
 
-- **What:** The libraries the app and the website bundle. Named in
-  `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
-  `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
-  `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
-  (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
-  families under `react-markdown`, and others); the build lists every one in
-  `third-party-licenses.md`. Build-time tools are listed in `package.json`.
+- **What:** The libraries the app, the website and the desktop app bundle.
+  Named in `package.json`: `react`, `react-dom`, `react-redux`,
+  `@reduxjs/toolkit`, `redux-saga`, `typed-redux-saga`, `classnames`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`,
+  `qrcode-generator`; for the website `astro`, `@astrojs/mdx`,
+  `@astrojs/react`, `pagefind`; for the desktop app `electron`,
+  `electron-store`, `selfsigned`. The bundles also hold what those pull in
+  (`immer`, `redux`, `reselect`, `scheduler`, and others); the build lists
+  every one in `third-party-licenses.md`. Build-time tools are listed in
+  `package.json`. The Jost font package has its own entry (see entry:
+  font-jost).
 - **By:** Their authors.
-- **Licence:** MIT, each of the fifteen named, as its own `package.json`
-  states. Of the 74 packages the app's bundle holds, the build reports MIT
-  for 71, ISC for one, and no licence field for two entry points of
-  `redux-saga` (itself MIT).
+- **Licence:** MIT, each of the nineteen named, as its own `package.json`
+  states. Of the 74 packages the app's bundle held on 2026-10-07, the build
+  reported MIT for 71, ISC for one, and no licence field for two entry
+  points of `redux-saga` (itself MIT).
 - **Use:** Free with credit
 - **Attribution:** MIT asks that "The above copyright notice and this
   permission notice shall be included in all copies or substantial portions
@@ -3171,13 +3302,20 @@ and where they come from".
   (`@ungap/structured-clone`). The website's build and the three dev-tool
   pages (`/galaxy/`, `/mcpm/`, `/flow/`) write no such file.
 - **Upstream:** <https://www.npmjs.com/>
-- **Enters skymap:** `package.json`, `packages/website/package.json`.
+- **Enters skymap:** `package.json`, `packages/website/package.json`,
+  `packages/desktop/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
   installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
   `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
   satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
-  <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
+  <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`;
+  2026-11-21: the `license` field of the installed `qrcode-generator` 2.0.4,
+  `@astrojs/react` 7.0.1, `electron` 44.9.2, `electron-store` 12.0.0 and
+  `selfsigned` 5.5.0 (MIT, all five).
 - **Not verified:** what the website's scripts and the dev-tool pages bundle;
-  the package count of the app's bundle since `satellite.js` joined it.
+  the package count of the app's bundle since `satellite.js` and
+  `qrcode-generator` joined it and `react-markdown` left; which licence
+  notices the desktop installers carry for Electron and the Chromium it
+  ships.

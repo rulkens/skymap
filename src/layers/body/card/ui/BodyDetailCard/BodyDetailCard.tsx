@@ -15,6 +15,7 @@ import type { EarthSceneInfo } from '../../../../../@types/engine/EarthSceneInfo
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../../utils/format/formatRadiusM';
 import { BODY_FACTS } from '../../../../../data/bodies/bodyFacts.generated';
+import { formatBodyMass } from '../../../../../utils/format/formatBodyMass';
 import { SCENE_BODIES } from '../../../../../data/bodies/sceneBodies';
 import { isMeshBody } from '../../../../../utils/meshBodies/isMeshBody';
 import { cardShotUrl } from '../../../../../utils/palette/cardShotUrl';
@@ -83,8 +84,11 @@ function BodyDetailCard({
     });
   }
   if (distanceMpc != null) leadRows.push({ label: 'Distance', value: formatDistance(distanceMpc) });
-  if (facts?.mass) {
-    leadRows.push({ label: <InfoTip {...TIPS.bodyMass}>Mass</InfoTip>, value: facts.mass });
+  if (facts?.massKg !== undefined) {
+    leadRows.push({
+      label: <InfoTip {...TIPS.bodyMass}>Mass</InfoTip>,
+      value: formatBodyMass(facts.massKg, facts.parent !== undefined),
+    });
   }
   if (facts?.gravity) {
     leadRows.push({

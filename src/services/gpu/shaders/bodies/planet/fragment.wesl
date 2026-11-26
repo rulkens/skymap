@@ -39,24 +39,24 @@ struct FSOut {
 
 @fragment
 fn fs(in: VSOut) -> FSOut {
-  let ro = in.camPosLocal;
+  let rayOrigin = in.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the PROXY_SCALE-scaled
   // shell, so neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
+  let rayDir = normalize(in.localPos - rayOrigin);
+  let surface = hitUnitSphere(rayOrigin, rayDir, dot(rayOrigin, rayOrigin) - 1.0);
   if (!surface.hit) {
     discard;
   }
 
   // Unit length by construction, so it is the exact geometric normal -- no
   // barycentric blend, and co-framed with 'sunDirLocal'.
-  let n = surface.point;
-  let shade = litShade(n, in.sunDirLocal);
+  let surfaceNormal = surface.point;
+  let shade = litShade(surfaceNormal, in.sunDirLocal);
 
   var out: FSOut;
   out.colour = vec4<f32>(in.albedo * shade, 1.0);
   // Absolute local frame: the SAME mvp the vertex stage used, applied to the
   // real surface point.
-  out.depth = fragDepthFromClip(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), n);
+  out.depth = fragDepthFromClip(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), surfaceNormal);
   return out;
 }

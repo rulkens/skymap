@@ -59,7 +59,7 @@ Licence check still owed for JAXA (Ryugu) and ESA/LAM (67P, Lutetia, Šteins).
    Donaldjohanson, Hyperion** — catalogue scale, non-star-shaped bake, and how a
    user finds a 500 m body (labels, palette, camera approach, body facts).
    Hyperion's chaotic spin is authored; 67P's spin period drifted across perihelion.
-4. **Didymos + Dimorphos** — not blocked: one more `BARYCENTRIC_PAIRS` row
+4. **Didymos + Dimorphos** — not blocked: a `pair` field on Didymos' body row
    (Earth–Moon's mechanism), Didymos' heliocentric row fitted to the system
    barycentre. Dimorphos is ~1% of the pair's mass, so Didymos' reflex is ~10 m.
    Only bodies that orbit the barycentre itself need the invisible node of

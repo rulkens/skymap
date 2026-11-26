@@ -13,6 +13,6 @@ export type DriverId =
   | 'followApproach'
   | 'followHold'
   | 'tween'
-  | 'mission'
+  | 'timeline'
   | 'autoRotate'
   | 'resting';

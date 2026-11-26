@@ -2,7 +2,7 @@ import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
 import { MILKY_WAY_NAMES } from '../../../../src/layers/milkyWay/card/data/milkyWayNames';
 import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
-import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
+import { BODY_SEARCH_NAMES } from '../../../../src/layers/starCatalog/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -37,8 +37,8 @@ import { byName } from '../utils/byName';
  */
 export const OBJECT_SECTIONS: readonly ObjectSection[] = [
   {
-    id: 'sun-planets-and-dwarf-planets',
-    title: 'Sun, planets and dwarf planets',
+    id: 'sun-planets-and-small-bodies',
+    title: 'Sun, planets and small bodies',
     kinds: ['sun', 'planet'],
     one: 'body',
     many: 'bodies',
@@ -168,16 +168,18 @@ const orbiting = ORBITAL_ELEMENTS.flatMap((orbit) => {
 const sunId = [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].find((row) => row.id === 'sun')!
   .stars[0]!.id;
 
-const planets = orbiting
-  .filter(({ round }) => round === sunId)
-  .map(({ body }) =>
-    focusRow({
-      name: body.label,
-      kind: 'planet',
-      id: `${BODY_FOCUS_PREFIX}${body.id}`,
-      ...(body.id === EARTH_REF.id ? { note: 'The home view' } : {}),
-    }),
-  );
+const planets = [
+  ...orbiting.filter(({ round }) => round === sunId).map(({ body }) => body),
+  // A body on a sampled track (2026 QQ8) has no orbit row; its track is Sun-centred.
+  ...SCENE_PLANETS.filter((body) => !orbitOf.has(body.id)),
+].map((body) =>
+  focusRow({
+    name: body.label,
+    kind: 'planet',
+    id: `${BODY_FOCUS_PREFIX}${body.id}`,
+    ...(body.id === EARTH_REF.id ? { note: 'The home view' } : {}),
+  }),
+);
 
 const moons = orbiting
   .filter(({ round }) => round !== sunId)

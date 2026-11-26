@@ -26,7 +26,7 @@ import {
   WHY_IT_IS_THERE,
 } from './zoneOfAvoidance.copy';
 
-export const zoneOfAvoidance: Exhibit = {
+export const zoneOfAvoidance: Exhibit<'zoneOfAvoidance'> = {
   id: 'zoneOfAvoidance',
   label: LABEL,
   settings: {

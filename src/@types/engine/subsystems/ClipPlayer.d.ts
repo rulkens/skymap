@@ -14,7 +14,7 @@ import type { RootState } from '../../../store/types';
 export type ClipPlayer = {
   /**
    * runFrame's FIRST statement, by contract: a step's frame roll must be in the store before the
-   * frame derives its basis. Advances `clipEpoch` against the live `camera.clip`; the frame
+   * frame derives its basis. Advances `clipEpoch` against the live `camera.intent.clip`; the frame
    * threads the result into `advanceEpochs`.
    */
   tick(

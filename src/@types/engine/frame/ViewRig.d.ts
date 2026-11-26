@@ -4,6 +4,7 @@
  * the canvas view and a `'perView'` one against every entry of `views`.
  */
 
+import type { OutputProjection } from '../../rendering/OutputProjection';
 import type { EngineState } from '../state/EngineState';
 import type { FrameSection } from './FrameSection';
 import type { FrameView } from './FrameView';
@@ -19,4 +20,6 @@ export type ViewRig = {
   /** Whether the canvas cursor maps to one of this rig's views — false turns
    *  off picking and the terrain pick marker (a dome has no single cursor ray). */
   readonly pickable: boolean;
+  /** How this rig's labels land on its output image (`outputProjectionOf`). */
+  readonly outputProjection: OutputProjection['kind'];
 };

@@ -18,7 +18,7 @@ import {
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { STELLAR_STREAMS_PICK_MIN_ACROSS_PX } from '../data/stellarStreamsPickMinAcrossPx.constants';
 import { STELLAR_STREAM_RIBBON_RECORD_LANES } from '../data/stellarStreamRibbonRecord.constants';
 import { stellarStreamRibbons } from '../utils/stellarStreamRibbons';
@@ -78,7 +78,7 @@ export function createStellarStreamsRibbonPickRenderer(
     },
   });
   const scratch = new Float32Array(UNIFORMS_BYTES / 4);
-  new Uint32Array(scratch.buffer)[PICK_BASE] = packSelection(pickCode, PICK_SENTINEL_OFFSET);
+  new Uint32Array(scratch.buffer)[PICK_BASE] = packPickWord(pickCode, 0);
   scratch[MIN_HALF_WIDTH_PX] = STELLAR_STREAMS_PICK_MIN_ACROSS_PX / 2;
 
   let segments: GPUBuffer | null = null;

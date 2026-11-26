@@ -41,6 +41,7 @@ import { exposureToEv } from '../../utils/tonemap/exposureToEv';
 import { evToExposure } from '../../utils/tonemap/evToExposure';
 import { LENS_MIN_DEG } from '../../data/camera/lensMinDeg';
 import { LENS_MAX_DEG } from '../../data/camera/lensMaxDeg';
+import { formatLensDeg } from '../../utils/format/formatLensDeg';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -66,6 +67,16 @@ const ORIENTATION_FRAME_IDS: readonly OrientationFrameId[] = [
 function formatEv(ev: number): string {
   return `${ev > 0 ? '+' : ''}${ev.toFixed(1)} EV`;
 }
+
+/**
+ * The lens slider runs in doublings above the floor (`LENS_MIN_DEG · 2^s`): a linear 1′–120°
+ * track would squeeze everything under a degree into its first pixel. 256 steps put the
+ * grid on both ends and make one nudge a ~3.5% zoom.
+ */
+const LENS_STOPS = Math.log2(LENS_MAX_DEG / LENS_MIN_DEG);
+const LENS_STOP_STEP = LENS_STOPS / 256;
+const lensDegAt = (stops: number): number => LENS_MIN_DEG * 2 ** stops;
+const lensStopsAt = (deg: number): number => Math.log2(deg / LENS_MIN_DEG);
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -112,6 +123,10 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
+  /** Whether the film look (grain, glow, softer lens) is on. */
+  filmEnabled: boolean;
+  /** Called with the toggled flag when the Film look switch is clicked. */
+  onFilmEnabledChange: (next: boolean) => void;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -143,6 +158,8 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
+  filmEnabled,
+  onFilmEnabledChange,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
@@ -196,12 +213,13 @@ function DisplaySection({
       <div className={styles.panelRow}>
         <Slider
           label="Field of view"
-          value={fovDeg}
-          min={LENS_MIN_DEG}
-          max={LENS_MAX_DEG}
-          step={0.5}
-          onChange={onFovDegChange}
-          format={(v) => `${v % 1 === 0 ? v : v.toFixed(1)}°`}
+          value={lensStopsAt(fovDeg)}
+          min={0}
+          max={LENS_STOPS}
+          step={LENS_STOP_STEP}
+          onChange={(stops) => onFovDegChange(lensDegAt(stops))}
+          format={(stops) => formatLensDeg(lensDegAt(stops))}
+          displayed={{ fromValue: lensDegAt, toValue: lensStopsAt }}
         />
       </div>
 
@@ -236,6 +254,25 @@ function DisplaySection({
           />
         </div>
       </CollapsibleSection>
+
+      {/* A switch with nothing to unfold: the Bloom/HDR header shape (toggle, then
+          the uppercase title) minus the chevron, which stays as a blank so the
+          toggles line up down the column. */}
+      <div className={styles.switchHeader}>
+        <span className={styles.switchHeaderChevron} aria-hidden>
+          ▸
+        </span>
+        <input
+          id="film-look"
+          type="checkbox"
+          className={styles.switchHeaderToggle}
+          checked={filmEnabled}
+          onChange={(e) => onFilmEnabledChange(e.target.checked)}
+        />
+        <label htmlFor="film-look" className={styles.switchHeaderTitle}>
+          Film look
+        </label>
+      </div>
 
       {/* Master toggle drives settings.hdr.enabled, which the swap-chain saga
           watches to reconfigure the surface at runtime. Disabled + hinted

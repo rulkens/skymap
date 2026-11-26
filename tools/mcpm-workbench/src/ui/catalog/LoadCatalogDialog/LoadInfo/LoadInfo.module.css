@@ -1,0 +1,24 @@
+/* Grows in above the footer when a file is chosen; the dialog keeps its size,
+   so the room comes out of the body's free space and the footer stays put. The
+   blocks hold the block padding, so only the divider shows at zero height.
+   Wide: `file` and `grid` side by side, each a label and a value track. Narrow:
+   both on the same two tracks, stacked, so their labels share one column. */
+.root {
+  composes: reveal from '../../../panel/reveal.module.css';
+  display: grid;
+  grid-template-columns:
+    [file-start] max-content max-content
+    [file-end grid-start] max-content minmax(0, 1fr)
+    [grid-end];
+  column-gap: var(--space-4);
+  padding-inline: var(--inset);
+  border-block-start: 1px solid var(--border-divider);
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+@container (inline-size < 30rem) {
+  .root {
+    grid-template-columns: [file-start grid-start] max-content minmax(0, 1fr) [file-end grid-end];
+  }
+}

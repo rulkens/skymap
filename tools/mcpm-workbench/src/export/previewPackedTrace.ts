@@ -1,18 +1,14 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
 import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
-
-export type PreviewPackedTrace = {
-  readonly buffer: GPUBuffer;
-  readonly element: GridElement;
-};
+import type { PreviewPackedTrace } from '../../@types/export/PreviewPackedTrace';
 
 /**
  * previewPackedTrace — packs `values` through the REAL `packLogTraceVoxels`
  * (the same call `exportScfd.ts`'s `.scfd` leg makes) and uploads the result
  * as a STORAGE buffer a second TracePass can march in place of the live
- * trace (spec §7's preview-export view). `packLogTraceVoxels` always packs
+ * trace. `packLogTraceVoxels` always packs
  * to f16 bits; this widens to f32 CPU-side ONLY when the device lacks
  * `shader-f16` — the same fork `createMcpmHarness` takes for the live grid's
  * own element, so the preview never risks an `enable f16` compile failure on

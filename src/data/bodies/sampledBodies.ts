@@ -1,10 +1,9 @@
 /**
- * SAMPLED_BODIES — the craft whose position comes from a loaded ephemeris track
+ * SAMPLED_BODIES — the bodies whose position comes from a loaded ephemeris track
  * instead of orbital elements; ids match `trajectoryRegistry` track ids.
- * `trailColor` is the craft's trail tint (linear HDR), the one source for it.
  */
 
-import type { SampledBody } from '../../@types/missions/SampledBody';
+import type { SampledBody } from '../../@types/scene/SampledBody';
 import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
 export const SAMPLED_BODIES: readonly SampledBody[] = APP_BODY_REGISTRY.flatMap((row) =>

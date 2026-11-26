@@ -2,11 +2,9 @@
 // screen-space rectangle per legible label, stamping the label subject's
 // packed identity into the r32uint pick target.
 //
-// The rect arrives ALREADY in device pixels ('labelScreenRect' on the CPU —
-// the same measured-ink + em-clamp math the COSMO declutter runs), so nothing
-// is projected here; the vertex stage only maps px -> NDC. A shader-side
-// second copy of that clamp is precisely the drift the shared CPU helper
-// exists to prevent. It is also why this is not 'lib/billboard's
+// The rect arrives ALREADY in device pixels (the ink box 'projectRecords'
+// made for declutter), so nothing is projected here; the vertex stage only
+// maps px -> NDC. That is also why this is not 'lib/billboard's
 // 'expandBillboardScreen': that expands a uniform radius about a projected
 // centre, and a line of text is an asymmetric box about its anchor.
 //
@@ -21,7 +19,7 @@
 // a fragment pinned to the plane has to be broken.
 //
 // Every label in a pass shares its band, and the depth test rejects EQUAL, so
-// the FIRST instance drawn wins a contested pixel — 'labelPickQuads' emits
+// the FIRST instance drawn wins a contested pixel — 'recordPickQuads' emits
 // them nearest-subject-first for that reason.
 //
 // ## Attribute layout (stepMode 'instance', stride 20 bytes)
@@ -38,7 +36,7 @@ struct LabelPickUniforms {
   _pad1: f32,
 };
 
-@group(0) @binding(0) var<uniform> u: LabelPickUniforms;
+@group(0) @binding(0) var<uniform> uniforms: LabelPickUniforms;
 
 // Distance from the winning end of the depth range — see the header. Far
 // coarser than depth32float/depth24plus resolve at either extreme, so the band
@@ -51,35 +49,35 @@ struct VSOut {
   @location(0) @interpolate(flat) packedId: u32,
 };
 
-// Corner 'vi' of the pixel rect, in NDC. 'quadUv' gives [0,1]^2 in the same
+// Corner 'vertexIndex' of the pixel rect, in NDC. 'quadUv' gives [0,1]^2 in the same
 // corner order the six-vertex triangle list uses; +Y down in px becomes +Y up
 // in NDC via the 1 - t flip.
-fn rectCornerNdc(vi: u32, rectPx: vec4<f32>) -> vec2<f32> {
-  let px = mix(rectPx.xy, rectPx.zw, quadUv(vi));
-  return vec2<f32>(px.x / u.viewportPx.x * 2.0 - 1.0, 1.0 - px.y / u.viewportPx.y * 2.0);
+fn rectCornerNdc(vertexIndex: u32, rectPx: vec4<f32>) -> vec2<f32> {
+  let cornerPx = mix(rectPx.xy, rectPx.zw, quadUv(vertexIndex));
+  return vec2<f32>(cornerPx.x / uniforms.viewportPx.x * 2.0 - 1.0, 1.0 - cornerPx.y / uniforms.viewportPx.y * 2.0);
 }
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) rectPx: vec4<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
   var out: VSOut;
   // w = 1, so z IS z/w: the band value lands in NDC depth unchanged.
-  out.clip = vec4<f32>(rectCornerNdc(vi, rectPx), LABEL_PICK_BAND_EPS, 1.0);
+  out.clip = vec4<f32>(rectCornerNdc(vertexIndex, rectPx), LABEL_PICK_BAND_EPS, 1.0);
   out.packedId = packedId;
   return out;
 }
 
 @vertex
 fn vsReversed(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) rectPx: vec4<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
   var out: VSOut;
-  out.clip = vec4<f32>(rectCornerNdc(vi, rectPx), 1.0 - LABEL_PICK_BAND_EPS, 1.0);
+  out.clip = vec4<f32>(rectCornerNdc(vertexIndex, rectPx), 1.0 - LABEL_PICK_BAND_EPS, 1.0);
   out.packedId = packedId;
   return out;
 }

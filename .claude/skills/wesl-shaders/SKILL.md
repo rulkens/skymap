@@ -62,6 +62,10 @@ export default defineConfig({
 
 Without this, Vitest fetches `.wesl` files and rolldown tries to parse them as JavaScript, failing with "expected a semicolon" or "unexpected token" — a JS parse error, not a shader error. A tool with its own `wesl.toml` passes `weslStaticPlugin({ weslToml })`, since the default is `<cwd>/wesl.toml`.
 
+## An `enable` directive goes AFTER the imports
+
+WGSL wants `enable …;` before every declaration, but the linker stops resolving imports once it has seen one: with `enable dual_source_blending;` above the `import` lines, the imports reach the browser unlinked (`unexpected token` on each `import`, then the "Invalid ShaderModule" cascade and a black frame). Put the `enable` directly below the imports; the linked output still carries it ahead of all declarations. Exemplar: `atmosphere/shell/fragmentDualSource.wesl`.
+
 ## Runtime-only failure: duplicate @builtin(position)
 
 Declaring `@builtin(position)` twice in one entry point (once on a member of the input struct and again on a bare parameter) fails ONLY at runtime: the build and the wesl linker both pass, and it is `device.createShaderModule` that rejects the module. Fix: read the position from the struct member and delete the bare parameter. Because nothing fails until module creation, the symptom is the same "Invalid ShaderModule" cascade as gotcha #3; the dev-mode compile logger (below) shows the real error.
@@ -94,7 +98,7 @@ How to find and prove it:
 
 ## File layout and moves
 
-- **One folder per shader** with `io.wesl` + `vertex.wesl` + `fragment.wesl`; variants are extra fragments over one vertex (`galaxyCatalog/points/`: `colorFragment.wesl` + `pickFragment.wesl`). A draw-type `if` inside a shared fragment is the wrong split: it belongs in the pipeline table. Ground a new layout in the existing tree and checkpoint it with the user for anything beyond a one-file tweak. No register-style locals (`g0`, `w2`). `tests/conventions/shaderFolderShape.test.ts` enforces the split (io.wesl, `@vertex` only in `vertex*.wesl`, `@fragment` only in `fragment*`/`*Fragment.wesl`); its `ALLOWED` folders only shrink.
+- **One folder per shader** with `io.wesl` + `vertex.wesl` + `fragment.wesl`; variants are extra fragments over one vertex (`galaxyCatalog/points/`: `colorFragment.wesl` + `pickFragment.wesl`). A draw-type `if` inside a shared fragment is the wrong split: it belongs in the pipeline table. Ground a new layout in the existing tree and checkpoint it with the user for anything beyond a one-file tweak. No register-style locals (`g0`, `w2`, `mu`), enforced for every declared name by `tests/conventions/weslNames.test.ts`, whose `ALLOWED` counts only shrink. `tests/conventions/shaderFolderShape.test.ts` enforces the split (io.wesl, `@vertex` only in `vertex*.wesl`, `@fragment` only in `fragment*`/`*Fragment.wesl`); its `ALLOWED` folders only shrink.
 - **A shader move needs a hand sweep** of literals `npm run move-files` does not rewrite (it exits 1 on some, not all): `import package::…`, TS `?static` specifiers, `wesl.toml`, `vite.config.ts`, and bare directory literals in scraper/parity tests (no trailing slash, no filename).
 - **Tool shader symlinks go at the LEAF**: the galaxy-renderer tool's `wesl.toml` glob follows a symlinked dir but not a real subdir of one, so `tools/galaxy-renderer/src/engine/shaders/milkyWay/field/` is a real dir of per-file symlinks. The wrong shape fails "module not found" only at the tool's shader-link time, and tool-only trees are linked only by the tool's vite build, so both builds are gates.
 

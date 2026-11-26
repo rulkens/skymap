@@ -9,8 +9,6 @@
 // hdr' OVER composite already multiplies the foreground by, so any cutoff
 // over it gives one number two meanings.
 
-import package::lib::camera::CameraUniforms;
-import package::lib::camera::worldToClip;
 import package::lib::math::saturate;
 import package::lib::sceneDepthRay::FAR_DEPTH;
 import package::lib::sceneDepthRay::sceneRayDistance;
@@ -58,36 +56,39 @@ fn sceneTransmittance(fragXY: vec2f) -> f32 {
  * relief away.
  */
 fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
+  // No surface reads as 'nearKm' itself, which is never nearer than 'nearKm'.
+  return select(0.0, 1.0, sceneSurfaceKm(fragXY, nearKm) < nearKm);
+}
+
+/**
+ * Distance along this pixel's ray to the sampled scene surface, km, or
+ * 'noSurfaceKm' where the texel still holds the far clear. The texel rescale
+ * is the one 'sceneDepthOccludes' documents.
+ */
+fn sceneSurfaceKm(fragXY: vec2f, noSurfaceKm: f32) -> f32 {
   let texel = vec2i(fragXY * vec2f(textureDimensions(sceneDepthTex)) / depthFrame.viewportPx);
   let depth = textureLoad(sceneDepthTex, texel, 0);
   if (depth == FAR_DEPTH) {
-    return 0.0;
+    return noSurfaceKm;
   }
-  let sceneKm = sceneRayDistance(
+  return sceneRayDistance(
     fragXY / depthFrame.viewportPx,
     depth,
     depthFrame.invMvp,
     depthFrame.camPosKm,
   );
-  return select(0.0, 1.0, sceneKm < nearKm);
 }
 
 /**
- * Shared 'vsOcclude' body for labels and marker-line leaders: projects
- * 'worldPos', flips NDC into 'depthFrame's framebuffer space (y points
- * DOWN, ndc.y points UP), then calls 'sceneDepthOccludes'. Guarded
+ * 'sceneDepthOccludes' at a subject's window uv (y down; the labels'
+ * 'vsOcclude' passes its projected px over the output size). Guarded
  * explicitly rather than leaning on textureLoad's out-of-bounds return:
  * FAR_DEPTH is 0 and so is an out-of-bounds load on the backends this
  * targets, a coincidence nothing should lean on — WGSL does not pin
  * what an out-of-bounds load returns.
  */
-fn subjectDepthVerdict(cam: CameraUniforms, worldPos: vec3<f32>, nearKm: f32) -> f32 {
-  let clip = worldToClip(cam, worldPos);
-  if (clip.w <= 0.0) {
-    return 0.0;
-  }
-  let ndc = clip.xy / clip.w;
-  let anchorXY = vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * depthFrame.viewportPx;
+fn subjectDepthVerdictAtUv(uv: vec2<f32>, nearKm: f32) -> f32 {
+  let anchorXY = uv * depthFrame.viewportPx;
   if (
     anchorXY.x < 0.0 || anchorXY.x >= depthFrame.viewportPx.x ||
     anchorXY.y < 0.0 || anchorXY.y >= depthFrame.viewportPx.y

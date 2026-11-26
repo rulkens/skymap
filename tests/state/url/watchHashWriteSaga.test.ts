@@ -30,7 +30,7 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
@@ -85,7 +85,11 @@ describe('watchHashWriteSaga', () => {
     // resolution path — a late catalog pulse, the star-count pulse, a direct ref
     // write — arrives here as this one action. Covering it covers all of them.
     buildHarness().dispatch(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({
+        slot: 'focus',
+        row: virgoRow,
+        id: { id: 'cluster-virgo-m87', ref: { type: 'structure', id: 'cluster-virgo-m87' } },
+      }),
     );
     await settle();
 
@@ -99,7 +103,7 @@ describe('watchHashWriteSaga', () => {
     // the `focus` row's `write` reads only the FOCUS row — so a slot-blind
     // trigger re-admits, through the derived cache, exactly the `selection/*`
     // hot stream the named-action list was chosen to exclude.
-    buildHarness().dispatch(setSelectionRow({ slot: 'hover', row: virgoRow }));
+    buildHarness().dispatch(setSelectionRow({ slot: 'hover', row: virgoRow, id: null }));
     await settle();
 
     expect(write).not.toHaveBeenCalled();

@@ -82,7 +82,7 @@ import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/frustum/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/occlusion/subjectOccludedByBodies';
-import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
+import { sampledDepthOcclusion } from '../sampledDepthOcclusion';
 import { pinInsideNearPlane } from '../../../../utils/camera/projection/pinInsideNearPlane';
 
 export const near0SelectionRingPass: ContentPass = {
@@ -166,11 +166,11 @@ export const near0SelectionRingPass: ContentPass = {
 
     // The per-pixel occlusion variant is selected by HANDING the renderer the
     // scene joint, so the depth verdict is made here: only a ring whose subject
-    // an opaque body actually hides gets attenuated. `overlaySceneOcclusion` is
+    // an opaque body actually hides gets attenuated. `sampledDepthOcclusion` is
     // undefined until the body pass has written this frame's `foreground:0`
     // (else the colour is stale and would blank the whole ring), and being the
     // first conjunct it keeps the body partition off those frames entirely.
-    const scene = overlaySceneOcclusion(ctx, view);
+    const scene = sampledDepthOcclusion(ctx, view);
     const occluded =
       scene !== undefined &&
       subjectOccludedByBodies({

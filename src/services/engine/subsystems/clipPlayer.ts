@@ -3,7 +3,7 @@
  * clock, evaluates the scene at t, and hands each change to the subsystem that animates it (the
  * fade registry, the frame roll). It never dispatches the scene: the engine reads it through
  * `view`, an overlay on intent. At the end the play's `atEnd` reverts or commits it (spec S3 §2).
- * A play under transport (S4) takes its clock from `camera.clip.transport` and publishes a jump
+ * A play under transport (S4) takes its clock from `camera.intent.clip.transport` and publishes a jump
  * (a new transport, new data, a wrap) by seeding the registry at t instead of by crossings.
  * Everything happens inside `tick`; nothing is deferred to a later frame. The epoch comes in
  * through `tick` and goes back out, rebased on a loop lap or to a transport's t.
@@ -19,7 +19,11 @@ import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { liveUpBasisQuat } from '../camera/orientation/liveUpBasisQuat';
 import { frameRollQuatAt } from '../camera/orientation/frameRollQuatAt';
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../data/orientation/orientationFrames';
-import { clipEnded, clearFrameTween, startFrameTween } from '../../../state/camera/cameraSlice';
+import {
+  clipEnded,
+  clearFrameTween,
+  startFrameTween,
+} from '../../../state/camera/cameraIntentSlice';
 import { FRAME_TWEEN_MS } from '../../../state/camera/watchOrientationChangeSaga';
 import { mergeSnapshot } from '../../../state/settings/mergeSnapshotAction';
 import { setOrientation } from '../../../state/settings/core/orientationSlice';
@@ -28,7 +32,7 @@ import { captureSettings } from '../../../state/scene/captureSettings';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { ClipPlayerDeps } from '../../../@types/engine/subsystems/ClipPlayerDeps';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
-import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../@types/camera/orbitCamera/CameraIntentState';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { SceneApplied } from '../../../@types/animation/compiledClip/SceneApplied';
 import type { SceneStep } from '../../../@types/animation/compiledClip/SceneStep';
@@ -51,7 +55,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   // The live play and its scene at t. `applied` is replaced only when a count moves, so its
   // identity keys the view memo.
-  let clip: CameraState['clip'] = null;
+  let clip: CameraIntentState['clip'] = null;
   let compiled: CompiledClip | null = null;
   let t = 0;
   let held = false;
@@ -166,7 +170,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     }
     const roll = running ? rollAt(prefixes) : null;
     if (roll !== null) store.dispatch(startFrameTween(roll));
-    else if (root.camera.frameTween !== null) store.dispatch(clearFrameTween());
+    else if (root.camera.intent.frameTween !== null) store.dispatch(clearFrameTween());
     publishedFrame = view(root).settings.orientation;
   }
 
@@ -214,7 +218,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
         publishStep(compiled!.scene.steps[i]!, i, root);
   }
 
-  function compile(next: NonNullable<CameraState['clip']>): void {
+  function compile(next: NonNullable<CameraIntentState['clip']>): void {
     clip = next;
     compiled = compileClip(next.data);
     applied = NOTHING_APPLIED;
@@ -226,7 +230,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   // Transported to transported is always one play: whoever owns a transport ends its play with
   // `stop()`, which resets the player first. A new play replacing a live clip hands its published
   // scene over to the new clip's start and leaves the end resolver to the play that registered it.
-  function enter(next: NonNullable<CameraState['clip']>, root: RootState): boolean {
+  function enter(next: NonNullable<CameraIntentState['clip']>, root: RootState): boolean {
     const continuing = clip?.transport != null && next.transport !== null;
     if (continuing) {
       if (next.data === clip!.data) clip = next;
@@ -313,11 +317,11 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
       stop();
       // Advanced against the POST-dispatch clip: the resolver may start the
       // next clip synchronously, and the driver reads this epoch this frame.
-      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.clip, nowMs) };
+      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.intent.clip, nowMs) };
     }
 
     const root = store.getState();
-    const next = root.camera.clip;
+    const next = root.camera.intent.clip;
     let epoch = advanceEpoch(clipEpoch, next, nowMs);
     if (next === null) return { clipEpoch: epoch };
     let jumped = next !== clip && enter(next, root);
