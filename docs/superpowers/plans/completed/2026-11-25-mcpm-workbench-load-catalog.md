@@ -473,7 +473,8 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 
 **Deliverables**
 
-- `parseCsvCatalog`, `concatCatalogPoints`, `massWeightFromLog10`, `LoadCatalogDialog`, the
+- The CSV reader (planned as `parseCsvCatalog`; shipped as `createCsvColumnReader` +
+  `catalogFromCsvColumns` behind the catalog worker), `concatCatalogPoints`, `massWeightFromLog10`, `LoadCatalogDialog`, the
   `UserCatalog` / `CatalogImportSettings` / `CatalogFileProblem` / `Cosmology` types.
 - `packedOverride`, `setPackedCatalog`, `readDroppedPackedCatalog` and `medianLog10Mass` no longer
   appear under `tools/mcpm-workbench/` or its tests; `log10StellarMass` appears only where
