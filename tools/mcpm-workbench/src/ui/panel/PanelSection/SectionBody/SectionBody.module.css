@@ -1,0 +1,28 @@
+/* Grows in on mount and folds up before it unmounts, so the sections below slide
+   both ways. No padding here: at zero height it is exactly the folded section. */
+.root {
+  composes: row from '../../panelGrid.module.css';
+  composes: reveal from '../../reveal.module.css';
+  transition:
+    block-size var(--duration-fast) ease-in,
+    opacity var(--duration-fast) ease-in;
+}
+
+.root[data-closing] {
+  block-size: 0;
+  opacity: 0;
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}
+
+/* The header-to-body gap lives here too, so it folds away with the rows. */
+.content {
+  composes: row from '../../panelGrid.module.css';
+  row-gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-3);
+}

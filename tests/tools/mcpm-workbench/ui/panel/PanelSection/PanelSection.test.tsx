@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /**
  * PanelSection keeps a folded body mounted, inert, until its fold-up transition
- * finishes, and unmounts it at once when nothing is running.
+ * finishes, and unmounts it at once when nothing is running. A new contentKey
+ * slides the body, unless motion is reduced.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
@@ -34,6 +35,8 @@ function fakeTransitions(): { finish: () => void } {
 
 afterEach(() => {
   delete (Element.prototype as Partial<Element>).getAnimations;
+  delete (Element.prototype as Partial<Element>).animate;
+  delete (window as Partial<Window>).matchMedia;
 });
 
 describe('PanelSection icon tip', () => {
@@ -97,5 +100,27 @@ describe('PanelSection fold-up', () => {
     fold();
     await flush();
     expect(grow.reverses).toBe(2);
+  });
+});
+
+describe('PanelSection content slide', () => {
+  it('slides only when contentKey changes, and never under reduced motion', () => {
+    let slides = 0;
+    let reduced = false;
+    Element.prototype.animate = () => (slides++, {} as Animation);
+    window.matchMedia = () => ({ matches: reduced }) as MediaQueryList;
+    const section = (key: string): ReactNode => (
+      <PanelSection title="Rendering" icon={null} open onToggle={() => {}} contentKey={key}>
+        <span />
+      </PanelSection>
+    );
+    const { rerender } = render(section('raymarch'));
+    rerender(section('raymarch'));
+    expect(slides).toBe(0);
+    rerender(section('agents'));
+    expect(slides).toBe(1);
+    reduced = true;
+    rerender(section('pathTracer'));
+    expect(slides).toBe(1);
   });
 });
