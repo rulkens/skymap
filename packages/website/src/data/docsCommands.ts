@@ -159,8 +159,13 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SCENE,
       },
       {
-        scripts: ['build-fonts', 'build-env-brdf-lut', 'build-pgc-aliases'],
-        does: 'Write three small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, and the catalogue names the search knows a galaxy by.',
+        scripts: [
+          'build-fonts',
+          'build-env-brdf-lut',
+          'build-blue-noise-mask',
+          'build-pgc-aliases',
+        ],
+        does: 'Write four small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, a noise pattern that hides the step grid in the cosmic-web volume, and the catalogue names the search knows a galaxy by.',
         manual: DATA,
       },
       {

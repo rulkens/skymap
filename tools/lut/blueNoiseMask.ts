@@ -15,47 +15,27 @@ const SIGMA = 1.9;
 const SPATIAL_RADIUS = 6; // ≈ 3σ
 const INITIAL_FILL = 0.1;
 
-type Kernel = {
-  readonly offsets: Int32Array;
-  readonly dx: Int32Array;
-  readonly weights: Float64Array;
-};
-
 function gaussian(distance: number): number {
   return Math.exp(-(distance * distance) / (2 * SIGMA * SIGMA));
 }
 
 /** Spatial (dx, dy) and temporal (dt) neighbours, each torus residue at most once. */
-function buildKernel(size: number, slices: number): { spatial: Kernel; temporal: Kernel } {
+function buildKernel(size: number, slices: number) {
   const radius = Math.min(SPATIAL_RADIUS, Math.floor((size - 1) / 2));
-  const sOffsets: number[] = [];
-  const sDx: number[] = [];
-  const sWeights: number[] = [];
+  const spatial = { dx: [] as number[], dy: [] as number[], weights: [] as number[] };
   for (let dy = -radius; dy <= radius; dy += 1) {
     for (let dx = -radius; dx <= radius; dx += 1) {
-      sOffsets.push(dy);
-      sDx.push(dx);
-      sWeights.push(gaussian(Math.hypot(dx, dy)));
+      spatial.dx.push(dx);
+      spatial.dy.push(dy);
+      spatial.weights.push(gaussian(Math.hypot(dx, dy)));
     }
   }
-  const tOffsets: number[] = [];
-  const tWeights: number[] = [];
+  const temporal = { dt: [] as number[], weights: [] as number[] };
   for (let dt = 1; dt < slices; dt += 1) {
-    tOffsets.push(dt);
-    tWeights.push(gaussian(Math.min(dt, slices - dt)));
+    temporal.dt.push(dt);
+    temporal.weights.push(gaussian(Math.min(dt, slices - dt)));
   }
-  return {
-    spatial: {
-      offsets: Int32Array.from(sOffsets),
-      dx: Int32Array.from(sDx),
-      weights: Float64Array.from(sWeights),
-    },
-    temporal: {
-      offsets: Int32Array.from(tOffsets),
-      dx: new Int32Array(tOffsets.length),
-      weights: Float64Array.from(tWeights),
-    },
-  };
+  return { spatial, temporal };
 }
 
 export function blueNoiseMask(size: number, slices: number, seed: number): Uint8Array {
@@ -68,12 +48,12 @@ export function blueNoiseMask(size: number, slices: number, seed: number): Uint8
     const y = Math.floor((cell % area) / size);
     const x = cell % size;
     for (let i = 0; i < spatial.weights.length; i += 1) {
-      const ny = (y + spatial.offsets[i]! + size) % size;
+      const ny = (y + spatial.dy[i]! + size) % size;
       const nx = (x + spatial.dx[i]! + size) % size;
       energy[s * area + ny * size + nx]! += sign * spatial.weights[i]!;
     }
     for (let i = 0; i < temporal.weights.length; i += 1) {
-      const ns = (s + temporal.offsets[i]!) % slices;
+      const ns = (s + temporal.dt[i]!) % slices;
       energy[ns * area + y * size + x]! += sign * temporal.weights[i]!;
     }
   };
