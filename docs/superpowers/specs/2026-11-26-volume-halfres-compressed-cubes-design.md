@@ -1,8 +1,9 @@
 # Half-res compressed volume cubes: design spec
 
-> **Status.** Draft, 2026-11-26. Owner: Alexander Rulkens. PR 3 of the volume effort (PR 1 #1170
+> **Status.** Approved 2026-11-26. Owner: Alexander Rulkens. PR 3 of the volume effort (PR 1 #1170
 > prep, PR 2 #1175 progressive sampling). Shape approved at the ground check the same day; the
-> owner's rulings are quoted in §2.
+> owner's rulings are quoted in §2 and §13. Plan:
+> `docs/superpowers/plans/2026-11-26-volume-halfres-compressed-cubes.md`.
 > **Written against** main at e41e5d89a, and against the post-prep shape of §3 as if it existed.
 > **Inputs.** The half-res spike (worktree `volume-progressive-octree`, `spike/` folders and
 > `tools/spike/build-scripts/{dense-mips,twomrs}/`; throwaway, not a code base) and its data in
@@ -84,8 +85,10 @@ export type GpuVolume = {
   `AssetSlot`'s rule that a committed payload belongs to the consumer.
 - The fetcher becomes `createCosmicWebDensityFetcher(device)` (`npm run move-files` renames
   `cosmicWebDensityFetcher.ts` and drags its test). It fetches, decodes, creates the texture with
-  `gpuTextureFormatForChannels` (the SCFD loader's existing format helper) and returns a
-  `GpuVolume`. The decoded cube is garbage once the function returns.
+  `gpuTextureFormatForChannels` (`src/utils/gpu/`, the flow field's existing format helper) and
+  returns a `GpuVolume`. The decoded cube is garbage once the function returns, so `placement` is a
+  fresh object: a `ScalarCube` satisfies `CubePlacement` structurally and would keep its voxels
+  alive.
 - The slot passes `dispose: (v) => v.texture.destroy()` for a fetched volume it drops before
   commit (superseded, or landing after release).
 - One caller and 13 test calls of `upload` change. Pixels are identical.
@@ -166,7 +169,12 @@ the byte lengths are exact (no partial blocks) and no level is padded.
 | Field | `levelMax` | Box origin (vox) | Box dims (vox) | Visible voxels outside (L0 / L1) |
 | --- | --- | --- | --- | --- |
 | MCPM, grid 712×1200×728 @ 0.78131 Mpc | 134143.296875, 81543.546875, 40429.76953125, 12616.5263671875 | 40, 40, 40 | 672 × 1152 × 648 | none: every non-zero r8 voxel is inside |
-| 2MRS, grid 1200×752×960 @ 1.2242083 Mpc | 11272, 6090, 2702.28, 1187.88 | 352, 120, 208 | 480 × 480 × 464 | 0.095% / 0.035% |
+| 2MRS, grid 1200×752×960 @ 1.22420848 Mpc | 11272, 6090, 2702.28, 1187.88 | 352, 120, 208 | 480 × 480 × 464 | 0.095% / 0.035% |
+
+`levelMax[1..3]` are read from the `.npy` files at build time; the values above are the spike's.
+MCPM's d4 and d8 `.npy` maxima differ from them in the seventh digit (40429.7734375 and
+12616.5234375, today's `mcpm-medium` and `mcpm-small` headers). The 2MRS voxel is the mean of the
+export's three per-axis edges, as today's import collapsed them (today's large header: 2.44841695 / 2).
 
 MCPM keeps the spike's origin and grows x and y to the next multiple of 96 (+5.9% texels; the
 spike's 648×1128×648 is a sub-box, so its r8 levels match byte for byte where they overlap). For
@@ -203,7 +211,8 @@ new boxes add mostly zeros.
 // tools/@types/volumes/VolumePyramidFieldRow.d.ts
 export type VolumePyramidFieldRow = {
   readonly id: string;                         // read from the source row (MCPM_ENTRY.binBaseName), never retyped
-  readonly npy: Readonly<Record<1 | 2 | 3, RawDataKey>>;  // d2, d4, d8, C-order (x slowest)
+  /** `<rawDataPath(dir)>/<stem>_d{2,4,8}.npy`, C-order (x slowest); both extractors name them so. */
+  readonly npy: { readonly dir: RawDataKey; readonly stem: string };
   readonly nativePeak: number;                 // levelMax[0]; the d2 file cannot know it
   readonly gridDims: Vec3;
   readonly voxelMpc: number;
@@ -214,19 +223,23 @@ export type VolumePyramidFieldRow = {
 };
 ```
 
-- **Inputs.** Both fields read whole-grid block-mean `.npy` files through `rawDataRegistry`. MCPM:
-  today's `mcpm_sdss_d{2,4,8}.npy` (`mcpm.dir`). 2MRS: the same three files from the native
-  Polyphorm export (1200×752×960 f16), written by the existing `extractPolyphormExport.py` into
-  `polyphorm.dir`. Its d2 is today's large file (the spike's `t00_verify.py`). The native peaks are
-  recorded in the rows because a d2 file cannot know them; both extractors already print them. The
-  grid constants move from `buildMcpmVolume.ts` into the MCPM row.
+- **Inputs.** Both fields read whole-grid block-mean `.npy` files through `rawDataRegistry`'s
+  directory keys (its rule for tier variants: a directory key, file names joined). MCPM: today's
+  `mcpm_sdss_d{2,4,8}.npy` (`mcpm.dir`). 2MRS: `polyphorm_2mrs_d{2,4,8}.npy` from the native
+  Polyphorm export (1200×752×960 f16, folder `2026-08-13_13-33-58`), written by the existing
+  `extractPolyphormExport.py` into `polyphorm.dir`. Its d2 is today's large file (the spike's
+  `t00_verify.py`). The native peaks are recorded in the rows because a d2 file cannot know them.
+  `extractMcpmCube.py` prints MCPM's; `extractPolyphormExport.py` prints only the d2/d4/d8 maxima, so
+  it gains one line printing the native stats (2MRS's 11272 is the spike's measurement). The grid
+  constants move from `buildMcpmVolume.ts` into the MCPM row.
 - **Per level k = 1..3.** Take `levelMax[k]` as the whole level's peak (so the gain reproduces
   today's per-tier stretch by construction), cut the box `>> k`, zero below `zeroBelowRaw`, encode
   (§4) into an r8 level. That pure step is `tools/volumes/utils/encodeVolumeLevel.ts`.
 - **Guard.** The builder refuses a box that leaves more than 0.1% of L1's visible voxels
   (code > 86) outside, or that breaks the crop rule. It prints the loss. A data refresh therefore
   cannot silently cut structure.
-- **Compression.** `basisu` v2.50.0 (Homebrew) gets each level as a 2D array of grey slices. BC4:
+- **Compression.** `basisu` v2.50.0 (Homebrew formula `basis_universal`) gets each level as a 2D
+  array of grey slices. BC4:
   `-dds -dds_format BC4 -linear -tex_type 2darray`. ASTC: `-ldr_6x6 -tl -ktx2_no_zstandard
   -tex_type 2darray`, effort 3. The builder strips the containers (DDS header 148 B; KTX2 level
   index at byte 80) to headerless blocks and checks each length against §4. Spike timings for the
@@ -290,8 +303,12 @@ The loader takes the first row whose features are all on `device.features`. A pl
    `voxelMpc·2^base`, dims `dataBox.dims >> base`, identity rotation), the gain and the native box.
 2. Create the texture: base dims, `mipLevelCount = 4 − base`, the chosen format,
    `TEXTURE_BINDING | COPY_DST`, labelled `density-volume-<id>` for the Memory panel. Creation and
-   writes run inside a validation and an out-of-memory error scope; an error throws, so an invalid
-   texture never reaches a bind group (that would drop whole frames).
+   each write run inside a validation and an out-of-memory error scope; an error throws, so an
+   invalid texture never reaches a bind group (that would drop whole frames). Each scope wraps one
+   synchronous call and is popped before the next `await`: error scopes belong to the device, so a
+   scope held open across a fetch would also catch, and hide, the render loop's errors from the
+   frames drawn in between. Creation's scope is awaited at once; the writes' are awaited together
+   before step 4 returns.
 3. Fetch the levels coarse to fine, one at a time, each streamed through a reader into one
    8 MiB slab of whole z-slices. A full slab goes out as one `writeTexture` at its z offset and mip,
    then the buffer is reused (spike: 10.46 MB held at peak, 52 ms on localhost for MCPM ASTC). A
@@ -382,9 +399,13 @@ MCPM ASTC, per draw on vs off: inside 0.400 / 0.375 ms, outside 600 Mpc 0.575 / 
 - The desktop mirror needs no code: every family's group is `offline`. The syncing machine must
   have built both pyramids, or the inventory build throws (DEPLOY.md).
 - The old six files stay on R2 (sync never deletes), so tabs opened before the deploy keep their
-  manifest and their volumes. Pruning them is a manual step a month after the deploy.
-- A kiosk running a desktop build from before this PR loses both volumes after its next sync: the
-  new manifest no longer names the old files. A desktop build ships in the same deploy window (§12).
+  manifest and their volumes. Pruning them is a manual step a month after the deploy (§13).
+- The app deploy follows `sync-r2-secure` at once: the new manifest no longer names the old files,
+  so a fresh visit between the two gets the old app with the new manifest and draws no volume.
+- **Accepted known cost (owner, 2026-11-26).** A kiosk running a desktop build from before this PR
+  loses both volumes after its next data sync: the new manifest no longer names the old files. No
+  desktop build ships with this deploy; such a kiosk draws no density volume until it runs a newer
+  build.
 
 ## 9. Docs to update
 
@@ -397,8 +418,8 @@ MCPM ASTC, per draw on vs off: inside 0.400 / 0.375 ms, outside 600 Mpc 0.575 / 
   blocks, never sampling a partly written level.
 - `data/raw/mcpm/README.md`, `ATTRIBUTIONS.md:911-913` (the 2MRS route), `docs/science.md:43`
   ("three tiers", `buildMcpmVolume.ts`).
-- Website: `content/docs/data/pipeline.mdx:93,131` ("reduced to three sizes", "a cube of numbers
-  with a header"), copy through the `copy` skill. `docsRenderingFacts.ts` reads the step table and
+- Website: `packages/website/src/content/docs/data/pipeline.mdx:93,131` ("reduced to three sizes",
+  "a cube of numbers with a header"), copy through the `copy` skill. `docsRenderingFacts.ts` reads the step table and
   is unchanged.
 
 ## 10. Adjacent fixes
@@ -417,10 +438,10 @@ Own commits, after the prep and before the feature. Each verified on main e41e5d
    `VolumeFieldSettings.d.ts:24-39` (a gamma remap and a `1 − exp` alpha the shader does not use);
    `scalarFieldFormat.ts:82-85` and the same claim in `docs/DATA.md:40` (`max-age=86400`; hashed
    data files are immutable, DEPLOY.md:162).
-3. **Per-field hand lists beside the rows tuple.** The slots record in `create.ts:35-45` maps over
-   `COSMIC_WEB_DENSITY_SOURCE_ROWS`. `PRIORITY` (`cosmicWebDensityAssetRows.ts:13-17`) moves onto
+3. **Per-field hand lists beside the rows tuple.** The slots record in `create.ts:35-45` becomes a
+   map over `COSMIC_WEB_DENSITY_SOURCE_ROWS`. `PRIORITY` (`cosmicWebDensityAssetRows.ts:13-17`) moves onto
    the rows as `priority` (the entry type grows by one member; no Layer contract). The
-   `initialState.ts:14-27` list is not moved: see §12.
+   `initialState.ts:14-27` list is not moved: see §13.
 
 ## 11. Tests
 
@@ -439,8 +460,10 @@ Only what can break (testing.md):
   `GpuVolume`.
 - **Ledger.** MCPM base L1 ASTC → 31,788,288 B and BC4 → 35,761,824 B, with no fallback warning.
 - **Uniform parity** at 304 B (existing test, updated).
-- **`encodeVolumeLevel`.** A tiny hand-computed grid: block mean before the log, the clamp zeroing
-  below the threshold, rounding.
+- **`encodeVolumeLevel`.** A tiny hand-computed grid: the crop offset, the C-order → x-fastest
+  reorder, the log against `levelMax[0]` (not the level's own peak), the clamp zeroing below the
+  threshold, rounding. Its input is already a block mean of the raw trace (the extractors average
+  before anything is logged), so "mean first, log second" holds by construction, not in this step.
 - **`dataFamilyOf`.** A hashed level file and the sidecar are tracked; `mcpm-medium.scfd` no longer
   is. (Existing cases updated.)
 - **SCFD `FormatVersionError`** (§10.1).
@@ -489,16 +512,21 @@ measuring run is time-boxed to about 30 minutes, one pass.
 13. **Tier switch** small → medium → large → small in the app: no flash to empty, no texture leaked
     in the Memory panel.
 
-## 13. Open questions
+## 13. Rulings on open questions
 
-1. **`initialState`'s per-field list** (`enabled`, `intensity`): the entry type records that boot
-   visibility lives in the Layer's `initialState`, not on rows. Recommended: keep it there.
-2. **Desktop build.** Kiosks on an older build lose both volumes after the next sync. Recommended:
-   cut a desktop build in the same deploy window.
-3. **2MRS inputs on R2.** MCPM's `.npy` are mirrored as Extra files; 2MRS's are not, so only the
-   owner can rebuild it. Recommended: not in this PR (the d2 file is about 430 MB, over wrangler's
-   cap); backlog it.
-4. **Old files on R2.** Recommended: prune the six `.scfd` a month after the deploy.
+Owner, 2026-11-26:
+
+1. **The spec is approved.**
+2. **A failed file after retries:** that volume is absent, with one console warning, as today for a
+   missing `.scfd`. No format step-down (§6 "Failure").
+3. **`initialState`'s per-field list** (`enabled`, `intensity`) stays in the Layer's `initialState`:
+   the entry type records that boot visibility lives there, not on rows.
+4. **No desktop build ships with the deploy.** Kiosks on an older desktop build lose both volumes
+   after their next data sync; the owner accepts that as a known cost (§8).
+5. **2MRS build inputs on R2:** not in this PR (the d2 file is about 430 MB, over wrangler's cap).
+   A backlog line records it, added with the builder (§14).
+6. **The six old `.scfd` come off R2 a month after the deploy.** A dated backlog line records it,
+   added when the runtime stops reading them (§14).
 
 ## 14. Backlog
 
@@ -507,5 +535,7 @@ measuring run is time-boxed to about 30 minutes, one pass.
 - Edited: "`AssetSlot` keeps committed values nothing re-reads" (`BACKLOG.md:93` and
   `docs/backlog/2026-10-13-asset-slot-value-disposal.md`): volume voxels leave its list. The flow
   cube, filaments, `ShellMesh` and the structure payload remain.
+- Added: "Mirror the 2MRS volume inputs to R2" (ruling 5) and "Prune the six tiered volume `.scfd`
+  from R2", dated a month after the deploy (ruling 6).
 - Untouched, related: "Large tier switch fails in headless" (`BACKLOG.md:273`). Medium ↔ large no
   longer reloads the density cubes, which may hide the repro; it is not fixed here.
