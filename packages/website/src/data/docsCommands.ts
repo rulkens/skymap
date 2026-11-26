@@ -134,6 +134,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['bake-horizon'],
+        does: 'Bakes the terrain shadow tiles of Earth, the Moon or Mars from their height tiles, and the whole-globe shadow maps. Options: --body, --band and --workers.',
+        manual: 'tools/textures/surfaceHorizon/README.md',
+      },
+      {
         scripts: ['fetch-cloud-inputs'],
         does: 'Downloads the cloud bake’s fixed inputs, about 400 MB: the static cloud map it matches its map to and the twelve Blue Marble months of 2004 it cuts the ice mask from. It runs fetch-textures with --cloud-inputs and needs -- --confirm.',
         manual: 'data/raw/clouds/README.md',
