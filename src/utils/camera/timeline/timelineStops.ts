@@ -1,7 +1,8 @@
 /**
  * timelineStops — one craft's events grouped into leg boundaries: an event less than a day after
  * the stop's first joins it (Voyager 1's Titan and Saturn are one stop). A stop frames the
- * planet it flew past — of a moon-and-planet stop, the planet, the body that orbits the Sun.
+ * planet it flew past — of a moon-and-planet stop, the planet, the body that orbits the Sun —
+ * else the body any of its events names (`targetId`), else Earth at a launch.
  */
 
 import type { TimelineEvent } from '../../../@types/exhibits/timeline/TimelineEvent';
@@ -17,7 +18,10 @@ function stopOf(events: readonly TimelineEvent[]): TimelineStop {
   return {
     ms: timelineEventMs(events[0]!),
     events,
-    planetId: encounter?.targetId ?? (launched ? 'earth' : null),
+    planetId:
+      encounter?.targetId ??
+      events.find((e) => e.targetId !== undefined)?.targetId ??
+      (launched ? 'earth' : null),
     encounter,
   };
 }
