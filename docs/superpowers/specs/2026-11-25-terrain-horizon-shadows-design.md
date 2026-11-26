@@ -225,22 +225,19 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
   the shadows there sharpen and never shift or coarsen.
 - **Phones read the sun only.** On a coarse pointer (`matchMedia('(pointer: coarse)')`, read once
   when the body Layer builds its pipelines) every pipeline linking `horizonLookup` sets its
-  `HORIZON_SKY` override false: each post loads only the texels of the two sunward sectors, 8
-  loads instead of 16, with the same sun and a sky term of 1. A fine pointer keeps all 16 and the
-  sky term. On a OnePlus 7T at close Jezero: 16.8 ms (57.5 fps) without horizon, 21.1 ms median
-  (p90 51 ms, 37.9 fps) with 16 loads, 16.8 ms (p90 18.6 ms, 55.5 fps) with 8. Desktop pays
-  about 1.0 ms for 16.
+  `HORIZON_SKY` override false: each post loads only the texels of the two sunward sectors, at
+  most 8 loads instead of 16 (4 when the two share a texel, three sector pairs in four), with the
+  same sun and a sky term of 1. A fine pointer keeps all 16 and the sky term. On a OnePlus 7T at
+  close Jezero: 16.8 ms (57.5 fps) without horizon, 21.1 ms median (p90 51 ms, 37.9 fps) with 16
+  loads, 16.8 ms (p90 18.6 ms, 55.5 fps) with 8. Desktop pays about 1.0 ms for 16.
 
 ## 8. Deploy and size
 
-- **R2:** about 360 MB (Moon 130.8 measured, Earth ≈ 130 and Mars ≈ 100 estimated) plus the
-  globe images: the Moon's small and medium measure 1.4 and 6.0 MB. The estimate (2026-11-26)
-  re-encoded every Earth and Mars tile whose 16 sub-tiles all have heights (1210 and 795 tiles)
-  and priced a fallback sub-tile per level from 94 and 44 baked samples (90% range: Earth 128–132,
-  Mars 99.7–100.7). With the ancestors' siblings closed over it put Earth at ≈ 194 MB and Mars at
-  ≈ 109: 631 and 187 of those tiles had no heights of their own, 468 of Earth's on its 30 small
-  regional bands, and the tile-set rule (§3) drops them. Large is capped at medium (a large
-  request reads the medium image), because surface tiles take over up close.
+- **R2:** 359.6 MB of tile packs measured (Moon 130.8, Earth 127.8, Mars 101.0 MB) plus the globe
+  images: the Moon's small and medium measure 1.4 and 6.0 MB. The tile-set rule (§3) keeps Earth
+  and Mars there: closing over the ancestors' siblings would have added 631 and 187 tiles with no
+  heights of their own (≈ 194 and ≈ 109 MB). Large is capped at medium (a large request reads the
+  medium image), because surface tiles take over up close.
 - **Upload:** `collectSurfaceTiles.ts:26` reads products from `builtFrom`, and the offline
   inventory and cache rules (`tools/deploy/syncR2.ts:136-152`) need no edit. Sync with
   `npm run sync-r2-secure`.
@@ -261,7 +258,7 @@ Run 2026-11-24.
 | # | Prep commit | Bolt-on it removes |
 |---|---|---|
 | 1 | `readTile` returns `TileRead = { kind: 'bytes', bytes } \| { kind: 'empty' } \| { kind: 'missing' } \| { kind: 'failed' }`; a zero-length entry reads `'empty'` without a fetch. On `'empty'` the lane records the key as empty and uploads nothing; the planner (`planSurfaceTiles.ts:83-91`) neither touches nor re-requests an empty key, so LRU reclaims the slot it was allocated (no slot-release API is added). | Today not-in-index, a 404 and a timeout all return `null`, and `null` marks the key failed for the session (`createArchiveTileSource.ts:57-83`, `services/engine/subsystems/tileStreamSubsystem.ts:94-95`). |
-| 2 | Lane rows carry `role: 'gates-cut' \| 'standalone'`, `binding` and `reservedSlots?`. A standalone product's level cap is not a row field: it is the deepest `max` of its own request bands, as night's is today (`cutSurfaceTiles.ts:113-116`). `derivePlannerParams`, the renderer's bind group and the pass's draw args read the table (`Record<SurfaceTileProduct, GPUTextureView>`). | Per-product request lines (`derivePlannerParams.ts:41-58`), fixed bindings (`surfaceTileRenderer.ts:86-111`) and named atlas args (`surfaceTilesPass.ts:42-43`). Horizon would be the second copy of night's line. |
+| 2 | Lane rows carry `role: 'gates-cut' \| 'standalone'`, `binding` and `reservedSlots?` (since removed: a zero rect means no data). A standalone product's level cap is not a row field: it is the deepest `max` of its own request bands, as night's is today (`cutSurfaceTiles.ts:113-116`). `derivePlannerParams`, the renderer's bind group and the pass's draw args read the table (`Record<SurfaceTileProduct, GPUTextureView>`). | Per-product request lines (`derivePlannerParams.ts:41-58`), fixed bindings (`surfaceTileRenderer.ts:86-111`) and named atlas args (`surfaceTilesPass.ts:42-43`). Horizon would be the second copy of night's line. |
 | 3 | One standalone resolver, generalised from `nightOf` (`cutSurfaceTiles.ts:326-338`). `SurfaceCutTile.night` becomes `standalone: Readonly<Record<StandaloneProduct, StandaloneRect>>`, with `StandaloneRect = { atlasUvOrigin, atlasUvScale } \| 'empty' \| null`. | One field and one resolver per product (`SurfaceCutTile.d.ts:31`); horizon would be `horizonOf` beside `nightOf`. |
 | 4 | `composeSurfaceLight` in `lib/`, replacing the three copies of the lighting line (`fragmentBare.wesl:36`, `fragmentEarth.wesl:71`, `earth/fragment.wesl:136`). `texturedBody` splits `AMBIENT` out of `litShade` (`lib/bodyLighting.wesl:34-39`; `planet/fragment.wesl:54` keeps calling `litShade`). | Pasting the visibility multiply into four shaders. |
 
