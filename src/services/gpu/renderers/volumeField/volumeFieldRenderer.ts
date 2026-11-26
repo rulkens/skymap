@@ -200,6 +200,8 @@ export function createVolumeFieldRenderer<Id extends string>({
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<Id, FieldEntry>();
+  // Apart from `fields`, so a base re-upload leaves the region bound. Borrowed: never destroyed here.
+  const regions = new Map<Id, GPUTexture>();
 
   // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
@@ -297,6 +299,10 @@ export function createVolumeFieldRenderer<Id extends string>({
         fadeBuffer,
         fadeBindGroup,
       });
+    },
+    attachRegion(id, texture) {
+      if (texture === null) regions.delete(id);
+      else regions.set(id, texture);
     },
     unload(id) {
       const entry = fields.get(id);
@@ -443,6 +449,7 @@ export function createVolumeFieldRenderer<Id extends string>({
         e.fadeBuffer.destroy();
       }
       fields.clear();
+      regions.clear();
       cornerBuffer.destroy();
       indexBuffer.destroy();
     },

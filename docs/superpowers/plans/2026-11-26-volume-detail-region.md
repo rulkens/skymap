@@ -328,7 +328,7 @@ attachRegion(id: Id, texture: GPUTexture | null): void;
 
 Steps:
 
-- [ ] As above. `npm run typecheck:fast`; `npm test -- volumeField cosmicWebDensity`.
+- [x] As above. `npm run typecheck:fast`; `npm test -- volumeField cosmicWebDensity`.
 
 **Commit:** `Prep: VolumeFieldRenderer.attachRegion, a borrowed region texture per field`
 

@@ -48,6 +48,7 @@ function makeRenderer(
     label: 'stub',
     upload: () => {},
     unload: () => {},
+    attachRegion: () => {},
     hasActiveFields: () => true,
     draw: drawSpy,
     destroy: () => {},

@@ -36,6 +36,7 @@ function stubRenderer(
     label: 'stub',
     upload: () => {},
     unload: () => {},
+    attachRegion: () => {},
     hasActiveFields,
     draw: () => {},
     destroy: () => {},

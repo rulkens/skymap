@@ -34,6 +34,12 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     volume: GpuVolume,
     statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
   ): void;
+  /**
+   * Binds `texture` as `id`'s detail region; null drops the binding. Borrowed, not owned: the region
+   * host is the one caller, and it passes null before it destroys the texture. Kept across `upload`
+   * of a new base volume.
+   */
+  attachRegion(id: Id, texture: GPUTexture | null): void;
   unload(id: Id): void;
   /**
    * True iff any field's resolved opacity (`fadeOpacityOf`, which covers
