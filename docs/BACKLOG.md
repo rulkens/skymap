@@ -255,20 +255,18 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Barycentric orbit pairs** `needs-design` — Pluto's wobble is a `pair` field on Pluto's body row (Earth's row already carries one); the minor moons still need an invisible focus-graph node. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
 - [ ] **Consolidate the renderer hygiene-basket duplications** `ready` — grow-on-demand instance buffer (×7+), 16-byte fade-scratch (×4), fullscreen-triangle (×5 + a second `.wesl` copy), sub-pixel cull (×3). → [details](backlog/2026-08-20-renderer-hygiene-basket.md)
 - [ ] **Disabling a producer layer in the DebugPanel freezes its overlay** `ready` — the shared `createUpsamplePass` composites its source target even when the producer didn't run; one `renderedTargets` guard fixes all four. → [details](backlog/2026-08-17-debugpanel-producer-toggle-freezes-overlay.md)
-- [ ] **mcpm-workbench: histogram plot never redraws on resize or section expand** `ready` — blank canvas when the section opens while paused.
 - [ ] **mcpm-workbench: `RenderGraph`'s blit pipeline still uses `layout: 'auto'`** `ready` — the tool's one banned-pattern site.
 - [ ] **mcpm-workbench: `densities` allocated as a full agent lane** `ready` — only `nDataPoints` entries are ever used (~41 MB dead VRAM at 10M agents).
 - [ ] **mcpm-workbench: unit-test `recordHistogramSample`** `ready` — against the CLI's `dataPointHistogram` on a shared fixture; the statistic Phase 3 rests on has no test.
-- [ ] **mcpm-workbench: promote `ToggleRow` to `src/components/common/`** `ready` — the galaxy tool hand-rolls the same row in four files.
+- [ ] **mcpm-workbench: share its toggle row with the galaxy tool** `needs-design` — the galaxy tool hand-rolls it in four files; the workbench's `ToggleRow` now sits on its own `PanelRow` grid, so the row chrome would move with it.
 - [ ] **mcpm-workbench: `boxLines.wesl` pushes a line endpoint to `z = 2.0`** `ready` — a line-list clips rather than discards, so a half-length line draws when a box corner is behind the eye plane.
 - [ ] **mcpm-workbench: comparator `--bins` is unvalidated** `ready` — an all-out-of-grid `--points` set fails with an unrelated `RangeError` instead of a clear message.
 - [ ] **mcpm-workbench: `export_metadata.txt` vs packed-catalog point-count mismatch** `needs-verification` — 324,849 (fork export) vs 324,901 (packed catalog sidecar), not yet investigated.
 - [ ] **mcpm-workbench: `attachTrace` rebuilds the whole pipeline on a palette change** `ready` — the live palette dropdown (`watchPaletteSaga`) now pays this every change; a `setPalette(id)` swaps only the LUT.
-- [ ] **mcpm-workbench: `PathTracerSliderSpec` duplicates `RaymarchSliderSpec` field-for-field** `ready` — one shared spec type covers both tables.
 - [ ] **mcpm-workbench: a sim step sliced over frames** `needs-design` — a large selection locks up the UI; same result, spread over frames. → [details](backlog/2026-11-25-mcpm-workbench-sliced-sim-step.md)
 - [ ] **mcpm-workbench: `compareTraceCubes.test.ts`'s hand-rolled `.npy` writer is supersedable by `writeNpy`** `ready` — pre-existing test-helper duplication.
 - [ ] **mcpm-workbench: `HistogramSlice.d.ts` exports two types** `ready` — the only file in the tool's `@types/` that does; `HistogramSample` wants its own file.
-- [ ] **mcpm-workbench: stream large catalog files** `ready` — files over 400 MB (full DESI samples) need a streamed parse and an unboxed median.
+- [ ] **mcpm-workbench: lift the 400 MB catalog file cap** `ready` — full DESI samples are larger; the worker already streams the file, but `deriveAgentWeights` still sorts a boxed array for its median.
 - [ ] **Pick-debug overlay is off `FRAME_ORDER`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 - [ ] **Sun bloom inflates the solar disc against a transiting Moon** `needs-design` — geometry is correct (eclipse ratio ≈ 1.006); the emissive-12 disc seeds a bloom halo the lit-albedo Moon never gets. → [details](backlog/2026-08-21-sun-bloom-inflates-eclipse-disc.md)
 
@@ -283,6 +281,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Camera smooth wheel zoom + flick coast** `awaiting-decision` — Google Maps / Cesium feel via synthetic `InputStep`s in the aggregator; revises grill Q8 (no inertia), shape pre-ruled. Follow-up to #647. → [details](backlog/2026-09-09-camera-smooth-zoom-and-flick-coast.md)
 - [ ] **Wheel notch routed by last frame's winner** `needs-design` — the replay routes a notch before the frame has picked its winner; four defects follow. → [details](backlog/2026-09-10-wheel-notch-route-by-last-winner.md)
 - [ ] **One search placeholder** `ready` — the top bar reads "Search the universe…" but the open palette's box reads "Search galaxies, stars, planets & clusters…"; use the bar's wording in both (seen in the website's palette survey, 2026-11-02).
+- [ ] **The app's native `<select>`s use the shared `Select`** `ready` — 12 files (DebugPanel and Settings rows, `TierChip`, `PaletteSelect`, four Layer sections) still draw their own; `src/components/common/Select` is the shared one.
 - [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The phone dock, InfoCard sheet and Layers sheet already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; sections now come from Layer `ui` slots in composition order, rows are hand-coded text-only. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **Schema-driven slider rows** `needs-design` — `SliderField` + `DebugTuningSection` already drive the DebugPanel; extend them to the Settings rows (Display, Stars, Flow, density field) and derive the slice reducer/selector from the same table. → [details](backlog/2026-07-29-schema-driven-slider-rows.md)
@@ -324,6 +323,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Two tests time out under full-suite load** `ready` — `tests/services/engine/camera/noStoredRegimeFlag.test.ts` and `tests/tools/scene-recon/repackAtlas.test.ts` pass alone but hit the 5 s timeout in a full `npm test` (seen 2026-11-03); find what each waits on.
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Constants files: `<thing>.constants.ts`, one thing per file** `ready` — the suffix keeps "constant" visible outside `data/`; plus a ratchet refusing functions in `data/` (49 today). Own PRs after Layer M1. → [details](backlog/2026-11-03-constants-file-convention.md)
+- [ ] **refactor `rename` misses a default-exported component** `ready` — `function X` + `export default X` is not renamed; the component and its importers need hand edits.
+- [ ] **move-files drags no tests for the `tools/<tool>/src/` apps** `ready` — their tests drop `src/` (`tests/tools/mcpm-workbench/…`), but the `tools/` companion rule keeps it; four tools.
+- [ ] **move-files leaves emptied directories behind** `ready` — a folder whose files all moved stays on disk, empty.
 - [ ] **move-files rewrites `.astro` and `.mdx` imports** `needs-design` — the website's 281 relative imports get a guard finding but no rewrite, so a site move needs hand fixes; `.vue` and `.svelte` are the same seam.
 - [ ] **Trim the refactor CLI's over-budget headers** `ready` — `classifyLocalDeps`, `detectPassthrough`, `readManifest` and `resolveSymbol` run 23 to 63 header lines against a budget of 10; about 125 lines go, keeping landmines. Own PR.
 - [ ] **refactor `extract` drops type imports** `ready` — a confirmed bug: the extracted file loses its type-only imports and does not compile. → [details](backlog/2026-07-21-refactor-cli-followups.md)

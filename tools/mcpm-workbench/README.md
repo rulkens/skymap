@@ -51,8 +51,9 @@ line number and an example of the chosen format.
 **Weight** is required, positive and linear. Built-in catalogs use stellar mass
 in 10¹² M☉, median about 0.02; a column in 10⁹ M☉ takes a weight scale of 0.001.
 A column of log₁₀ mass in M☉ can be declared as such and is converted on load
-(workbench only). The dialog shows the smallest, median and largest weight, and
-warns when the values look like logarithms or the median is far above 0.02.
+(workbench only). The dialog shows the weights' mean and spread, and warns when
+the values look like logarithms or the median is far above 0.02; the loaded
+row's info tip gives the smallest, median and largest.
 
 **Limits:** files over 400 MB are refused. 324,901 rows is the largest size
 tested.
@@ -64,14 +65,15 @@ medium-tier run is not comparable with the published SDSS run.
 ## Architecture
 
 State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
-scaffold: five slices (`catalog`, `grid`, `sim`, `view`, `histogram`) plus a
-`commands.ts` for one-shot actions (reset, clear-trace, export). Redux-saga
+scaffold: five slices (`catalog`, `grid`, `sim`, `view`, `histogram`, each in
+`src/state/<slice>/`) plus `src/state/commands.ts` for one-shot
+actions (reset, clear-trace, export). Redux-saga
 owns every side effect — seven watch-sagas (catalog load, scene
 build/rebuild/device-loss, sim commands, npy/scfd export, previewPacked
 pack/dispose, histogram readback, palette re-attach) — each mediating one
 concern against the WebGPU objects held in `RenderResources`
 (`src/render/renderResources.ts`), handed to the saga layer once via
-`registerSagaContext`. `Viewport.tsx` stays a dumb frame driver: it owns the
+`registerSagaContext`. `src/ui/Viewport/Viewport.tsx` stays a dumb frame driver: it owns the
 canvas and the rAF loop's dirty/FPS/interaction-boost bookkeeping and draws
 the per-frame layers off `resources`; it dispatches only `setFps` and the
 sim-step counter, everything else is a saga's job.

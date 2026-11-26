@@ -36,7 +36,7 @@ page by a pure function; nothing is sent anywhere.
     warns when the median is far from the published run's or the values look like logarithms, and
     lets the user declare the column as log₁₀ mass in M☉, converted on load.
 
-## Owner additions during execution (2026-11-25)
+## Owner additions during execution (2026-11-25 and 26)
 
 Asked for by the owner while the tasks ran, so they are in scope, not creep:
 
@@ -60,6 +60,33 @@ Asked for by the owner while the tasks ran, so they are in scope, not creep:
   the file contents, the box the load will leave and its GPU cost; the two laid out as tables.
 - A weight warning shows in the Weight scale row, in the help's place; a scale warning also tints
   the field.
+- The dialog has a header and a footer, reads a chosen file at once in a catalog worker (the page
+  never freezes on it), and the sim pauses while it is open.
+- Loading from the dialog frames the camera on the catalog.
+- A loaded file's row count and weights sit behind its row's info icon.
+- Auto fit raises the voxel size until the box fits GPU memory; the voxel slider reaches as far as a
+  large box needs; the centre sliders hold their value.
+- Each sidebar collapses; Selection sits on the left under Data, size and voxels shown as one fact,
+  Auto fit its own subsection.
+- The sidebars hold still on state changes and share one left edge; a row's info icon lights on hover.
+- Every section has an icon, folds (Stats and Histogram too) with an animation both ways, and shows a
+  one-line summary when folded; Raymarch, Selection and Stats start folded.
+- Raymarch, Agents and Path tracer are one Rendering section with a renderer dropdown; galaxies stay
+  an overlay.
+- Stats are compact; GPU memory lives there only, as a full-width bar of the sim's total memory
+  against the device's buffer limit, catalog points included.
+- The histogram draws the convergence line over the bars, labels each bar, and redraws on resize.
+- The Simulation icon turns while the sim runs, is green at 20 fps or more and warns below; its tip
+  shows frame rate, step, grid and agents.
+- A lost GPU device shows a toast with Reload.
+- One dropdown everywhere, now the shared `src/components/common/Select`; palettes show their gradient.
+- The shared Slider takes a typed value on right-click or Enter, in the units it shows, and says why
+  a value is refused.
+- Saved params are `.mcpm.json` files. The tab and the title carry the Skymap icon.
+- Cleanup (2026-11-26): files by concern, one-constant files `<camelCase>.constant.ts`, `@types/` by
+  concern; slider rows as data; store wiring in containers; the load dialog and `PanelSection` split;
+  icons to `src/components/icons/`; three convention tests (store boundary, props names, constant
+  file names).
 
 ## Ground preparation
 
@@ -155,7 +182,7 @@ or a mean-1 display scale (the overlay), and say which in the commit message.
       relative.
 - [x] `uniform` mode keeps its current behaviour (the port has no such mode); state that in the test name
       `uniform mode still sums to 1e6`.
-- [ ] After a box cull, the kept points keep the weights they had before it (the port never culls; a
+- [x] After a box cull, the kept points keep the weights they had before it (the port never culls; a
       cropped box must not re-inflate the survivors). Test: `culling does not change a surviving point's weight` — not added: it passes before the fix and repeats `filters the weights array with the same mask`.
 - [x] Commit.
 
@@ -312,8 +339,9 @@ No scale is computed or applied for the user: the file may hold something other 
 | Fewer than 4 numbers | `Line N: expected 4 numbers, found K` |
 | Non-finite coordinate | `Line N: every value must be a finite number` |
 | Weight × scale ≤ 0 or non-finite | `Line N: weight must be greater than 0` |
-| Log kind, mass overflows a 32-bit float (added 2026-11-25, owner to confirm) | `Line N: weight V is too large for log₁₀ of mass. Did you mean linear?` |
-| Stored weight outside 32-bit float range (added 2026-11-25, owner to confirm) | `Line N: weight is outside the range a 32-bit float can hold` |
+| Log kind, mass overflows a 32-bit float (added 2026-11-25) | `Line N: weight V is too large for log₁₀ of mass. Did you mean linear?` |
+| Stored weight outside 32-bit float range (added 2026-11-25) | `Line N: weight is outside the range a 32-bit float can hold` |
+| Position outside 32-bit float range (added 2026-11-25) | `Line N: position is outside the range a 32-bit float can hold` |
 | RA/Dec format, Dec outside −90…90 | `Line N: Dec V is outside −90 to 90. Did you mean cartesian?` |
 | RA/Dec format, RA outside 0…360 | `Line N: RA V is outside 0 to 360. Did you mean cartesian?` |
 | RA/Dec format, z < 0 | `Line N: redshift must be 0 or more` |
@@ -380,9 +408,9 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
   re-parses and restores `Load catalog`. No warning: the dialog loads and closes at once.
 - `UserCatalog` gains `readonly weightStats: WeightStats` (add it in this task; the dev drop from
   Task 3 computes it with the same helper the parser uses).
-- The Data row: file name, row count with `toLocaleString()`, the weight range as
-  `weights A – B, median M`, and a `ToggleRow` bound to `userCatalogOn` / `setUserCatalogOn`,
-  placed above the built-in toggles.
+- The Data row: the file name on a `ToggleRow` bound to `userCatalogOn` / `setUserCatalogOn`,
+  placed above the built-in toggles; the row count with `toLocaleString()` and the weight range as
+  `weights A – B, median M` sit in its info tip (owner, 2026-11-25).
 - H0 and Ωm fields show only for the RA/Dec format. Defaults 70 and 0.315. Text inputs are 16 px.
 
 **Copy** (exact)
@@ -407,7 +435,11 @@ Report: ui-ux.md self-check, two screenshots per state, one line per check.
 | Too large | `File is larger than 400 MB. Use a smaller sample, or the native build.` |
 | Auto fit switch, the row under File (added 2026-11-25) | `Auto fit` (no hint) |
 | File contents, above the footer once a file is chosen (added 2026-11-25) | labels `rows` · `weight` (`M ± S`, stored weights' mean ± standard deviation) · `x` `y` `z` (min and max, one decimal, `−` for negatives, `Mpc` once); `—` until read; announced as `N rows read` |
-| Beside it, the box the load will leave (added 2026-11-25) | labels `voxels` (`A × B × C`) · `size` (`S Mpc`, or `A × B × C Mpc`) · `GPU` (total, then the largest-grid-buffer gauge); `—` until read; group named `Selection` |
+| Beside it, the box the load will leave (added 2026-11-25) | labels `voxels` (`A × B × C`, then the voxel size; tip `Raised to fit GPU memory.` when Auto fit raised it) · `size` (`S Mpc`, or `A × B × C Mpc`) · `GPU` (the sim's total memory, then its gauge); `—` until read; group named `Selection` |
+| Loaded row's info tip (added 2026-11-25) | `N rows` / `weights A – B, median M` |
+| GPU bar tip in Stats (added 2026-11-25) | `Memory used for simulation.` |
+| Device-lost toast (added 2026-11-26) | `GPU device lost` · `Reload` |
+| Slider, refused typed value (added 2026-11-26) | `Not a number` · `Between {min} and {max}` (displayed units, no unit) |
 
 `CATALOG_EXAMPLES` holds two rows per format, shown in a mono block labelled `Example`:
 `-239.4, -16.5, 201.2, 0.042` / `-241.0, -12.1, 198.7, 0.013` and
