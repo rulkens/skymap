@@ -2,7 +2,7 @@
  * f32ToF16Bits — convert one IEEE-754 f32 value to its 16-bit f16 raw
  * bit pattern.
  *
- * Used offline by the SCFD volume / flow builders (`buildMcpmVolume`,
+ * Used offline by the SCFD volume / flow builders (`packLogTraceVoxels`,
  * `buildFlowField`) to pack f32 source arrays into Uint16 f16 voxel
  * arrays for on-disk storage.
  *

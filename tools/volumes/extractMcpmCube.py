@@ -35,7 +35,7 @@ Verification:
     export_metadata.txt implies (see CF-4 commit c6024d3 for the
     precedent surprise — "transpose numpy axes 0↔2 to match WebGPU
     x-fastest layout").  If that happens, the build script in
-    tools/buildMcpmVolume.ts already does the WebGPU-axis transpose;
+    tools/volumes/buildVolumePyramid.ts already does the WebGPU-axis transpose;
     this script just needs to ensure the .npy ends up in (X, Y, Z)
     order matching export_metadata.txt's (712, 1200, 728).
 """

@@ -99,8 +99,14 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['build-mcpm', 'build-dust', 'build-flow-field', 'build-local-bubble'],
-        does: 'Write the density field of the cosmic web, the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
+        scripts: [
+          'build-mcpm',
+          'build-2mrs',
+          'build-dust',
+          'build-flow-field',
+          'build-local-bubble',
+        ],
+        does: 'Write the two density fields of the cosmic web (SDSS and 2MRS), the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
         manual: DATA,
       },
       {

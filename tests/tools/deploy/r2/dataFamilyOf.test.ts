@@ -14,6 +14,7 @@ const STARS = { label: 'star-catalog-v1', transport: 'wrangler', gzipOnWire: fal
 const STARS_V2_INDEX = { label: 'star-catalog-v2-index', transport: 'wrangler', gzipOnWire: true };
 const STARS_V2_CHUNKS = { label: 'star-catalog-v2-chunks', transport: 'bulk', gzipOnWire: true };
 const SCALAR = { label: 'scalar-field', transport: 'wrangler', gzipOnWire: true };
+const PYRAMID = { label: 'volume-pyramid', transport: 'wrangler', gzipOnWire: true };
 const FLOW = { label: 'flowfield', transport: 'wrangler', gzipOnWire: false };
 const FILAMENT = { label: 'filament', transport: 'wrangler', gzipOnWire: true };
 const STRUCTURE = { label: 'structure-catalog', transport: 'wrangler', gzipOnWire: true };
@@ -41,6 +42,8 @@ const TRACKED: [string, typeof GALAXY][] = [
   ['polyphorm-2mrs-medium.a3f19c2e.scfd', SCALAR],
   ['scalar-field/v3/edenhofer-dust-large.scfd', SCALAR],
   ['mcpm-workbench.scfd', SCALAR],
+  ['volume-pyramid/v1/mcpm.astc6.L1.1a2b3c4d.bin', PYRAMID],
+  ['volume-pyramid/v1/polyphorm-2mrs.json', PYRAMID],
   ['flowfield.scfd', FLOW],
   ['flowfield.a3f19c2e.scfd', FLOW],
   ['scalar-field/v3/flowfield.scfd', FLOW],
@@ -78,6 +81,8 @@ const UNTRACKED = [
   'desi-wedge-large.bin',
   'desi-sgw-large.bin',
   'stars-huge.bin',
+  // A pyramid level outside its folder.
+  'mcpm.astc6.L1.bin',
   // A download in flight, a chunk outside its dir, and a v2 name in the v1 epoch.
   'star-catalog/v2/stars/6-12345.bin.part',
   'stars/6-12345.a3f19c2e.bin',

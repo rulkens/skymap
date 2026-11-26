@@ -754,7 +754,7 @@ does not fit as it is.`
 
 Steps:
 
-- [ ] `encodeVolumeLevel.test.ts`, hand-computed, `encodeMax = e − 1` so `log1p(encodeMax) = 1`
+- [x] `encodeVolumeLevel.test.ts`, hand-computed, `encodeMax = e − 1` so `log1p(encodeMax) = 1`
       and a code is `round(255 · log1p(v))`:
   - `crops the box and reorders C-order to x fastest`: a 3×2×2 level, box origin (1,0,0) dims
     (2,2,2); output index `x + 2·(y + 2·z)` holds input `[(x+1)·4 + y·2 + z]`.
@@ -764,17 +764,17 @@ Steps:
   - `zeroes raw values below the threshold, keeps the rest`: threshold 0.1; 0.05 → 0 (it would
     code 12), 0.2214 (`e^0.2 − 1`) → 51.
   - `clamps above encodeMax to 255`.
-- [ ] `dataFamilyOf.test.ts`: `volume-pyramid/v1/mcpm.astc6.L1.1a2b3c4d.bin` and
+- [x] `dataFamilyOf.test.ts`: `volume-pyramid/v1/mcpm.astc6.L1.1a2b3c4d.bin` and
       `volume-pyramid/v1/polyphorm-2mrs.json` are tracked as `volume-pyramid`; a level name outside
       that folder is not.
-- [ ] Row type, rows, `encodeVolumeLevel`, `basisuEncodeLevel`, the builder, scripts, deploy row,
+- [x] Row type, rows, `encodeVolumeLevel`, `basisuEncodeLevel`, the builder, scripts, deploy row,
       registry text, the extractor's print line.
-- [ ] Delete the old builder and its two tests; strip `--clamp` from `buildRhizomeVolume.ts` and
+- [x] Delete the old builder and its two tests; strip `--clamp` from `buildRhizomeVolume.ts` and
       its test; reword the comments named above. Grep `buildMcpmVolume`, `MCPM_TIER_FILENAME`,
       `mcpmTierAnchors`, `--clamp`: nothing outside `completed/`, `docs/research/` and
       `docs/grill-sessions/` (history stays).
-- [ ] Do **not** run the builder: it needs the owner's data and basisu (Task 12).
-- [ ] `npm run typecheck`; `npm test -- encodeVolumeLevel dataFamilyOf buildRhizomeVolume buildDustVolume`.
+- [x] Do **not** run the builder: it needs the owner's data and basisu (Task 12).
+- [x] `npm run typecheck`; `npm test -- encodeVolumeLevel dataFamilyOf buildRhizomeVolume buildDustVolume`.
 
 **Commit:** `buildVolumePyramid: MCPM and 2MRS as ASTC, BC4 and r8 level files; the tiered builder goes`
 
