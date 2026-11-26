@@ -42,8 +42,8 @@ export async function loadVolumePyramid(
   let texture = undefined as GPUTexture | undefined;
   try {
     await scopedGpuCall(device, () => {
-      // Dawn clears a whole 3D level through one staging buffer before its first partial write;
-      // the largest (MCPM r8 L1, 62.7 MB) fits the default 256 MiB maxBufferSize.
+      // Each level's one writeTexture stages through one buffer: the largest (MCPM r8 L1,
+      // 62.7 MB) fits the default 256 MiB maxBufferSize.
       texture = device.createTexture({
         label: `density-volume-${binBaseName}`,
         size: { width, height, depthOrArrayLayers },
