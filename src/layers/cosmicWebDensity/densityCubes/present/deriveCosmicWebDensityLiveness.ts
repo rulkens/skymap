@@ -4,8 +4,8 @@
  * producer and consumer of the offscreen cannot disagree. Each field's handed value
  * already folds the section switch, its own switch and clip; its focus emphasis is
  * composed here, for both passes. No field can be the focus, so every field recedes
- * alike. The clamp and `hasActiveFields` check are `deriveVolumeLiveness`'s
- * pure core.
+ * alike. Nothing is live until the jitter mask's slot settles. The clamp and
+ * `hasActiveFields` check are `deriveVolumeLiveness`'s pure core.
  */
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';
@@ -26,6 +26,10 @@ export function deriveCosmicWebDensityLiveness(
   ctx: FrameView,
   fade: Readonly<Record<CosmicWebDensityFieldId, number>>,
 ): VolumeFieldLiveness<CosmicWebDensityFieldId> | null {
+  // Before the mask lands a march shows the zero mask's step grid; a mask the loader gave up on
+  // draws unjittered rather than keeping the volume off for the session.
+  const mask = runtime.jitterMaskSlot.state().kind;
+  if (mask !== 'ready' && mask !== 'error') return null;
   const emphasis = emphasisOf(DENSITY_ENTRY, ctx.snapshot);
 
   return deriveVolumeLiveness(

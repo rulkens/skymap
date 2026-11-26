@@ -1,4 +1,4 @@
-/** What every density slot shares: the one renderer, the jitter mask's readiness and the fetcher. */
+/** What every density slot shares: the one renderer and the fetcher. */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
@@ -8,7 +8,5 @@ import type { CosmicWebDensityFieldId } from './CosmicWebDensityFieldId';
 
 export type CosmicWebDensitySlotDeps = {
   readonly renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>;
-  /** Every commit awaits it (a cube drawn before the mask marches unjittered). */
-  readonly jitterMaskReady: Promise<void>;
   readonly fetch: Fetcher<GpuVolume, CosmicWebDensityReq>;
 };

@@ -30,7 +30,6 @@ describe('createCosmicWebDensitySlot', () => {
     const renderer = fakeRenderer();
     const slot = createCosmicWebDensitySlot(entry, {
       renderer,
-      jitterMaskReady: Promise.resolve(),
       fetch: async () => fakeVolume(),
     });
 
@@ -41,43 +40,6 @@ describe('createCosmicWebDensitySlot', () => {
     expect(renderer.unload).toHaveBeenCalledExactlyOnceWith(entry.id);
   });
 
-  // A cube drawn before the mask lands marches with zero jitter: a visible step grid.
-  it('a cube commits only after the jitter mask is written', async () => {
-    const renderer = fakeRenderer();
-    let maskWritten!: () => void;
-    const jitterMaskReady = new Promise<void>((resolve) => (maskWritten = resolve));
-    const slot = createCosmicWebDensitySlot(entry, {
-      renderer,
-      jitterMaskReady,
-      fetch: async () => fakeVolume(),
-    });
-
-    void slot.load({ storage: 'scfd', binBaseName: entry.binBaseName });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
-    expect(renderer.upload).not.toHaveBeenCalled();
-
-    maskWritten();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-    expect(renderer.upload).toHaveBeenCalledOnce();
-  });
-
-  it('a jitter mask that fails destroys the loaded texture and the slot errors', async () => {
-    const renderer = fakeRenderer();
-    const volume = fakeVolume();
-    const jitterMaskReady = Promise.reject(new Error('mask failed'));
-    jitterMaskReady.catch(() => {});
-    const slot = createCosmicWebDensitySlot(entry, {
-      renderer,
-      jitterMaskReady,
-      fetch: async () => volume,
-    });
-
-    void slot.load({ storage: 'scfd', binBaseName: entry.binBaseName });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
-    expect(volume.texture.destroy).toHaveBeenCalledOnce();
-    expect(renderer.upload).not.toHaveBeenCalled();
-  });
-
   // A texture is never garbage-collected: a superseded volume dropped to the GC would leak.
   it('a superseded volume that never committed is destroyed exactly once', async () => {
     const renderer = fakeRenderer();
@@ -86,7 +48,6 @@ describe('createCosmicWebDensitySlot', () => {
     const resolvers: ((v: GpuVolume) => void)[] = [];
     const slot = createCosmicWebDensitySlot(entry, {
       renderer,
-      jitterMaskReady: Promise.resolve(),
       fetch: () => new Promise<GpuVolume>((resolve) => resolvers.push(resolve)),
     });
 

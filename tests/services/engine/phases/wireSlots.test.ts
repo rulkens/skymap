@@ -171,13 +171,13 @@ function makeState(
   const densityRenderer = { upload: vi.fn() } as never;
   const densityRuntime = {
     renderer: densityRenderer,
+    jitterMaskSlot: makeFakeSlot('jitter-mask'),
     slots: Object.fromEntries(
       COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
         entry.id,
         // MCPM is default-on, so the demand loop fires its load at boot; no networking.
         createCosmicWebDensitySlot(entry, {
           renderer: densityRenderer,
-          jitterMaskReady: Promise.resolve(),
           fetch: async () =>
             ({
               texture: { destroy: vi.fn() },

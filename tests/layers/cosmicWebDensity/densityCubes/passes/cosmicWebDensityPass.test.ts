@@ -14,6 +14,7 @@ import type { VolumeAccumulationPlan } from '../../../../../src/layers/cosmicWeb
 const draw = vi.fn();
 const RUNTIME = {
   renderer: { hasActiveFields: () => true, draw },
+  jitterMaskSlot: { state: () => ({ kind: 'ready' }) },
 } as unknown as CosmicWebDensityRuntime;
 const PLANNER = cosmicWebDensityAccumulationPlanner(RUNTIME);
 

@@ -146,6 +146,7 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
   const densityRuntime = {
     renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
+    jitterMaskSlot: { state: () => ({ kind: 'ready' }) },
     slots: {},
   } as unknown as CosmicWebDensityRuntime;
   const densityPlanner = cosmicWebDensityAccumulationPlanner(densityRuntime);

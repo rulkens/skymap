@@ -150,8 +150,6 @@ export function createCosmicWebDensityFetcher(
 // src/layers/cosmicWebDensity/@types/CosmicWebDensitySlotDeps.d.ts
 export type CosmicWebDensitySlotDeps = {
   readonly renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>;
-  /** Every commit awaits it (a cube drawn before the mask marches unjittered). */
-  readonly jitterMaskReady: Promise<void>;
   readonly fetch: Fetcher<GpuVolume, CosmicWebDensityReq>;
 };
 
