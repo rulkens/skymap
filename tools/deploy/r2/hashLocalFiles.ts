@@ -24,17 +24,27 @@ export function hashLocalFiles(
   const cache = readCache();
   const fresh: Record<string, LocalHashCache[string]> = {};
   const hashes = new Map<string, string>();
-  for (const group of groups) {
-    for (const file of group.files) {
-      if (!include(file.r2Key)) continue;
-      const { size, mtimeMs } = statSync(file.localPath);
-      let md5 = lookupLocalHash(cache, file.localPath, group.gzipOnWire, { size, mtimeMs });
-      if (md5 === null) {
-        md5 = localUploadHash(file, group.gzipOnWire);
-        fresh[localHashCacheKey(file.localPath, group.gzipOnWire)] = { size, mtimeMs, md5 };
-      }
-      hashes.set(file.r2Key, md5);
+  const checked = groups.flatMap((group) =>
+    group.files
+      .filter((file) => include(file.r2Key))
+      .map((file) => {
+        const { size, mtimeMs } = statSync(file.localPath);
+        const md5 = lookupLocalHash(cache, file.localPath, group.gzipOnWire, { size, mtimeMs });
+        return { file, gzipOnWire: group.gzipOnWire, size, mtimeMs, md5 };
+      }),
+  );
+  const hits = checked.filter((c) => c.md5 !== null).length;
+  console.error(`▶ hashing ${checked.length} local file(s) (${hits} cached)`);
+  for (const { file, gzipOnWire, size, mtimeMs, md5: cached } of checked) {
+    let md5 = cached;
+    if (md5 === null) {
+      console.error(
+        `# ${file.localPath} (${(size / 1e6).toFixed(1)} MB${gzipOnWire ? ', gzip' : ''})`,
+      );
+      md5 = localUploadHash(file, gzipOnWire);
+      fresh[localHashCacheKey(file.localPath, gzipOnWire)] = { size, mtimeMs, md5 };
     }
+    hashes.set(file.r2Key, md5);
   }
   if (Object.keys(fresh).length > 0) {
     mkdirSync(dirname(CACHE_PATH), { recursive: true });
