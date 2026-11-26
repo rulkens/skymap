@@ -39,7 +39,7 @@ function outcomeOf(source: CatalogSource, settings: CatalogImportSettings): Cata
   const { fileName } = source;
   if (source.kind === 'packed') {
     try {
-      const { points } = loadPackedCatalog(source.bin, source.metadataText);
+      const points = loadPackedCatalog(source.bin, source.metadataText);
       if (points.count === 0)
         return { kind: 'problem', message: 'No points found', showExample: false };
       const weightStats = weightStatsFor(points.weight);

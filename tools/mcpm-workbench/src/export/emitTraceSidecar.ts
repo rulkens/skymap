@@ -44,23 +44,23 @@ export function emitTraceSidecar(input: {
   readonly seed: number;
   readonly producedAt: Date;
   /** The loaded file the trace was built from; null otherwise. */
-  readonly userCatalog: UserFileProvenance | null;
+  readonly userFile: UserFileProvenance | null;
 }): string {
-  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt, userCatalog } =
+  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt, userFile } =
     input;
   // `frame` below stays 'equatorial-cartesian' with a file loaded: the importer
   // checks it against a closed list, and for an x, y, z file it is the user's claim.
-  const userFile = userCatalog && {
-    name: userCatalog.fileName,
-    n_points: userCatalog.nPoints,
-    format: userCatalog.settings.format.kind,
-    weight_kind: userCatalog.settings.weight.kind,
-    ...(userCatalog.settings.weight.kind === 'linear' && {
-      weight_scale: userCatalog.settings.weight.scale,
+  const userFileBlock = userFile && {
+    name: userFile.fileName,
+    n_points: userFile.nPoints,
+    format: userFile.settings.format.kind,
+    weight_kind: userFile.settings.weight.kind,
+    ...(userFile.settings.weight.kind === 'linear' && {
+      weight_scale: userFile.settings.weight.scale,
     }),
-    ...(userCatalog.settings.format.kind === 'raDecRedshift' && {
-      h0_km_s_mpc: userCatalog.settings.format.h0KmSMpc,
-      omega_m: userCatalog.settings.format.omegaM,
+    ...(userFile.settings.format.kind === 'raDecRedshift' && {
+      h0_km_s_mpc: userFile.settings.format.h0KmSMpc,
+      omega_m: userFile.settings.format.omegaM,
       // redshiftToDistanceMpc's kind: line-of-sight comoving, not luminosity or angular-diameter.
       distance_kind: 'comoving',
     }),
@@ -95,7 +95,7 @@ export function emitTraceSidecar(input: {
         tier,
         n_points: points.count,
         nan_mass_filled: weights.nanCount,
-        ...(userFile && { user_file: userFile }),
+        ...(userFileBlock && { user_file: userFileBlock }),
       },
       // V3's exportParams preset carries the SAME object, via the same
       // buildParamsPayload — spec §10's "keep the two shapes identical".

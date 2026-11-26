@@ -163,7 +163,13 @@ function* buildScene() {
     );
     if (!harness) return; // stale — superseded while awaiting; already disposed
     resources.harness = harness;
-    resources.weights = weights;
+    resources.built = {
+      points,
+      weights,
+      userFile: s.catalog.pointsUserFile,
+      tier: s.catalog.tier,
+      agentCount: s.sim.agentCount,
+    };
 
     yield* put(setResolvedGrid({ resolvedElement: harness.element }));
     yield* put(setMaxBufferBytes(bufferLimitBytes(harness.gpu.device.limits)));

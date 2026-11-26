@@ -1,13 +1,10 @@
 /**
  * watchExportSaga — the two download buttons' actual work: `readbackTrace`
  * off the running harness, then `exportNpy`+`emitTraceSidecar` or `exportScfd`,
- * each via `triggerDownload`. `takeLeading`, not `takeEvery`: a readback is
- * one in-flight GPU round trip per leg, and a repeat click mid-copy should be
- * ignored rather than queued (Viewport's old code had no queuing either —
- * `void runExport()` fire-and-forget from a click handler). No-op without a
- * harness — same guard style as `watchSimCommandsSaga`. Epoch snapshot before
- * `readbackTrace()`, compared after: a rebuild landing mid-readback disposes
- * the buffers the export would otherwise read from.
+ * each via `triggerDownload`. `takeLeading`: a repeat click mid-readback is
+ * ignored, not queued. The sidecar describes `resources.built`, not the store.
+ * Epoch snapshot before `readbackTrace()`, compared after: a rebuild landing
+ * mid-readback disposes the buffers the export would otherwise read from.
  */
 import { takeLeading, call, put, select, getContext } from 'typed-redux-saga';
 
@@ -25,10 +22,9 @@ import { setCatalogStatusMessage } from '../catalog/catalogSlice';
 function* exportNpyWorker() {
   const resources = yield* getContext<WorkbenchSagaContext['resources']>('resources');
   const harness = resources?.harness;
-  const weights = resources?.weights;
+  const built = resources?.built;
+  if (!harness || !built) return;
   const s = yield* select((state: RootState) => state);
-  const { points, pointsUserFile } = s.catalog;
-  if (!harness || !points || !weights) return; // mirrors Viewport's old runExport guard
   const epoch = resources.epoch;
   try {
     const readback = yield* call(() => harness.readbackTrace());
@@ -40,15 +36,15 @@ function* exportNpyWorker() {
     triggerDownload(`${stem}.npy`, exportNpy(readback), 'application/octet-stream');
     const sidecar = emitTraceSidecar({
       box: harness.box,
-      points,
-      weights,
-      tier: s.catalog.tier,
+      points: built.points,
+      weights: built.weights,
+      tier: built.tier,
       params: s.sim.params,
-      agentCount: s.sim.agentCount,
+      agentCount: built.agentCount,
       steps: s.sim.stepCount,
       seed: s.sim.seed,
       producedAt: new Date(),
-      userCatalog: pointsUserFile,
+      userFile: built.userFile,
     });
     triggerDownload(`${stem}.json`, sidecar, 'application/json');
   } catch (err) {

@@ -27,14 +27,22 @@ function HistogramPlot({ histogram }: HistogramPlotProps): ReactNode {
   const readoutLines = readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints);
   const fractions = barFractions(histogram.counts);
 
-  // The observer's first callback, on observe, is the draw for this sample.
+  // The observer's first callback, on observe, is the draw for this sample. It
+  // stays silent on a pixel-ratio change (another display), hence the media query.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const history = histogram.history.map((sample) => sample.meanLogTraceAtPoints);
-    const observer = new ResizeObserver(() => drawHistoryLine(canvas, history));
+    const draw = (): void => drawHistoryLine(canvas, history);
+    const observer = new ResizeObserver(draw);
     observer.observe(canvas);
-    return () => observer.disconnect();
+    // jsdom has no matchMedia.
+    const pixelRatio = window.matchMedia?.(`(resolution: ${window.devicePixelRatio}dppx)`);
+    pixelRatio?.addEventListener('change', draw);
+    return () => {
+      observer.disconnect();
+      pixelRatio?.removeEventListener('change', draw);
+    };
   }, [histogram]);
 
   return (

@@ -18,6 +18,7 @@ import LoadFooter from './LoadFooter/LoadFooter';
 import LoadHeader from './LoadHeader/LoadHeader';
 import LoadInfo from './LoadInfo/LoadInfo';
 import { CATALOG_EXAMPLES } from './data/catalogExamples.constant';
+import { useBackdropClose } from './useBackdropClose';
 import { useCatalogPreview } from './useCatalogPreview';
 import { useChosenCatalogFiles } from './useChosenCatalogFiles';
 import { useFocusOnFirstParse } from './useFocusOnFirstParse';
@@ -68,6 +69,7 @@ function LoadCatalogDialog({
     onOpenChange(true);
   });
   useModalOpen(dialogRef, open);
+  useBackdropClose(dialogRef);
 
   const outcome = preview?.outcome ?? null;
   const catalog = outcome !== null && outcome.kind !== 'problem' ? outcome.catalog : null;

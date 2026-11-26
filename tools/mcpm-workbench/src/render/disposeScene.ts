@@ -12,6 +12,6 @@ export function disposeScene(resources: RenderResources): void {
   resources.previewBuffer = null;
   resources.graph = null;
   resources.harness = null;
-  resources.weights = null;
+  resources.built = null;
   resources.epoch += 1;
 }

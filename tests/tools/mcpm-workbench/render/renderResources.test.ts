@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createRenderResources } from '../../../../tools/mcpm-workbench/src/render/renderResources';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { BuildInputs } from '../../../../tools/mcpm-workbench/@types/render/BuildInputs';
 import type { McpmHarness } from '../../../../tools/mcpm-workbench/@types/sim/McpmHarness';
 import type { RenderGraph } from '../../../../tools/mcpm-workbench/@types/render/RenderGraph';
 import { disposeScene } from '../../../../tools/mcpm-workbench/src/render/disposeScene';
@@ -12,14 +12,13 @@ function stubResources() {
   const graph = { dispose: vi.fn(() => calls.push('graph')) } as unknown as RenderGraph;
   const harness = { dispose: vi.fn(() => calls.push('harness')) } as unknown as McpmHarness;
   const gpu = {} as GpuContext;
-  const weights = { weights: new Float32Array(), nanCount: 0, medianWeight: 10 } as AgentWeights;
   const resources = createRenderResources();
   resources.gpu = gpu;
   resources.harness = harness;
-  resources.weights = weights;
+  resources.built = {} as BuildInputs;
   resources.graph = graph;
   resources.previewBuffer = previewBuffer;
-  return { calls, previewBuffer, graph, harness, gpu, weights, resources };
+  return { calls, previewBuffer, graph, harness, gpu, resources };
 }
 
 describe('disposeScene', () => {
@@ -34,13 +33,13 @@ describe('disposeScene', () => {
     expect(calls).toEqual(['preview', 'graph', 'harness']);
   });
 
-  it('nulls harness, weights, graph and previewBuffer but leaves gpu untouched — the device outlives a rebuild', () => {
+  it('nulls harness, built, graph and previewBuffer but leaves gpu untouched — the device outlives a rebuild', () => {
     const { resources, gpu } = stubResources();
 
     disposeScene(resources);
 
     expect(resources.harness).toBeNull();
-    expect(resources.weights).toBeNull();
+    expect(resources.built).toBeNull();
     expect(resources.graph).toBeNull();
     expect(resources.previewBuffer).toBeNull();
     expect(resources.gpu).toBe(gpu);

@@ -77,7 +77,7 @@ describe('emitTraceSidecar', () => {
       steps: 5000,
       seed: 12345,
       producedAt,
-      userCatalog: null,
+      userFile: null,
     });
 
     // The wire format itself, ahead of the parser: keys stay snake_case.
@@ -147,7 +147,7 @@ describe('emitTraceSidecar', () => {
       steps: 1000,
       seed: 1,
       producedAt: new Date(),
-      userCatalog: null,
+      userFile: null,
     });
 
     const sidecar = parsePolyphyTraceSidecar(text);
@@ -165,7 +165,7 @@ describe('emitTraceSidecar', () => {
     expect(sidecar.dims).toEqual(box.dims);
   });
 
-  const sidecarWith = (userCatalog: Parameters<typeof emitTraceSidecar>[0]['userCatalog']) =>
+  const sidecarWith = (userFile: Parameters<typeof emitTraceSidecar>[0]['userFile']) =>
     JSON.parse(
       emitTraceSidecar({
         box: autoFitGridBox({ min: [0, 0, 0], max: [100, 50, 30] }, 64, 4),
@@ -177,7 +177,7 @@ describe('emitTraceSidecar', () => {
         steps: 1000,
         seed: 1,
         producedAt: new Date(),
-        userCatalog,
+        userFile,
       }),
     ) as { frame: string; provenance: { catalog: Record<string, unknown> } };
 

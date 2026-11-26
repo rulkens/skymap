@@ -2,14 +2,11 @@
  * watchCatalogSaga — the single owner of "what points feed the sim" and their
  * agent weights. Triggers: the catalog-identity writes (sources, tier, the
  * loaded file and its toggle), and `sagaContextRegistered` for the very first
- * load. `takeLatest` cancels an in-flight fetch the instant a newer trigger
- * lands for free — a superseded fetch's `catalogLoaded` never fires, because
- * the generator that would `put` it is already dead. WHERE points come from is
- * `resolveCatalogPointsPlan` (src/catalog/), pulled out so the decision is
- * unit-testable without a fetch, a DOM `location`, or a running saga. A load
- * from the dialog fits the box here when Auto fit is on, and frames the camera
- * on that box (or on the file, when the box stays), in the same synchronous run
- * as `catalogLoaded`: watchSceneSaga's debounce folds them into one build.
+ * load. `takeLatest` cancels a superseded fetch, so its `catalogLoaded` never
+ * fires. WHERE points come from is `resolveCatalogPointsPlan`. A load from the
+ * dialog fits the box here when Auto fit is on, and frames the camera on that
+ * box (or on the file, when the box stays), in the same synchronous run as
+ * `catalogLoaded`: watchSceneSaga's debounce folds them into one build.
  */
 import type { Action } from '@reduxjs/toolkit';
 import { takeLatest, put, select, call } from 'typed-redux-saga';
@@ -68,6 +65,8 @@ function* loadCatalogWorker(trigger: Action) {
   try {
     const catalog = yield* select((s: RootState) => s.catalog);
     const plan = resolveCatalogPointsPlan(catalog, hasUrlGate('probe'));
+    // The tier picks built-in files only; with none on, a reload would just restart the run.
+    if (setCatalogTier.match(trigger) && plan.kind === 'load' && plan.sources.length === 0) return;
     const points = yield* resolvePoints(plan);
     const weights = deriveAgentWeights(points.weight, catalog.weightMode);
     const bounds = points.count > 0 ? catalogBounds(points.positions) : null;

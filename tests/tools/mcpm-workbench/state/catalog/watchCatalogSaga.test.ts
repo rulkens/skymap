@@ -1,13 +1,20 @@
 /**
- * watchCatalogSaga — only `resolveCatalogPointsPlan`'s priority order is
- * tested here: a real bug in it (e.g. a probe drop starting the network
- * fetch anyway) would ship undetected past a saga-plumbing test that just
- * asserts `takeLatest` was called. The saga's own wiring isn't tested — a
- * mis-wired trigger breaks the app in an impossible-to-miss way (no catalog
- * ever loads).
+ * watchCatalogSaga — `resolveCatalogPointsPlan`'s priority order, and the one
+ * trigger that must NOT reload: a mis-wired trigger that never loads is
+ * impossible to miss, a needless reload silently restarts the run.
  */
-import { describe, expect, it } from 'vitest';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
+import { describe, expect, it, vi } from 'vitest';
 import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/catalog/resolveCatalogPointsPlan';
+import {
+  catalogLoaded,
+  setCatalogSources,
+  setCatalogTier,
+  userCatalogLoaded,
+} from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
+import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
+import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
 import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
 import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
 
@@ -56,5 +63,31 @@ describe('resolveCatalogPointsPlan', () => {
     );
 
     expect(plan).toEqual({ kind: 'synthetic' });
+  });
+});
+
+describe('watchCatalogSaga', () => {
+  it('a tier change with no built-in source on keeps the loaded points, so the run does not restart', async () => {
+    const loads: Action[] = [];
+    const record: Middleware = () => (next) => (action) => {
+      if (catalogLoaded.match(action)) loads.push(action as Action);
+      return next(action);
+    };
+    const saga = createSagaMiddleware();
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (getDefault) =>
+        getDefault({ serializableCheck: false, immutableCheck: false }).concat(record, saga),
+    });
+    saga.run(watchCatalogSaga);
+
+    store.dispatch(setCatalogSources([]));
+    await vi.waitFor(() => expect(loads).toHaveLength(1));
+    store.dispatch(userCatalogLoaded({ catalog: userCatalog, fitBounds: null }));
+    await vi.waitFor(() => expect(loads).toHaveLength(2));
+    store.dispatch(setCatalogTier('large'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(loads).toHaveLength(2);
   });
 });
