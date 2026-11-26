@@ -600,7 +600,7 @@ limit is raised (one comment line).
 
 Steps:
 
-- [ ] Tests, with `fetch` stubbed per URL (a `ReadableStream` body), `dataUrl` mocked, and a mock
+- [x] Tests, with `fetch` stubbed per URL (a `ReadableStream` body), `dataUrl` mocked, and a mock
       device whose `features` is empty (so r8) and whose `popErrorScope` resolves `null` unless a
       test says otherwise. Tiny sidecar: box dims 16×16×8 at base 1, so L1 8×8×4, L2 4×4×2,
       L3 2×2×1.
@@ -612,7 +612,7 @@ Steps:
   - `an abort mid-level destroys the texture and rethrows the AbortError`.
   - `a validation error on one write throws and destroys the texture`.
   - `a 404 sidecar throws HttpError before any texture exists`.
-- [ ] Implement. `npm run typecheck:fast`; `npm test -- loadVolumePyramid streamLevelSlabs`.
+- [x] Implement. `npm run typecheck:fast`; `npm test -- loadVolumePyramid streamLevelSlabs`.
 
 **Commit:** `loadVolumePyramid: a sidecar, one texture, levels streamed coarse to fine`
 
