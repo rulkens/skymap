@@ -1,7 +1,7 @@
 /**
  * TimelineStop — one boundary of a craft's legs: events less than a day apart share one.
- * `planetId` is what the camera frames there (Earth at launch, the planet flown past, null for
- * a heliosphere or milestone stop); `encounter` is that planet's flyby, null at launch.
+ * `planetId` is what the camera frames there (Earth at launch, the planet flown past or named,
+ * null for a heliosphere or milestone stop); `encounter` is that planet's flyby, null at launch.
  */
 
 import type { TimelineEvent } from '../../exhibits/timeline/TimelineEvent';

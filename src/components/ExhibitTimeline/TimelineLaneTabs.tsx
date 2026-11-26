@@ -26,7 +26,7 @@ function TimelineLaneTabs({ lanes, selectedId, onSelect }: TimelineLaneTabsProps
     e.currentTarget.querySelector<HTMLElement>(`[data-body="${next.bodyId}"]`)?.focus();
   };
   return (
-    <div className={styles.tabs} role="tablist" aria-label="Spacecraft" onKeyDown={onKeyDown}>
+    <div className={styles.tabs} role="tablist" aria-label="Timelines" onKeyDown={onKeyDown}>
       {lanes.map((lane) => {
         const selected = lane.bodyId === selectedId;
         return (
