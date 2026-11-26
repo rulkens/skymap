@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import type { KeyedTilePath } from '../../@types/textures/KeyedTilePath';
 import { writeFileAtomic } from '../io/writeFileAtomic';
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { SURFACE_TILE_ARCHIVE_MAX_PART_BYTES } from '../../../src/data/archive/archiveFormat';
+import { ARCHIVE_MAX_PART_BYTES } from '../../../src/data/archive/archiveFormat';
 import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../archive/encodeArchiveIndex';
-import { planSurfaceTileParts } from '../archive/planArchiveParts';
+import { encodeArchiveIndex } from '../archive/encodeArchiveIndex';
+import { planArchiveParts } from '../archive/planArchiveParts';
 
 /**
  * packSurfaceTileLevels — writes every (product, z) level's `.p<k>.pack` parts
@@ -45,9 +45,9 @@ export function packSurfaceTileLevels(
   let files = 0;
   for (const { product, z, tiles } of levels.values()) {
     tiles.sort((a, b) => a.key - b.key);
-    const { entries, partCount } = planSurfaceTileParts(
+    const { entries, partCount } = planArchiveParts(
       tiles.map((t) => ({ key: t.key, length: statSync(join(outDir, t.path)).size })),
-      SURFACE_TILE_ARCHIVE_MAX_PART_BYTES,
+      ARCHIVE_MAX_PART_BYTES,
     );
     for (let part = 0; part < partCount; part++) {
       const members = tiles
@@ -59,7 +59,7 @@ export function packSurfaceTileLevels(
     }
     writeFileAtomic(
       join(outDir, surfaceTileArchivePath(tilePrefix, product, z)),
-      encodeSurfaceTileArchiveIndex(entries, partCount),
+      encodeArchiveIndex(entries, partCount),
     );
     files++;
     // A smaller re-pack must not leave an older, larger run's tail parts behind.

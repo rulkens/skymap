@@ -42,7 +42,7 @@ import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { resolveStandaloneRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/resolveStandaloneRect';
 import { flattenAtlasRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/flattenAtlasRect';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/archive/encodeArchiveIndex';
+import { encodeArchiveIndex } from '../../../../../../tools/utils/archive/encodeArchiveIndex';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
@@ -546,7 +546,7 @@ describe('surfaceTileStream absent tiles', () => {
       'fetch',
       vi.fn(async (url: string) =>
         url.endsWith('.idx')
-          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          ? new Response(encodeArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
           : new Response(new Uint8Array(4), { status: 206 }),
       ),
     );

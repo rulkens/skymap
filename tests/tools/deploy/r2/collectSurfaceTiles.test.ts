@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { collectSurfaceTiles } from '../../../../tools/deploy/r2/collectSurfaceTiles';
-import { encodeSurfaceTileArchiveIndex } from '../../../../tools/utils/archive/encodeArchiveIndex';
+import { encodeArchiveIndex } from '../../../../tools/utils/archive/encodeArchiveIndex';
 
 const KEY = 'earth-tiles';
 const PREFIX = 'earth-tiles/v11';
@@ -41,7 +41,7 @@ function fixture(): string {
 }
 
 const writeLevel = (root: string, product: 'albedo' | 'height', z: number, parts: number): void => {
-  write(root, surfaceTileArchivePath(PREFIX, product, z), encodeSurfaceTileArchiveIndex([], parts));
+  write(root, surfaceTileArchivePath(PREFIX, product, z), encodeArchiveIndex([], parts));
   for (let k = 0; k < parts; k++) write(root, surfaceTileArchivePath(PREFIX, product, z, k), 'x');
 };
 
@@ -81,7 +81,7 @@ describe('collectSurfaceTiles', () => {
 
   it('throws when an index names a part that is not on disk', () => {
     const root = fixture();
-    write(root, surfaceTileArchivePath(PREFIX, 'albedo', 2), encodeSurfaceTileArchiveIndex([], 1));
+    write(root, surfaceTileArchivePath(PREFIX, 'albedo', 2), encodeArchiveIndex([], 1));
     expect(() => collectSurfaceTiles(root, KEY)).toThrow(/part 0/);
   });
 

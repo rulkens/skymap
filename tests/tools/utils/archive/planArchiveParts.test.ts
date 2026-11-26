@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
 
-import { planSurfaceTileParts } from '../../../../tools/utils/archive/planArchiveParts';
+import { planArchiveParts } from '../../../../tools/utils/archive/planArchiveParts';
 
 it('fills a part to exactly maxPartBytes before opening the next', () => {
-  const { entries, partCount } = planSurfaceTileParts(
+  const { entries, partCount } = planArchiveParts(
     [
       { key: 0, length: 60 },
       { key: 1, length: 40 },
@@ -20,5 +20,5 @@ it('fills a part to exactly maxPartBytes before opening the next', () => {
 });
 
 it('throws on a single tile larger than a part', () => {
-  expect(() => planSurfaceTileParts([{ key: 0, length: 101 }], 100)).toThrow(/part cap/);
+  expect(() => planArchiveParts([{ key: 0, length: 101 }], 100)).toThrow(/part cap/);
 });

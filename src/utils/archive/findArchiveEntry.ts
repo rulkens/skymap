@@ -1,21 +1,15 @@
-import type { SurfaceTileArchiveEntry } from '../../@types/archive/ArchiveEntry';
-import type { SurfaceTileArchiveIndex } from '../../@types/archive/ArchiveIndex';
-import {
-  SURFACE_TILE_ARCHIVE_ENTRY_BYTES,
-  SURFACE_TILE_ARCHIVE_HEADER_BYTES,
-} from '../../data/archive/archiveFormat';
+import type { ArchiveEntry } from '../../@types/archive/ArchiveEntry';
+import type { ArchiveIndex } from '../../@types/archive/ArchiveIndex';
+import { ARCHIVE_ENTRY_BYTES, ARCHIVE_HEADER_BYTES } from '../../data/archive/archiveFormat';
 
-/** findSurfaceTileArchiveEntry — binary search over the key-sorted entries. */
-export function findSurfaceTileArchiveEntry(
-  index: SurfaceTileArchiveIndex,
-  key: number,
-): SurfaceTileArchiveEntry | null {
+/** findArchiveEntry — binary search over the key-sorted entries. */
+export function findArchiveEntry(index: ArchiveIndex, key: number): ArchiveEntry | null {
   const { view } = index;
   let lo = 0;
   let hi = index.entryCount - 1;
   while (lo <= hi) {
     const mid = (lo + hi) >>> 1;
-    const at = SURFACE_TILE_ARCHIVE_HEADER_BYTES + mid * SURFACE_TILE_ARCHIVE_ENTRY_BYTES;
+    const at = ARCHIVE_HEADER_BYTES + mid * ARCHIVE_ENTRY_BYTES;
     const found = view.getUint32(at, true) + view.getUint16(at + 4, true) * 2 ** 32;
     if (found === key) {
       return {

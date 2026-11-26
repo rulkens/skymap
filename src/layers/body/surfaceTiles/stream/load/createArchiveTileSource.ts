@@ -1,9 +1,9 @@
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
-import type { SurfaceTileArchiveIndex } from '../../../../../@types/archive/ArchiveIndex';
+import type { ArchiveIndex } from '../../../../../@types/archive/ArchiveIndex';
 import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import type { TileRead } from '../@types/TileRead';
-import { decodeSurfaceTileArchiveIndex } from '../../../../../utils/archive/decodeArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../../../../utils/archive/findArchiveEntry';
+import { decodeArchiveIndex } from '../../../../../utils/archive/decodeArchiveIndex';
+import { findArchiveEntry } from '../../../../../utils/archive/findArchiveEntry';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
 import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
@@ -23,29 +23,27 @@ const FETCH_DEADLINE_MS = 10_000;
  */
 export function createArchiveTileSource(prefix: string): SurfaceTileSource {
   // A memoised 'failed' is a corrupt index: a broken deploy, which no retry mends.
-  const indexes = new Map<string, Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'>>();
+  const indexes = new Map<string, Promise<ArchiveIndex | 'missing' | 'failed'>>();
   // The same answers once landed, so the planner can ask synchronously what a level lacks.
-  const landed = new Map<string, SurfaceTileArchiveIndex | 'missing' | 'failed'>();
+  const landed = new Map<string, ArchiveIndex | 'missing' | 'failed'>();
   let warnedNoRange = false;
   const levelId = (tile: SurfaceTileId) => `${tile.product}:${tile.z}`;
 
-  async function fetchIndex(
-    tile: SurfaceTileId,
-  ): Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'> {
+  async function fetchIndex(tile: SurfaceTileId): Promise<ArchiveIndex | 'missing' | 'failed'> {
     const url = dataUrl(`images/${surfaceTileArchivePath(prefix, tile.product, tile.z)}`);
     const res = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(FETCH_DEADLINE_MS) });
     if (res.status === 404) return 'missing';
     if (!res.ok) throw new Error(`archive index ${res.status}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
     try {
-      return decodeSurfaceTileArchiveIndex(bytes);
+      return decodeArchiveIndex(bytes);
     } catch {
       // Never 'missing': a level that reads as missing must mean nothing was baked there.
       return 'failed';
     }
   }
 
-  function indexOf(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'> {
+  function indexOf(tile: SurfaceTileId): Promise<ArchiveIndex | 'missing' | 'failed'> {
     const id = levelId(tile);
     let pending = indexes.get(id);
     if (!pending) {
@@ -68,7 +66,7 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
       try {
         const index = await indexOf(tile);
         if (index === 'missing' || index === 'failed') return { kind: index };
-        const entry = findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y));
+        const entry = findArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y));
         if (!entry) return { kind: 'missing' };
         // Answered without a fetch: `bytes=o-(o-1)` is not a valid Range.
         if (entry.length === 0) return { kind: 'empty' };
@@ -99,7 +97,7 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
       if (index === undefined || index === 'failed') return false;
       return (
         index === 'missing' ||
-        findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y)) === null
+        findArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y)) === null
       );
     },
   };

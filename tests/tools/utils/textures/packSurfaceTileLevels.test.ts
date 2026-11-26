@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import type { SurfaceTileProduct } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { decodeSurfaceTileArchiveIndex } from '../../../../src/utils/archive/decodeArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../../../src/utils/archive/findArchiveEntry';
+import { decodeArchiveIndex } from '../../../../src/utils/archive/decodeArchiveIndex';
+import { findArchiveEntry } from '../../../../src/utils/archive/findArchiveEntry';
 import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import { packSurfaceTileLevels } from '../../../../tools/utils/textures/packSurfaceTileLevels';
@@ -36,11 +36,8 @@ it('writes z<z>.idx and parts whose ranges read back each tile byte for byte', (
   for (const [path, body] of Object.entries(TILES)) {
     const [product, z, x, y] = path.slice(PREFIX.length + 1).split('/');
     const p = product as SurfaceTileProduct;
-    const index = decodeSurfaceTileArchiveIndex(read(surfaceTileArchivePath(PREFIX, p, Number(z))));
-    const e = findSurfaceTileArchiveEntry(
-      index,
-      surfaceTileMortonKey(Number(x), Number.parseInt(y!, 10)),
-    )!;
+    const index = decodeArchiveIndex(read(surfaceTileArchivePath(PREFIX, p, Number(z))));
+    const e = findArchiveEntry(index, surfaceTileMortonKey(Number(x), Number.parseInt(y!, 10)))!;
     const part = read(surfaceTileArchivePath(PREFIX, p, Number(z), e.part));
     expect(part.subarray(e.offset, e.offset + e.length).toString()).toBe(body);
   }
@@ -64,8 +61,8 @@ it('a zero-byte tile file packs as a zero-length entry', () => {
   const flat = `${PREFIX}/albedo/2/1/1.webp`;
   writeFileSync(join(dir, flat), '');
   packSurfaceTileLevels(dir, PREFIX, [...PATHS, flat].sort());
-  const index = decodeSurfaceTileArchiveIndex(read(surfaceTileArchivePath(PREFIX, 'albedo', 2)));
-  expect(findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(1, 1))?.length).toBe(0);
+  const index = decodeArchiveIndex(read(surfaceTileArchivePath(PREFIX, 'albedo', 2)));
+  expect(findArchiveEntry(index, surfaceTileMortonKey(1, 1))?.length).toBe(0);
 });
 
 it('deletes a stale higher-numbered part left by an earlier, larger pack', () => {

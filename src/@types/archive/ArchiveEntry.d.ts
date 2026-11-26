@@ -1,6 +1,6 @@
-/** SurfaceTileArchiveEntry — where one tile's bytes sit: `length` bytes at
- *  `offset` inside part `part` of the level's pack. `key` is the Morton key. */
-export type SurfaceTileArchiveEntry = {
+/** ArchiveEntry — where one entry's bytes sit: `length` bytes at `offset` inside part `part`
+ *  of the archive's pack. `key` is the caller's (a surface tile's Morton key). */
+export type ArchiveEntry = {
   readonly key: number;
   readonly part: number;
   readonly offset: number;
