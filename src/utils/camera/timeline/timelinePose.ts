@@ -119,11 +119,22 @@ export function timelinePose(
   let easeAtMs = prev?.easeAtMs ?? now;
   let shortfall = prev?.shortfall ?? 1;
   const easing = from !== null && now - easeAtMs < TIMELINE_EASE_MS;
-  if (prev === null ? (token?.ease ?? false) : viewChanged) {
+  const started = prev === null ? (token?.ease ?? false) : viewChanged;
+  if (started) {
     from = ctx.authoredWorld;
     easeAtMs = now;
-    shortfall = Math.min(1, from.distance / fitAbout(from.target));
   } else if (!easing) from = null;
+  // The start pose rides with the craft, or a playing clock (or a step's jump) drags the blend back
+  // to where the system was: by the craft's move since last frame, if this row drew it of this craft.
+  const last = own?.craft?.id === craftId ? own.craft.positionMpc : undefined;
+  if (from !== null && craft && last && ctx.winnerLastFrame === 'timeline') {
+    const t = from.target;
+    from = {
+      ...from,
+      target: [t[0] + craft[0] - last[0], t[1] + craft[1] - last[1], t[2] + craft[2] - last[2]],
+    };
+  }
+  if (started && from !== null) shortfall = Math.min(1, from.distance / fitAbout(from.target));
 
   const distance = frame.distance * offsets.zoom;
   const { yaw, pitch } = orbitAnglesLookingAlong(
@@ -142,8 +153,8 @@ export function timelinePose(
     const s = smoothstep(0, TIMELINE_EASE_MS, now - easeAtMs);
     const blend = blendCameraPose(from, exact, s);
     // A blended centre can leave the craft outside a log-blended distance, so the distance never
-    // falls under the craft's fit. A step jumps the clock, leaving the craft out of the start
-    // pose; that shortfall fades over the ease rather than snapping out on its first frame.
+    // falls under the craft's fit. A start pose not carried (another craft, another row's pose)
+    // can leave the craft out of it; that shortfall fades over the ease rather than snapping out.
     const floor = fitAbout(blend.target) * shortfall ** (1 - s);
     shown = { ...blend, distance: Math.max(blend.distance, floor) };
   }
@@ -181,6 +192,7 @@ export function timelinePose(
     own: {
       aim: token,
       offsets: touched || viewChanged || holding ? offsets : kept,
+      craft: craft === undefined ? null : { id: craftId, positionMpc: craft },
       view: {
         stop: frame.stop,
         cruise: frame.cruise,
