@@ -1,0 +1,28 @@
+.root {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-6);
+}
+
+.status {
+  display: flex;
+  flex: 1 1 0;
+  min-inline-size: 0;
+  white-space: nowrap;
+  color: var(--color-fg);
+}
+
+.formats {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-fg-tertiary);
+}
+
+.nameStart {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nameEnd {
+  flex: none;
+}

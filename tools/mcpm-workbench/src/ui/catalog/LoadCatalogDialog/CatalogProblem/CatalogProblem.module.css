@@ -1,0 +1,44 @@
+/* At the end of the body's free row, so it moves no control; it opens to its
+   height instead of appearing at once. */
+.root {
+  grid-column: label-start / control-end;
+  grid-row: 2;
+  align-self: end;
+  display: grid;
+  grid-template-columns: subgrid;
+  row-gap: var(--space-8);
+  margin-block-start: var(--space-8);
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition:
+    block-size var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-standard);
+}
+
+@starting-style {
+  .root {
+    block-size: 0;
+    opacity: 0;
+  }
+}
+
+.problem {
+  composes: error from '../../../panel/FormField/FormField.module.css';
+  grid-column: control;
+}
+
+.example {
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  font: inherit;
+  color: var(--color-fg-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

@@ -1,0 +1,53 @@
+/* Its own inset, like the dialog's header and body, so the divider runs border to border. */
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+  padding-inline: var(--inset);
+  border-block-start: 1px solid var(--border-divider);
+}
+
+.load {
+  composes: button from '../dialogControl.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.loadLabels {
+  display: grid;
+}
+
+.loadLabels > * {
+  grid-area: 1 / 1;
+}
+
+.loadLabels > [data-shown='false'] {
+  visibility: hidden;
+}
+
+/* Only the room the buttons leave, cut short, so the buttons never move. */
+.reading {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-fg-muted);
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading {
+    animation: none;
+  }
+}
