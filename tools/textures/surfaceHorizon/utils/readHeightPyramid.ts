@@ -26,16 +26,13 @@ const keyOf = (z: number, x: number, y: number): number => (z * 2 ** 20 + y) * 2
 
 /**
  * readHeightPyramid — a body's baked height archives as the march reads them. A read at level
- * z falls back to the deepest ancestor that has the tile, which is how a regional band (Jezero,
- * z10+) hands over to the global levels, and Mars's missing z8–9 land on z7. Where no level
- * from z down to 0 has the tile, heights and ceilings read 0 m (the datum): a gap in the
- * global base would otherwise make the march throw, and the base covers the globe on all
- * three bodies.
+ * z falls back to the deepest ancestor that has the tile: a regional band (Jezero, z10+) hands
+ * over to the global levels, and Mars's missing z8–9 land on z7. With no tile from z down to 0,
+ * heights and ceilings read 0 m (the datum), so a gap in the global base cannot throw.
  *
- * Reads are synchronous (the march calls them in its inner loop) while WebP decode is not, so
- * a read of an undecoded tile returns 0 and records a miss; `loadMisses` decodes them and the
- * caller re-marches (`bakeHorizonSubTileResolved`). Headers (`subtreeMaxM`) read
- * synchronously.
+ * The march reads synchronously in its inner loop while WebP decode is async: an undecoded
+ * tile reads 0 and records a miss, `loadMisses` decodes it, and the caller re-marches
+ * (`bakeHorizonSubTileResolved`). Headers (`subtreeMaxM`) read synchronously.
  */
 export function readHeightPyramid(
   imagesDir: string,

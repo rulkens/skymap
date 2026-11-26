@@ -33,7 +33,12 @@ export async function writeGlobeHorizon(
         );
       }
     }
-    if (![...paths.values()].every((path) => existsSync(path))) continue;
+    if (![...paths.values()].every((path) => existsSync(path))) {
+      process.stderr.write(
+        `  globe ${tier} skipped: z${level} is not fully baked (an older image stays on disk)\n`,
+      );
+      continue;
+    }
     const tiles = new Map<string, HorizonTile | null>();
     for (const [key, path] of paths) tiles.set(key, await readHorizonTileFile(path));
     const { width, height, rgba } = repackGlobeHorizon(

@@ -20,6 +20,7 @@ import { Worker } from 'node:worker_threads';
 import type { SurfaceTileBodyId } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId';
 import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
+import { argValue } from '../../utils/cli/argValue';
 import { writeFileAtomic } from '../../utils/io/writeFileAtomic';
 import { packSurfaceTileLevels } from '../../utils/textures/packSurfaceTileLevels';
 import type { HorizonBakeReply } from './@types/HorizonBakeReply';
@@ -32,12 +33,6 @@ import { horizonTilesOfBand } from './utils/horizonTilesOfBand';
 import { writeGlobeHorizon } from './utils/writeGlobeHorizon';
 
 const IMAGES_DIR = resolve('public/data/images');
-
-/** `--name value`, or undefined when absent. */
-function flagValue(argv: readonly string[], name: string): string | undefined {
-  const at = argv.indexOf(name);
-  return at < 0 ? undefined : argv[at + 1];
-}
 
 /** Runs `tasks` over `workerCount` worker threads, one tile per message; resolves with the
  *  counts of flat and image tiles written. */
@@ -89,7 +84,7 @@ async function bakeTiles(
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const bodyFlag = flagValue(argv, '--body');
+  const bodyFlag = argValue(argv, '--body');
   if (bodyFlag === undefined || !(bodyFlag in SURFACE_TILE_REGISTRY)) {
     throw new Error(`bakeSurfaceHorizon: --body must be earth, moon or mars, got '${bodyFlag}'`);
   }
@@ -108,7 +103,7 @@ async function main(): Promise<void> {
 
   // Horizon-only rows are this tool's own output, not a source.
   const heightBands = manifest.bands.filter((band) => band.builtFrom.height !== undefined);
-  const bandFlag = flagValue(argv, '--band');
+  const bandFlag = argValue(argv, '--band');
   const bands =
     bandFlag === undefined ? heightBands : heightBands.filter((_, i) => i === Number(bandFlag));
   if (bands.length === 0) {
@@ -117,7 +112,7 @@ async function main(): Promise<void> {
     );
   }
   const workerCount = Number(
-    flagValue(argv, '--workers') ?? Math.max(1, availableParallelism() - 1),
+    argValue(argv, '--workers') ?? Math.max(1, availableParallelism() - 1),
   );
 
   const { prefix } = manifest;

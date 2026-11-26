@@ -15,11 +15,14 @@ const STEPS_PER_POST = (HORIZON_POSTS_PER_TILE - 1) / HORIZON_POSTS_PER_TILE;
 export function horizonPostRect(
   rect: Pick<ResolvedTileResidency, 'atlasUvOrigin' | 'atlasUvScale'>,
 ): Vec4 {
-  const axis = (origin: number, scale: number): [number, number] => {
-    const slotOrigin = Math.floor((origin + scale / 2) / SLOT_UV) * SLOT_UV;
-    return [slotOrigin + (origin - slotOrigin) * STEPS_PER_POST, scale * STEPS_PER_POST];
-  };
-  const [originU, scaleU] = axis(rect.atlasUvOrigin[0], rect.atlasUvScale[0]);
-  const [originV, scaleV] = axis(rect.atlasUvOrigin[1], rect.atlasUvScale[1]);
-  return [originU, originV, scaleU, scaleV];
+  const [originU, originV] = rect.atlasUvOrigin;
+  const [scaleU, scaleV] = rect.atlasUvScale;
+  const slotU = Math.floor((originU + scaleU / 2) / SLOT_UV) * SLOT_UV;
+  const slotV = Math.floor((originV + scaleV / 2) / SLOT_UV) * SLOT_UV;
+  return [
+    slotU + (originU - slotU) * STEPS_PER_POST,
+    slotV + (originV - slotV) * STEPS_PER_POST,
+    scaleU * STEPS_PER_POST,
+    scaleV * STEPS_PER_POST,
+  ];
 }
