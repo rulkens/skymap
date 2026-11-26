@@ -4,7 +4,7 @@
  * stay separately focusable. An off section dims its icon and title. The summary is hidden
  * from assistive tech, since the body says the same and a live summary must not chatter.
  */
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import ChevronRightIcon from '../../../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import IconTip from '../IconTip/IconTip';
 import type { PanelSectionProps } from '../PanelSection';
@@ -27,6 +27,7 @@ function SectionHeader({
 }: SectionHeaderProps): ReactNode {
   const tipId = useId();
   const tipped = iconTip !== undefined;
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
   return (
     <div className={styles.root}>
       <button
@@ -38,13 +39,15 @@ function SectionHeader({
         // aria-hidden, so a tipped button is named by aria-label instead.
         aria-label={tipped ? title : undefined}
         aria-describedby={tipped ? tipId : undefined}
+        onFocus={(e) => setKeyboardFocus(e.currentTarget.matches(':focus-visible'))}
+        onBlur={() => setKeyboardFocus(false)}
       >
         <span className={styles.chevron}>
           <ChevronRightIcon size={10} />
         </span>
         <span className={styles.label}>
           {tipped ? (
-            <IconTip id={tipId} tip={iconTip}>
+            <IconTip id={tipId} tip={iconTip} focused={keyboardFocus}>
               {icon}
             </IconTip>
           ) : (

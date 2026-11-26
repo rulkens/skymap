@@ -40,13 +40,35 @@ afterEach(() => {
 });
 
 describe('PanelSection icon tip', () => {
-  it('describes the fold button and stays out of its name', () => {
+  it('describes the fold button while it has keyboard focus, and stays out of its name', () => {
     render(
       <PanelSection title="Stats" icon={null} iconTip="60 fps" open onToggle={() => {}}>
         <span />
       </PanelSection>,
     );
+    act(() => screen.getByRole('button', { name: 'Stats' }).focus());
     expect(screen.getByRole('button', { name: 'Stats', description: '60 fps' })).toBeDefined();
+  });
+
+  // The Simulation tip reads the step count: mounted while hidden, it re-rendered every step.
+  it('mounts the tip content only while the icon is hovered', () => {
+    const { container } = render(
+      <PanelSection
+        title="Stats"
+        icon={<i data-testid="icon" />}
+        iconTip="60 fps"
+        open
+        onToggle={() => {}}
+      >
+        <span />
+      </PanelSection>,
+    );
+    expect(container.textContent).not.toContain('60 fps');
+    const icon = screen.getByTestId('icon');
+    fireEvent.pointerEnter(icon);
+    expect(container.textContent).toContain('60 fps');
+    fireEvent.pointerLeave(icon);
+    expect(container.textContent).not.toContain('60 fps');
   });
 });
 
