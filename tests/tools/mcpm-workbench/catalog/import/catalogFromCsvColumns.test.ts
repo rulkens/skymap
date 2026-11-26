@@ -3,7 +3,6 @@ import type { CatalogImportSettings } from '../../../../../tools/mcpm-workbench/
 import type { CsvColumns } from '../../../../../tools/mcpm-workbench/@types/catalog/import/CsvColumns';
 import { catalogFromCsvColumns } from '../../../../../tools/mcpm-workbench/src/catalog/import/catalogFromCsvColumns';
 import { createCsvColumnReader } from '../../../../../tools/mcpm-workbench/src/catalog/import/createCsvColumnReader';
-import { redshiftToDistanceMpc } from '../../../../../src/utils/math/redshiftToDistanceMpc';
 
 const XYZ: CatalogImportSettings = {
   format: { kind: 'cartesianMpc' },
@@ -176,8 +175,8 @@ describe('catalogFromCsvColumns', () => {
 
     expect(points.weight[0]).toBe(1);
     expect(points.weight[1]).toBeCloseTo(0.001, 9);
-    expect(points.weight[2]).toBeGreaterThan(0);
-    expect(points.weight[3]).toBeGreaterThan(0);
+    expect(points.weight[2]! / 1e-12).toBeCloseTo(1, 5);
+    expect(points.weight[3]! / 1e-13).toBeCloseTo(1, 5);
   });
 
   it('reports min, median and max of the stored weights', () => {
@@ -188,7 +187,8 @@ describe('catalogFromCsvColumns', () => {
 
   it("places RA 0, Dec 0 on +x and Dec 90 on +z at the redshift's distance", () => {
     const { points } = parsed('0,0,0.1,1\n0,90,0.1,1\n', RADEC);
-    const d = redshiftToDistanceMpc(0.1, { h0KmSMpc: 70, omegaM: 0.3 });
+    // An independent Simpson integration (1e5 panels): d_C(0.1) at H0 70, Ωm 0.3.
+    const d = 418.4545;
     const p = Array.from(points.positions);
 
     expect(p[0]).toBeCloseTo(d, 3);

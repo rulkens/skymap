@@ -27,7 +27,7 @@ const points: CatalogPoints = {
   count: 1,
   sources: [],
 };
-const weights = { weights: new Float32Array([1]), nanCount: 0, medianWeight: 1 };
+const weights = { weights: new Float32Array([1]), nanCount: 0 };
 const userFile: UserFileProvenance = {
   fileName: 'desi.csv',
   settings: { format: { kind: 'cartesianMpc' }, weight: { kind: 'linear', scale: 1 } },

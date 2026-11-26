@@ -67,7 +67,6 @@ describe('seedAgents aroundData anchoring', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([1, 1, 1]),
       nanCount: 0,
-      medianWeight: 10,
     };
     const culled = cullPointsToBox(points, weights, box);
     expect(culled.points.count).toBe(2); // sanity: the outsider really was dropped
@@ -95,7 +94,6 @@ describe('seedAgents aroundData anchoring', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([1]),
       nanCount: 0,
-      medianWeight: 10,
     };
     const culled = cullPointsToBox(points, weights, box);
     expect(culled.points.count).toBe(0);

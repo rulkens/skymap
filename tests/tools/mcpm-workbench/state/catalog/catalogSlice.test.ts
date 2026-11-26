@@ -20,7 +20,7 @@ const points: CatalogPoints = {
   sources: [],
 };
 
-const weights = { weights: new Float32Array([1e6]), nanCount: 0, medianWeight: 10 };
+const weights = { weights: new Float32Array([1e6]), nanCount: 0 };
 
 const userCatalog: UserCatalog = {
   points,

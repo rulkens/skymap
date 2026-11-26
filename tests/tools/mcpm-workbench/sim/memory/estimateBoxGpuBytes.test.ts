@@ -1,26 +1,18 @@
 /**
- * estimateBoxGpuBytes — the live GPU memory figure must match what the build
- * then allocates, catalog points included (they share the agent lanes).
+ * estimateBoxGpuBytes — the live GPU memory figure: three grids plus seven agent
+ * lanes, catalog points included (they share the lanes with the free agents).
  */
 import { describe, expect, it } from 'vitest';
-import { deriveGridBox } from '../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import { estimateBoxGpuBytes } from '../../../../../tools/mcpm-workbench/src/sim/memory/estimateBoxGpuBytes';
-import { planGridBudget } from '../../../../../tools/mcpm-workbench/src/sim/memory/planGridBudget';
 import { defaultGridSlice } from '../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 
-const GENEROUS = { maxBufferSize: 2 ** 40, maxStorageBufferBindingSize: 2 ** 40 };
-
 describe('estimateBoxGpuBytes', () => {
-  it('with N points equals what planGridBudget totals for a build with N points in the box', () => {
-    const agentCount = 2_000_000;
-    for (const pointCount of [0, 1_000_000]) {
-      const built = planGridBudget(
-        deriveGridBox(defaultGridSlice),
-        pointCount + agentCount,
-        'f32',
-        GENEROUS,
-      );
-      expect(estimateBoxGpuBytes(defaultGridSlice, agentCount, pointCount)).toBe(built.totalBytes);
-    }
+  it('counts three f32 grids and seven lanes of points plus agents', () => {
+    // The default box is 272³ voxels: 20_123_648 × 4 bytes per grid; lanes 4 bytes per entry.
+    const grids = 3 * 20_123_648 * 4;
+    expect(estimateBoxGpuBytes(defaultGridSlice, 2_000_000, 0)).toBe(grids + 7 * 4 * 2_000_000);
+    expect(estimateBoxGpuBytes(defaultGridSlice, 2_000_000, 1_000_000)).toBe(
+      grids + 7 * 4 * 3_000_000,
+    );
   });
 });

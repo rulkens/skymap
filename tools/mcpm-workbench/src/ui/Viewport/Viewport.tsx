@@ -96,7 +96,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     // (or tore down) since the last time the subscriber checked.
     let lastSeenEpoch = resources.epoch;
 
-    // T25: `store` is the App.tsx-memoized instance for this component's whole
+    // `store` is the App.tsx-memoized instance for this component's whole
     // lifetime, so installing the getter once here (rather than per-build) is enough.
     if (hasUrlGate('probe')) {
       (window as unknown as ProbeWindow).__mcpmProbeMeanLogTraceAtPoints = () =>
@@ -197,17 +197,15 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // the empty-catalog scene (no harness) draws nothing and must be black.
       graph.clear(encoder);
       if (h) {
-        // Task FLE: every renderer's divisor takes the same interaction boost — coarser
+        // Every renderer's divisor takes the same interaction boost — coarser
         // while a UI write is fresh, the user's own setting once it settles.
         const sinceInteractionMs = now - lastInteractionMs;
         const drawRenderer: Readonly<Record<RendererId, () => void>> = {
           raymarch: () => {
             const divisor = effectiveVolpathDivisor(s.view.raymarch.divisor, sinceInteractionMs);
-            // T18: previewPacked wants the packed cube, but only while it is still
-            // the pack of THIS stepCount — `watchPreviewPackedSaga` owns disposing a
-            // stale one (spec's "STALE"), so this is a pure read; the fallback IS
-            // the live trace, not a blank frame. Both route through the same
-            // drawTracePass divisor path (task R7).
+            // previewPacked wants the packed cube, but only while it is still the
+            // pack of THIS stepCount — `watchPreviewPackedSaga` disposes a stale one,
+            // so this is a pure read; the fallback IS the live trace, not a blank frame.
             if (
               s.view.raymarch.previewPacked &&
               graph.hasPreviewTrace() &&
@@ -253,10 +251,9 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       // The pending box leads the debounced harness rebuild by up to REBUILD_DEBOUNCE_MS —
       // that lead is the point, live tuning ahead of the rebuild landing. Drawn last, over
       // the galaxy dots.
-      // A drag in progress keeps the wireframe up even once the 200ms preview timer
-      // lapses — a continuous pointer signal is its own "still hot"; `input`'s own
-      // isWireframeVisible ORs that in on top of the pointer/flash pair below (F1.7).
-      if (input.isWireframeVisible(s, now)) {
+      // A drag in progress keeps the wireframe up after the preview timer lapses;
+      // `isWireframeVisible` ORs it with the pointer and the flash.
+      if (input.isWireframeVisible(now)) {
         // No harness (empty scene): the pending box IS the built box — the gizmo
         // manipulates a selection that nothing has been built against yet.
         const pendingBox = deriveGridBox(s.grid);

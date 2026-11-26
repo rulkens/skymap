@@ -6,7 +6,6 @@ import PaletteRow from '../PaletteRow/PaletteRow';
 import SliderRows from '../../panel/SliderRows/SliderRows';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
-import { PALETTE_INFO } from '../data/paletteInfo.constant';
 import { PATH_TRACER_PREVIEW_SLIDER_FIELDS } from './data/pathTracerPreviewSliderFields.constant';
 import { PATH_TRACER_SLIDER_FIELDS } from './data/pathTracerSliderFields.constant';
 
@@ -32,7 +31,7 @@ function PathTracerRows({
 }: PathTracerRowsProps): ReactNode {
   return (
     <>
-      <PaletteRow value={pathTracer.paletteId} onChange={onPaletteChange} info={PALETTE_INFO} />
+      <PaletteRow value={pathTracer.paletteId} onChange={onPaletteChange} />
       <SubsectionGroup title="Trace">
         <SliderRows
           fields={PATH_TRACER_SLIDER_FIELDS}

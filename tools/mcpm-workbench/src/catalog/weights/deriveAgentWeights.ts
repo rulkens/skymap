@@ -1,18 +1,17 @@
 /**
  * deriveAgentWeights — linear catalog weight W → MCPM agent deposit weight.
- *
- * W is linear and positive (built-ins: stellar mass in 1e12 Msun, see
- * `massWeightFromLog10`). The port's formula, do not reorder: NaN entries take
- * the finite median → `(1e6 / n) * log10(1 + max(W, 0)) / mean(W)`, mean(W)
- * of the untransformed weights, not of the logs. The `max(W, 0)` clamp
- * guards the domain: a negative sentinel can pass `isFinite`, and `log10` of a
- * value ≤ -1 would poison the whole deposit with NaN. `uniform` mode (not in
- * the port) gives every point `1e6 / n` but still reports the NaN accounting.
+ * W is linear and positive (built-ins: stellar mass in 1e12 Msun). The port's
+ * formula, do not reorder: NaN entries take the finite median →
+ * `(1e6 / n) * log10(1 + max(W, 0)) / mean(W)`, mean(W) of the untransformed
+ * weights, not of the logs. `max(W, 0)`: a negative sentinel passes `isFinite`,
+ * and `log10` of a value ≤ -1 would poison the whole deposit with NaN.
+ * `uniform` mode (not in the port) gives every point `1e6 / n`.
  */
 import type { AgentWeights } from '../../../@types/catalog/AgentWeights';
 
 const DEPOSIT_SCALE = 1e6; // the port's `1.0e6 / data_count` numerator
 
+// Not tools/utils/perf/median: that one sorts a copy, and these millions are sorted already.
 function median(sorted: readonly number[]): number {
   const mid = sorted.length >> 1;
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
@@ -33,14 +32,14 @@ export function deriveAgentWeights(
   const nanCount = n - finiteSorted.length;
   const medianWeight = median(finiteSorted);
 
-  // No finite mass in the slice degrades stellarMass to uniform: medianWeight
-  // stays NaN (nothing to fill from) rather than poisoning every weight with NaN.
+  // No finite mass in the slice degrades stellarMass to uniform rather than
+  // filling every weight with a NaN median.
   const degradeToUniform = mode === 'uniform' || finiteSorted.length === 0;
 
   const weights = new Float32Array(n);
   if (degradeToUniform) {
     weights.fill(DEPOSIT_SCALE / n);
-    return { weights, nanCount, medianWeight };
+    return { weights, nanCount };
   }
 
   let rawSum = 0;
@@ -53,5 +52,5 @@ export function deriveAgentWeights(
   const scale = DEPOSIT_SCALE / n / (rawSum / n);
   for (let i = 0; i < n; i++) weights[i] = weights[i]! * scale;
 
-  return { weights, nanCount, medianWeight };
+  return { weights, nanCount };
 }

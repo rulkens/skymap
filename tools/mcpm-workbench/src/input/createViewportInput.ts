@@ -26,7 +26,7 @@ import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { setManualCenterMpc, setManualSizeMpc, setRotation } from '../state/grid/gridSlice';
 import { commitCameraPose } from '../state/view/viewSlice';
-import type { RootState, WorkbenchStore } from '../store/types';
+import type { WorkbenchStore } from '../store/types';
 import { arrowLengthMpcFor } from './arrowLengthMpcFor';
 import { isAxisDrag } from './isAxisDrag';
 import { rayFromPointer } from './rayFromPointer';
@@ -45,7 +45,7 @@ const PAN_SPEED = 0.0016;
 export type ViewportInputDeps = {
   readonly canvas: HTMLCanvasElement;
   readonly store: WorkbenchStore;
-  /** The post-edit-flash reason of boxWireframeVisible's three (F1.7/F1.8) — Viewport's
+  /** The post-edit flash, one of the wireframe's three reasons — Viewport's
    *  own `boxPreviewUntil` timer. Deliberately ignores pointer position: the user's mouse
    *  is on a panel control outside the canvas when the flash is the whole point. The other
    *  two reasons (the pointer over the canvas, an in-flight gizmo drag) are this module's
@@ -65,15 +65,15 @@ export type ViewportInput = {
   /** The live camera: the register mid-gesture, the committed store value otherwise
    *  (the store→register adoption below keeps them equal at rest). */
   getCameraPose(): ViewSlice['camera'];
-  /** F1.7's hover glyph highlight — recomputed every non-dragging pointermove. */
+  /** The hovered handle's glyph highlight — recomputed every non-dragging pointermove. */
   getHoverHandle(): GizmoHandleId | null;
   /** The handle currently being dragged, or null — drawBoxPreview's `activeHandle`. */
   getDragHandleId(): GizmoHandleId | null;
-  /** boxWireframeVisible's full OR (F1.7/F1.8): the gizmo hit-test/hover-pick below must
-   *  agree with frame()'s draw call exactly, or picking an invisible/hidden handle would
-   *  hijack an orbit click. The box shows while the pointer is over the canvas; the
-   *  flash and an in-flight drag show it anywhere (F1.8's binding exceptions). */
-  isWireframeVisible(s: RootState, now: number): boolean;
+  /** The wireframe's full OR: the gizmo hit-test/hover-pick below must agree with
+   *  frame()'s draw call exactly, or picking an invisible handle would hijack an orbit
+   *  click. The box shows while the pointer is over the canvas; the flash and an
+   *  in-flight drag show it anywhere. */
+  isWireframeVisible(now: number): boolean;
   destroy(): void;
 };
 
@@ -99,7 +99,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     targetMpc: cloneTarget(lastSeenCamera.targetMpc),
   };
 
-  // Closure-local, per spec §5's "State flow" — not store fields. `gizmoDragging`'s anchor
+  // Closure-local, not store fields. `gizmoDragging`'s anchor
   // is captured once at the routing decision (dragAnchor); `hoverHandle` is recomputed on
   // every non-dragging canvas pointermove, purely for drawBoxPreview's glyph highlight.
   let gizmoDragging: GizmoDragState | null = null;
@@ -117,7 +117,7 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   // until `dragAnchor` decides the gesture is a camera one.
   let pendingGestureStart = false;
 
-  function isWireframeVisible(s: RootState, now: number): boolean {
+  function isWireframeVisible(now: number): boolean {
     return isFlashVisible(now) || gizmoDragging !== null || pointerInside;
   }
 
@@ -137,8 +137,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   // ── Gizmo hit-test (dragAnchor routing) ─────────────────────────────────────
 
   function tryStartGizmoDrag(xPx: number, yPx: number): boolean {
+    if (!isWireframeVisible(performance.now())) return false;
     const s = store.getState();
-    if (!isWireframeVisible(s, performance.now())) return false;
 
     const pendingBox = deriveGridBox(s.grid);
     const pointer = { clientX: xPx, clientY: yPx };
@@ -192,10 +192,9 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
       return;
     }
 
-    // Fixed-anchor recompute (spec §5): every move recomputes rotation' from the SAME
-    // anchorRotation captured at the routing decision — see the original F2.5 comment
-    // this logic was ported from (createViewportInput's pre-recognizer version) for why
-    // that must not incrementally accumulate onto the live box rotation.
+    // Fixed-anchor recompute: every move recomputes rotation' from the SAME
+    // anchorRotation captured at the routing decision, never accumulating onto the
+    // live box rotation, so float error cannot build up over a long drag.
     const drag = gizmoDragging;
     const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
     const referenceDir = ringReferenceDirFor(axisDir);
@@ -340,9 +339,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
 
   const onHoverMove = (e: PointerEvent): void => {
     if (route !== null) return; // matches the old `if (!dragging)` gate
-    const s = store.getState();
-    if (isWireframeVisible(s, performance.now())) {
-      const box = deriveGridBox(s.grid);
+    if (isWireframeVisible(performance.now())) {
+      const box = deriveGridBox(store.getState().grid);
       const ray = rayFromPointer(canvas, e, getCameraPose());
       const arrowLengthMpc = arrowLengthMpcFor(canvas, getCameraPose(), box.centerMpc);
       hoverHandle = pickGizmoHandle(
@@ -359,8 +357,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     markDirty(); // wakes render-on-demand so the wireframe reappears this frame
   };
   const onPointerLeave = (): void => {
-    // Mid-drag the gesture is window-tracked with no pointer capture (F1.8's first
-    // exception), so this fires legitimately while a gizmo/camera drag is in flight —
+    // Mid-drag the gesture is window-tracked with no pointer capture, so this
+    // fires legitimately while a gizmo/camera drag is in flight —
     // `gizmoDragging !== null` in isWireframeVisible covers that, not a check here.
     pointerInside = false;
     hoverHandle = null;

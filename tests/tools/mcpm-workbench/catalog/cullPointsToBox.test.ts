@@ -1,5 +1,5 @@
 /**
- * cullPointsToBox — task S14. Same box fixture as worldToVoxel.test.ts:
+ * cullPointsToBox — same box fixture as worldToVoxel.test.ts:
  * origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8] -> voxel range [0,8) per axis.
  */
 import { describe, expect, it } from 'vitest';
@@ -36,7 +36,6 @@ describe('cullPointsToBox', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([5, 9]),
       nanCount: 0,
-      medianWeight: 10,
     };
 
     const culled = cullPointsToBox(points, weights, box);
@@ -53,7 +52,6 @@ describe('cullPointsToBox', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([11, 22, 33]),
       nanCount: 0,
-      medianWeight: 10,
     };
 
     const culled = cullPointsToBox(points, weights, box);

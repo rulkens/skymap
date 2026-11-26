@@ -1,17 +1,8 @@
 /**
- * Unit tests for `redshiftToDistanceMpc`.
- *
- * The function evaluates the flat-ΛCDM line-of-sight comoving-distance
- * integral by Simpson's rule (see the source for the formula).  We pin
- * the boundary case (z = 0), a small-z value where ΛCDM and linear
- * Hubble nearly agree, a high-z value where they diverge sharply, and
- * monotonicity across the operative redshift range.
- *
- * Reference values are computed against an independent Python integration
- * with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70 km/s/Mpc.  Tolerances are
- * generous enough that small tweaks to `SIMPSON_PANELS` don't churn the
- * tests — the load-bearing assertion is "agrees with the analytic limit
- * at low z and diverges from linear Hubble at high z".
+ * redshiftToDistanceMpc — z = 0, a small z where ΛCDM and linear Hubble nearly
+ * agree, a high z where they diverge, and monotonicity. Reference values come from
+ * an independent Python integration with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70;
+ * tolerances leave room for a different `SIMPSON_PANELS`.
  */
 
 import { describe, it, expect } from 'vitest';

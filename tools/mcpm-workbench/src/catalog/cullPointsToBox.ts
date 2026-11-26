@@ -5,14 +5,14 @@ import { worldToVoxel } from '../grid/box/worldToVoxel';
 
 /**
  * cullPointsToBox — drops catalog points whose voxel coordinate falls
- * outside [0, dims) on any axis, before seeding (task S14). Polyphorm's box
+ * outside [0, dims) on any axis, before seeding. Polyphorm's box
  * always covers all of its data; skymap's manual box can crop the catalog,
  * and seedAgents' 'aroundData' mode anchors free agents on catalog points —
  * an anchor beyond a face wraps (modFloor in propagate.wesl) to the OPPOSITE
  * face, mirroring external structure as a thin shell. `weights.weights` is
  * index-aligned 1:1 with `points` (deriveAgentWeights' per-point output), so
- * it is filtered by the SAME mask; `nanCount`/`medianWeight` are
- * catalog-load stats and pass through unchanged.
+ * it is filtered by the SAME mask; `nanCount` is a catalog-load stat and
+ * passes through unchanged.
  */
 export function cullPointsToBox(
   points: CatalogPoints,
@@ -53,10 +53,6 @@ export function cullPointsToBox(
 
   return {
     points: { positions, weight, count, sources: points.sources },
-    weights: {
-      weights: culledWeights,
-      nanCount: weights.nanCount,
-      medianWeight: weights.medianWeight,
-    },
+    weights: { weights: culledWeights, nanCount: weights.nanCount },
   };
 }

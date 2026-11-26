@@ -38,12 +38,10 @@ function pointsFixture(): CatalogPoints {
 const WEIGHTS: AgentWeights = {
   weights: new Float32Array(0),
   nanCount: 20_114,
-  medianWeight: 10.2,
 };
 
 // Mirrors emitTraceSidecar's own local-time-with-numeric-offset format —
-// asserted independently of the test runner's timezone (spec §8's example
-// is CEST, but CI may run in UTC or anywhere else).
+// asserted independently of the test runner's timezone (CI may run in UTC or anywhere).
 function expectedProducedAt(d: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
   const offsetMin = -d.getTimezoneOffset();

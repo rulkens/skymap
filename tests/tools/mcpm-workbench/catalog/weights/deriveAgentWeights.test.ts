@@ -1,8 +1,7 @@
 /**
- * deriveAgentWeights — fork-exact transform order + NaN median-fill accounting.
- *
- * Order under test (spec §6, §15 decision 8): NaN → finite median,
- * w = log10(1 + max(W, 0)), divide by mean(W), scale by 1e6/n_points.
+ * deriveAgentWeights — the port's transform order and the NaN median fill:
+ * NaN → finite median, w = log10(1 + max(W, 0)), divide by mean(W), scale by 1e6/n.
+ * Expected values are worked out by hand from that formula.
  */
 import { describe, expect, it } from 'vitest';
 import { deriveAgentWeights } from '../../../../../tools/mcpm-workbench/src/catalog/weights/deriveAgentWeights';
@@ -10,9 +9,10 @@ import { massWeightFromLog10 } from '../../../../../tools/mcpm-workbench/src/cat
 
 describe('deriveAgentWeights', () => {
   it('NaN masses take the finite median with an even finite count', () => {
-    const input = new Float32Array([8, 9, 10, 11, NaN]); // finite sorted: 8,9,10,11 → median 9.5
+    // Median 9.5 fills the NaN; mean(W) = 47.5 / 5 = 9.5 → 2e5 · log10(10.5) / 9.5.
+    const input = new Float32Array([8, 9, 10, 11, NaN]);
     const result = deriveAgentWeights(input, 'stellarMass');
-    expect(result.medianWeight).toBe(9.5);
+    expect(result.weights[4]! / 21498.722 - 1).toBeCloseTo(0, 5);
   });
 
   it('nanCount reports how many entries were filled', () => {
@@ -22,13 +22,10 @@ describe('deriveAgentWeights', () => {
   });
 
   it("matches the port's formula on linear weights", () => {
-    const w = [0.01, 0.1, 1];
-    const meanW = w.reduce((a, b) => a + b, 0) / w.length;
-    const result = deriveAgentWeights(new Float32Array(w), 'stellarMass');
-    w.forEach((wi, i) => {
-      const expected = (1e6 / w.length) * (Math.log10(1 + wi) / meanW);
-      expect(Math.abs(result.weights[i]! / expected - 1)).toBeLessThan(1e-3);
-    });
+    // mean(W) = 0.37; (1e6 / 3) / 0.37 · log10(1.01), log10(1.1), log10(2).
+    const expected = [3893.1295, 37290.707, 271198.19];
+    const result = deriveAgentWeights(new Float32Array([0.01, 0.1, 1]), 'stellarMass');
+    expected.forEach((e, i) => expect(Math.abs(result.weights[i]! / e - 1)).toBeLessThan(1e-5));
   });
 
   it('mass weighting separates a 1e8 and a 1e12 Msun galaxy like the port', () => {
@@ -54,7 +51,6 @@ describe('deriveAgentWeights', () => {
     for (let i = 0; i < result.weights.length; i++) {
       expect(result.weights[i]).toBeCloseTo(expected, -1);
     }
-    expect(result.medianWeight).toBeNaN();
     expect(result.nanCount).toBe(3);
   });
 });

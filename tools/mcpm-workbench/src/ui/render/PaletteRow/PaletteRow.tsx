@@ -5,16 +5,16 @@ import { PALETTE_IDS } from '../../../../../../src/data/volume/scalarFieldPalett
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import Select from '../../../../../../src/components/common/Select/Select';
 import { PALETTE_ICONS } from './data/paletteIcons.constant';
+import { PALETTE_INFO } from './data/paletteInfo.constant';
 
 export type PaletteRowProps = {
   readonly value: ScalarFieldPaletteId;
   readonly onChange: (id: ScalarFieldPaletteId) => void;
-  readonly info?: string;
 };
 
-function PaletteRow({ value, onChange, info }: PaletteRowProps): ReactNode {
+function PaletteRow({ value, onChange }: PaletteRowProps): ReactNode {
   return (
-    <PanelRow label="palette" info={info}>
+    <PanelRow label="palette" info={PALETTE_INFO}>
       <Select
         value={value}
         options={PALETTE_IDS}

@@ -143,8 +143,8 @@ describe('createViewportInput — gizmo routing (dragAnchor hits a handle)', () 
       markDirty: () => {},
     });
 
-    // isWireframeVisible's pointer term is pointer-gated (F1.8) — a real pointerdown
-    // is always preceded by the browser's own pointerenter, so the fixture reproduces that.
+    // Hover shows the wireframe only after a pointerenter, which a real pointerdown
+    // always follows, so the fixture fires one.
     fire('pointerenter', {});
     fire('pointerdown', mouseDown(clientXFor(ndcXForWorldX(arrowLengthMpc))));
     expect(input.getDragHandleId()).toEqual({ kind: 'translate', axis: 0 });
@@ -283,7 +283,7 @@ describe('createViewportInput — store→register adoption', () => {
   });
 });
 
-describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8)', () => {
+describe('createViewportInput — isWireframeVisible pointer-inside gating', () => {
   it('hides the wireframe once the pointer leaves the canvas', () => {
     const { store } = createWorkbenchStore(defaultAppState);
     const { canvas, fire } = makeCanvas();
@@ -295,10 +295,10 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     });
 
     fire('pointerenter', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     fire('pointerleave', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 
   it('keeps the wireframe visible while a gizmo drag is in flight, pointer outside or not', () => {
@@ -321,12 +321,12 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     expect(input.getDragHandleId()).not.toBeNull();
 
     // Gestures are window-tracked with no pointer capture — leaving the canvas mid-drag
-    // is the expected, legitimate path (F1.8's first exception), not a corner case.
+    // is the expected, legitimate path, not a corner case.
     fire('pointerleave', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     win.fire('pointerup', mouseUp(clientXFor(ndcXForWorldX(arrowLengthMpc))));
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 
   it('keeps the flash-window wireframe visible with the pointer outside the canvas', () => {
@@ -341,10 +341,10 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     });
 
     // Pointer never entered — the panel edit that triggers the flash happens with the
-    // mouse on a slider outside the canvas (F1.8's second exception).
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    // mouse on a slider outside the canvas.
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     flashActive = false;
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 });

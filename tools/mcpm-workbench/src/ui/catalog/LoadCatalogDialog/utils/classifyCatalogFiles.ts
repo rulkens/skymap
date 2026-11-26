@@ -9,7 +9,7 @@ export function classifyCatalogFiles(files: readonly File[]): CatalogFiles | Cat
   if (files.some((f) => f.size > MAX_CATALOG_FILE_BYTES)) {
     return {
       kind: 'problem',
-      message: 'File is larger than 400 MB. Use a smaller sample, or the native build.',
+      message: `File is larger than ${MAX_CATALOG_FILE_BYTES / 1e6} MB. Use a smaller sample, or the native build.`,
     };
   }
   const named = (ext: string) => files.filter((f) => f.name.toLowerCase().endsWith(ext));

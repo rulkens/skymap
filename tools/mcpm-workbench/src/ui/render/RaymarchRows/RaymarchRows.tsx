@@ -6,7 +6,6 @@ import PaletteRow from '../PaletteRow/PaletteRow';
 import SliderRows from '../../panel/SliderRows/SliderRows';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
-import { PALETTE_INFO } from '../data/paletteInfo.constant';
 import { RAYMARCH_PREVIEW_SLIDER_FIELDS } from './data/raymarchPreviewSliderFields.constant';
 import { RAYMARCH_SLIDER_FIELDS } from './data/raymarchSliderFields.constant';
 
@@ -38,7 +37,7 @@ function RaymarchRows({
         info="Adds brightness along each ray, so dense regions show through. Off, nearer structure hides what is behind it, as in Polyphorm."
         onChange={onAdditiveChange}
       />
-      {/* T18: on demand, not a mode — watchPreviewPackedSaga packs once on the
+      {/* On demand, not a mode — watchPreviewPackedSaga packs once on the
           rising edge and un-checks this itself once the sim steps past that
           snapshot. */}
       <ToggleRow
@@ -47,7 +46,7 @@ function RaymarchRows({
         info="Marches the packed export cube (real packLogTraceVoxels) instead of the live trace — a structure check, not a brightness match. Goes stale and reverts on the next sim step."
         onChange={onPreviewPackedChange}
       />
-      <PaletteRow value={raymarch.paletteId} onChange={onPaletteChange} info={PALETTE_INFO} />
+      <PaletteRow value={raymarch.paletteId} onChange={onPaletteChange} />
       <SubsectionGroup title="Trace">
         <SliderRows
           fields={RAYMARCH_SLIDER_FIELDS}

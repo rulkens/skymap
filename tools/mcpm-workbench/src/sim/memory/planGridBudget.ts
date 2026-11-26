@@ -5,9 +5,7 @@ import { bufferLimitBytes } from './bufferLimitBytes';
 import { BYTES_PER_ELEMENT } from '../bytesPerElement.constant';
 import { BYTES_PER_AGENT_LANE_ENTRY } from './bytesPerAgentLaneEntry.constant';
 import { bufferBytesForDims } from './bufferBytesForDims';
-import { estimateGridBudgetBytes } from './estimateGridBudgetBytes';
-
-const DIM_GRANULARITY = 8; // decay dispatches dims/8 with no bounds tail
+import { DECAY_WG_EDGE } from '../decayWgEdge.constant';
 
 // Named in allocation order so a refusal points at the first buffer that fails.
 const BUFFER_NAMES = ['depositA', 'depositB', 'trace', 'agents'] as const;
@@ -37,20 +35,18 @@ export function planGridBudget(
     trace: gridBytes,
     agents: laneBytes,
   };
-  const totalBytes = estimateGridBudgetBytes(box.dims, agentCount, element);
 
   const offender = BUFFER_NAMES.find((name) => perBufferBytes[name] > limitBytes);
-  if (offender === undefined) return { perBufferBytes, totalBytes, refusal: null };
+  if (offender === undefined) return { perBufferBytes, refusal: null };
 
   // At a fixed aspect ratio the voxel count scales with the cube of the long
   // axis, so the fitting axis follows from the ratio of limit to grid bytes.
   const longAxis = Math.max(box.dims[0], box.dims[1], box.dims[2]);
   const fittingAxis = longAxis * Math.cbrt(limitBytes / gridBytes);
-  const maxLongAxis = Math.floor(fittingAxis / DIM_GRANULARITY) * DIM_GRANULARITY;
+  const maxLongAxis = Math.floor(fittingAxis / DECAY_WG_EDGE) * DECAY_WG_EDGE;
 
   return {
     perBufferBytes,
-    totalBytes,
     refusal: {
       buffer: offender,
       requestedBytes: perBufferBytes[offender],
