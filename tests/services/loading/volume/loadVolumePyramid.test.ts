@@ -1,6 +1,7 @@
 /**
  * loadVolumePyramid — sidecar, one texture, levels coarse to fine, and nothing left on the GPU when
- * a load fails. A device with no features, so r8: a level's length is its texel count.
+ * a load fails. A device with no features is r8 (a level's length is its texel count) unless a test
+ * passes the ASTC features.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { VolumePyramidSidecar } from '../../../../src/@types/data/volume/VolumePyramidSidecar';
@@ -26,10 +27,10 @@ const SIDECAR: VolumePyramidSidecar = {
 const PREFIX = '/data/volume-pyramid/v1/tiny';
 const LEVEL_BYTES = { 1: 256, 2: 32, 3: 4 };
 
-function mockDevice() {
+function mockDevice(features: readonly string[] = []) {
   const texture = { destroy: vi.fn() };
   return {
-    features: new Set<string>(),
+    features: new Set(features),
     createTexture: vi.fn(() => texture),
     queue: { writeTexture: vi.fn() },
     pushErrorScope: vi.fn(),
@@ -60,11 +61,15 @@ function serve(
   );
 }
 
-function load(device: ReturnType<typeof mockDevice>, signal = new AbortController().signal) {
+function load(
+  device: ReturnType<typeof mockDevice>,
+  signal = new AbortController().signal,
+  baseLevel: 1 | 2 = 1,
+) {
   const progress: Array<[number, number]> = [];
   const promise = loadVolumePyramid(
     device as unknown as GPUDevice,
-    { binBaseName: 'tiny', baseLevel: 1 },
+    { binBaseName: 'tiny', baseLevel },
     signal,
     (loaded, total) => progress.push([loaded, total]),
   );
@@ -114,6 +119,44 @@ describe('loadVolumePyramid', () => {
     expect(volume.texture).toBe(device.texture);
     expect(volume.placement.dims).toEqual([8, 8, 4]);
     expect(device.texture.destroy).not.toHaveBeenCalled();
+  });
+
+  it('an ASTC device writes each level in 6×6 blocks: 16 B per block, rows per image in block rows', async () => {
+    // Base 2 of a 48×48×8 box: L2 12×12×2 is 2×2 blocks per slice (64 B), L3 6×6×1 one block.
+    const sidecar = {
+      ...SIDECAR,
+      gridDims: [48, 48, 8],
+      dataBox: { originVox: [0, 0, 0], dims: [48, 48, 8] },
+    };
+    serve(fetch, {
+      [`${PREFIX}.json`]: () => JSON.stringify(sidecar),
+      [`${PREFIX}.astc6.L2.bin`]: () => new Uint8Array(128),
+      [`${PREFIX}.astc6.L3.bin`]: () => new Uint8Array(16),
+    });
+    const device = mockDevice(['texture-compression-astc', 'texture-compression-astc-sliced-3d']);
+    await load(device, undefined, 2).promise;
+
+    expect(fetch.mock.mock.calls.map(([url]) => url).slice(1)).toEqual([
+      `${PREFIX}.astc6.L3.bin`,
+      `${PREFIX}.astc6.L2.bin`,
+    ]);
+    const writes = device.queue.writeTexture.mock.calls.map(([, bytes, layout, size]) => ({
+      bytesPerSlice: (bytes as Uint8Array).byteLength / size.depthOrArrayLayers,
+      layout,
+      size,
+    }));
+    expect(writes).toEqual([
+      {
+        bytesPerSlice: 16,
+        layout: { bytesPerRow: 16, rowsPerImage: 1 },
+        size: { width: 6, height: 6, depthOrArrayLayers: 1 },
+      },
+      {
+        bytesPerSlice: 64,
+        layout: { bytesPerRow: 32, rowsPerImage: 2 },
+        size: { width: 12, height: 12, depthOrArrayLayers: 2 },
+      },
+    ]);
   });
 
   it('a level of the wrong length throws and destroys the texture', async () => {
