@@ -289,13 +289,13 @@ restarts the mean.
 
 Steps:
 
-- [ ] Tests:
+- [x] Tests:
   - `structurally equal region values give the same key`: two fresh objects with the same numbers.
     Guards an identity compare, which would restart the mean every frame and never converge.
   - `a fade step or a moved settled box gives a new key`: `fade.w` 0.25 → 0.5, and `settledHi[0]`
     changed, each against a base value. Guards the freeze: a region change the key missed would keep
     the converged image of the old box at rest.
-- [ ] Implement. `npm test -- densityAccumulationKey planVolumeAccumulation`.
+- [x] Implement. `npm test -- densityAccumulationKey planVolumeAccumulation`.
 
 **Commit:** `Prep: the detail region's draw value restarts the density mean`
 

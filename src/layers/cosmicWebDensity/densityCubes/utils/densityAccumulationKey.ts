@@ -7,12 +7,14 @@
 
 import type { Tier } from '../../../../@types/data/Tier';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
+import type { DetailRegionDraw } from '../../../../@types/rendering/DetailRegionDraw';
 
 export function densityAccumulationKey<Id extends string>(
   ids: readonly Id[],
   settingsOf: (id: Id) => VolumeFieldSettings,
   opacityOf: (id: Id) => number,
   cubeStampOf: (id: Id) => number | null,
+  regionOf: (id: Id) => DetailRegionDraw | null,
   tier: Tier,
 ): string {
   const fields = ids.map((id) => {
@@ -28,6 +30,7 @@ export function densityAccumulationKey<Id extends string>(
       s.exposure,
       opacityOf(id),
       cubeStampOf(id),
+      regionOf(id),
     ];
   });
   // JSON prints each number in its shortest round-trip form: exact, like `String(n)`.
