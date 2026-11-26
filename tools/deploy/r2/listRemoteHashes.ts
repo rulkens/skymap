@@ -1,14 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import type { RemoteHashes } from '../@types/RemoteHashes';
 import { RCLONE_REMOTE, rcloneEnv, type RcloneCredentials } from './rcloneEnv';
-import { remoteHashesFromLsjson } from './remoteHashesFromLsjson';
+import { remoteHashesFromMd5sum } from './remoteHashesFromMd5sum';
 
 const CHECKERS = 32;
 
 /**
- * One read-only listing of `keys` on R2. `--files-from` makes rclone list only
- * the directories those keys sit in (one request per directory, in parallel),
- * never the old tile trees beside them; the MD5 comes from the listing's ETag.
+ * One read-only check of `keys` on R2. `md5sum` hashes in parallel
+ * (`--checkers`); `lsjson --hash` does the same work one object at a time, minutes
+ * for a few hundred keys. Absent keys are skipped silently, so they stay absent.
  */
 export function listRemoteHashes(
   keys: readonly string[],
@@ -16,17 +16,12 @@ export function listRemoteHashes(
   creds: RcloneCredentials,
 ): RemoteHashes {
   if (keys.length === 0) return new Map();
-  console.error(`▶ rclone lsjson ${keys.length} key(s) on r2://${bucket}`);
-  const json = execFileSync(
+  console.error(`▶ rclone md5sum ${keys.length} key(s) on r2://${bucket}`);
+  const out = execFileSync(
     'rclone',
     [
-      'lsjson',
+      'md5sum',
       `${RCLONE_REMOTE}:${bucket}`,
-      '--recursive',
-      '--files-only',
-      '--hash',
-      '--hash-type',
-      'MD5',
       '--files-from',
       '-',
       '--checkers',
@@ -41,5 +36,5 @@ export function listRemoteHashes(
       env: { ...process.env, ...rcloneEnv(creds) },
     },
   );
-  return remoteHashesFromLsjson(json);
+  return remoteHashesFromMd5sum(out);
 }
