@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
-import StudioDock from '../../../src/shell/components/StudioDock/StudioDock';
+import StudioDockContainer from '../../../src/containers/shell/StudioDockContainer';
 import { paramEdited } from '../../../src/session/state/studioSlice';
 import { selectSelection } from '../../../src/session/state/selectors';
 import { openStudioStore } from '../../helpers/openStudioStore';
@@ -22,7 +22,7 @@ function mount() {
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
     <Provider store={store}>
-      <StudioDock clipId="cosmicFlows" />
+      <StudioDockContainer clipId="cosmicFlows" />
     </Provider>,
   );
   return { store, dispatch };
@@ -100,7 +100,7 @@ describe('StudioDock', () => {
     const store = openStudioStore({ timeline: [] });
     render(
       <Provider store={store}>
-        <StudioDock clipId="cosmicFlows" />
+        <StudioDockContainer clipId="cosmicFlows" />
       </Provider>,
     );
     expect(screen.getByText('No steps')).toBeInTheDocument();

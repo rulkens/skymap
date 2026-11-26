@@ -6,7 +6,7 @@ import {
   selectLayerSearchRows,
   selectStructureSearchList,
 } from '../../../../../src/state/engine/selectors';
-import { selectRefNames } from '../state/selectors';
+import { selectRefNames } from '../../session/state/selectors';
 import type { ObjectIndex } from '../../@types/kinds/ObjectIndex';
 
 /** The command palette's own index reads, so the studio searches and names objects as the app does. */

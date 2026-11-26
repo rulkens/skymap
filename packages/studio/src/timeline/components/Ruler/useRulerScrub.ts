@@ -4,14 +4,15 @@
  */
 import { useRef, type PointerEvent } from 'react';
 
-import { playheadSet } from '../../../session/state/studioSlice';
 import { snapTime } from '../../utils/ruler/snapTime';
 import { FINE_FACTOR } from './Ruler.constants';
-import { useAppDispatch } from '../../../../../../src/store/hooks';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 
-export function useRulerScrub(window: TimeWindow, cueSecs: readonly number[]) {
-  const dispatch = useAppDispatch();
+export function useRulerScrub(
+  window: TimeWindow,
+  cueSecs: readonly number[],
+  onSeek: (sec: number) => void,
+) {
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const last = useRef<{ x: number; sec: number } | null>(null);
@@ -26,7 +27,7 @@ export function useRulerScrub(window: TimeWindow, cueSecs: readonly number[]) {
     const raw = fine ? from.sec + (event.clientX - from.x) * secPerPx * FINE_FACTOR : pointerSec;
     const sec = event.altKey || event.shiftKey ? raw : snapTime(raw, cueSecs, secPerPx);
     last.current = { x: event.clientX, sec };
-    dispatch(playheadSet(sec));
+    onSeek(sec);
   };
 
   // A cancelled gesture (a system swipe, the capture taken away) ends the drag like a release.

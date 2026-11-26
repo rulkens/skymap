@@ -15,7 +15,7 @@ import {
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
-import Inspector from '../../../src/inspector/components/Inspector/Inspector';
+import InspectorContainer from '../../../src/containers/inspector/InspectorContainer';
 import { draftResolved, paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
 import {
   selectDraft,
@@ -35,7 +35,7 @@ const resolveWith = (store: ReturnType<typeof open>, data: ClipData) =>
 const show = (store: ReturnType<typeof open>) =>
   render(
     <Provider store={store}>
-      <Inspector />
+      <InspectorContainer />
     </Provider>,
   );
 

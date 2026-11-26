@@ -3,6 +3,7 @@ import { ROW_KINDS } from '../../../kinds/data/rowKinds';
 import { familyStyle } from '../../utils/familyStyle';
 import { spanStyle } from '../../utils/spanStyle';
 import { TRACK_MARKS } from './TrackLane.constants';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import s from './TrackLane.module.css';
@@ -17,9 +18,18 @@ type TrackLaneProps = {
   readonly contains: boolean;
   /** Aria-hidden like the rest of the lane: keyboard selection is the outline's. */
   readonly onSelect: () => void;
+  readonly objects: ObjectIndex;
 };
 
-function TrackLane({ row, ancestors, window, selectedId, contains, onSelect }: TrackLaneProps) {
+function TrackLane({
+  row,
+  ancestors,
+  window,
+  selectedId,
+  contains,
+  onSelect,
+  objects,
+}: TrackLaneProps) {
   const Mark = TRACK_MARKS[ROW_KINDS[row.kind].mark];
   return (
     <div className={s.root} style={familyStyle(row.family)} aria-hidden onClick={onSelect}>
@@ -37,7 +47,13 @@ function TrackLane({ row, ancestors, window, selectedId, contains, onSelect }: T
           />
         ),
       )}
-      <Mark row={row} window={window} selected={row.id === selectedId} contains={contains} />
+      <Mark
+        row={row}
+        window={window}
+        selected={row.id === selectedId}
+        contains={contains}
+        objects={objects}
+      />
     </div>
   );
 }

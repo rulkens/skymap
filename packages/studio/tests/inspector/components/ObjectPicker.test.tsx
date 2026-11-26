@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { lookAtId } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
 import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
-import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
+import FieldRowContainer from '../../../src/containers/inspector/FieldRowContainer';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
 import { objectPicked, pickFailed, refNamed } from '../../../src/session/state/studioSlice';
@@ -39,7 +39,7 @@ function renderField(
   const subject = rowSubject(selectStudioState(store.getState()).draft!, rowRef)!;
   render(
     <Provider store={store}>
-      <FieldRow spec={spec} subject={subject} rowRef={rowRef} />
+      <FieldRowContainer spec={spec} subject={subject} rowRef={rowRef} />
     </Provider>,
   );
   return { store, dispatch };

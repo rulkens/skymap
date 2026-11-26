@@ -10,12 +10,12 @@ import { resolvedText } from '../../utils/resolvedText';
 import { rowWhere } from '../../utils/rowWhere';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
-import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
-import FieldRow from '../FieldRow/FieldRow';
-import StartModeField from '../StartModeField/StartModeField';
+import FieldRowContainer from '../../../containers/inspector/FieldRowContainer';
+import StartModeFieldContainer from '../../../containers/inspector/StartModeFieldContainer';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import type { StudioResolution } from '../../../@types/session/StudioResolution';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 
 type RowInspectorProps = {
   readonly row: TimelineRow;
@@ -23,14 +23,14 @@ type RowInspectorProps = {
   readonly rows: readonly TimelineRow[];
   readonly draft: ClipData;
   readonly resolution: StudioResolution | null;
+  readonly objects: ObjectIndex;
 };
 
-function RowInspector({ row, rows, draft, resolution }: RowInspectorProps) {
+function RowInspector({ row, rows, draft, resolution, objects }: RowInspectorProps) {
   const spec = inspectorSpec(row.kind);
   const subject = rowSubject(draft, row.ref);
   const fields = subject === null ? [] : shownFields(spec.fields, subject);
   const resolved = resolvedText(row, resolution);
-  const objects = useObjectIndex();
 
   return (
     <>
@@ -43,10 +43,10 @@ function RowInspector({ row, rows, draft, resolution }: RowInspectorProps) {
       {row.errors.map((reason) => (
         <AlertChip key={reason}>{COMPILE_REASON_TEXT[reason].long}</AlertChip>
       ))}
-      {row.ref.kind === 'start' && <StartModeField start={draft.start} />}
+      {row.ref.kind === 'start' && <StartModeFieldContainer start={draft.start} />}
       {subject !== null &&
         fields.map((field) => (
-          <FieldRow key={field.key} spec={field} subject={subject} rowRef={row.ref} />
+          <FieldRowContainer key={field.key} spec={field} subject={subject} rowRef={row.ref} />
         ))}
       {resolved !== '' && (
         <InspectorRow label="Resolved">

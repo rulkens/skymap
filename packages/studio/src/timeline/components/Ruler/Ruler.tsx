@@ -20,11 +20,12 @@ type RulerProps = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
   readonly playheadSec: number;
+  readonly onSeek: (sec: number) => void;
 };
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window, playheadSec }: RulerProps) {
-  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);
+function Ruler({ timeline, window, playheadSec, onSeek }: RulerProps) {
+  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs, onSeek);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;
   const { major, minor } = rulerSteps(span, trackPx);

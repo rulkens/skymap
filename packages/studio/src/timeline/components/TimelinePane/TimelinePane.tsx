@@ -1,42 +1,58 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, type RefObject } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import OutlineRow from '../OutlineRow/OutlineRow';
 import TrackLane from '../TrackLane/TrackLane';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
-import { rowSelected, rowToggled } from '../../../session/state/studioSlice';
-import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
 import Playhead from '../Playhead/Playhead';
 import Ruler from '../Ruler/Ruler';
 import { timeToPercent } from '../../utils/window/timeToPercent';
-import { selectSelectionStandInId } from '../../state/selectSelectionStandInId';
-import { selectTimeline } from '../../state/selectTimeline';
 import { ancestorChains } from '../../utils/ancestorChains';
 import { selectionRelation } from '../../utils/selectionRelation';
 import { familyStyle } from '../../utils/familyStyle';
 import { viewWindow } from '../../utils/window/viewWindow';
-import { useTimelineWheel } from './useTimelineWheel';
-import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
+import type { RowRef } from '../../../@types/rows/RowRef';
+import type { Timeline } from '../../../@types/rows/Timeline';
+import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import s from './TimelinePane.module.css';
 
+type TimelinePaneProps = {
+  readonly timeline: Timeline;
+  /** The selected row, or the folded ancestor standing in for it. */
+  readonly standIn: string | null;
+  /** Null = fit. */
+  readonly viewport: TimeWindow | null;
+  readonly playheadSec: number;
+  readonly objects: ObjectIndex;
+  /** The wheel listens here; the track gives it the time axis. */
+  readonly rootRef: RefObject<HTMLDivElement | null>;
+  readonly trackRef: RefObject<HTMLDivElement | null>;
+  readonly onSelectRow: (ref: RowRef) => void;
+  readonly onToggleRow: (id: string) => void;
+  readonly onSeek: (sec: number) => void;
+};
+
 /** The outline beside its tracks: a header, then one row per visible step, each an outline cell and a lane. */
-function TimelinePane() {
-  const dispatch = useAppDispatch();
-  const timeline = useAppSelector(selectTimeline);
-  const standIn = useAppSelector(selectSelectionStandInId);
-  const viewport = useAppSelector(selectViewport);
-  const playheadSec = useAppSelector(selectPlayheadSec);
-  const chains = useMemo(() => ancestorChains(timeline?.rows ?? []), [timeline]);
-  const track = useRef<HTMLDivElement>(null);
-  const root = useRef<HTMLDivElement>(null);
-  useTimelineWheel(root, track, timeline !== null);
-  if (timeline === null) return null;
+function TimelinePane({
+  timeline,
+  standIn,
+  viewport,
+  playheadSec,
+  objects,
+  rootRef,
+  trackRef,
+  onSelectRow,
+  onToggleRow,
+  onSeek,
+}: TimelinePaneProps) {
+  const chains = useMemo(() => ancestorChains(timeline.rows), [timeline]);
   const window = viewWindow(viewport, timeline);
   const selectedIndex = timeline.rows.findIndex((row) => row.id === standIn);
   const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
-    <div ref={root} className={s.root}>
+    <div ref={rootRef} className={s.root}>
       <div className={s.head}>
         <div className={s.headOutline}>
           <span className={s.headLabel}>Step</span>
@@ -50,7 +66,7 @@ function TimelinePane() {
             ))}
           </span>
         </div>
-        <Ruler timeline={timeline} window={window} playheadSec={playheadSec} />
+        <Ruler timeline={timeline} window={window} playheadSec={playheadSec} onSeek={onSeek} />
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
         {timeline.rows.map((row, index) => {
@@ -62,8 +78,9 @@ function TimelinePane() {
                 ancestors={chains[index]!}
                 selected={row.id === standIn}
                 relation={relation}
-                onSelect={() => dispatch(rowSelected(row.ref))}
-                onToggle={() => dispatch(rowToggled(row.id))}
+                onSelect={() => onSelectRow(row.ref)}
+                onToggle={() => onToggleRow(row.id)}
+                objects={objects}
               />
               <TrackLane
                 row={row}
@@ -71,14 +88,15 @@ function TimelinePane() {
                 window={window}
                 selectedId={standIn}
                 contains={relation.contains}
-                onSelect={() => dispatch(rowSelected(row.ref))}
+                onSelect={() => onSelectRow(row.ref)}
+                objects={objects}
               />
             </div>
           );
         })}
         {timeline.rows.length <= 1 && <p className={s.empty}>No steps</p>}
       </div>
-      <div ref={track} className={s.overlay} aria-hidden>
+      <div ref={trackRef} className={s.overlay} aria-hidden>
         {end !== null && (
           <>
             <span className={s.afterEnd} style={{ left: `${end}%` }} />

@@ -1,23 +1,26 @@
-import { useAppSelector } from '../../../../../../src/store/hooks';
 import { APP_CLIP_REGISTRY } from '../../../../../../src/compositions/appClips';
 import InspectorPanel from '../../../primitives/components/InspectorPanel/InspectorPanel';
-import {
-  selectCurrentResolution,
-  selectDraft,
-  selectStudioClipId,
-} from '../../../session/state/selectors';
-import { selectFullTimeline } from '../../../timeline/state/selectFullTimeline';
-import { selectSelectedRow } from '../../../timeline/state/selectSelectedRow';
 import ClipInspector from '../ClipInspector/ClipInspector';
 import RowInspector from '../RowInspector/RowInspector';
+import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
+import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
+import type { Timeline } from '../../../@types/rows/Timeline';
+import type { TimelineRow } from '../../../@types/rows/TimelineRow';
+import type { StudioResolution } from '../../../@types/session/StudioResolution';
+
+type InspectorProps = {
+  readonly draft: ClipData | null;
+  /** The full tree, nothing collapsed. */
+  readonly timeline: Timeline | null;
+  readonly row: TimelineRow | null;
+  readonly resolution: StudioResolution | null;
+  readonly clipId: ClipId | null;
+  readonly objects: ObjectIndex;
+};
 
 /** The selected row's settings, or the clip's when nothing is selected. */
-function Inspector() {
-  const draft = useAppSelector(selectDraft);
-  const timeline = useAppSelector(selectFullTimeline);
-  const row = useAppSelector(selectSelectedRow);
-  const resolution = useAppSelector(selectCurrentResolution);
-  const clipId = useAppSelector(selectStudioClipId);
+function Inspector({ draft, timeline, row, resolution, clipId, objects }: InspectorProps) {
   if (draft === null || timeline === null) return null;
 
   return (
@@ -36,6 +39,7 @@ function Inspector() {
           rows={timeline.rows}
           draft={draft}
           resolution={resolution}
+          objects={objects}
         />
       )}
     </InspectorPanel>

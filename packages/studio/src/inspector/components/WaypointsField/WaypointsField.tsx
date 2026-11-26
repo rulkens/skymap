@@ -1,17 +1,17 @@
 import Glyph from '../../../primitives/components/Glyph/Glyph';
-import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import { objectText } from '../../../kinds/utils/object/objectText';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 import type { PathWaypoint } from '../../../../../../src/@types/animation/PathWaypoint';
 import s from './WaypointsField.module.css';
 
 type WaypointsFieldProps = {
   readonly waypoints: readonly PathWaypoint[];
+  readonly objects: ObjectIndex;
   readonly onSelect: (index: number) => void;
 };
 
 /** A Fly's waypoints in order, as chips that select their waypoint; the last one is where it settles. */
-function WaypointsField({ waypoints, onSelect }: WaypointsFieldProps) {
-  const objects = useObjectIndex();
+function WaypointsField({ waypoints, objects, onSelect }: WaypointsFieldProps) {
   return (
     <span className={s.root}>
       {waypoints.map((w, i) => {

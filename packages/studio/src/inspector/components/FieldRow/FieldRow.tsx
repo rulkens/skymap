@@ -1,9 +1,5 @@
-import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
-import { objectPicked, paramEdited, rowSelected } from '../../../session/state/studioSlice';
-import { selectPick } from '../../../session/state/selectors';
 import { isPickFor } from '../../../session/utils/isPickFor';
 import { sameParamValue } from '../../../draft/utils/sameParamValue';
-import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
 import LayerPickField from '../../../primitives/components/LayerPickField/LayerPickField';
@@ -33,11 +29,19 @@ import type { PathWaypoint } from '../../../../../../src/@types/animation/PathWa
 import type { GeodesicTuning } from '../../../../../../src/@types/camera/focusMotion/GeodesicTuning';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
+import type { ObjectPick } from '../../../@types/session/ObjectPick';
+import type { PickStatus } from '../../../@types/session/PickStatus';
 
 type FieldRowProps = {
   readonly spec: FieldSpec<InspectorSubject>;
   readonly subject: InspectorSubject;
   readonly rowRef: RowRef;
+  readonly objects: ObjectIndex;
+  readonly pick: PickStatus | null;
+  readonly onEdit: (value: ParamValue, gesture: string | null, label: string) => void;
+  readonly onSelectRow: (ref: RowRef) => void;
+  readonly onPickObject: (pick: ObjectPick) => void;
 };
 
 /**
@@ -45,10 +49,16 @@ type FieldRowProps = {
  * and bright with ↺ back to it otherwise: the `resetTo` value, or absent (its fallback, or `auto` when
  * the engine decides). A required param with no `resetTo` is always authored.
  */
-function FieldRow({ spec, subject, rowRef }: FieldRowProps) {
-  const dispatch = useAppDispatch();
-  const objects = useObjectIndex();
-  const pick = useAppSelector(selectPick);
+function FieldRow({
+  spec,
+  subject,
+  rowRef,
+  objects,
+  pick,
+  onEdit,
+  onSelectRow,
+  onPickObject,
+}: FieldRowProps) {
   const control = typeof spec.control === 'function' ? spec.control(subject) : spec.control;
   const widget = FIELD_CONTROLS[control];
   const authored = subject[spec.param] !== undefined;
@@ -60,7 +70,7 @@ function FieldRow({ spec, subject, rowRef }: FieldRowProps) {
   const hasDefault = resetTo !== undefined || canBeAbsent;
   const atDefault = resetTo === undefined ? !authored : sameParamValue(stored, resetTo);
   const edit = (value: ParamValue, gesture: string | null, label = spec.label) =>
-    dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label, gesture }));
+    onEdit(value, gesture, label);
 
   // Several rows of their own, so they are not wrapped in one row here.
   if (widget.widget === 'settingsAction') {
@@ -124,7 +134,8 @@ function FieldRow({ spec, subject, rowRef }: FieldRowProps) {
     field = (
       <WaypointsField
         waypoints={stored as readonly PathWaypoint[]}
-        onSelect={(index) => dispatch(rowSelected({ kind: 'waypoint', path, index }))}
+        objects={objects}
+        onSelect={(index) => onSelectRow({ kind: 'waypoint', path, index })}
       />
     );
   } else if (widget.widget === 'layers') {
@@ -145,12 +156,13 @@ function FieldRow({ spec, subject, rowRef }: FieldRowProps) {
     field = (
       <ObjectPicker
         label={label}
+        objects={objects}
         value={objectText(stored, objects)}
         pending={pending && { name: objectText(pending.focusId, objects), failed: pending.failed }}
         onPick={(focusId) =>
           stores === 'focusId'
             ? edit(focusId, null)
-            : dispatch(objectPicked({ ref: rowRef, param, label, focusId, stores: stores! }))
+            : onPickObject({ ref: rowRef, param, label, focusId, stores: stores! })
         }
         onClear={widget.clearable ? () => edit(null, null) : undefined}
       />

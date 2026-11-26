@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import Ruler from '../../../src/timeline/components/Ruler/Ruler';
 import { selectPlayheadSec } from '../../../src/session/state/selectors';
+import { playheadSet } from '../../../src/session/state/studioSlice';
 import { selectTimeline } from '../../../src/timeline/state/selectTimeline';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
@@ -19,7 +20,12 @@ function mount(window = WINDOW) {
   const store = openStudioStore({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
   render(
     <Provider store={store}>
-      <Ruler timeline={selectTimeline(store.getState())!} window={window} playheadSec={0} />
+      <Ruler
+        timeline={selectTimeline(store.getState())!}
+        window={window}
+        playheadSec={0}
+        onSeek={(sec) => store.dispatch(playheadSet(sec))}
+      />
     </Provider>,
   );
   const ruler = screen.getByLabelText('Timeline ruler');

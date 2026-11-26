@@ -1,7 +1,7 @@
 import cx from 'classnames';
 import { spanStyle } from '../../../utils/spanStyle';
 import { stuckLabelInset } from '../../../utils/stuckLabelInset';
-import { useObjectName } from '../../../../session/hooks/useObjectName';
+import { objectName } from '../../../../kinds/utils/object/objectName';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './BarMark.module.css';
 
@@ -9,8 +9,8 @@ import s from './BarMark.module.css';
  * A move over its window, to its visible end: a fade runs its `over` though nothing waits for it.
  * Overlapping steps draw as plain overlapping bars (the crossfade taper is slice S5).
  */
-function BarMark({ row, window, selected }: MarkProps) {
-  const subject = useObjectName(row.label.subject);
+function BarMark({ row, window, selected, objects }: MarkProps) {
+  const subject = objectName(row.label.subject, objects);
   const { startSec, tailEndSec: endSec } = row;
   if (startSec === null || endSec === null) return null;
   const { op, value } = row.label;
