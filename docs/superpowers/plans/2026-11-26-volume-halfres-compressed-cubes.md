@@ -186,25 +186,25 @@ export function createCosmicWebDensitySlot(
 
 Steps:
 
-- [ ] Move the fetcher with move-files (command above), then edit it to the factory.
-- [ ] Type, renderer, load step, slot, runtime type, `create.ts`.
-- [ ] Test `a superseded volume that never committed is destroyed exactly once`
+- [x] Move the fetcher with move-files (command above), then edit it to the factory.
+- [x] Type, renderer, load step, slot, runtime type, `create.ts`.
+- [x] Test `a superseded volume that never committed is destroyed exactly once`
       (`createCosmicWebDensitySlot.test.ts`):
   - A fake `fetch` returns deferred volumes A then B, each with its own `texture.destroy` mock.
   - `load` A, `load` B, resolve B, then resolve A.
   - A's `destroy` is called once; `renderer.upload` is called once, with B.
   - Regression it guards: before this commit the slot dropped a superseded cube to the GC; a
     texture is never collected.
-- [ ] The slot's two existing tests take the bag with a fake `fetch`; the `vi.mock` of the fetcher
+- [x] The slot's two existing tests take the bag with a fake `fetch`; the `vi.mock` of the fetcher
       module goes.
-- [ ] Renderer tests: `fixture()` returns a fake `GpuVolume` (`texture` with `createView` and
+- [x] Renderer tests: `fixture()` returns a fake `GpuVolume` (`texture` with `createView` and
       `destroy` mocks; the placement fields of today's fixture). The unload and re-upload tests
       assert on the fixture's own `texture.destroy` (once), and `upload` now creates one texture
       (the palette).
-- [ ] Fetcher test: keep both file-name cases. Add to the tiered case, with a mock device: one
+- [x] Fetcher test: keep both file-name cases. Add to the tiered case, with a mock device: one
       `createTexture` with `format: 'r16float'`, `dimension: '3d'` and size = the cube's dims, and
       one `writeTexture` with `bytesPerRow` = dims[0] · 2 (the bytes today's renderer wrote).
-- [ ] `npm run typecheck:fast`; `npm test -- volumeField cosmicWebDensity`.
+- [x] `npm run typecheck:fast`; `npm test -- volumeField cosmicWebDensity`.
 
 **Commit:** `Prep: density volumes reach the renderer as a GpuVolume`
 

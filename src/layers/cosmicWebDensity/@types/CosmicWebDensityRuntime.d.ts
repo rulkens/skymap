@@ -6,7 +6,7 @@
  */
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import type { CosmicWebDensityFieldId } from './CosmicWebDensityFieldId';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
 import type { BlueNoiseMask } from '../../../@types/rendering/BlueNoiseMask';
@@ -19,6 +19,6 @@ export type CosmicWebDensityRuntime = {
   /** Bound by the renderer, awaited by every slot's commit; the Layer owns and frees it. */
   readonly jitterMask: BlueNoiseMask;
   readonly slots: Readonly<
-    Record<CosmicWebDensityFieldId, AssetSlot<ScalarCube, CosmicWebDensityReq>>
+    Record<CosmicWebDensityFieldId, AssetSlot<GpuVolume, CosmicWebDensityReq>>
   >;
 };

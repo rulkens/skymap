@@ -3,14 +3,12 @@
  * skymap world space.
  *
  * The model-matrix math (`buildCubeModelMatrix`) is shared by every cube layer:
- * the scalar-volume overlay (`ScalarCube`) and the flow field (whose
- * `FlowFieldMeta` derives from a `ScalarCube`). Rather than privilege one of
- * those richer types as the function's parameter — and force the other to
- * fabricate the fields it lacks — the builder takes this narrow structural
- * type. A `ScalarCube` already satisfies it (it carries every field plus the
- * voxel bytes), so volume call sites pass the cube unchanged; the flow renderer
- * constructs one from `FlowFieldMeta` + an identity rotation (flow cubes ship
- * axis-aligned, so their per-cube rotation is the identity quaternion).
+ * the scalar-volume overlay (`GpuVolume.placement`) and the flow field (whose
+ * `FlowFieldMeta` derives from a `ScalarCube`), so the builder takes this narrow
+ * structural type. A `ScalarCube` satisfies it too, but a volume load copies the
+ * five fields into a fresh object: holding the cube would keep its voxels alive.
+ * The flow renderer constructs one from `FlowFieldMeta` + an identity rotation
+ * (flow cubes ship axis-aligned, so their per-cube rotation is the identity).
  */
 import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';

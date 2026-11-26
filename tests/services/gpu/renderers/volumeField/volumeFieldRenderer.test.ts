@@ -2,23 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { MCPM_ENTRY } from '../../../../../src/layers/cosmicWebDensity/sources/mcpm';
-import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
+import type { GpuVolume } from '../../../../../src/@types/rendering/GpuVolume';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { VolumeFieldDrawInputs } from '../../../../../src/@types/rendering/VolumeFieldDrawInputs';
 import type { VolumeFieldRendererDeps } from '../../../../../src/@types/rendering/VolumeFieldRendererDeps';
 
-function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
+function fixture(): GpuVolume {
   return {
-    dims: [4, 4, 4],
-    channels: 1, // density cube — SCFD v3 made `channels` a required field
-    voxels: new Uint16Array(64),
-    frameKind: 'equatorial-cartesian',
-    origin: [-100, -100, -100],
-    voxelSize: 50,
-    rotation: [0, 0, 0, 1],
-    valueMin: 0,
-    valueMax: 1,
-    ...overrides,
+    texture: { createView: vi.fn(() => ({})), destroy: vi.fn() } as unknown as GPUTexture,
+    placement: {
+      dims: [4, 4, 4],
+      frameKind: 'equatorial-cartesian',
+      origin: [-100, -100, -100],
+      voxelSize: 50,
+      rotation: [0, 0, 0, 1],
+    },
   };
 }
 
@@ -376,15 +374,16 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("unload destroys the field's four GPU resources and drops it from the map", () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
-    r.upload('mcpm', fixture(), MCPM_ENTRY);
-    // upload() creates textures [volumeTexture, paletteTexture] (the only
-    // createTexture calls) and, last among buffers, [uniformBuffer, fadeBuffer]
-    // — the factory itself already created cornerBuffer/indexBuffer, so the
-    // last two createBuffer results are the ones upload() just made.
-    const [volumeTexture, paletteTexture] = createdTextures(device);
+    const volume = fixture();
+    r.upload('mcpm', volume, MCPM_ENTRY);
+    // upload() creates one texture (the palette; the volume arrives finished) and, last among
+    // buffers, [uniformBuffer, fadeBuffer]: the factory already made cornerBuffer/indexBuffer.
+    const textures = createdTextures(device);
+    expect(textures).toHaveLength(1);
+    const [paletteTexture] = textures;
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
     r.unload('mcpm');
-    expect(volumeTexture!.destroy).toHaveBeenCalledTimes(1);
+    expect(volume.texture.destroy).toHaveBeenCalledTimes(1);
     expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
     expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
     expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);
@@ -394,11 +393,14 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("re-uploading the same id destroys the previous field's resources first", () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
-    r.upload('mcpm', fixture(), MCPM_ENTRY);
-    const [volumeTexture, paletteTexture] = createdTextures(device);
+    const first = fixture();
+    r.upload('mcpm', first, MCPM_ENTRY);
+    const [paletteTexture] = createdTextures(device);
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
-    r.upload('mcpm', fixture(), MCPM_ENTRY);
-    expect(volumeTexture!.destroy).toHaveBeenCalledTimes(1);
+    const second = fixture();
+    r.upload('mcpm', second, MCPM_ENTRY);
+    expect(first.texture.destroy).toHaveBeenCalledTimes(1);
+    expect(second.texture.destroy).not.toHaveBeenCalled();
     expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
     expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
     expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);

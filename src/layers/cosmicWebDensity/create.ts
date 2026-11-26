@@ -9,6 +9,7 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { CosmicWebDensityFieldId } from './@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
+import type { CosmicWebDensitySlotDeps } from './@types/CosmicWebDensitySlotDeps';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createBlueNoiseMask } from '../../services/gpu/resources/createBlueNoiseMask';
@@ -18,6 +19,7 @@ import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
 import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
 import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
+import { createCosmicWebDensityFetcher } from './densityCubes/load/createCosmicWebDensityFetcher';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
   const jitterMask = createBlueNoiseMask(deps.ctx.device);
@@ -27,22 +29,19 @@ export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
     fadeBgl: deps.fadeBgl,
     jitterMask: jitterMask.texture,
   });
+  const slotDeps: CosmicWebDensitySlotDeps = {
+    renderer,
+    jitterMaskReady: jitterMask.ready,
+    fetch: createCosmicWebDensityFetcher(deps.ctx.device),
+  };
   return {
     renderer,
     upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
     jitterMask,
     slots: {
-      mcpm: createCosmicWebDensitySlot(MCPM_ENTRY, renderer, jitterMask.ready),
-      'polyphorm-2mrs': createCosmicWebDensitySlot(
-        POLYPHORM_2MRS_ENTRY,
-        renderer,
-        jitterMask.ready,
-      ),
-      'mcpm-workbench': createCosmicWebDensitySlot(
-        MCPM_WORKBENCH_ENTRY,
-        renderer,
-        jitterMask.ready,
-      ),
+      mcpm: createCosmicWebDensitySlot(MCPM_ENTRY, slotDeps),
+      'polyphorm-2mrs': createCosmicWebDensitySlot(POLYPHORM_2MRS_ENTRY, slotDeps),
+      'mcpm-workbench': createCosmicWebDensitySlot(MCPM_WORKBENCH_ENTRY, slotDeps),
     },
   };
 }

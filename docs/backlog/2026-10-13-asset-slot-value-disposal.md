@@ -6,9 +6,10 @@ retention half.
 
 `AssetSlot` holds the committed value until `release()` (`AssetSlot.ts`, `lastReady`),
 but several slots' consumers read it only once, in the commit or the `ready`
-notification: volume voxels (155 MB MCPM at large), the flow cube, `FilamentCloud`,
-`ShellMesh` (views into the whole ~11 MB fetched buffer), the structure payload (the
-store keeps its own projection). That is JS heap held for nothing.
+notification: the flow cube, `FilamentCloud`, `ShellMesh` (views into the whole ~11 MB
+fetched buffer), the structure payload (the store keeps its own projection). That is JS
+heap held for nothing. Density volumes left the list when their slots began holding a
+finished `GpuVolume`: the decoded cube no longer outlives its load.
 
 ## Directions
 
