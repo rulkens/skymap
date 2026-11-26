@@ -390,12 +390,12 @@ export function pickVolumePyramidFormat(features: ReadonlySet<string>): VolumePy
 
 Steps:
 
-- [ ] Tests:
+- [x] Tests:
   - `ASTC needs both ASTC features`: `{astc, astc-sliced-3d}` → `astc6`; `{astc}` alone → `r8`.
   - `BC4 needs both BC4 features`: `{bc, bc-sliced-3d}` → `bc4`; `{bc}` alone → `r8`.
   - `ASTC wins when both families are present`.
   - `no features picks r8`.
-- [ ] Implement. `npm run typecheck:fast`; `npm test -- pickVolumePyramidFormat initGpu`.
+- [x] Implement. `npm run typecheck:fast`; `npm test -- pickVolumePyramidFormat initGpu`.
 
 **Commit:** `Volume pyramid formats: ASTC 6×6, BC4 and r8, picked by device features`
 

@@ -10,6 +10,7 @@
  */
 
 import { DUAL_SOURCE_FEATURE } from '../../../data/rendering/dualSourceBlend';
+import { VOLUME_PYRAMID_FORMATS } from '../../../data/volume/volumePyramidFormats';
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
 import { trackGpuMemory } from '../../gpu/memory/trackGpuMemory';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
@@ -42,9 +43,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Sync the backing store first — otherwise `getCurrentTexture()` may return a 300×150 default.
   resizeCanvasToDisplay(canvas);
 
-  // Optional: granted only where the adapter has it; the atmosphere falls back to two draws.
+  // Optional: granted only where the adapter has them; the atmosphere falls back to two draws and
+  // the density volumes to the next format row.
   const { device, context, format, hdrCapable } = await gpuInitGpu(canvas, {
-    requiredFeatures: [DUAL_SOURCE_FEATURE],
+    requiredFeatures: [DUAL_SOURCE_FEATURE, ...VOLUME_PYRAMID_FORMATS.flatMap((r) => r.features)],
   });
   state.gpu.memory = trackGpuMemory(device);
 
