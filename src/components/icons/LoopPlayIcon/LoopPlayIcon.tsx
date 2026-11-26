@@ -1,7 +1,7 @@
 /** LoopPlayIcon: play inside a looping arrow, a run that keeps stepping. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 type LoopPlayIconProps = Pick<IconProps, 'size'> & {
   /** On the looping arrow alone, so it can turn while the play mark stays upright. */

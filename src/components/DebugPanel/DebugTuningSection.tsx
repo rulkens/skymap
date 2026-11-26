@@ -8,7 +8,7 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
-import type { SliderField } from '../../@types/data/SliderField';
+import type { SliderField } from '../../../packages/shared/src/@types/data/SliderField';
 import DebugSection from './DebugSection';
 import DebugSlider from './DebugSlider';
 

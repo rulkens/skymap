@@ -1,5 +1,5 @@
 // Scene Workbench entry point.
-import '../../../src/styles/global.css';
+import '../../../packages/shared/src/styles/global.css';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App/App';
 

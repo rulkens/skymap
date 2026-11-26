@@ -6,7 +6,10 @@
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { ShellMesh } from '../../@types/ShellMesh';
 import { decodeShellMesh } from '../data/shellMeshFormat';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const LOCAL_BUBBLE_PATH = 'local-bubble/v1/local-bubble.shell';
 

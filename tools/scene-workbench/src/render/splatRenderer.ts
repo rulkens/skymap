@@ -8,8 +8,8 @@
  * binding 1, the deg-0 variant's layout omits it — WebGPU validates a layout
  * only against what the entry point statically uses.
  */
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { SplatGpuAsset } from './renderResources';
 import fsCode from './shaders/splat/fragment.wesl?static';
 import vsCode from './shaders/splat/vertex.wesl?static';

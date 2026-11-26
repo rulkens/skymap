@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -32,7 +32,7 @@ import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc'
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../../src/data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../../../src/data/camera/flyToLonLatTweenMs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

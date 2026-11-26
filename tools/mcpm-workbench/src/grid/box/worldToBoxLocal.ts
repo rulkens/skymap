@@ -1,6 +1,6 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../../src/@types/math/Vec4';
-import { rotateVec3ByQuat } from '../../../../../src/utils/math/rotateVec3ByQuat';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
+import { rotateVec3ByQuat } from '../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import { boxHalfExtentMpc } from './boxHalfExtentMpc';
 

@@ -46,7 +46,7 @@ import {
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';

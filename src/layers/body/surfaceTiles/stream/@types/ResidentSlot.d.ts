@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * ResidentSlot — one exact tile's place in its product's atlas, the answer

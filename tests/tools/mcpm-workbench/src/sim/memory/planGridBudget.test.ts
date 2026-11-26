@@ -4,7 +4,7 @@
  * dimensions, independently of the source expression.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { GridBox } from '../../../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import { planGridBudget } from '../../../../../../tools/mcpm-workbench/src/sim/memory/planGridBudget';
 import { estimateGridBudgetBytes } from '../../../../../../tools/mcpm-workbench/src/sim/memory/estimateGridBudgetBytes';

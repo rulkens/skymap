@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { GizmoHandleId } from './GizmoHandleId';
 
 /** A translate or resize handle: a single point at `positionMpc`, dragged along `axisDir` (its

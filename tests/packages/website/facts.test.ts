@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { FACTS } from '../../../packages/website/src/data/facts';
 import { fact } from '../../../packages/website/src/data/fact';
-import { C_KM_S, PC_TO_LY } from '../../../src/utils/math/constants';
+import { C_KM_S, PC_TO_LY } from '../../../packages/shared/src/utils/math/constants';
 import { statedFigures } from './statedFigures';
 
 const ROOT = resolve(import.meta.dirname, '../../..');

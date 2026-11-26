@@ -10,7 +10,10 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import { initGpu, resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
+import {
+  initGpu,
+  resizeCanvasToDisplay,
+} from '../../../../../packages/shared/src/services/gpu/device';
 import { createSceneInput } from '../../input/createSceneInput';
 import {
   createRenderResources,

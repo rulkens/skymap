@@ -1,5 +1,5 @@
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * directionToLonLatDeg — geodetic longitude/latitude (degrees) of any non-zero

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { latticePostGradient } from './latticePostGradient';
 
 /** surfaceNormalFromHeightCell — unit normal at a fragment inside cell

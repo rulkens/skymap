@@ -7,7 +7,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.

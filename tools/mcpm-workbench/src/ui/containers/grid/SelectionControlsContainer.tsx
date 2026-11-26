@@ -4,7 +4,7 @@
  * receive the point arrays.
  */
 import { memo, useCallback, type ReactNode } from 'react';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { resolveAutoFitBounds } from '../../../grid/autoFit/resolveAutoFitBounds';
 import {
   fitBoxToCatalog,

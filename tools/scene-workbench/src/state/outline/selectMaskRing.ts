@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { RootState } from '../../store/types';
 
 /** The ring the preview mask cuts `assetId` to: none while drawing it (the whole

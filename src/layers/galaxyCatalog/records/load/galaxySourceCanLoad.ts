@@ -5,7 +5,7 @@
  */
 
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
 import { tierTarget } from '../data/tierTargets';
 import { galaxyCatalogVisibility } from '../../visibility';

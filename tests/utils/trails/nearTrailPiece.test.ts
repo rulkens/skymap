@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SampledTrack } from '../../../src/@types/scene/SampledTrack';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { nearTrailPiece } from '../../../src/utils/trails/nearTrailPiece';

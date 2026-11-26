@@ -12,7 +12,7 @@
 import { mat4 } from 'wgpu-matrix';
 import type { Mat4 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { imagePlaneBasis } from '../orbitPose/imagePlaneBasis';

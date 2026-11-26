@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../packages/shared/src/utils/random/mulberry32';
 import { gaussian } from '../../../../tools/utils/random/gaussian';
 
 /**

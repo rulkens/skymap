@@ -15,10 +15,10 @@ import { frameUp } from '../../../../../utils/camera/orbitPose/frameUp';
 import { eyeMpcOf } from '../../../../../utils/camera/orbitPose/eyeMpcOf';
 
 import type { CameraPose } from '../../../../../@types/camera/pose/CameraPose';
-import type { InputStep } from '../../../../../@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { PivotFraming } from '../../../../../@types/camera/arms/PivotFraming';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * `cssHeight` is the CSS height, NOT the backing store — gesture feel must not

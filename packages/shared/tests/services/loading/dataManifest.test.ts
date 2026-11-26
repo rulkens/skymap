@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { useFetchMock } from '../../setup/fetchMock';
+import { useFetchMock } from '../../../../../tests/setup/fetchMock';
 
 describe('dataManifest', () => {
   const fetch = useFetchMock();

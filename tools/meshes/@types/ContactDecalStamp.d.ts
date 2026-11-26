@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The prebake's `extras.contactDecal`, glTF frame — `buildMeshes` bakes it into a `ContactDecal`. */
 export type ContactDecalStamp = {

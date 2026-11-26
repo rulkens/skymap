@@ -4,7 +4,7 @@
  * zeroes `out`) when the two are parallel: no great circle is defined.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { PARALLEL_TANGENT_EPS } from '../../data/labels/parallelTangentEps';
 
 export function tangentToward(d: Readonly<Vec3>, toward: Readonly<Vec3>, out: Vec3): boolean {

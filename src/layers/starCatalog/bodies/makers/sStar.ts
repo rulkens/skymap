@@ -19,7 +19,7 @@ import { temperatureToLinearRgb } from '../utils/temperatureToLinearRgb';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
 import type { OrbitPlaneFrame } from '../../../../@types/scene/OrbitPlaneFrame';
 import type { SStarSeed } from '../../@types/SStarSeed';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 
 /**

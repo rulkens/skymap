@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { cameraBasis } from '../../../../../tools/mcpm-workbench/src/render/camera/cameraBasis';
 import { screenToRay } from '../../../../../tools/mcpm-workbench/src/gizmo/screenToRay';
 import { gizmoHandleGeometry } from '../../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
-import { quatFromAxisAngle } from '../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 // F2.3 review MAJOR: pins the two primitives rayFromPointer.ts composes — cameraBasis +
 // screenToRay — at exactly the values the fix and the pre-fix bug produce. rayFromPointer

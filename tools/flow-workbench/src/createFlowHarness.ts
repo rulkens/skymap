@@ -41,8 +41,8 @@ import type { AppState } from '../@types/state/AppState';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
-import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import { initGpu, resizeCanvasToDisplay } from '../../../packages/shared/src/services/gpu/device';
 import { createOrbitCamera } from '../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/orbitCamera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/projection/computeViewProj';
@@ -53,9 +53,9 @@ import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../../src/data/volume/scalarFieldFormat';
-import { loadDataManifest } from '../../../src/services/loading/dataManifest';
-import { dataUrl } from '../../../src/services/loading/fetchWithProgress';
+} from '../../../packages/shared/src/data/volume/scalarFieldFormat';
+import { loadDataManifest } from '../../../packages/shared/src/services/loading/dataManifest';
+import { dataUrl } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 import { makeShaderFactory } from './engine/gpu/makeShaderFactory';
 import { createRenderGraph } from './engine/RenderGraph';
 import { setCameraViewProj } from './state/slices/cameraSlice';

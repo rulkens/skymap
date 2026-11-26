@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../../src/services/loading/fetchWithProgress', () => ({
+vi.mock('../../../../../packages/shared/src/services/loading/fetchWithProgress', () => ({
   dataUrl: (path: string) => `/data/${path}`,
   fetchWithProgress: vi.fn(),
 }));
@@ -32,7 +32,7 @@ import {
   encodeSkstCatalog,
   packStarRecord,
 } from '../../../../../src/data/starCatalog/starCatalogFormat';
-import { fetchWithProgress } from '../../../../../src/services/loading/fetchWithProgress';
+import { fetchWithProgress } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import { encodeOctreeObject } from '../../../../../tools/octree/encodeOctreeObject';
 import { NO_CHUNK_REF } from '../../../../../src/data/octree/octreeFormat';

@@ -13,13 +13,13 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SampledTrailRenderer } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrailRenderer';
 import type { SampledTrailFrame } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrailFrame';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { SampledTrail } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrail';
 import type { SampledTrailGeometry } from '../../../../@types/rendering/sampledTrailRenderer/SampledTrailGeometry';
 import vsCode from '../../shaders/bodies/sampledTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/sampledTrail/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { buildSampledTrails } from '../../../../utils/trails/buildSampledTrails';
 import { SAMPLED_TRAIL_WIDTH_PX } from '../../../../data/bodies/sampledTrailStyle';

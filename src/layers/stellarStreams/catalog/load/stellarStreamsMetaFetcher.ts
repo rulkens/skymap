@@ -4,7 +4,10 @@
  */
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { StellarStreamMeta } from '../@types/StellarStreamMeta';
-import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgress';
+import {
+  HttpError,
+  dataUrl,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { streamPairMismatch } from '../utils/streamPairMismatch';
 
 const STELLAR_STREAMS_META_PATH = 'stellar-streams/v1/stellar_streams_meta.json';

@@ -25,7 +25,7 @@
     <!--
       Cormorant Garamond SemiBold and Sora Thin (100) — ExhibitOverlay's body
       voice, spec §4.3 — are both self-hosted (public/fonts/, @font-face in
-      src/styles/global.css) rather than loaded from Google Fonts. A
+      packages/shared/src/styles/global.css) rather than loaded from Google Fonts. A
       third-party stylesheet would block first paint on a page that otherwise
       fetches nothing off-origin, and it works offline for the Electron build.
     -->
@@ -107,7 +107,7 @@
     </script>
 
     <!--
-      Design tokens + page reset live in src/styles/global.css.  We import
+      Design tokens + page reset live in packages/shared/src/styles/global.css.  We import
       them from main.tsx (side-effect import) rather than linking from this
       file so Vite's module graph owns the asset and HMR works during dev.
     -->
@@ -119,7 +119,7 @@
       except the title font.  main.tsx removes #boot once React has rendered.
 
       The colours, font stacks and offsets repeat design tokens from
-      src/styles/global.css and the Splash column's position, because that
+      packages/shared/src/styles/global.css and the Splash column's position, because that
       stylesheet arrives with the bundle.  The hairline matches SplashProgress
       so the bar carries through the handoff.
     -->

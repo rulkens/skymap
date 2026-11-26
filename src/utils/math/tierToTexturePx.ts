@@ -1,4 +1,4 @@
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 /**
  * tierToTexturePx — maps a `Tier` to the square texture's pixel edge.

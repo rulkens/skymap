@@ -9,7 +9,7 @@ import { mat4d, vec4d } from 'wgpu-matrix';
 
 import type { ContactDecal } from '../../../../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { composeContactDecalMatrices } from '../../../../../src/layers/missions/contactShadows/utils/composeContactDecalMatrices';
 import { composeMeshMvp } from '../../../../../src/utils/camera/bodyCompose/composeMeshMvp';
 

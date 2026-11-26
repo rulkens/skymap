@@ -15,7 +15,7 @@ import { rotateVec3ByTightMat3 } from '../../../../../../src/utils/math/rotateVe
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /** World-space target→eye direction for (yaw, pitch) decoded under `basis`. */
 function decodeWorld(yaw: number, pitch: number, basis: Mat3 | undefined): Vec3 {

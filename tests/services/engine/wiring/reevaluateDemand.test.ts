@@ -24,7 +24,7 @@ import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
 import type { AssetDemandVerdict } from '../../../../src/@types/loading/AssetDemandVerdict';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceId } from '../../../../src/@types/data/SourceId';
-import type { Tier } from '../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 type DemandFn = () => boolean;

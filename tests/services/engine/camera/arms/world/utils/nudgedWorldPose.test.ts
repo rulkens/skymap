@@ -6,7 +6,7 @@ import { PITCH_LIMIT } from '../../../../../../../src/services/engine/camera/arm
 import type { CameraPose } from '../../../../../../../src/@types/camera/pose/CameraPose';
 import type { PivotFraming } from '../../../../../../../src/@types/camera/arms/PivotFraming';
 import type { Mat3 } from '../../../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { ORIENTATION_FRAMES } from '../../../../../../../src/data/orientation/orientationFrames';
 import { frameUp } from '../../../../../../../src/utils/camera/orbitPose/frameUp';
 import { orbitForwardOf } from '../../../../../../../src/utils/camera/orbitPose/orbitForwardOf';

@@ -9,7 +9,7 @@
  * which there is none.  If a second volume needs a similar helper we'd
  * parameterise; hard-coding keeps the call sites short.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const CF4_VOXEL_SIZE_MPC = 1000 / 128;
 const CF4_DIMS = 128;

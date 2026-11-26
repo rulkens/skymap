@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4, type Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { buildCubeModelMatrix } from '../../../../../src/utils/math/buildCubeModelMatrix';
-import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 

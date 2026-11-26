@@ -9,7 +9,7 @@
  * exactly as apparent pixels do without needing the projection.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 
 const MPC_TO_KM = SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;

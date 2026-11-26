@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { FocusUniformsValue } from '../../@types/rendering/FocusUniformsValue';
 import { FOCUS_CORE_FRACTION } from '../../data/focusCoreFraction';
 import { FOCUS_DIM_FLOOR } from '../../data/focusDimFloor';

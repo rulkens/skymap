@@ -41,11 +41,11 @@ import { resolve } from 'node:path';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../src/data/volume/scalarFieldFormat';
+} from '../../packages/shared/src/data/volume/scalarFieldFormat';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/eqToSg';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { resolveDataFile } from '../utils/data/resolveDataFile';
 
 /**

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { ResidentHeightLookup } from '../@types/ResidentHeightLookup';
 import { SURFACE_TILE_PX } from '../../format/data/surfaceTileParams';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../../data/bodies/texturePrimeMeridianU';

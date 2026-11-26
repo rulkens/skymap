@@ -1,5 +1,5 @@
-import type { Tier } from '../../src/@types/data/Tier';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import type { Tier } from '../../packages/shared/src/@types/data/Tier';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 
 /**

@@ -5,13 +5,13 @@
  * from the same view.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
-import { cross3 } from '../../../utils/math/cross3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 import { degToRad } from '../../../utils/math/degToRad';
 import { dot3 } from '../../../utils/math/dot3';
-import { lerpVec3 } from '../../../utils/math/lerpVec3';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { ECLIPTIC_FRAME } from '../../../data/bodies/orbitPlaneFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';

@@ -10,7 +10,7 @@ import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGene
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { buildGalaxyIsmMapArmForcing } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapArmForcing';
 import { buildGalaxyIsmMapFluidEvents } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapFluidEvents';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { ISM_MAP_FLUID_MAX_EVENTS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapFluidMaxEvents';
 import { ISM_MAP_AZ } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapAz';
 import { ISM_MAP_RINGS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';

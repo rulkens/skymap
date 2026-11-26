@@ -16,6 +16,6 @@
 
 import { tierRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 export const selectTier = (state: RootState): Tier => state[tierRoute];

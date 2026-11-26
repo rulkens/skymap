@@ -12,7 +12,7 @@ import { BiasMode } from '../../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
-import Slider from '../../../../components/common/Slider/Slider';
+import Slider from '../../../../../packages/shared/src/components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────

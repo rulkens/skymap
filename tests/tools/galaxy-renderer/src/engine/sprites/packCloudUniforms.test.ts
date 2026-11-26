@@ -12,7 +12,7 @@ import {
   packCloudUniforms,
 } from '../../../../../../tools/galaxy-renderer/src/engine/sprites/packCloudUniforms';
 import type { MilkyWayCloudTuning } from '../../../../../../src/@types/settings/MilkyWayCloudTuning';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 const TUNING: MilkyWayCloudTuning = {
   starSizeScale: 1.5,

@@ -8,7 +8,7 @@
  * ground, where the profile's density is 1.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { DensityProfile } from './DensityProfile';
 import type { PhaseFunction } from './PhaseFunction';
 

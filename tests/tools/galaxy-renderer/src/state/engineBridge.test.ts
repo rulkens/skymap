@@ -29,7 +29,7 @@ import { DEFAULT_RENDER_SETTINGS } from '../../../../../tools/galaxy-renderer/sr
 import { DEFAULT_LOD_SETTINGS } from '../../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
 import { DEFAULT_EXTRAS_STATE } from '../../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../packages/shared/src/utils/random/mulberry32';
 import type { GalaxyEngineHandle } from '../../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 
 type EngineMocks = {

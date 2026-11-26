@@ -4,10 +4,10 @@
  * Identity only — position/orientation live in `BodyState`, as for `PlanetBody`.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { MeshAsset } from '../data/mesh/MeshAsset';
 import type { SceneBodyId } from './SceneBodyId';
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 export type MeshBody = {
   readonly id: SceneBodyId;

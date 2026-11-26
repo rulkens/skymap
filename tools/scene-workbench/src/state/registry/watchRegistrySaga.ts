@@ -10,9 +10,9 @@
  */
 import { call, put, takeLatest } from 'typed-redux-saga';
 
-import { dataUrl } from '../../../../../src/services/loading/fetchWithProgress';
-import { loadDataManifest } from '../../../../../src/services/loading/dataManifest';
-import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { dataUrl } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
+import { loadDataManifest } from '../../../../../packages/shared/src/services/loading/dataManifest';
+import { hasUrlGate } from '../../../../../packages/shared/src/utils/url/hasUrlGate';
 import type { GroupRegistry } from '../../../@types/GroupRegistry';
 import { sagaContextRegistered } from '../../store/sagaContextRegistered';
 import { syntheticProbeScene } from '../../scene/syntheticProbeScene';

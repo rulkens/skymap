@@ -19,7 +19,7 @@ import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPosit
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 type FixtureStarId = keyof typeof FIXTURE.stars;
 

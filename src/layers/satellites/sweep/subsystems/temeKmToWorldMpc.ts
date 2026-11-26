@@ -1,6 +1,6 @@
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** TEME km → world Mpc about `base`. km become Mpc BEFORE `base` (Earth's au-scale heliocentric
  * position) is added, or the offset would round off an au magnitude. */

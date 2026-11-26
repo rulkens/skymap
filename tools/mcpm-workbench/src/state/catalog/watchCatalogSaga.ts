@@ -11,7 +11,7 @@
 import type { Action } from '@reduxjs/toolkit';
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 
-import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../../../packages/shared/src/utils/url/hasUrlGate';
 import type { CatalogPointsPlan } from '../../../@types/catalog/CatalogPointsPlan';
 import type { GridSlice } from '../../../@types/grid/GridSlice';
 import type { UserCatalogLoad } from '../../../@types/catalog/UserCatalogLoad';

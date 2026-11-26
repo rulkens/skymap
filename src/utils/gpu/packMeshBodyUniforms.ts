@@ -8,7 +8,7 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { MeshMaterialFactors } from '../../@types/rendering/MeshMaterialFactors';
 import { MESH_BODY_UNIFORM_FLOATS } from '../../data/mesh/meshBodyUniformLayout';
 

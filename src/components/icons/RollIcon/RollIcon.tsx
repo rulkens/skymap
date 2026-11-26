@@ -1,7 +1,7 @@
 /** RollIcon: a horizon line between two arrows turning about it. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function RollIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

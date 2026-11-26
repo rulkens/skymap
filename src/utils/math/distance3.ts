@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * distance3 — Euclidean distance between two Vec3s, unit-agnostic.

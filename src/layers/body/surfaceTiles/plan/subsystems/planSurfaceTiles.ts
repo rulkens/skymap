@@ -15,7 +15,7 @@ import type { SurfaceTileRequest } from '../@types/SurfaceTileRequest';
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
 import type { SurfaceTileBodyId } from '../../format/@types/SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
-import type { Tier } from '../../../../../@types/data/Tier';
+import type { Tier } from '../../../../../../packages/shared/src/@types/data/Tier';
 import { IDLE_SURFACE_TILE_PLAN } from './idleSurfaceTilePlan';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../../../utils/object/findByIdOrThrow';

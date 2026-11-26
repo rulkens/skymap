@@ -16,7 +16,7 @@ import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider';
 import styles from './DustCloudSection.module.css';
 
 // `clumpiness` has no UI surface — no slider below reaches it.

@@ -4,7 +4,7 @@
  * an ordinary arm (`deriveArmSpurs` derives one arm's; the particle cloud
  * is `deriveArmSpurCloudCount`'s side). Pure, no engine state.
  */
-import { mulberry32 } from '../../../../../utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import type { GalaxyArmSpurTuning } from '../@types/GalaxyArmSpurTuning';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';

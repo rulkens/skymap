@@ -6,7 +6,7 @@
 
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function hrOfPose(eye: Readonly<Vec3>, body: BodyState, radiusM: number): number {
   const d = Math.hypot(

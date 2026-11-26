@@ -21,7 +21,7 @@ import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';
 import { patchOriginRelEyeM } from '../subsystems/patchOriginRelEyeM';
 import { surfacePatchIndices } from '../subsystems/surfacePatchIndices';
 import { surfaceEffectsKey } from '../../plan/subsystems/surfaceEffectsKey';
-import { createShaderModuleWithDevLog } from '../../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import vsCode from '../../../../../services/gpu/shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
@@ -36,7 +36,7 @@ import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 
 /** A leaf with no resident night tile: zero scale tells the fragment to read the global map. */
 const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];

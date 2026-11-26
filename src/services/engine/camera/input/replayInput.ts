@@ -38,7 +38,7 @@ import type { Epoch } from '../../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
 import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
-import type { InputStep } from '../../../../@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { RawInputStep } from '../../../../@types/camera/input/RawInputStep';
 import type { ZoomLimitPush } from '../../../../@types/camera/arms/ZoomLimitPush';
 import type { ZoomLimitPress } from '../../../../@types/camera/input/ZoomLimitPress';

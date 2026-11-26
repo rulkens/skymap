@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ChromaCalibration } from '../../../../src/layers/body/textures/@types/ChromaCalibration';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { panSharpenRgb } from '../../../../tools/utils/image/panSharpenRgb';
 
 /** Rec.709 weights and the published sRGB EOTF, used only to READ an output. */

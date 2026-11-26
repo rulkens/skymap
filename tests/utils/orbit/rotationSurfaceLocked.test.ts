@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { rotationSurfaceLocked } from '../../../src/utils/orbit/rotationSurfaceLocked';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Column c of a column-major Mat3 is the contiguous span m[c*3 .. c*3+2].
 const col = (m: Mat3, c: number): Vec3 => [m[c * 3]!, m[c * 3 + 1]!, m[c * 3 + 2]!];

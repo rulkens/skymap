@@ -23,8 +23,11 @@
  * the flag is still a one-line edit.
  */
 
-import { HUBBLE_DISTANCE_MPC, USE_LCDM_DISTANCES } from './constants';
-import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
+import {
+  HUBBLE_DISTANCE_MPC,
+  USE_LCDM_DISTANCES,
+} from '../../../packages/shared/src/utils/math/constants';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 /**
  * Upper bound on the LUT's z range.  z = 12 corresponds to a ΛCDM comoving

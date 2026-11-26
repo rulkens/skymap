@@ -6,7 +6,7 @@
  * reads 0: there is nowhere to draw.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { BlackHoleRow } from '../../@types/BlackHoleRow';
 import { BLACK_HOLE_SKY_CAPTURES } from '../../lensing/data/blackHoleSkyCaptures';

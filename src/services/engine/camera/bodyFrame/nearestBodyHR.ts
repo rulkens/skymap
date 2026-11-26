@@ -7,7 +7,7 @@
  * and a bounding sphere would engage the surface camera on empty space.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';

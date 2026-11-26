@@ -5,10 +5,10 @@
  */
 
 import type { EyeFrame } from '../../../../../@types/camera/pose/EyeFrame';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../data/camera/bodyLocalFrame';
 import { blendedEnuAt } from '../../../../../utils/camera/surfaceFrame/blendedEnuAt';
-import { normalize3 } from '../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 
 export function siteEyeFrame(pointBodyFixed: Readonly<Vec3>): EyeFrame {
   const localUp = normalize3(pointBodyFixed);

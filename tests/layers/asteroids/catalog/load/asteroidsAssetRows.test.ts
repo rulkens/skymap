@@ -15,7 +15,7 @@ import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { AsteroidsRuntime } from '../../../../../src/layers/asteroids/@types/AsteroidsRuntime';
 import type { UiState } from '../../../../../src/@types/ui/UiState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // Slots are carried, never called here.
 const [CATALOG] = asteroidsAssetRows({} as AsteroidsRuntime);

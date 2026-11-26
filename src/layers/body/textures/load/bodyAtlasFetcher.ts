@@ -9,7 +9,7 @@
 
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import { BODY_ATLAS_FILENAME } from '../data/bodyAtlas.generated';
-import { dataUrl } from '../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 export const bodyAtlasFetcher: Fetcher<ImageBitmap, void> = async (_req, signal) => {
   const url = dataUrl(`images/textures/${BODY_ATLAS_FILENAME}`);

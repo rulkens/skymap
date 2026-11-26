@@ -38,7 +38,7 @@
  * the two evaluations bit-for-bit aligned across future edits.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Clamp one interpolant to [0, 1] — the WESL `saturate`. */
 function saturate(t: number): number {

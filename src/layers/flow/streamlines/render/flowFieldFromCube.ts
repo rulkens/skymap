@@ -17,7 +17,7 @@
  */
 
 import type { FlowField } from '../@types/FlowField';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import { gpuTextureFormatForChannels } from '../../../../utils/gpu/gpuTextureFormatForChannels';
 import { flowFieldMetaFromCube } from '../utils/flowFieldMetaFromCube';
 

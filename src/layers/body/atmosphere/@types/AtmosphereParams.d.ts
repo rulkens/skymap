@@ -11,7 +11,7 @@
  * standing in daylight, where `exposure` was tuned for the limb seen from space.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AtmosphereConstituent } from './AtmosphereConstituent';
 
 export type AtmosphereParams = {

@@ -6,7 +6,7 @@
  * feed, which subscribes to this same slot.
  */
 
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';

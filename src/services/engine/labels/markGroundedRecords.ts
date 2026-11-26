@@ -8,7 +8,7 @@
  */
 
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import {
   LABEL_RECORD as W,
   LABEL_RECORD_FLAGS,

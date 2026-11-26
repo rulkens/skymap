@@ -1,5 +1,5 @@
 import type { GridElement } from '../../../@types/grid/GridElement';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { BYTES_PER_ELEMENT } from '../bytesPerElement.constant';
 import { BYTES_PER_AGENT_LANE_ENTRY } from './bytesPerAgentLaneEntry.constant';
 import { bufferBytesForDims } from './bufferBytesForDims';

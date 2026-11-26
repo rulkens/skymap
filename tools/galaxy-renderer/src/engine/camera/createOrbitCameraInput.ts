@@ -8,7 +8,7 @@
  * idle gate and the interaction timeout reachable from a test. The handlers do
  * call `performance.now()` — a real event has a real time to report.
  */
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { ViewPose } from '../../../@types/engine/ViewPose';
 
 import { exponentialZoomDistance } from '../../../../utils/camera/exponentialZoomDistance';

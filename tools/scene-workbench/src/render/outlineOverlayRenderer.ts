@@ -3,9 +3,9 @@
  * line list of its edges, then one instanced handle per corner. Depth-tested 'always' and
  * never writing depth, so it must draw after every scene pass.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import fsCode from './shaders/outlineOverlay/fragment.wesl?static';
 import vsCode from './shaders/outlineOverlay/vertex.wesl?static';
 

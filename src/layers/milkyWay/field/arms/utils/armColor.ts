@@ -1,5 +1,5 @@
-import { lerpVec3 } from '../../../../../utils/math/lerpVec3';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { lerpVec3 } from '../../../../../../packages/shared/src/utils/math/lerpVec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /** Hot blue-white, nudged bluer with youngFraction — eyeball, echoing tempColorRamp(0.6 + 0.36*youngFraction)'s direction without matching its curve. */
 const ARM_COLOR_OLD: Readonly<Vec3> = [0.8, 0.86, 1.0];

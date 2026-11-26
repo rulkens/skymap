@@ -39,9 +39,9 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { FilamentRenderer } from '../@types/FilamentRenderer';
 import type { Mat4 } from 'wgpu-matrix';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { clampFilamentIntensity } from '../utils/clampFilamentIntensity';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import {

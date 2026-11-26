@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { rotateByTranspose } from '../../../src/utils/math/rotateByTranspose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('rotateByTranspose', () => {
   it('applies the inverse rotation', () => {

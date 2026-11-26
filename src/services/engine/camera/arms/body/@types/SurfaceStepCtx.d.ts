@@ -1,7 +1,7 @@
 import type { CameraTuning } from '../../../../../../@types/camera/orbitCamera/CameraTuning';
 import type { GroundRadiusLookup } from '../../../../../../@types/camera/terrain/GroundRadiusLookup';
-import type { Vec2 } from '../../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import type { ViewFrustum } from '../../../../../../@types/camera/projection/ViewFrustum';
 
 /** Everything the body arm's input and nudge cells read about the viewport and the host. */

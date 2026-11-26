@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * FocusUniformsValue — CPU mirror of the 32-byte FocusUniforms block

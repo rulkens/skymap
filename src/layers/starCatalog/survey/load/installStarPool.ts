@@ -8,7 +8,7 @@ import { installOctreePool } from '../../../../services/octree/installOctreePool
 import { octreeChunkPath } from '../../../../utils/octree/octreeChunkPath';
 import { starColumnsOf } from '../utils/starColumnsOf';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { StarColumns } from '../@types/StarColumns';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { OctreePoolHost } from '../../../../@types/octree/OctreePoolHost';

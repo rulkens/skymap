@@ -11,8 +11,8 @@ import { EMPTY_TILT_MEMORY } from '../../../../../../../../src/services/engine/c
 import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SurfaceStepCtx } from '../../../../../../../../src/services/engine/camera/arms/body/@types/SurfaceStepCtx';
 import type { Mat3 } from '../../../../../../../../src/@types/math/Mat3';
-import type { Vec2 } from '../../../../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../../../../../../helpers/math/angleBetween';
 import { symmetricFrustum } from '../../../../../../../../src/utils/camera/frustum/symmetricFrustum';

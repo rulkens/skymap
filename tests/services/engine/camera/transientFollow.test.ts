@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -27,7 +27,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { TransientBodyId } from '../../../../src/@types/scene/TransientBodyId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';

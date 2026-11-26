@@ -1,5 +1,5 @@
-import type { Tier } from '../../@types/data/Tier';
-import { TIER_LADDER } from '../../data/tierLadder';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
+import { TIER_LADDER } from '../../../packages/shared/src/data/tierLadder';
 
 /**
  * clampTier — caps a requested tier at a per-body `ceiling` under the ordering

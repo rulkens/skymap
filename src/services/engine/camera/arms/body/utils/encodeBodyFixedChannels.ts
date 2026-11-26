@@ -5,7 +5,7 @@
  */
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { CameraPose } from '../../../../../../@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../data/camera/bodyLocalFrame';
 import { bodyFixedEyeM } from '../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { orbitAnglesLookingAlong } from '../../../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';

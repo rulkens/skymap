@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** sunZenithCos — cos of the Sun's zenith angle at the eye; 0 for an eye at the body's centre. */
 export function sunZenithCos(camLocal: Readonly<Vec3>, sunLocal: Readonly<Vec3>): number {

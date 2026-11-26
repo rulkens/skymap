@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const near = (a: Vec3, b: Vec3) => {
   expect(a[0]).toBeCloseTo(b[0], 12);

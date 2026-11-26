@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { stretchExtinctionChroma } from '../../../../../../src/layers/milkyWay/field/dust/utils/stretchExtinctionChroma';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 describe('stretchExtinctionChroma', () => {
   const rgb: Vec3 = [0.88, 1.0, 1.3];

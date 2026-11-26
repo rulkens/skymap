@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * Label3DArcPlacement — the circle a `Label3D`'s lettering runs along:

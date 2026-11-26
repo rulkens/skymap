@@ -20,7 +20,7 @@ import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow
 import { siteGroundRadiusM } from '../../../../../src/utils/camera/arms/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';

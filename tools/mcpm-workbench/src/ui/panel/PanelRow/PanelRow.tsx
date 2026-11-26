@@ -5,7 +5,7 @@
  * label and control columns. Tab order runs control, then its ⓘ.
  */
 import type { ReactNode } from 'react';
-import CompactInfoTip from '../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './PanelRow.module.css';
 
 export type PanelRowProps = {

@@ -10,7 +10,7 @@
  * declare identical `@group(0)` bindings; `encodeGeneration.ts` builds a
  * separate bind group per pipeline for that reason.
  */
-import { createShaderModuleWithDevLog } from '../../../gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import generateStarsWgsl from '../../../gpu/shaders/milkyWay/sprites/generateStars.wesl?static';
 import generateDustWgsl from '../../../gpu/shaders/milkyWay/sprites/generateDust.wesl?static';
 import type { GenerationPipelines } from '../../../../@types/galaxy/GenerationPipelines';

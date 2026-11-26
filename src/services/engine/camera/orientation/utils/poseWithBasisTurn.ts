@@ -1,5 +1,5 @@
 import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import { rotateBasisByQuat } from './rotateBasisByQuat';
 
 /** Turn the basis in place — the eye-pivot form of a settle rotation. */

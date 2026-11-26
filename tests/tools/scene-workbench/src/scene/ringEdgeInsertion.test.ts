@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import { ringEdgeInsertion } from '../../../../../tools/scene-workbench/src/scene/ringEdgeInsertion';
 
 // A 100 px square, corners clockwise on screen.

@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb';
 import { meshEdgeIndices } from './meshEdgeIndices';
 import { packMaskPolygon } from './packMaskPolygon';

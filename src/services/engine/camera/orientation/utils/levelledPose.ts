@@ -1,5 +1,5 @@
 import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { canonicalBasisAt } from '../../../../../utils/camera/surfaceFrame/canonicalBasisAt';
 import { cappedRotationToward } from './cappedRotationToward';
 import { eyeFrameOf } from '../../../../../utils/camera/surfaceFrame/eyeFrameOf';

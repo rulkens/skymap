@@ -6,7 +6,7 @@
  * parity test, not this comment.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';

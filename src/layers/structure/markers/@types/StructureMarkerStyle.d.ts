@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
 
 /** Ring and halo style for one structure category; its label's style is its `LABEL_STYLES` row. */
 export type StructureMarkerStyle = {

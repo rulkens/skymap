@@ -3,9 +3,9 @@
  * upRef)`, `e2 = e1 × forward` — so θ is just the two projections. `forward ∥
  * upRef` leaves `e1 ≈ 0` and returns 0, that function's own degeneracy. */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { normalize3 } from '../../math/normalize3';
-import { cross3 } from '../../math/cross3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../../math/dot3';
 
 export function rollFromScreenUp(

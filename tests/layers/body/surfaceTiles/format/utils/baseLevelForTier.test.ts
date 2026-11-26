@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { tierToTexturePx } from '../../../../../../src/utils/math/tierToTexturePx';
 import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
-import { TIER_LADDER } from '../../../../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../../../../packages/shared/src/data/tierLadder';
 
 describe('baseLevelForTier', () => {
   it('drops exactly one level per tier step down', () => {

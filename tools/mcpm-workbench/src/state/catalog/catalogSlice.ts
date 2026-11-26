@@ -6,7 +6,7 @@ import type { UserCatalog } from '../../../@types/catalog/UserCatalog';
 import type { UserCatalogLoad } from '../../../@types/catalog/UserCatalogLoad';
 import type { UserFileProvenance } from '../../../@types/catalog/UserFileProvenance';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 /**
  * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier: SDSS ships no

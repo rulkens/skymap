@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const LUMA_R = 0.2126;
 const LUMA_G = 0.7152;

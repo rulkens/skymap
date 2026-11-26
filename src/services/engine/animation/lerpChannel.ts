@@ -8,10 +8,10 @@
 
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Space } from '../../../@types/animation/Space';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { lerpInSpace } from './channelSpace';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
-import { lerpVec3 } from '../../../utils/math/lerpVec3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
 
 export function lerpChannel<V extends number | Vec3>(
   channel: Channel,

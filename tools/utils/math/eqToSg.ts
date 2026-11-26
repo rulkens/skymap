@@ -4,7 +4,7 @@
  * Used by the flow-field diagnostics and workbench to map sky positions
  * into the supergalactic frame the flow cube is defined in.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { applyMat3 } from './applyMat3';
 import { EQ_TO_SG_MATRIX } from './eqToSgMatrix';
 

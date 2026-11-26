@@ -71,7 +71,7 @@
  */
 
 import type { CubeSphereMesh } from '../../@types/math/CubeSphereMesh';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/texturePrimeMeridianU';
 
 // Six cube faces (index 0..5 = +x, -x, +y, -y, +z, -z). Each carries its outward

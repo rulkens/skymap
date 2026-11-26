@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const len = (v: Vec3) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);

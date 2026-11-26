@@ -27,7 +27,7 @@
  * is no null case.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitPlaneFrame } from './OrbitPlaneFrame';
 import type { SceneBodyId } from './SceneBodyId';
 import type { PositionedId } from './PositionedId';

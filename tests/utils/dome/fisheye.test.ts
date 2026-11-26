@@ -5,15 +5,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { DOME_FACES } from '../../../src/data/rendering/domeFaces';
 import { domeBasis } from '../../../src/utils/dome/domeBasis';
 import { domeFaceRotations } from '../../../src/utils/dome/domeFaceRotations';
 import { fisheyeDirection } from '../../../src/utils/dome/fisheyeDirection';
 import { domeFaceUv } from '../../../src/utils/dome/domeFaceUv';
 import { dot3 } from '../../../src/utils/math/dot3';
-import { cross3 } from '../../../src/utils/math/cross3';
-import { normalize3 } from '../../../src/utils/math/normalize3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { rotateByTranspose } from '../../../src/utils/math/rotateByTranspose';
 import { mat3Columns } from '../../../src/utils/math/mat3Columns';
 

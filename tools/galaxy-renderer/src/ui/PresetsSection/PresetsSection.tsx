@@ -13,7 +13,7 @@
  * the static "PRESETS" label is a plain div, not a `CollapsibleSection`.
  */
 import { useRef, type ChangeEvent, type ReactNode } from 'react';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { paramsPatched } from '../../state/slices/galaxySlice';
 import { renderPatched } from '../../state/slices/renderSlice';

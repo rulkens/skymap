@@ -10,8 +10,8 @@
 
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../@types/rendering/ProjectedLabel';
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { projectLabel } from './projectLabel';
 import { tangentToward } from './tangentToward';
 import { unprojectLabel } from './unprojectLabel';

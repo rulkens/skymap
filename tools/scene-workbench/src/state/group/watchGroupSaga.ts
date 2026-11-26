@@ -9,7 +9,7 @@
  */
 import { call, cancelled, getContext, put, select, takeLatest } from 'typed-redux-saga';
 
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { SceneAsset } from '../../../@types/SceneAsset';
 import type { SceneManifest } from '../../../@types/SceneManifest';
 import { disposeScene, type RenderResources } from '../../render/renderResources';

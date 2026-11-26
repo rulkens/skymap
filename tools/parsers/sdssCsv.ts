@@ -33,7 +33,7 @@
  */
 
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 

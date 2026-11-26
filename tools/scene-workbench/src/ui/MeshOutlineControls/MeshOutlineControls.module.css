@@ -7,13 +7,13 @@
 }
 
 .toggleLabel {
-  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
+  composes: toggleLabel from '../../../../../packages/shared/src/components/common/shared.module.css';
   flex: 0 1 auto;
   gap: 6px;
 }
 
 .checkbox {
-  composes: checkbox from '../../../../../src/components/common/shared.module.css';
+  composes: checkbox from '../../../../../packages/shared/src/components/common/shared.module.css';
 }
 
 .readout {

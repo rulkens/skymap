@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { buildGalaxyInfo } from '../../../../../src/layers/galaxyCatalog/records/present/buildGalaxyInfo';
 import { extractGalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
 import { DESI_TRACER_CLASS } from '../../../../../src/layers/galaxyCatalog/records/data/sourceClass';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../../src/utils/math/cartesianToRaDecZ';
 import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';

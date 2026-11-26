@@ -32,7 +32,7 @@ vi.mock('../../../../src/services/engine/frame/runLabelDirector', () => ({
 
 // resizeCanvasToDisplay reads window.devicePixelRatio (undefined in node); stubbed to a no-op false
 // since resize is incidental to the camera-driver tests. runFrame imports only that symbol.
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -74,7 +74,7 @@ import {
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';

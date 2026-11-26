@@ -2,7 +2,7 @@
  * Even-odd point-in-ring. `texturedMesh.wesl`'s `insideMask` repeats this exact
  * rule, half-open test included, so the preview mask and the CLI's cut agree.
  */
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export function insideRing(p: Vec2, ringM: readonly Vec2[]): boolean {
   const [px, py] = p;

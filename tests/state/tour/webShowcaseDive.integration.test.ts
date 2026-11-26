@@ -54,7 +54,7 @@ import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 

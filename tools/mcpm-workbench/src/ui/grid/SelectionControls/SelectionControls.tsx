@@ -6,8 +6,8 @@
  * and size once, padding baked in; after that it is an ordinary manual box.
  */
 import { useState, type ReactNode } from 'react';
-import Button from '../../../../../../src/components/common/Button/Button';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import Button from '../../../../../../packages/shared/src/components/common/Button/Button';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { CatalogSlice } from '../../../../@types/catalog/CatalogSlice';
 import type { GridSlice } from '../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../grid/deriveGridBox';

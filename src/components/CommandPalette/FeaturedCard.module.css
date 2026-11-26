@@ -2,7 +2,7 @@
  * FeaturedCard — square, image-led card: name floated over the bottom of the
  * thumbnail with a dark gradient for legibility, or (once the image 404s) a
  * dashed text tile with the label centred. All atoms reference tokens from
- * `src/styles/global.css`.
+ * `packages/shared/src/styles/global.css`.
  */
 
 .root {

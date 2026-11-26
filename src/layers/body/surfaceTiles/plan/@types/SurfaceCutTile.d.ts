@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import type { SurfacePatchAnchor } from '../../patch/@types/SurfacePatchAnchor';
 import type { StandaloneProduct } from './StandaloneProduct';
 import type { StandaloneRect } from './StandaloneRect';

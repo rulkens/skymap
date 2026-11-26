@@ -26,7 +26,7 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 // Reads window.devicePixelRatio, which the node environment has no window for.
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 vi.mock(
@@ -101,7 +101,7 @@ import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -112,7 +112,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';

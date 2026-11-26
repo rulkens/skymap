@@ -13,12 +13,12 @@ import { describe, it, expect } from 'vitest';
 import { anchoredDragRotation } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/utils/anchoredDragRotation';
 import { cursorRayBodyLocal } from '../../../../../../../../src/utils/camera/terrain/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../../../../../src/utils/math/raySphereRoots';
-import { cross3 } from '../../../../../../../../src/utils/math/cross3';
-import { normalize3 } from '../../../../../../../../src/utils/math/normalize3';
+import { cross3 } from '../../../../../../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
 import { degToRad } from '../../../../../../../../src/utils/math/degToRad';
 import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/pose/BodyFixedPose';
-import type { Vec2 } from '../../../../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../../../../../../src/utils/camera/frustum/symmetricFrustum';
 

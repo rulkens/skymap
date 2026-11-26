@@ -24,7 +24,7 @@ import {
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/planet/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/planet/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 /**

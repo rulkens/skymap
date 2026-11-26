@@ -1,7 +1,7 @@
 /** ExhibitIcon: a sparkle in a picture frame. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function ExhibitIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

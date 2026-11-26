@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { constellationLabelSource } from '../../../../../src/layers/constellations/figures/present/constellationLabelSource';
 import type { ConstellationsRuntime } from '../../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 

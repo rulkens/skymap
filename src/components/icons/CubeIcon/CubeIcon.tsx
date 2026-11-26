@@ -1,7 +1,7 @@
 /** CubeIcon: an outlined cube, a voxel volume. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function CubeIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

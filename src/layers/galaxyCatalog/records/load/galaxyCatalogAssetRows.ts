@@ -10,7 +10,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceR
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../../hiResFamous/data/hiResLayerSideByTier';
 import { tierTarget } from '../data/tierTargets';
-import { TIER_LADDER } from '../../../../data/tierLadder';
+import { TIER_LADDER } from '../../../../../packages/shared/src/data/tierLadder';
 import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 
 function pointRow(

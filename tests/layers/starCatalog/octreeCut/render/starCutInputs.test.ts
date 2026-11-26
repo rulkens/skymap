@@ -15,7 +15,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogSettings } from '../../../../../src/layers/starCatalog/@types/StarCatalogSettings';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 // Distinct per tier so a test can tell which tier's budget the cut read.

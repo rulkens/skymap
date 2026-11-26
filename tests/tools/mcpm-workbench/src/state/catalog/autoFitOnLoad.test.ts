@@ -20,10 +20,10 @@ import { framingCameraPose } from '../../../../../../tools/mcpm-workbench/src/st
 import { watchSceneSaga } from '../../../../../../tools/mcpm-workbench/src/state/scene/watchSceneSaga';
 import { rootReducer } from '../../../../../../tools/mcpm-workbench/src/store/rootReducer';
 import { resolveAutoFitBounds } from '../../../../../../tools/mcpm-workbench/src/grid/autoFit/resolveAutoFitBounds';
-import { initGpu } from '../../../../../../src/services/gpu/device';
+import { initGpu } from '../../../../../../packages/shared/src/services/gpu/device';
 
 // A build that never finishes: each call is one build started.
-vi.mock('../../../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../../../packages/shared/src/services/gpu/device', () => ({
   initGpu: vi.fn(() => new Promise(() => {})),
 }));
 

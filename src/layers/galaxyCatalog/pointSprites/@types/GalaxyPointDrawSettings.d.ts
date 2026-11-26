@@ -8,7 +8,7 @@
  * so the engine-side pass code can pluck them without renames.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
 

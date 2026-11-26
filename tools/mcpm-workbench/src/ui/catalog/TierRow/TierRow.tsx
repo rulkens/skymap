@@ -4,8 +4,8 @@
  * its own "Tier" caption, which would repeat the row label here.
  */
 import type { ReactNode } from 'react';
-import type { Tier } from '../../../../../../src/@types/data/Tier';
-import { TIER_LADDER } from '../../../../../../src/data/tierLadder';
+import type { Tier } from '../../../../../../packages/shared/src/@types/data/Tier';
+import { TIER_LADDER } from '../../../../../../packages/shared/src/data/tierLadder';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import Select from '../../../../../../src/components/common/Select/Select';
 

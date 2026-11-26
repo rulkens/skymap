@@ -14,7 +14,7 @@ import { deriveBodyStates } from '../../../../../../src/services/engine/frame/de
 import { eyeMpcOf } from '../../../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../../src/data/camera/cameraTuning';
 import { mappedTiltRad } from '../../../../../../src/services/engine/camera/orientation/utils/mappedTiltRad';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
@@ -24,7 +24,7 @@ import { absoluteArm } from '../../../../../../src/utils/camera/arms/absoluteArm
 import { bodyDriverGeometry } from '../../../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../../../src/@types/camera/pose/FramedCameraPose';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../../src/utils/scene/bodyRowAt';
 import type { SelectionRowBase } from '../../../../../../src/@types/engine/selection/SelectionRowBase';

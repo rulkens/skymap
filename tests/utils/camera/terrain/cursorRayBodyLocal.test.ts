@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { cursorRayBodyLocal } from '../../../../src/utils/camera/terrain/cursorRayBodyLocal';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { ViewFrustum } from '../../../../src/@types/camera/projection/ViewFrustum';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { opticalCentrePx } from '../../../../src/services/engine/camera/arms/body/gesture/utils/opticalCentrePx';

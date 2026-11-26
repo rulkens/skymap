@@ -1,7 +1,7 @@
 /** TourIcon: a winding route between two stops. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function TourIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

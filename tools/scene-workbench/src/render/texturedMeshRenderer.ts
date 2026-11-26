@@ -8,8 +8,8 @@
  * 'cullMode: none' is deliberate: MVS triangle winding is not guaranteed
  * consistent, so backface culling drops real surface at random.
  */
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { SceneDisplay } from '../../@types/SceneDisplay';
 import type { MeshGpuAsset } from './renderResources';
 import wireframeFsCode from './shaders/meshWireframe/fragment.wesl?static';

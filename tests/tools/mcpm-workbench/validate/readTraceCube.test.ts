@@ -9,9 +9,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { readTraceCube } from '../../../../tools/mcpm-workbench/validate/readTraceCube';
-import { f32ToF16Bits } from '../../../../src/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../../../packages/shared/src/utils/math/f32ToF16Bits';
 import { f16BitsToFloat } from '../../../../tools/utils/math/f16BitsToFloat';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 describe('readTraceCube', () => {
   let dir: string;

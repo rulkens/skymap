@@ -6,7 +6,7 @@
  */
 
 import { degToRad } from '../math/degToRad';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function surfacePointBodyFixed(latDeg: number, lonDeg: number, radiusM: number): Vec3 {
   const lat = degToRad(latDeg);

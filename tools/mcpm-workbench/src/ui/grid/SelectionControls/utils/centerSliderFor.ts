@@ -1,4 +1,4 @@
-import type { SliderProps } from '../../../../../../../src/components/common/Slider/Slider';
+import type { SliderProps } from '../../../../../../../packages/shared/src/components/common/Slider/Slider';
 import type { CatalogSlice } from '../../../../../@types/catalog/CatalogSlice';
 import type { GridSlice } from '../../../../../@types/grid/GridSlice';
 import { CENTER_RANGE_MPC } from '../data/centerRangeMpc.constant';

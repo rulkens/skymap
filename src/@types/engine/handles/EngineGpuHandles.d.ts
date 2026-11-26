@@ -32,7 +32,7 @@ import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
-import type { GpuContext } from '../../rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { GpuMemorySnapshot } from '../../gpu/memory/GpuMemorySnapshot';
 
 export type EngineGpuHandles = {

@@ -9,7 +9,7 @@
  * R_V's physical meaning (grain size / sightline) is documented on
  * `GalaxyDustParams.rV`, not restated here.
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 const CCM89_A_RGB: Vec3 = [0.9506, 1.0002, 1.0103];
 const CCM89_B_RGB: Vec3 = [-0.1969, 0.0014, 0.6958];

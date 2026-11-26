@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SatelliteProfileId } from '../points/@types/SatelliteProfileId';
 
 /** The tunable tint of each satellite group, linear RGB. */

@@ -8,7 +8,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat4 } from 'wgpu-matrix';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
 

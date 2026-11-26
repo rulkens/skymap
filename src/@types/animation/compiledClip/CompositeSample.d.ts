@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * CompositeSample — the channels a `CompositeTrack` produces at one instant,

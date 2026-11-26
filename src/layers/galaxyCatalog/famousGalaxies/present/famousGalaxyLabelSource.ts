@@ -5,7 +5,7 @@
  * catalog object (a load or a tier swap) is the change signal. The Milky Way is not a row here.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { COSMO } from '../../../../services/engine/frame/slabs';

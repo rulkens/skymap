@@ -2,7 +2,7 @@
 
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/jost/wght.css';
-import '../../../../src/styles/tokens.css';
+import '../../../shared/src/styles/tokens.css';
 import './control.css';
 import AboutWindow from './shell/components/AboutWindow/AboutWindow';
 import ControlPage from './shell/components/ControlPage/ControlPage';

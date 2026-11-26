@@ -4,7 +4,7 @@
  * composed in f64 by the pass.
  */
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidClassLook } from '../../@types/AsteroidClassLook';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 

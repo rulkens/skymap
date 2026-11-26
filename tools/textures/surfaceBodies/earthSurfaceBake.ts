@@ -4,7 +4,7 @@
  * this one, not inside the shared bake harness.
  */
 
-import { TIER_LADDER } from '../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../packages/shared/src/data/tierLadder';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { BLACK_MARBLE_QUADRANT_KEYS } from '../../utils/io/blackMarbleQuadrantKeys';

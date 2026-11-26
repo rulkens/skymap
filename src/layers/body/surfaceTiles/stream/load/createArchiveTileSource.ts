@@ -6,7 +6,7 @@ import { decodeSurfaceTileArchiveIndex } from '../../archive/utils/decodeSurface
 import { findSurfaceTileArchiveEntry } from '../../archive/utils/findSurfaceTileArchiveEntry';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
-import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 // An in-flight fetch pins a queue pipe and keeps the render-on-demand loop
 // ticking, so a promise that never settles leaks more than a socket.

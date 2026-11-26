@@ -23,11 +23,11 @@ import { eyeMpcOf } from '../../../../../../src/utils/camera/orbitPose/eyeMpcOf'
 import { imagePlaneBasis } from '../../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../../../src/utils/camera/orbitPose/frameUp';
 import { orbitAnglesLookingAlong } from '../../../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];

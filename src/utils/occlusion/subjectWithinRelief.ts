@@ -3,7 +3,7 @@
  * (between its deepest basin and highest peak), i.e. on that body's ground?
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OccluderBody } from '../../@types/scene/OccluderBody';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 

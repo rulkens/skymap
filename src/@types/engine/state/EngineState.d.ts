@@ -8,7 +8,7 @@
  */
 
 import type { Task } from 'redux-saga';
-import type { Tier } from '../../data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EnginePickingState } from './EnginePickingState';

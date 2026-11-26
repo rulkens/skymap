@@ -7,7 +7,7 @@
  * app's buttons (font, focus ring, padding) rather than reinventing chrome.
  */
 import type { ReactNode } from 'react';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 
 export type ToggleProps = {
   readonly label: string;

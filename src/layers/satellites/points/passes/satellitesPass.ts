@@ -26,7 +26,7 @@ import { near0OverlayClipScale } from '../../../../services/engine/frame/near0Ov
 import { near0OverlayVpF32 } from '../../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { normalize3 } from '../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../../sweep/subsystems/composeTemeToWorld';

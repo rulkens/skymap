@@ -5,10 +5,10 @@
  * reproducible across runs; clustered rather than uniform so the raymarch
  * has actual structure to draw, not a flat haze.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
-import { gaussian } from '../../../../src/utils/random/gaussian';
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { gaussian } from '../../../../packages/shared/src/utils/random/gaussian';
+import { mulberry32 } from '../../../../packages/shared/src/utils/random/mulberry32';
 import { uniformInSphere } from '../../../../src/utils/random/uniformInSphere';
 import { massWeightFromLog10 } from './weights/massWeightFromLog10';
 

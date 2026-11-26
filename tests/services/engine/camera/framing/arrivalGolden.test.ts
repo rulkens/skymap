@@ -19,7 +19,7 @@ import type { FocusFraming } from '../../../../../src/@types/camera/pose/FocusFr
 import type { SelectionHalo } from '../../../../../src/@types/engine/selection/SelectionHalo';
 import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();

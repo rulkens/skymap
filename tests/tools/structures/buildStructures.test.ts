@@ -19,7 +19,7 @@ import { parseStructureSeed } from '../../../tools/parsers/parseStructureSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
 import type { StructureSeedEntry } from '../../../tools/parsers/parseStructureSeed';
-import { H0_KM_S_MPC } from '../../../src/utils/math/constants';
+import { H0_KM_S_MPC } from '../../../packages/shared/src/utils/math/constants';
 
 // ── Shared fixtures ──────────────────────────────────────────────────────────
 

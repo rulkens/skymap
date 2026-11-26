@@ -1,7 +1,7 @@
 import type { ArmDelta } from '../../../@types/ArmDelta';
 import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
 import type { MeshBody } from '../../../../../../@types/scene/MeshBody';
-import type { Vec2 } from '../../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../../packages/shared/src/@types/math/Vec2';
 import { steppedSitePose } from './steppedSitePose';
 
 /**

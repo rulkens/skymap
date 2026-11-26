@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 

@@ -20,11 +20,11 @@ import { resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice
 import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { dot3 } from '../../../../src/utils/math/dot3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 installAppSelectionKinds();
 

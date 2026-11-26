@@ -11,7 +11,7 @@
 import type { Clip } from '../../../@types/animation/Clip';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import type { Ease } from '../../../@types/animation/Ease';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import {
   dollyTo,
   spin,

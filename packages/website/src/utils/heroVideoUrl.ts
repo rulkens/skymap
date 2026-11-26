@@ -1,5 +1,5 @@
 import { HERO_MEDIA } from '../../../../tools/site/heroMediaPlan';
-import { dataBaseUrl } from '../../../../src/utils/network/dataBaseUrl';
+import { dataBaseUrl } from '../../../shared/src/utils/network/dataBaseUrl';
 
 /**
  * Where the scrub video is served. Dev: the repo's `public/data/site/` at the

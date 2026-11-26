@@ -3,7 +3,7 @@
  * `OrbitalElements`: the root of a focus graph rather than one of its leaves.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedId } from './PositionedId';
 
 export type AnchorBody = {

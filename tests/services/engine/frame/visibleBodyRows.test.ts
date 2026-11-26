@@ -9,7 +9,7 @@ import { visibleBodyRows } from '../../../../src/services/engine/frame/visibleBo
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForwardOf';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

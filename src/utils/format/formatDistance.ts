@@ -37,7 +37,7 @@
  * @param mpc  Distance in megaparsecs. Must be non-negative.
  */
 
-import { PC_TO_LY } from '../math/constants';
+import { PC_TO_LY } from '../../../packages/shared/src/utils/math/constants';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { formatScalar } from './formatScalar';
 

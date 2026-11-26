@@ -16,7 +16,7 @@ import type { OctreeChunkStreamDeps } from '../../@types/octree/OctreeChunkStrea
 import type { OctreeChunkRequest } from '../../@types/octree/OctreeChunkRequest';
 import { SlotPool } from '../../utils/cache/slotPool';
 import { createTileStreamSubsystem } from '../engine/subsystems/tileStreamSubsystem';
-import { dataUrl } from '../loading/fetchWithProgress';
+import { dataUrl } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 import { OCTREE_CHUNK_CONCURRENCY } from '../../data/octree/octreeChunkConcurrency';
 import { decodeOctreeChunk } from '../../data/octree/decodeOctreeChunk';
 

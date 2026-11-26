@@ -10,7 +10,10 @@ import type { AsteroidCatalog } from '../@types/AsteroidCatalog';
 import type { LoadedAsteroids } from '../@types/LoadedAsteroids';
 import type { AsteroidKeplerSolver } from '../../kepler/@types/AsteroidKeplerSolver';
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
 import { ASTEROID_CATALOG_PATHS } from '../../../../data/asteroids/asteroidCatalogPaths';
 import { parseAsteroidDiameters } from './parseAsteroidDiameters';

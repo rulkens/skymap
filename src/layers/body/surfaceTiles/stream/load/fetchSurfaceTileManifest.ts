@@ -1,5 +1,5 @@
 import type { SurfaceTileManifest } from '../../format/@types/SurfaceTileManifest';
-import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /**
  * fetchSurfaceTileManifest — read the baked pyramid's description once, when

@@ -1,5 +1,5 @@
 import type { UnitPoint } from '../../@types/input/UnitPoint';
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 // 2^-16 px grid: absorbs the unit round trip's float noise
 const GRID_STEPS_PER_PX = 2 ** 16;

@@ -6,8 +6,8 @@
  * Opaque + depth-tested is what buys the missing sort: nearest wins per pixel
  * whatever order the assets draw in.
  */
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { POINTS_RECORD_BYTES } from '../../../scene-recon/pack/pointCloudFormat';
 import type { LidarGpuAsset } from './renderResources';
 import fsCode from './shaders/lidarPoint/fragment.wesl?static';

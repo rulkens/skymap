@@ -1,6 +1,6 @@
 import type { Renderer } from './Renderer';
 import type { Label3D } from './Label3D';
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * Label3DRenderer — the shared world-geometry text renderer (spec §9.1).

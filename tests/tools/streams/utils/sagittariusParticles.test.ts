@@ -8,7 +8,7 @@ import {
 } from '../../../../tools/streams/data/streamsBuild.constants';
 import { sagittariusParticles } from '../../../../tools/streams/utils/sagittariusParticles';
 import { sagittariusMeta } from '../../../../tools/streams/utils/sagittariusMeta';
-import { raDecDistToEqCart } from '../../../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { galToEq } from '../../../../tools/utils/math/galToEq';
 
 function star(i: number, tStripGyr = 0): VasilievStar {

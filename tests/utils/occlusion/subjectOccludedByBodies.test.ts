@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { subjectOccludedByBodies } from '../../../src/utils/occlusion/subjectOccludedByBodies';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const EARTH_RADIUS_KM = 6371;
 const EARTH = [{ positionMpc: [0, 0, 0] as Vec3, radiusM: EARTH_RADIUS_KM * 1000 }];

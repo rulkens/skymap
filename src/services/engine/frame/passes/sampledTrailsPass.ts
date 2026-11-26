@@ -10,7 +10,7 @@
  * that body: a stay curves around its planet while the planet moves.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
 import { bodyPresent } from '../../../../utils/scene/bodyPresent';

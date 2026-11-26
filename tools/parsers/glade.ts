@@ -97,7 +97,7 @@ import { type ParsedRecord } from './common';
 import { galaxyDiameterKpc } from '../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { parseFloatOrNaN } from '../utils/math/parseFloatOrNaN';
 

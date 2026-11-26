@@ -4,8 +4,8 @@
  * rather than `acos(−f·n)`: acos near ±1 turns the dot's last bit into ~1e-8
  * rad, which differed between CPUs and drifted the settle golden trace. */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { cross3 } from '../../math/cross3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 
 export function tiltFromNadirRad(forward: Readonly<Vec3>, eyeM: Readonly<Vec3>): number {
   if (eyeM[0] === 0 && eyeM[1] === 0 && eyeM[2] === 0) return 0; // no nadir at the centre

@@ -9,7 +9,7 @@
  * strict binary `add(a, b)` would force a nested call at exactly the site that
  * motivated the helper.
  */
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function addVec3(...vecs: readonly Readonly<Vec3>[]): Vec3 {
   const sum: Vec3 = [0, 0, 0];

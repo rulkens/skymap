@@ -10,13 +10,13 @@ import { linkedPoseToWorld } from '../../../../../../src/services/engine/camera/
 import { deriveBodyStates } from '../../../../../../src/services/engine/frame/deriveBodyStates';
 import { yawPitchToDir } from '../../../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../../../src/utils/math/rotateVec3ByTightMat3';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { BodyState } from '../../../../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 
 const BASIS = ORIENTATION_FRAMES.ecliptic;

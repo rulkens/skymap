@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { buildDustVolume } from '../../tools/volumes/buildDustVolume';
-import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import { decodeScalarField } from '../../packages/shared/src/data/volume/scalarFieldFormat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
   const headerDict = `{'descr': '<f4', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;

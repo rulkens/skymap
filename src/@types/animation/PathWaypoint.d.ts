@@ -37,7 +37,7 @@
  * it won't).
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { FocusId } from './FocusId';
 
 export type PathWaypoint =

@@ -4,7 +4,7 @@
  * going to the lower layer (`>`, not `>=`, keeps the first max found).
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { DOME_FACES } from '../../data/rendering/domeFaces';
 import { dot3 } from '../math/dot3';
 import { mat3Columns } from '../math/mat3Columns';

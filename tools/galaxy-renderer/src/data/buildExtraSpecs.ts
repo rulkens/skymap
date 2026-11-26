@@ -9,7 +9,7 @@
  */
 
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { randomGalaxyParams } from './randomGalaxyParams';
 
 export function buildExtraSpecs(count: number, rng: () => number): ExtraGalaxySpec[] {

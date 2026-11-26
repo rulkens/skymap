@@ -13,7 +13,7 @@
 
 import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
 import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { flooredBodyPose } from '../../utils/flooredBodyPose';
 import { spentZoomFactor } from '../../../../input/utils/spentZoomFactor';

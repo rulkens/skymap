@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { maxDistanceToPolyline } from '../../utils/math/maxDistanceToPolyline';
 import { simplifyPolyline } from '../../utils/math/simplifyPolyline';

@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { OctreeCatalog } from '../deploy/@types/OctreeCatalog';
 import { OCTREE_CATALOGS } from '../deploy/r2/octreeCatalogs';
-import type { DataManifest } from '../../src/@types/data/DataManifest';
+import type { DataManifest } from '../../packages/shared/src/@types/data/DataManifest';
 import type { OctreeChunkHeader } from '../../src/@types/octree/OctreeChunkHeader';
 import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';

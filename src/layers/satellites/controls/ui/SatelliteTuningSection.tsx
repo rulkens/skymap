@@ -1,14 +1,14 @@
 /** SatelliteTuningSection: the ambient and dot size sliders, then a colour row per group, dev-only. */
 
 import type { ReactElement } from 'react';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SatelliteTuning } from '../../@types/SatelliteTuning';
 import type { SatelliteTuningSliderKey } from '../../@types/SatelliteTuningSliderKey';
 import type { SatelliteProfileId } from '../../points/@types/SatelliteProfileId';
 import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
 import { SATELLITE_TUNING_SLIDER_FIELDS } from '../data/satelliteTuningSliderFields';
 import { formatSatelliteColorDefaults } from '../utils/formatSatelliteColorDefaults';
-import Button from '../../../../components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
 import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';

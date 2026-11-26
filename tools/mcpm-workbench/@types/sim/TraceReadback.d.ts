@@ -1,5 +1,5 @@
 import type { GridElement } from '../grid/GridElement';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * TraceReadback — the sim's trace grid copied to the CPU for the .npy and

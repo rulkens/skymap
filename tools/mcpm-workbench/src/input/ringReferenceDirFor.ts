@@ -1,6 +1,6 @@
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { cross3 } from '../../../../src/utils/math/cross3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 /** A unit vector ⊥ `axisDir` — the rotate ring's 0°-angle reference for `dragRotate`. Same
  *  "helper axis not near-parallel" fallback as cameraBasis.ts's right/up derivation and

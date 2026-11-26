@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ProbeSphereId } from './ProbeSphereId';
 
 /** The section switch and one switch per sphere, then the material every sphere shares. */

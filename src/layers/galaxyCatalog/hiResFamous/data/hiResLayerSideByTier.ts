@@ -1,4 +1,4 @@
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 /** Per-tier layer side of the hi-res array; cost line and ADR in `hiResLayerCount.ts`. */
 export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {

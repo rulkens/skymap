@@ -3,7 +3,7 @@
  * the inverse of `fisheyeDirection` (zenith at the centre, front horizon at (0, −1)).
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function directionToFisheye(dir: Readonly<Vec3>): [number, number] {
   const sinT = Math.hypot(dir[0], dir[2]);

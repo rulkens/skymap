@@ -22,7 +22,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 const tierSlice = createSlice({
   name: 'tier',

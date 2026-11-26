@@ -86,11 +86,11 @@ import {
   FILAMENT_DATA_PREFIX,
 } from '../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
-import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { galaxyCatalogFluxLimit } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
-import { mulberry32 } from '../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../packages/shared/src/utils/random/mulberry32';
 import { computeAngularWeights } from '../catalog/bias/computeAngularWeights';
 import { gaussian } from '../utils/random/gaussian';
 
@@ -415,7 +415,7 @@ const JITTER_SIGMA_MPC = 0.5;
 
 /**
  * Seed for the duplication+jitter PRNG.  We use a seeded generator
- * (`mulberry32` from `src/utils/random/mulberry32`) so two runs over
+ * (`mulberry32` from `packages/shared/src/utils/random/mulberry32`) so two runs over
  * the same input produce byte-identical output — important for
  * reproducibility (caching the Delaunay tessellation across `--cut`
  * sweeps assumes the same TSV) and for debugging (a flaky filament can

@@ -6,7 +6,7 @@
 
 import { createRoot } from 'react-dom/client';
 import RemotePage from './components/RemotePage/RemotePage';
-import './styles/tokens.css';
+import '../packages/shared/src/styles/tokens.css';
 import './styles/remote.css';
 
 const rootEl = document.getElementById('root');

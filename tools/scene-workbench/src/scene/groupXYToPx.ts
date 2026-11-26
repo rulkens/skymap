@@ -2,7 +2,7 @@
  * groupXYToPx — the inverse of `pxToGroupXY`: group-frame XY metres to a CSS pixel
  * (origin top-left, +y down) under a nadir orthographic view built from the canvas's CSS size.
  */
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { SceneCameraView } from '../render/sceneCameraView';
 
 export function groupXYToPx(view: SceneCameraView, xyM: Vec2): Vec2 {

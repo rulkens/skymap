@@ -7,7 +7,7 @@
  * `pow(2.2)` visibly diverges at the low intensities this layer tunes.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { HexString } from '../../@types/math/HexString';
 import { srgbToLinear } from './srgbToLinear';
 

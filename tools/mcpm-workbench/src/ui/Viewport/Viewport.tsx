@@ -10,8 +10,8 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { RendererId } from '../../../@types/view/RendererId';
-import { resizeCanvasToDisplay } from '../../../../../src/services/gpu/device';
-import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { resizeCanvasToDisplay } from '../../../../../packages/shared/src/services/gpu/device';
+import { hasUrlGate } from '../../../../../packages/shared/src/utils/url/hasUrlGate';
 import { deriveGridBox } from '../../grid/deriveGridBox';
 import { createViewportInput } from '../../input/createViewportInput';
 import { cameraViewFor } from '../../render/camera/cameraViewFor';

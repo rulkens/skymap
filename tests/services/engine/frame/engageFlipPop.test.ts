@@ -14,7 +14,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -27,7 +27,7 @@ import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorld
 import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/services/engine/camera/data/orientDecay';
 import { setCameraTuning } from '../../../../src/state/camera/cameraIntentSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -37,7 +37,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraTuning } from '../../../../src/@types/camera/orbitCamera/CameraTuning';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 

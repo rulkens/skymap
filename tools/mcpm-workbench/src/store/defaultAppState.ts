@@ -1,5 +1,5 @@
 import type { RootState } from './types';
-import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../../packages/shared/src/utils/url/hasUrlGate';
 import { defaultCatalogSlice } from '../state/catalog/catalogSlice';
 import { defaultGridSlice } from '../state/grid/gridSlice';
 import { defaultHistogramSlice } from '../state/histogram/histogramSlice';

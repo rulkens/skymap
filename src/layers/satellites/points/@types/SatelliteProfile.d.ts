@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SatelliteProfileId } from './SatelliteProfileId';
 
 /** How one group of satellites looks: its tint, how much sunlight it catches, whether it has panels to flash. */

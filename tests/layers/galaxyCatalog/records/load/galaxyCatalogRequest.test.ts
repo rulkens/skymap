@@ -11,7 +11,7 @@ import { galaxyCatalogRequest } from '../../../../../src/layers/galaxyCatalog/re
 import { sameRequest } from '../../../../../src/utils/loading/sameRequest';
 import { tierFilenameForSource } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
-import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../../../packages/shared/src/data/tierLadder';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /** Every galaxy catalog that actually ships a `.bin` — the only ones with a filename. */

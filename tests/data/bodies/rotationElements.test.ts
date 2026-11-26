@@ -4,7 +4,7 @@ import { SATURN_EQUATORIAL_FRAME } from '../../../src/data/bodies/orbitPlaneFram
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 import { degToRad } from '../../../src/utils/math/degToRad';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('ROTATION_ELEMENTS', () => {
   it('has valid structure', () => {

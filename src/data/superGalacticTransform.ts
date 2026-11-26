@@ -31,8 +31,8 @@
 
 import type { Mat3 } from '../@types/math/Mat3';
 import type { Mat4 } from '../@types/math/Mat4';
-import type { Vec3 } from '../@types/math/Vec3';
-import type { Vec4 } from '../@types/math/Vec4';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../packages/shared/src/@types/math/Vec4';
 import { galacticToCartesian } from '../utils/math/galacticToCartesian';
 import { eqRaDecToUnitCart } from '../utils/math/eqRaDecToUnitCart';
 import { mat3FromColumns } from '../utils/math/mat3FromColumns';

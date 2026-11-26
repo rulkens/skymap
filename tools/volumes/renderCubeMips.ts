@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { PNG } from 'pngjs';
-import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import { decodeScalarField } from '../../packages/shared/src/data/volume/scalarFieldFormat';
 import { readNpy } from '../parsers/npyReader';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 

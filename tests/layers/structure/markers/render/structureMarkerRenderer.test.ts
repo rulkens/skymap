@@ -4,7 +4,7 @@ import { createStructureMarkerRenderer } from '../../../../../src/layers/structu
 import type { StructureMarkerDescriptor } from '../../../../../src/layers/structure/markers/@types/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import { STRUCTURE_IDS } from '../../../../../src/data/structure/structureIds';
 import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';

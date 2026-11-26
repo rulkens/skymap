@@ -10,11 +10,11 @@
 
 import type { FramedPose } from '../../../@types/camera/pose/FramedPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 import { absoluteArm } from './absoluteArm';
 import { orbitAnglesLookingAlong } from '../orbitPose/orbitAnglesLookingAlong';
-import { normalize3 } from '../../math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 export function centreLookingArm(
   eyeMpc: Readonly<Vec3>,

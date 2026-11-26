@@ -2,7 +2,7 @@ import type { AgentInitMode } from '../../@types/sim/AgentInitMode';
 import type { AgentWeights } from '../../@types/catalog/AgentWeights';
 import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
 import type { GridBox } from '../../@types/grid/GridBox';
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../packages/shared/src/utils/random/mulberry32';
 import { worldToVoxel } from '../grid/box/worldToVoxel';
 import { AGENT_COUNT_STEP } from './agentCountStep.constant';
 import type { SeededAgents } from '../../@types/sim/SeededAgents';

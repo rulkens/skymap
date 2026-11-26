@@ -7,7 +7,7 @@
  */
 
 import { mat4d } from 'wgpu-matrix';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** vp · translate(−eyeRelBodyM) · scale(radiusM). Returns RAW f64 — caller narrows. */
 export function composeBodySlabMvp(

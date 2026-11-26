@@ -12,8 +12,8 @@ import type { CatalogFileProblem } from '../../../@types/catalog/import/CatalogF
 import type { CatalogImportSettings } from '../../../@types/catalog/import/CatalogImportSettings';
 import type { CsvColumns } from '../../../@types/catalog/import/CsvColumns';
 import type { ParsedCsvCatalog } from '../../../@types/catalog/import/ParsedCsvCatalog';
-import { raDecDistToEqCart } from '../../../../../src/utils/math/raDecDistToEqCart';
-import { redshiftToDistanceMpc } from '../../../../../src/utils/math/redshiftToDistanceMpc';
+import { raDecDistToEqCart } from '../../../../../packages/shared/src/utils/math/raDecDistToEqCart';
+import { redshiftToDistanceMpc } from '../../../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import { massWeightFromLog10 } from '../weights/massWeightFromLog10';
 import { weightStatsFor } from '../weights/weightStatsFor';
 

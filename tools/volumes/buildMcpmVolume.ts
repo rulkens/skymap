@@ -4,7 +4,7 @@
  * consumed by the scalar-volume renderer.
  *
  * Pure Node/TS — no Python required. The log-normalise + f16-pack step is
- * shared via `src/utils/volume/packLogTraceVoxels.ts` (also used by
+ * shared via `packages/shared/src/utils/volume/packLogTraceVoxels.ts` (also used by
  * `buildRhizomeVolume.ts` and `buildDustVolume.ts`).
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
@@ -21,12 +21,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
+import { packLogTraceVoxels } from '../../packages/shared/src/utils/volume/packLogTraceVoxels';
 import {
   encodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../src/data/volume/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
+} from '../../packages/shared/src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../packages/shared/src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /** Native MCPM cube dims per export_metadata.txt (X, Y, Z). */

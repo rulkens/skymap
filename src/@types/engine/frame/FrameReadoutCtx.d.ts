@@ -1,5 +1,5 @@
 import type { Size } from '../../rendering/Size';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../scene/BodyState';
 import type { PositionedId } from '../../scene/PositionedId';
 import type { SelectionRowBase } from '../selection/SelectionRowBase';

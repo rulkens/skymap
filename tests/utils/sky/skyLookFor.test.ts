@@ -8,7 +8,7 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedId } from '../../../src/@types/scene/PositionedId';
 
 const EARTH = asSceneBodyId('earth');

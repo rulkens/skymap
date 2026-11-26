@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { eyeRelativeOrbitBasisKm } from '../../../src/utils/orbit/eyeRelativeOrbitBasisKm';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const KM = SCALE_UNITS.KM_TO_MPC;
 

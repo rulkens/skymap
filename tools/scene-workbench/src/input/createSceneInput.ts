@@ -9,8 +9,8 @@
  */
 import { createInputAggregator } from '../../../utils/input/createInputAggregator';
 import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
-import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { InputStep } from '../../../../packages/shared/src/@types/camera/input/InputStep';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
 import { cornerAppended } from '../state/outline/outlineSlice';
 import { selectDraftAsset } from '../state/outline/selectDraftAsset';

@@ -15,7 +15,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { UiState } from '../../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 

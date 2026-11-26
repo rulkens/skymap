@@ -14,7 +14,7 @@ import type { ViewRig } from '../../@types/engine/frame/ViewRig';
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ImagePlaneBasis } from '../../@types/camera/pose/ImagePlaneBasis';
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { DOME_LABEL_SCALE } from '../../data/labels/domeLabelScale';
 import { REFERENCE_PX_PER_RAD } from '../../data/labels/referencePxPerRad';
 import { DOME_PARAMS } from '../../data/rendering/domeParams';

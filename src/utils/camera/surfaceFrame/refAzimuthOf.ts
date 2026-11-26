@@ -9,7 +9,7 @@
  * whose views reach straight up, reads −screen-up there.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { dot3 } from '../../math/dot3';
 
 export function refAzimuthOf(

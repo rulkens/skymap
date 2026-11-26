@@ -20,7 +20,7 @@
 import type { UiState } from '../../@types/ui/UiState';
 import { hasDeepLink } from '../../utils/url/hasDeepLink';
 import { isCinemaSearch } from '../../utils/url/isCinemaSearch';
-import { searchHasGate } from '../../utils/url/searchHasGate';
+import { searchHasGate } from '../../../packages/shared/src/utils/url/searchHasGate';
 import { readPersisted } from '../../utils/storage/readPersisted';
 import { SPLASH_SEEN_VERSION } from '../persistedValues';
 import { CURRENT_SPLASH_VERSION, readUrlAtMount } from './splashStorage';

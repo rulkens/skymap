@@ -7,7 +7,7 @@
  * `octreeNodeOriginRelCamMpc`, the formula `resolveStarRecord` and the renderer use, so the
  * sphere lands where the sprite drew.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { OctreeResidency } from '../../../../@types/octree/OctreeResidency';
 import type { StarColumns } from '../../survey/@types/StarColumns';

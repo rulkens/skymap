@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SampledBody } from '../../../src/@types/scene/SampledBody';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SampledTrack } from '../../../src/@types/scene/SampledTrack';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';

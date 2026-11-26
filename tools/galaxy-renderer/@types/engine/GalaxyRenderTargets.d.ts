@@ -1,5 +1,5 @@
 import type { GalaxyFieldRenderTargets } from '../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { TargetDivisors } from './TargetDivisors';
 
 /**

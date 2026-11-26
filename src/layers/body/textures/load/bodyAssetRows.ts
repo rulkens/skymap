@@ -17,7 +17,7 @@ import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../@types/BodyTextureKey';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 
 /** Per-`kind` tier ceiling (a ring's is its host's); total because the keys are enumerated from present `kinds`, hence the `!`. */

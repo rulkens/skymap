@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import { packMeshBodyUniforms } from '../../../src/utils/gpu/packMeshBodyUniforms';
 import { MESH_BODY_UNIFORM_FLOATS } from '../../../src/data/mesh/meshBodyUniformLayout';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { MeshMaterialFactors } from '../../../src/@types/rendering/MeshMaterialFactors';
 import { NEUTRAL_MESH_MATERIAL_FACTORS } from '../../../src/data/mesh/neutralMeshMaterialFactors';

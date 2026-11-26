@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { boxBasisVectors } from '../../../../../../tools/mcpm-workbench/src/grid/box/boxBasisVectors';
-import { quatFromAxisAngle } from '../../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 const dot = (a: readonly number[], b: readonly number[]): number =>
   a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;

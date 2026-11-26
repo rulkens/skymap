@@ -11,7 +11,7 @@ import {
 } from '../../../../../tools/galaxy-renderer/src/data/randomGalaxyParams';
 import { GALAXY_LEGACY_PARAM_KEYS } from '../../../../../tools/galaxy-renderer/src/data/galaxyLegacyParamKeys';
 import { PARAM_SPEC } from '../../../../../tools/galaxy-renderer/src/data/paramSpec';
-import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../packages/shared/src/utils/random/mulberry32';
 
 /** Looks a flat field up on whichever bag `randomGalaxyParams` routed it to. */
 function fieldOf(params: ReturnType<typeof randomGalaxyParams>, key: string): number | undefined {

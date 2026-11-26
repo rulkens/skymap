@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { dot3 } from '../../../src/utils/math/dot3';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';

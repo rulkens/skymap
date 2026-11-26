@@ -1,4 +1,4 @@
-import { dataBaseUrl } from '../../../../src/utils/network/dataBaseUrl';
+import { dataBaseUrl } from '../../../shared/src/utils/network/dataBaseUrl';
 import pressKit from '../data/pressKit.json';
 
 /** Where the press kit's zip is served: the data host in production, the repo's `public/data/site/` in dev, as heroVideoUrl. */

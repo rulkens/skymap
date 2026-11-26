@@ -5,7 +5,7 @@
  * contract lives.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type GeodesicPath = {
   /** clamp(length / velocity · 1000, minMs, maxMs); minMs wins when they cross. */

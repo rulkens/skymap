@@ -9,7 +9,7 @@
  * `VolumeFieldSettings` by `layers/cosmicWebDensity/state/defaults.ts`.
  */
 
-import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;

@@ -1,4 +1,4 @@
-/* src/components/common/CompactInfoTip/CompactInfoTip.module.css */
+/* packages/shared/src/components/common/CompactInfoTip/CompactInfoTip.module.css */
 /*
  * Plain absolute-inside-relative label. Reveal is entirely self-contained —
  * `.root:hover .tip` / `.root:focus-within .tip` — so a consumer adds no

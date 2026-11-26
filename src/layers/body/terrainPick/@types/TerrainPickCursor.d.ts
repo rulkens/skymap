@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 export type TerrainPickCursor = {
   /** In the canvas's texture pixels. Null until a mouse hovers with the overlay on. */

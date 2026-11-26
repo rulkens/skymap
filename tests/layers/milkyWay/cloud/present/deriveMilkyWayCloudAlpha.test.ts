@@ -16,7 +16,7 @@ import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/reced
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // Not a catalog value: the emphasis key must follow the code the caller passes.
 const PICK_CODE = 37;

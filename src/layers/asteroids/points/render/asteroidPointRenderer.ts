@@ -15,7 +15,7 @@ import type { AsteroidKeplerRows } from '../../kepler/@types/AsteroidKeplerRows'
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import vsCode from '../../../../services/gpu/shaders/asteroids/points/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/asteroids/points/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';

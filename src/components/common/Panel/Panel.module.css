@@ -1,7 +1,7 @@
 /*
  * Panel.module.css — shared glassmorphic card chrome.
  *
- * Every visual atom referenced here lives in `src/styles/global.css` as a
+ * Every visual atom referenced here lives in `packages/shared/src/styles/global.css` as a
  * CSS custom property; this stylesheet only composes them.  The HUD's
  * left-stack overlays (Navigation, Settings, Stats) all wear this chrome,
  * so a tweak to the glass look (border opacity, blur strength, header

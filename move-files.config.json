@@ -19,6 +19,12 @@
       "suffixes": [".test.ts", ".test.tsx"]
     },
     {
+      "from": "packages/shared/src/",
+      "to": "packages/shared/tests/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
       "from": "packages/desktop/src/",
       "to": "packages/desktop/tests/",
       "sources": [".ts", ".tsx", ".cts"],

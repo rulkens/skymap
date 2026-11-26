@@ -17,11 +17,11 @@ import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
-import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
-import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import { f32ToF16Bits } from '../../packages/shared/src/utils/math/f32ToF16Bits';
+import { packLogTraceVoxels } from '../../packages/shared/src/utils/volume/packLogTraceVoxels';
+import { encodeScalarField } from '../../packages/shared/src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 // Rhizome-only, so it lives here rather than as a packLogTraceVoxels param —
 // buildMcpmVolume shares that function and has no clamp need. f16 bit

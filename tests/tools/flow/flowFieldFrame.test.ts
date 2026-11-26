@@ -14,7 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { attractorVoxel } from '../../../tools/flow/flowFieldFrame';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Production flow-cube geometry: 128³ over a 1000 Mpc supergalactic box,
 // observer-centred (lower corner of voxel (0,0,0) at -500 Mpc per axis).

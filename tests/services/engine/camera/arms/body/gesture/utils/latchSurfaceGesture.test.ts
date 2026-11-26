@@ -11,7 +11,7 @@ import type { BodyFixedPose } from '../../../../../../../../src/@types/camera/po
 import type { DragStep } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/@types/DragStep';
 import type { GroundRadiusLookup } from '../../../../../../../../src/@types/camera/terrain/GroundRadiusLookup';
 import type { Mat3 } from '../../../../../../../../src/@types/math/Mat3';
-import type { Vec2 } from '../../../../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
 import { asSceneBodyId } from '../../../../../../../../src/utils/scene/asSceneBodyId';
 import { symmetricFrustum } from '../../../../../../../../src/utils/camera/frustum/symmetricFrustum';
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { structureMembership } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMembership';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /** The flat record sources over these (source, catalog) pairs, in order. */

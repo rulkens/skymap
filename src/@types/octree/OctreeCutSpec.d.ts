@@ -3,7 +3,7 @@
  * compares it whole (eye and planes within a slack), so a field added later is compared without a list.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OctreeCutSourceInput } from './OctreeCutSourceInput';
 
 export type OctreeCutSpec = {

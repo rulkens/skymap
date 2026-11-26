@@ -15,7 +15,7 @@ import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { loadDataManifest } from '../../loading/dataManifest';
+import { loadDataManifest } from '../../../../packages/shared/src/services/loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

@@ -5,7 +5,7 @@
  * metres the two agree with a proper ellipsoidal tangent plane to ~1 cm).
  */
 
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import { degToRad } from '../../../src/utils/math/degToRad';
 
 export function enuOffsetM(

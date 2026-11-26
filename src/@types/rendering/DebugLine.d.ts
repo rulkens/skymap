@@ -7,8 +7,8 @@
  * premultiplied colour.
  */
 
-import type { Vec3 } from '../math/Vec3';
-import type { Vec4 } from '../math/Vec4';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 export type DebugLine = {
   readonly from: Vec3;

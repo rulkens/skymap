@@ -21,7 +21,7 @@ import { createGalaxyEngine } from '../../engine/createGalaxyEngine';
 import { DEFAULT_GALAXY_PARAMS } from '../../data/defaultGalaxyParams';
 import { DEFAULT_RENDER_SETTINGS } from '../../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../data/defaultLodSettings';
-import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../../../packages/shared/src/utils/url/hasUrlGate';
 import styles from './Viewport.module.css';
 
 /** `?probeReadback`-gated bridge so `probeGpuErrors.ts` (a page.evaluate, no React tree) can reach the live engine handle — see `createIsmMapReadbacks.ts`'s `requestRingMeans`. */
@@ -63,7 +63,13 @@ function Viewport({
     let disposed = false;
     let handle: GalaxyEngineHandle | null = null;
 
-    createGalaxyEngine(canvas, { autoRotate: true, onPerf, onStats, onFade, onOrientationDiagnostics })
+    createGalaxyEngine(canvas, {
+      autoRotate: true,
+      onPerf,
+      onStats,
+      onFade,
+      onOrientationDiagnostics,
+    })
       .then(async (engine) => {
         if (disposed) {
           engine.dispose();

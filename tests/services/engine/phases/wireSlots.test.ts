@@ -65,7 +65,7 @@ vi.mock(
 
 // wireSlots awaits loadDataManifest() before reevaluateDemand. Default resolves immediately; the
 // deferred-manifest test overrides it once with mockReturnValueOnce.
-vi.mock('../../../../src/services/loading/dataManifest', () => ({
+vi.mock('../../../../packages/shared/src/services/loading/dataManifest', () => ({
   loadDataManifest: vi.fn(async () => {}),
 }));
 
@@ -96,7 +96,7 @@ import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDens
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
+import { loadDataManifest } from '../../../../packages/shared/src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';

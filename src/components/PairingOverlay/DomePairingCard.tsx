@@ -8,7 +8,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DOME_PARAMS } from '../../data/rendering/domeParams';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { degToRad } from '../../utils/math/degToRad';
 import { warpCardToFisheye } from '../../utils/dome/warpCardToFisheye';
 import { paintPairingCard } from '../../utils/remote/paintPairingCard';

@@ -9,7 +9,7 @@
  * (`countEstimatedProvenance`) iterate the registry.
  */
 
-import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 export const PROVENANCE_AXES = [
   {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { bodyVelocityKmS } from '../../../src/utils/orbit/bodyVelocityKmS';
 

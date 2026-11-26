@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export type ArmRidgeFrame = { readonly point: Vec3 } & {
   readonly along: Vec3;

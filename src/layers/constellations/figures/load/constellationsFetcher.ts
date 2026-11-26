@@ -21,7 +21,7 @@
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { ConstellationsArtifact } from '../@types/ConstellationsArtifact';
 import { makeJsonFetcher } from '../../../../services/loading/fetchers/jsonFetcher';
-import { dataUrl } from '../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const CONSTELLATIONS_FILE = 'constellations.json';
 

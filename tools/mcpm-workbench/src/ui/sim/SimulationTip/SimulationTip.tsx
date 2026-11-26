@@ -5,7 +5,7 @@
  * re-renders one cell, and this table only on a grid or agent-count edit.
  */
 import type { ReactNode } from 'react';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { formatAgentCount } from '../../../utils/format/formatAgentCount';
 import FrameRateValueContainer from '../../containers/sim/FrameRateValueContainer';
 import StepCountValueContainer from '../../containers/sim/StepCountValueContainer';

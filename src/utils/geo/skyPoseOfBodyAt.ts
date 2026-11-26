@@ -7,12 +7,12 @@
 
 import type { SkyPose } from '../../@types/camera/pose/SkyPose';
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { orientationForBody } from '../../data/bodies/orientationForBody';
 import { siteEyeFrame } from '../../services/engine/camera/arms/utils/siteEyeFrame';
 import { bodyPositionMpcAt } from '../exhibits/mission/bodyPositionMpcAt';
 import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { rotateByTranspose } from '../math/rotateByTranspose';
 import { skySpotRadial } from './skySpotRadial';
 

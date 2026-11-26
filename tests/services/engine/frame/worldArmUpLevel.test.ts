@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -24,13 +24,13 @@ import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 

@@ -11,7 +11,7 @@
  * up-vector, not the screen axes derived from it.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** The roll-adjusted up vector plus the screen right/up axes it induces. */
 export type ImagePlaneBasis = {

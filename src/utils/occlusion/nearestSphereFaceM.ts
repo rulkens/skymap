@@ -4,7 +4,7 @@
  * `Math.min` against it is the identity. Negative when the eye is inside one.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { HostFrameSphere } from '../../@types/scene/HostFrameSphere';
 import { distance3 } from '../math/distance3';
 

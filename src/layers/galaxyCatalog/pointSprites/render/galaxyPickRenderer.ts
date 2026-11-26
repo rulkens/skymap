@@ -41,7 +41,7 @@ import {
   GALAXY_POINT_VERTEX_ATTRIBUTES,
   UNIFORM_BYTES,
 } from './galaxyPointVertexLayout';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ import {
 } from '../../../../../src/layers/body/atmosphere/render/packScatteringParams';
 import type { AtmosphereParams } from '../../../../../src/layers/body/atmosphere/@types/AtmosphereParams';
 import type { AtmosphereConstituent } from '../../../../../src/layers/body/atmosphere/@types/AtmosphereConstituent';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // Exponential profile + Henyey-Greenstein phase — tags (0, 1).
 const AEROSOL = {

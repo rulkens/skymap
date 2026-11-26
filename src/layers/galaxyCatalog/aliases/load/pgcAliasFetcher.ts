@@ -24,7 +24,10 @@
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { PgcAliasJsonShape } from '../@types/PgcAliasJsonShape';
 import type { PgcAliasMap } from '../@types/PgcAliasMap';
-import { dataUrl, HttpError } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  HttpError,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /**
  * Parse the `pgc_aliases.json` content into a runtime-shaped Map.

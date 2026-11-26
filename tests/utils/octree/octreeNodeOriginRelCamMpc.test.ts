@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { octreeNodeOriginRelCamMpc } from '../../../src/utils/octree/octreeNodeOriginRelCamMpc';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OctreeGrid } from '../../../src/@types/octree/OctreeGrid';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC; // 1e-6

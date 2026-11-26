@@ -8,8 +8,8 @@
  * from the same `GridBox`), and the sim's bind group is COMPUTE-visibility, which a
  * render pipeline cannot accept. Layouts are explicit, never 'auto'.
  */
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import type { ScalarFieldPaletteId } from '../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import type { GridElement } from '../../../@types/grid/GridElement';
 import { worldToVoxel } from '../../grid/box/worldToVoxel';

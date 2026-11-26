@@ -15,7 +15,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
@@ -40,7 +40,7 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/pose/Framed
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

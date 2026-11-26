@@ -12,7 +12,7 @@ import {
   type CctRunner,
 } from '../../../../tools/scene-recon/poses/topocentricPositionsM';
 import type { GroupAnchor } from '../../../../tools/scene-workbench/@types/GroupAnchor';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const ANCHOR: GroupAnchor = {
   kind: 'geodetic',

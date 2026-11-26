@@ -68,7 +68,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { NEAR0 } from '../slabs';
 import { selectionHaloOf } from '../../helpers/selectionHaloOf';
 import { liveBodyPosition } from '../../camera/bodyFrame/liveBodyPosition';

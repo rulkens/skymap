@@ -12,7 +12,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyPointPick } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPick';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { packPickWord } from '../../../../data/selectionEncoding';

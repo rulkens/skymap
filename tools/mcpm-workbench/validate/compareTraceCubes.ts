@@ -20,8 +20,8 @@ import { axisMarginals } from './axisMarginals';
 import { totalVariation } from './totalVariation';
 import { parseExportMetadata } from './parseExportMetadata';
 import { readPackedCatalog } from './readPackedCatalog';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { PackedTraceInputLayout } from '../../../src/utils/volume/packLogTraceVoxels';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { PackedTraceInputLayout } from '../../../packages/shared/src/utils/volume/packLogTraceVoxels';
 import type { TraceStats } from '../@types/validate/TraceStats';
 
 const LOG_HISTOGRAM_BIN_COUNT = 64;

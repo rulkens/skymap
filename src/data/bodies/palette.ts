@@ -3,7 +3,7 @@
  * inline (planet albedos in the body Layer's `bodies/` rows); star tints come from `temperatureToLinearRgb`.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Trail tints, one per body. Max channel stays ≲ 0.5 or the additive HDR draw blows out.
 export const MERCURY_GREY: Vec3 = [0.42, 0.4, 0.36];

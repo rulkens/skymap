@@ -11,7 +11,7 @@ import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 export function bodySurfaceTier(
   textureSlots: BodyRuntime['textureSlots'],

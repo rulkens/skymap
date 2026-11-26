@@ -4,7 +4,7 @@
  * orientation angles for Y-axis rotation and X-axis tilt.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { GalaxyParams } from './GalaxyParams';
 
 export type ExtraGalaxySpec = {

@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeIsmMapTexels } from '../../../../../../src/layers/milkyWay/field/host/utils/decodeIsmMapTexels';
 import { floatToF16 } from '../../../../../../src/utils/math/floatToF16';
-import { f16ToFloat } from '../../../../../../src/utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../../../../packages/shared/src/utils/math/f16ToFloat';
 
 describe('decodeIsmMapTexels', () => {
   it('reads all four lanes of each texel at the padded row stride, skipping padding', () => {

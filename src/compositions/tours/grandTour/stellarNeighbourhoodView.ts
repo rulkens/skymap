@@ -4,10 +4,10 @@
  * a skip or Prev starts its pull-out from the same view.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { degToRad } from '../../../utils/math/degToRad';
-import { lerpVec3 } from '../../../utils/math/lerpVec3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
 import { ECLIPTIC_FRAME } from '../../../data/bodies/orbitPlaneFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { TOUR_NIGHT_SIM_DAYS } from './tourNightSimDays';

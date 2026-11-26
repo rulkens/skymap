@@ -7,12 +7,12 @@
  * asset rows' `gates`, never from a Layer's `create`.
  */
 
-import type { GpuContext } from '../../rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
-import type { Tier } from '../../data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { MeshBodiesSink } from './MeshBodiesSink';
 

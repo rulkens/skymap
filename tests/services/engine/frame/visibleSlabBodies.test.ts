@@ -16,7 +16,7 @@ import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodyLayerSlabRow } from '../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 

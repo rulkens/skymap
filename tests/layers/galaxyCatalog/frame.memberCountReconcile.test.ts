@@ -11,7 +11,7 @@ import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';

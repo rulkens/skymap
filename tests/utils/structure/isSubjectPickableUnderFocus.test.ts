@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { isSubjectPickableUnderFocus } from '../../../src/utils/structure/isSubjectPickableUnderFocus';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../src/data/selection/recedeAllFocusSphere';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // A sphere holding nothing, fully faded in: only the exemption can make a subject pickable.
 const FOCUS = { ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 };

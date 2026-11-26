@@ -8,7 +8,7 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import {
   APP_CUBEMAP_CAPTURE_REGISTRY,
   APP_SKY_CAPTURE_KEYS,

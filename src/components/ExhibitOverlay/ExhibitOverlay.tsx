@@ -10,10 +10,10 @@ import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import cx from 'classnames';
 
 import ActionPill from '../common/ActionPill/ActionPill';
-import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import GestureHint from '../GestureHint/GestureHint';
 import StopIcon from '../icons/StopIcon/StopIcon';
-import EyeIcon from '../icons/EyeIcon/EyeIcon';
+import EyeIcon from '../../../packages/shared/src/components/icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';

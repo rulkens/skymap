@@ -22,7 +22,7 @@
  *     it (via `aimAlong`, resolved live) instead of the app booting there.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { DEFAULT_FOV_DEG } from '../../../../data/defaults';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */

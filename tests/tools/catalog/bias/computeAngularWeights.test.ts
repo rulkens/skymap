@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../tools/catalog/bias/computeAngularWeights';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function emptyCloud(count: number): GalaxyCatalog {
   return makeGalaxyCatalog(count, {

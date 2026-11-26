@@ -6,7 +6,7 @@
  * division, so a node coincident with the camera yields `[0, 0, 0]`, no
  * divide-by-zero guard.
  */
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OctreeGrid } from '../../@types/octree/OctreeGrid';
 import { mortonDecode3 } from '../math/mortonDecode3';
 import type { OctreeFamily } from '../../@types/octree/OctreeFamily';

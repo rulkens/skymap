@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { cameraBasisWorld } from '../../../../src/utils/camera/orbitPose/cameraBasisWorld';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 // Off every axis, so a wrong column can't coincide with a right one.

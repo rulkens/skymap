@@ -31,7 +31,7 @@ import { ARRIVAL_APPROACH_SEC } from '../../../data/sky/arrivalApproachSec';
 import { ARRIVAL_GROUND_MATCH_M } from '../../../data/sky/arrivalGroundMatchM';
 import { ARRIVAL_GROUND_WAIT_MS } from '../../../data/sky/arrivalGroundWaitMs';
 import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function* arriveSaga(spot: SkySpot, pointLocalM: Vec3 | null) {
   const frame = yield* select(selectOrientation);

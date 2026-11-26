@@ -6,7 +6,7 @@
 import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import type { TexturedMeshGeometry } from '../pack/packMeshGlb';
 
 export function repackedGeometry(

@@ -6,10 +6,10 @@
  * (E = 0 there); the ellipse still passes through it and differs from the true orbit by ~a·e.
  */
 import type { StateVectorEllipse } from '../../@types/orbit/StateVectorEllipse';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { cross3 } from '../math/cross3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 
 const NEAR_CIRCULAR_E = 1e-7;
 const TAU = 2 * Math.PI;

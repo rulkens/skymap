@@ -12,7 +12,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import vsCode from '../../shaders/domeResample/vertex.wesl?static';
 import fsCode from '../../shaders/domeResample/fragment.wesl?static';
 import fsOcclusionCode from '../../shaders/domeResample/fragmentOcclusion.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 export function createDomeResampleRenderer(init: {
   readonly device: GPUDevice;

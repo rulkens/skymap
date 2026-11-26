@@ -18,7 +18,7 @@ import { rotationTidallyLocked } from '../../utils/orbit/rotationTidallyLocked';
 import { rotationSurfaceLocked } from '../../utils/orbit/rotationSurfaceLocked';
 import { IDENTITY_MAT3 } from '../../utils/math/identityMat3';
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { DAYS_PER_JULIAN_CENTURY } from '../time/daysPerJulianCentury';
 
 function positionOrThrow(

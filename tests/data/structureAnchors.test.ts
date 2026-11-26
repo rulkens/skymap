@@ -3,7 +3,7 @@
  *
  * The seed data lives in `data/seeds/structure_anchors.seed.json`, parsed by
  * `tools/parsers/parseStructureSeed.ts`; the coordinate helper lives at
- * `src/utils/math/raDecDistToEqCart.ts`.
+ * `packages/shared/src/utils/math/raDecDistToEqCart.ts`.
  *
  * The id invariants that matter for deep-link stability are covered in
  * `buildStaticAnchorStructures.test.ts`.  Tests here focus on the coordinate
@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
 import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';

@@ -20,7 +20,7 @@ import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
 import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { ContactShadowResources } from '../../../../@types/rendering/ContactShadowResources';
 import { CONTACT_SHADOW_UNIFORM_BYTES } from '../../../../data/mesh/contactShadowUniformLayout';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';

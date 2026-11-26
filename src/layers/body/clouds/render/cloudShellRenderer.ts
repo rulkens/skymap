@@ -16,7 +16,7 @@ import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { CLOUD_SHELL_UNIFORM_FLOATS } from './packCloudShellUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { bodyTextureFormat } from '../../../../utils/bodyTextures/bodyTextureFormat';
 import vsCode from '../../../../services/gpu/shaders/bodies/cloudShell/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/cloudShell/fragment.wesl?static';

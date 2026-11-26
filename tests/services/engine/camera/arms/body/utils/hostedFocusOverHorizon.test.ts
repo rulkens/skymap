@@ -18,7 +18,7 @@ import { outerBoundRadiusM } from '../../../../../../../src/utils/occlusion/oute
 import { deriveBodyStates } from '../../../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../../../src/data/time/constJ2000';
 import type { HostBody } from '../../../../../../../src/services/engine/camera/arms/@types/HostBody';
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';
 
 const MARS_ROW = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!;

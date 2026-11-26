@@ -7,7 +7,7 @@
  * writing it is single-apply, not compounding.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeScalarField } from '../../../../../src/data/volume/scalarFieldFormat';
+import { decodeScalarField } from '../../../../../packages/shared/src/data/volume/scalarFieldFormat';
 import { exportScfd } from '../../../../../tools/mcpm-workbench/src/export/exportScfd';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
 

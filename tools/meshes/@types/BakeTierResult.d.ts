@@ -1,6 +1,6 @@
 import type { ContactDecal } from '../../../src/@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../../src/@types/data/mesh/MeshTextureField';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Geometry } from './Geometry';
 
 /** `bakeTier`'s return: one tier's merged geometry plus whichever texture

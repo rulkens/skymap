@@ -38,7 +38,7 @@ import { aladinLiteUrl } from '../../../../utils/math/aladinLiteUrl';
 import { galaxyThumbnailFovArcmin } from '../../../../utils/math/galaxyThumbnailFovArcmin';
 import { nedByNameUrl } from '../../../../utils/math/nedByNameUrl';
 import { nedNearPositionUrl } from '../../../../utils/math/nedNearPositionUrl';
-import { PC_TO_LY } from '../../../../utils/math/constants';
+import { PC_TO_LY } from '../../../../../packages/shared/src/utils/math/constants';
 import { galaxyType } from '../utils/galaxyType';
 import type { GalaxyInfo } from '../@types/GalaxyInfo';
 import type { GalaxyRow } from '../@types/GalaxyRow';

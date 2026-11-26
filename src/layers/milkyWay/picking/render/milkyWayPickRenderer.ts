@@ -8,12 +8,12 @@
  * `shaders/milkyWay/pick/io.wesl` — the renderer test pins both images.
  */
 
-import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MilkyWayPickRenderer } from '../@types/MilkyWayPickRenderer';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { createDummyFadeBindGroup } from '../../../../services/gpu/lib/dummyFade';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../data/milkyWayPickMinSizePx';
@@ -24,7 +24,7 @@ import {
 } from '../../../../services/gpu/lib/cameraUniforms';
 import vsCode from '../../../../services/gpu/shaders/milkyWay/pick/vertex.wesl?static';
 import pickFsCode from '../../../../services/gpu/shaders/milkyWay/pick/pick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 
 /**

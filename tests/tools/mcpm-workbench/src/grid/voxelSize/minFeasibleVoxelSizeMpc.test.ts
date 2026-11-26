@@ -5,7 +5,7 @@
  * that "fits" here is a floor that actually builds.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { bufferBytesForDims } from '../../../../../../tools/mcpm-workbench/src/sim/memory/bufferBytesForDims';
 import { minFeasibleVoxelSizeMpc } from '../../../../../../tools/mcpm-workbench/src/grid/voxelSize/minFeasibleVoxelSizeMpc';
 import { ceil8 } from '../../../../../../tools/mcpm-workbench/src/utils/math/ceil8';

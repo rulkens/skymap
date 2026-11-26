@@ -13,7 +13,7 @@
  * only pins the flag's spelling.
  */
 
-import { searchHasGate } from './searchHasGate';
+import { searchHasGate } from '../../../packages/shared/src/utils/url/searchHasGate';
 
 export function isPerfSearch(search: string): boolean {
   return searchHasGate(search, 'perf');

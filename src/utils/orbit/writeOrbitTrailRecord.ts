@@ -11,8 +11,8 @@
  * HARD INVARIANT: `slabVp` is `view.slab.vp`, NOT `view.vp` (see `composeOrbitConic`).
  */
 
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitConic } from '../../@types/scene/OrbitConic';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { CULL_PX, FULL_PX } from '../../data/bodies/orbitTrailConstants';

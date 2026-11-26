@@ -3,7 +3,7 @@ import type { FramedCameraPose } from '../pose/FramedCameraPose';
 import type { OrientDeltas } from '../orientation/OrientDeltas';
 import type { PoseFrame } from '../pose/PoseFrame';
 import type { SitePose } from '../pose/SitePose';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** The DebugPanel's "Camera" section readout (spec 2026-09-01-camera-pivot §4/§6). */
 export type CameraDebugSnapshot = {

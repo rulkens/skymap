@@ -3,7 +3,7 @@
  * selection and the tuned photometry for the cull. `sunFromCamAu` is composed in f64 by the caller.
  */
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export type AsteroidKeplerFrame = {
   /** JD (TT). */

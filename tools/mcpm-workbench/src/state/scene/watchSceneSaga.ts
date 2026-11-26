@@ -19,8 +19,8 @@ import {
   cancelled,
 } from 'typed-redux-saga';
 
-import { initGpu } from '../../../../../src/services/gpu/device';
-import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
+import { initGpu } from '../../../../../packages/shared/src/services/gpu/device';
+import { hasUrlGate } from '../../../../../packages/shared/src/utils/url/hasUrlGate';
 import { deriveAgentWeights } from '../../catalog/weights/deriveAgentWeights';
 import { deriveGridBox } from '../../grid/deriveGridBox';
 import { disposeScene } from '../../render/disposeScene';

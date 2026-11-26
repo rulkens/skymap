@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."   # repo root
 OUT=.design-sync/dist/styles-combined.css
 {
   echo '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap");'
-  cat src/styles/global.css .design-sync/dist/skymap.css
+  cat packages/shared/src/styles/global.css .design-sync/dist/skymap.css
   cat <<'CSS'
 
 /* ── design-sync preview-only overrides ────────────────────────────────────

@@ -19,8 +19,8 @@ import { SOENDERMARKEN } from '../../../../tools/scene-recon/groups/soendermarke
 import { SOENDERMARKEN_CROP } from '../../../../tools/scene-recon/groups/soendermarkenCrop';
 import type { SkraafotoStacItem } from '../../../../tools/scene-recon/@types/SkraafotoStacItem';
 import { lonLatBoundsToEnuM } from '../../../../tools/utils/scene/lonLatBoundsToEnuM';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 
 const fixture = (name: string) =>
   JSON.parse(

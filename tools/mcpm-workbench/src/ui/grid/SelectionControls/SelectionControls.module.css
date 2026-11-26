@@ -1,7 +1,7 @@
 /* "auto fit" — a one-shot command, styled like the Simulation section's
    reset/clear-trace pair: the same class of control, not a slider or toggle. */
 .autoFitButton {
-  composes: blockButton from '../../../../../../src/components/common/shared.module.css';
+  composes: blockButton from '../../../../../../packages/shared/src/components/common/shared.module.css';
   font-size: var(--font-size-sm);
 }
 

@@ -5,7 +5,7 @@
  * geodesic): docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { GeodesicPath } from '../../../@types/camera/focusMotion/GeodesicPath';
 import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 import { zoomPanGeodesic } from './zoomPanGeodesic';

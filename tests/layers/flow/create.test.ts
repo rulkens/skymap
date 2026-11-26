@@ -16,7 +16,7 @@ vi.mock('../../../src/layers/flow/streamlines/load/flowFieldFetcher', () => ({
 import { create } from '../../../src/layers/flow/create';
 import { flowLayer } from '../../../src/layers/flow/layer';
 import type { LayerCoreDeps } from '../../../src/@types/engine/layer/LayerCoreDeps';
-import type { ScalarCube } from '../../../src/@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../packages/shared/src/@types/data/volume/ScalarCube';
 
 /** Minimal GPUDevice mock — construction-only, mirrors flowFieldRenderer.test.ts. */
 function mockDevice(): GPUDevice {

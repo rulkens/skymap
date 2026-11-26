@@ -274,7 +274,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       }
       if (arg === '--dpr') {
         // Only 1 or 2: the app clamps devicePixelRatio to 2 when sizing the
-        // canvas backing store (src/services/gpu/device.ts), so a higher dpr
+        // canvas backing store (packages/shared/src/services/gpu/device.ts), so a higher dpr
         // would shrink the viewport without adding a single rendered pixel.
         if (value !== '1' && value !== '2') {
           throw new Error(`--dpr must be 1 or 2, got '${value}'`);
@@ -460,7 +460,7 @@ async function captureTake(
   // --dpr 2 LOSES HALF THE RESOLUTION — do not restore it as the default. The
   // first `captureScreenshot` carrying `clip.scale = 2` drops the page's
   // devicePixelRatio from 2 to 1, permanently; resizeCanvasToDisplay
-  // (src/services/gpu/device.ts) follows it down, so the canvas backing store
+  // (packages/shared/src/services/gpu/device.ts) follows it down, so the canvas backing store
   // collapses 3840x2160 → 1920x1080 and every frame after the first is a
   // 1080p render upscaled into a 4K file. Measured directly: read
   // canvas.width/height before and after one such capture. The visible damage

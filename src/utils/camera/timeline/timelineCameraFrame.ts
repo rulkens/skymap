@@ -10,14 +10,14 @@
 import type { TimelineCourse } from '../../../@types/camera/timeline/TimelineCourse';
 import type { TimelineCameraFrame } from '../../../@types/camera/timeline/TimelineCameraFrame';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { flybyOutsideBend } from './flybyOutsideBend';
 import { timelineFrame } from './timelineFrame';
-import { cross3 } from '../../math/cross3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../../math/dot3';
-import { normalize3 } from '../../math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { orbitAnglesLookingAlong } from '../orbitPose/orbitAnglesLookingAlong';
 import { sphereFitDistance } from '../orbitCamera/sphereFitDistance';

@@ -6,7 +6,7 @@
  * basis) the timeline camera looks along away from planets.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { TimelineEvent } from './TimelineEvent';
 
 export type ExhibitTimelineData = {

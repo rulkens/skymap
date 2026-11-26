@@ -8,7 +8,7 @@
  * then G's, then B's — so a channel's stride is `(deg+1)²−1`, not 3. Only
  * the first three of each channel survive; higher orders are dropped.
  */
-import type { Vec4 } from '../../../src/@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { GaussianSplatRecord } from '../pack/packSplats';
 
 export type GaussianPly = {

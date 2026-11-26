@@ -35,7 +35,7 @@ import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';

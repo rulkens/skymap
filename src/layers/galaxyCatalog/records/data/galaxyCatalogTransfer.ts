@@ -9,7 +9,7 @@
  * IS — the worker reconstructs the view via structured-clone.
  */
 
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogColumn } from '../@types/GalaxyCatalogColumn';
 import type { GalaxyCatalogFieldSpec } from '../@types/GalaxyCatalogFieldSpec';
 import type { ClonedGalaxyCatalog } from '../@types/ClonedGalaxyCatalog';

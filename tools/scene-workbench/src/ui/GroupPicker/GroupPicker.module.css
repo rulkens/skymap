@@ -5,11 +5,11 @@
 }
 
 .label {
-  composes: sectionHeader from '../../../../../src/components/common/shared.module.css';
+  composes: sectionHeader from '../../../../../packages/shared/src/components/common/shared.module.css';
 }
 
 .select {
-  composes: control from '../../../../../src/components/common/shared.module.css';
+  composes: control from '../../../../../packages/shared/src/components/common/shared.module.css';
   padding: 6px 8px;
   font-size: var(--font-size-md);
 }

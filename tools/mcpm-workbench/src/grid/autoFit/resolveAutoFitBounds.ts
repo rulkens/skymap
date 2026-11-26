@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { CatalogPoints } from '../../../@types/catalog/CatalogPoints';
 import { denseFractionBounds } from './denseFractionBounds';
 

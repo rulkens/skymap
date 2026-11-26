@@ -10,7 +10,7 @@ import {
 } from '../../../../../src/data/starCatalog/starCatalogFormat';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { OctreeResidency } from '../../../../../src/@types/octree/OctreeResidency';
 import { hoistedStarOctree } from '../../../../fixtures/hoistedStarOctree';
 import { multiRootStarOctree } from '../../../../fixtures/multiRootStarOctree';

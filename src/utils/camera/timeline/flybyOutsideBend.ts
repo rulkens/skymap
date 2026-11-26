@@ -4,8 +4,8 @@
  */
 
 import type { TimelineEvent } from '../../../@types/exhibits/timeline/TimelineEvent';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { normalize3 } from '../../math/normalize3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { unixMsToJulianDays } from '../../time/unixMsToJulianDays';
 import { timelineEventMs } from '../../exhibits/timeline/timelineEventMs';
 import { bodyRelativeState } from './bodyRelativeState';

@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import Button from '../common/Button/Button';
+import Button from '../../../packages/shared/src/components/common/Button/Button';
 import { useSheetDrag } from '../../hooks/useSheetDrag';
 import styles from './MobileSheet.module.css';
 

@@ -6,7 +6,7 @@
  */
 
 import { useState, type ReactElement } from 'react';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { AsteroidClassLook } from '../../@types/AsteroidClassLook';
 import type { AsteroidClassSliderKey } from '../../@types/AsteroidClassSliderKey';

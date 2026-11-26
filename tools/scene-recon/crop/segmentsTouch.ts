@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /** Inclusive: a shared point or collinear overlap counts, not only a proper crossing. */
 export function segmentsTouch(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean {

@@ -3,11 +3,11 @@
  * stratify, chunk and catalog-writer tests. `randomOctreeRecords` scatters seeded records
  * through a box so a fixture has real depth without hand-placing every star.
  */
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { OctreeGrid } from '../../src/@types/octree/OctreeGrid';
 import type { OctreeBuildInput } from '../../tools/@types/octree/OctreeBuildInput';
 import { STAR_COLUMN_SCHEMA } from '../../src/data/octree/starOctreeFamily';
-import { mulberry32 } from '../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../packages/shared/src/utils/random/mulberry32';
 
 export const TEST_STRATIFY = { thr: 0.16, mLim: 10, refUnit: 10 } as const;
 

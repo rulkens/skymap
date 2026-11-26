@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StarCatalogSettings } from '../../@types/StarCatalogSettings';
 import type { StarCatalogId } from '../../@types/StarCatalogId';

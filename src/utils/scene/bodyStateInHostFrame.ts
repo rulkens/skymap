@@ -8,7 +8,7 @@
  * before cancellation happens; same order as `bodyRelativePose.ts:5-9`.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { SCALE_UNITS } from '../../data/scaleUnits';

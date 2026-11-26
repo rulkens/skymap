@@ -10,7 +10,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../../markers/data/blackHoles';
 import { BLACK_HOLE_SKY_CAPTURES } from '../data/blackHoleSkyCaptures';

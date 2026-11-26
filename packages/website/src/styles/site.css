@@ -8,7 +8,7 @@
  * never below 20px, so small controls keep the ring and take a Jost label.
  * Every class lives in a component's module or a vocabulary module beside this file (*.module.css).
  */
-@import '../../../../src/styles/tokens.css';
+@import '../../../shared/src/styles/tokens.css';
 
 /* The site's own subset of the display face (tools/site/subsetDisplayFont.ts);
  * a separate family name, so the app's whole-font file is never fetched here. */

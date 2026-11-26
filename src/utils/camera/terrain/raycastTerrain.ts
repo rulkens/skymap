@@ -7,7 +7,7 @@
 import type { BodyLocalRay } from '../../../@types/camera/terrain/BodyLocalRay';
 import type { GroundRadiusLookup } from '../../../@types/camera/terrain/GroundRadiusLookup';
 import type { SurfacePick } from '../../../@types/camera/terrain/SurfacePick';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../data/camera/bodyLocalFrame';
 import { RAYCAST_BISECTION_ITERATION_CAP } from '../../../data/camera/raycastBisectionIterationCap';
 import { RAYCAST_CLOSING_RATE_FLOOR } from '../../../data/camera/raycastClosingRateFloor';

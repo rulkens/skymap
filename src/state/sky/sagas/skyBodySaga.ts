@@ -18,7 +18,7 @@ import { returnClip } from '../../../utils/sky/clips/returnClip';
 import { skyArmCtxSaga } from './skyArmCtxSaga';
 import type { SkyRestore } from '../../../@types/takeover/SkyRestore';
 import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function* skyBodySaga(
   spot: SkySpot,

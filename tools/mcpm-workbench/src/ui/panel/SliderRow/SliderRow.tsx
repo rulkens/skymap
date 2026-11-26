@@ -4,8 +4,8 @@
  * pill, so the app keeps its look; the tip carries the same prose and path.
  */
 import type { ReactNode } from 'react';
-import type { ParamSliderProps } from '../../../../../../src/components/common/ParamSlider/ParamSlider';
-import Slider from '../../../../../../src/components/common/Slider/Slider';
+import type { ParamSliderProps } from '../../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider';
+import Slider from '../../../../../../packages/shared/src/components/common/Slider/Slider';
 import PanelRow from '../PanelRow/PanelRow';
 import styles from './SliderRow.module.css';
 

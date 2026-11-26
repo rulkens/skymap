@@ -1,9 +1,9 @@
-import { cross3 } from '../../../../../utils/math/cross3';
-import { normalize3 } from '../../../../../utils/math/normalize3';
+import { cross3 } from '../../../../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { warpSurfaceFrame } from '../../mixture/utils/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { ArmRidgeFrame } from '../@types/ArmRidgeFrame';
 import { armRidgeAngle } from './armRidgeAngle';
 import { armRidgeCurvePoint } from './armRidgeCurvePoint';

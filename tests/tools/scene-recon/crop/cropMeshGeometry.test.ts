@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { cropMeshGeometry } from '../../../../tools/scene-recon/crop/cropMeshGeometry';
 import { triangulateOutline } from '../../../../tools/scene-recon/crop/triangulateOutline';
 import type { TexturedMeshGeometry } from '../../../../tools/scene-recon/pack/packMeshGlb';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const UNIT_SQUARE: Vec2[] = [
   [0, 0],

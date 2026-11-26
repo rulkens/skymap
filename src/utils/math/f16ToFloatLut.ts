@@ -8,7 +8,7 @@
  * formula as the scalar path — a misbehaving upstream still surfaces as a
  * real NaN/Inf here, not a garbled finite number.
  */
-import { f16ToFloat } from './f16ToFloat';
+import { f16ToFloat } from '../../../packages/shared/src/utils/math/f16ToFloat';
 
 let table: Float32Array | undefined;
 

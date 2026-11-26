@@ -6,12 +6,12 @@
  * value wrapped into [−π, π]; unwrapping across samples is the caller's job.
  */
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { cross3 } from '../../../src/utils/math/cross3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../../../src/utils/math/dot3';
 import { keplerianEllipse } from '../../../src/utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const MAX_ITERATIONS = 30;
 const CONVERGED_RAD = 1e-13;

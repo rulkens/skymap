@@ -22,7 +22,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import DebugTuningSection from '../../../src/components/DebugPanel/DebugTuningSection';
-import type { SliderField } from '../../../src/@types/data/SliderField';
+import type { SliderField } from '../../../packages/shared/src/@types/data/SliderField';
 
 type FixtureKey = 'a' | 'b';
 

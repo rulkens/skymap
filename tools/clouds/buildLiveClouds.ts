@@ -11,7 +11,7 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { liveFilePath } from '../../src/utils/live/liveFilePath';
 import { liveFolderStamp } from '../../src/utils/live/liveFolderStamp';

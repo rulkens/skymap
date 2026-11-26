@@ -52,7 +52,7 @@ import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCam
 import type { HeldIntent } from '../../../src/@types/input/HeldIntent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';

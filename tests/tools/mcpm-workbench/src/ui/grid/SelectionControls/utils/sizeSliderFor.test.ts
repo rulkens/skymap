@@ -3,8 +3,8 @@
  * never the stored request, so their value is always dims × voxelSizeMpc.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../../../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../../../../packages/shared/src/@types/math/Vec4';
 import type { GridSlice } from '../../../../../../../../tools/mcpm-workbench/@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import { defaultGridSlice } from '../../../../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';

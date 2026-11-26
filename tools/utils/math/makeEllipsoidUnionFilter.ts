@@ -47,10 +47,10 @@
  * clear of the 0°/360° seam, same stance as `makeDecBandFilter`.
  */
 
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { raDecZToCartesian } from '../../../src/utils/math/raDecZToCartesian';
 import { smoothstep } from '../../../src/utils/math/smoothstep';
-import { mulberry32 } from '../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../packages/shared/src/utils/random/mulberry32';
 
 /** One ellipsoid of the union: a centre and per-axis radii, both in Mpc. */
 type Ellipsoid = { center: Vec3; radii: Vec3 };
@@ -104,12 +104,7 @@ export function makeEllipsoidUnionFilter(
     );
     for (let i = 1; i < ellipsoids.length; i++) {
       const e = ellipsoids[i]!;
-      const sd = ellipsoidSdf(
-        px - e.center[0],
-        py - e.center[1],
-        pz - e.center[2],
-        e.radii,
-      );
+      const sd = ellipsoidSdf(px - e.center[0], py - e.center[1], pz - e.center[2], e.radii);
       f = smin(f, sd, blendMpc);
     }
 

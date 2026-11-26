@@ -13,7 +13,7 @@
 
 import type { FadeAnchor } from '../../../@types/engine/FadeAnchor';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/data/milkyWay/milkyWayModelScale';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';

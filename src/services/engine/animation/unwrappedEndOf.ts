@@ -5,7 +5,7 @@
  * turn the same way; `segmentValueAt` keeps the raw `to` (parity).
  */
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { lerpChannel } from './lerpChannel';
 import { segmentValueAt } from './segmentValueAt';
 

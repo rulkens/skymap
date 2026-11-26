@@ -1,4 +1,4 @@
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 /** `meshes/<meshKey>-<tier>` — the stem every tiered mesh file hangs off,
  *  shared by `meshFetcher` (reads it) and `buildMeshes` (writes it), named

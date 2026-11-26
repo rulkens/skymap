@@ -14,7 +14,7 @@ import { SITE_CAMERA_ARM } from '../../../../../../../src/services/engine/camera
 import type { MeshBody } from '../../../../../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../../../../../src/@types/camera/pose/SitePose';
 import type { SurfaceFixedSite } from '../../../../../../../src/@types/scene/SurfaceFixedSite';
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../../../../src/utils/scene/asSurfaceSiteId';
 

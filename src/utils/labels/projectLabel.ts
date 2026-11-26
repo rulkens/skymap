@@ -8,7 +8,7 @@
 
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../@types/rendering/ProjectedLabel';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { PARALLEL_TANGENT_EPS } from '../../data/labels/parallelTangentEps';
 
 export function projectLabel(v: Readonly<Vec3>, p: OutputProjection, out: ProjectedLabel): void {

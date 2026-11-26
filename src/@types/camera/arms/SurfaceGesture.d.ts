@@ -1,5 +1,5 @@
-import type { Vec2 } from '../../math/Vec2';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** Per-gesture, latched at gesture start, dead at pointerup (ruled, Q3). */
 export type SurfaceGesture = {

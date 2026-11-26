@@ -5,7 +5,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { TransientBodyId } from '../../../../src/@types/scene/TransientBodyId';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 

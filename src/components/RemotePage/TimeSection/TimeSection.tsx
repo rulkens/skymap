@@ -8,8 +8,8 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import cx from 'classnames';
-import ChevronLeftIcon from '../../icons/ChevronLeftIcon/ChevronLeftIcon';
-import ChevronRightIcon from '../../icons/ChevronRightIcon/ChevronRightIcon';
+import ChevronLeftIcon from '../../../../packages/shared/src/components/icons/ChevronLeftIcon/ChevronLeftIcon';
+import ChevronRightIcon from '../../../../packages/shared/src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import LiveIcon from '../../icons/LiveIcon/LiveIcon';
 import PauseIcon from '../../icons/PauseIcon/PauseIcon';
 import PlayIcon from '../../icons/PlayIcon/PlayIcon';

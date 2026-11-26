@@ -6,9 +6,9 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
-import { lerp } from '../../math/lerp';
+import { lerp } from '../../../../packages/shared/src/utils/math/lerp';
 import { lerpAngleShortest } from '../../math/lerpAngleShortest';
-import { lerpVec3 } from '../../math/lerpVec3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
 
 export function blendCameraPose(from: CameraPose, to: CameraPose, t: number): CameraPose {
   const distance = Math.exp(lerp(Math.log(from.distance), Math.log(to.distance), t));

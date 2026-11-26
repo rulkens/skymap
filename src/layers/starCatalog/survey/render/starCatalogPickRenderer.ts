@@ -14,7 +14,7 @@ import type { StarCatalogPickResources } from '../@types/StarCatalogPickResource
 import type { StarCatalogPickDrawArgs } from '../@types/StarCatalogPickDrawArgs';
 import vsCode from '../../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import pickFsCode from '../../../../services/gpu/shaders/starCatalog/pickFragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import {

@@ -8,7 +8,7 @@
  * `gridOrigin` is f64 because the camera is subtracted from it CPU-side before
  * upload: parsec-scale coordinates lose too much precision in float32.
  */
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SkstNode } from './SkstNode';
 
 export type SkstCatalog = {

@@ -19,7 +19,7 @@ import {
   HEIGHT_GRID_BYTES,
   HEIGHT_GRID_POSTS_PER_EDGE,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { codeHeightM } from '../../../../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
 import { terrainHeightM } from '../../../../../../src/layers/body/surfaceTiles/stream/subsystems/terrainHeightM';
 

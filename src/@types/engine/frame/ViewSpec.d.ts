@@ -5,7 +5,7 @@
  */
 
 import type { Mat3 } from '../../math/Mat3';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Size } from '../../rendering/Size';
 import type { ViewFrustum } from '../../camera/projection/ViewFrustum';
 import type { ViewKind } from './ViewKind';

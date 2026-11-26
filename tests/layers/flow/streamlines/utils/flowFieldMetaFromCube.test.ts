@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import { flowFieldMetaFromCube } from '../../../../../src/layers/flow/streamlines/utils/flowFieldMetaFromCube';
 
 /** A 4-channel velocity cube fixture with known, distinct field values. */

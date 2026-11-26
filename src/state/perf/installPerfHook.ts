@@ -26,7 +26,7 @@ import type { PerfWindow } from './@types/PerfWindow';
 import type { PerfPose } from '../../@types/perf/PerfPose';
 import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { MemorySnapshot } from '../../@types/perf/MemorySnapshot';
 
 // Per-frame yaw advance in radians; mirrors the camera slice's inline

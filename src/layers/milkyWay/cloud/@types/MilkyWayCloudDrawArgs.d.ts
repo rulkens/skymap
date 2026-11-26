@@ -7,8 +7,8 @@
  * preset's radius, so nothing can move it at runtime.
  */
 
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { MilkyWayCloudBuffers } from './MilkyWayCloudBuffers';
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 

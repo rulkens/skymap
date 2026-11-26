@@ -10,7 +10,7 @@
 
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../@types/rendering/ProjectedLabel';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { LIFT_ZENITH_MARGIN_RAD } from '../../data/labels/liftZenithMarginRad';
 import { projectLabel } from './projectLabel';
 import { tangentToward } from './tangentToward';

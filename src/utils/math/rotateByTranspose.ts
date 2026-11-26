@@ -5,7 +5,7 @@
  * transpose step.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../@types/math/Mat3';
 
 export function rotateByTranspose(orientation: Readonly<Mat3>, v: Readonly<Vec3>): Vec3 {

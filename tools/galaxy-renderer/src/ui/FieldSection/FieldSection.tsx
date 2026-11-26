@@ -20,7 +20,7 @@ import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider';
 import styles from './FieldSection.module.css';
 
 const OTHER_COMPONENTS = 8; // 4 inner disc + 2 bulge + 1 bar + 1 halo, unconditional

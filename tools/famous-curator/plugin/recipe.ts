@@ -11,7 +11,7 @@
  * `version` and add a migration in `parseRecipe` when the schema changes.
  */
 
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * Disk-overlay geometry annotation, drawn by the curator UI to let the

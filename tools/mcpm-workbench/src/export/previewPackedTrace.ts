@@ -1,7 +1,7 @@
 import type { GridBox } from '../../@types/grid/GridBox';
 import type { GridElement } from '../../@types/grid/GridElement';
-import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
-import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
+import { f16ToFloat } from '../../../../packages/shared/src/utils/math/f16ToFloat';
+import { packLogTraceVoxels } from '../../../../packages/shared/src/utils/volume/packLogTraceVoxels';
 import type { PreviewPackedTrace } from '../../@types/export/PreviewPackedTrace';
 
 /**

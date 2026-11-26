@@ -8,7 +8,7 @@
  * (extractMcpmCube.py:126-140); each tier is normalised independently
  * later.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function blockAverageCube(args: {
   values: Float32Array | Float64Array;

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** The `sizeMpc / 2` primitive every box-origin computation shares — see the
  * transform pair (worldToBoxLocal.ts) and its non-pair callers. */

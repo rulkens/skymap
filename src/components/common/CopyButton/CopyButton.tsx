@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import cx from 'classnames';
-import Button from '../Button/Button';
+import Button from '../../../../packages/shared/src/components/common/Button/Button';
 import styles from './CopyButton.module.css';
 
 const FEEDBACK_CLEAR_MS = 1600;

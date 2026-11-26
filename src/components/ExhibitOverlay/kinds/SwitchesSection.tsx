@@ -6,7 +6,7 @@
 
 import type { ReactNode } from 'react';
 
-import EyeIcon from '../../icons/EyeIcon/EyeIcon';
+import EyeIcon from '../../../../packages/shared/src/components/icons/EyeIcon/EyeIcon';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectSettings } from '../../../state/settings/selectSettings';
 import { isExhibitSwitchOn } from '../../../utils/exhibits/isExhibitSwitchOn';

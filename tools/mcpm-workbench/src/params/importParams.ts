@@ -1,7 +1,7 @@
 import type { McpmParams } from '../../@types/sim/McpmParams';
 import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import { DECAY_WG_EDGE } from '../sim/decayWgEdge.constant';
 import { WORKBENCH_SOURCES } from '../catalog/workbenchSources.constant';
 import { MCPM_PARAMS_VERSION } from './mcpmParamsVersion.constant';

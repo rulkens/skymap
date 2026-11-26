@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { extractGalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(): GalaxyCatalog {
   return makeGalaxyCatalog(1, {

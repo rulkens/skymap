@@ -4,7 +4,7 @@
  * in-page as `blob:` URLs, and `dataUrl()` prefixes unconditionally. Absolute
  * URLs therefore have to bypass it rather than be un-mangled afterwards.
  */
-import { dataUrl } from '../../../../src/services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const ABSOLUTE_URL = /^(blob:|data:|https?:\/\/)/;
 

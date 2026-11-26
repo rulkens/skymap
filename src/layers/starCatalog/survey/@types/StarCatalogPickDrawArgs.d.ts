@@ -3,7 +3,7 @@
  * leaves it draws are the frame cut's list, which stays on the GPU.
  */
 
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarFocusSphere } from '../../octreeCut/@types/StarFocusSphere';
 

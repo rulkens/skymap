@@ -4,7 +4,7 @@
  * basis (`milkyWay/sprites/io.wesl`).
  */
 import { vec3 } from 'wgpu-matrix';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { milkyWayInverseModelCached } from './milkyWayInverseModelCached';
 
 export function milkyWayCamPosModel(camPosWorld: Readonly<Vec3>): Vec3 {

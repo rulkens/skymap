@@ -10,7 +10,7 @@ import { slabRowActive } from '../../../src/utils/frame/slabRowActive';
 import { SGR_A_STAR_LENSING_BAND } from '../../../src/layers/blackHoles/lensing/data/sgrAStarLensingBand';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { SlabRow } from '../../../src/@types/engine/frame/SlabRow';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const ANCHOR_ID = 'galactic-centre';

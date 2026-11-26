@@ -11,7 +11,7 @@
 
 import { selectionDriver } from '../../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
 export function liveBodyPosition(

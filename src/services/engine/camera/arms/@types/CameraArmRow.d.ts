@@ -2,7 +2,7 @@ import type { ArmDelta } from '../../@types/ArmDelta';
 import type { CameraArmKind } from '../../../../../@types/camera/arms/CameraArmKind';
 import type { FrameOf } from '../../../../../@types/camera/arms/FrameOf';
 import type { FramedPose } from '../../../../../@types/camera/pose/FramedPose';
-import type { InputStep } from '../../../../../@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { MemOf } from '../../../../../@types/camera/arms/MemOf';
 import type { PoseOf } from '../../../../../@types/camera/arms/PoseOf';
 import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/CameraArmBasisCtx';

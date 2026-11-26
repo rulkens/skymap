@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderKey';
 
 /** The asteroid tuning section's global slider rows, the same for every class. */

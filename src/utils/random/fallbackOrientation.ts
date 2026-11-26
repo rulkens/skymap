@@ -26,7 +26,7 @@
  *   - positionAngleDeg uniform in [0, 180): full range; PA wraps mod 180.
  */
 
-import { mulberry32 } from './mulberry32';
+import { mulberry32 } from '../../../packages/shared/src/utils/random/mulberry32';
 
 /**
  * Fold a bigint and two doubles into a single 32-bit seed.

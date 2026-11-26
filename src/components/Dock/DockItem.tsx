@@ -7,7 +7,7 @@
 
 import type { ComponentType, ReactNode, Ref } from 'react';
 import cx from 'classnames';
-import type { IconProps } from '../Icon/Icon';
+import type { IconProps } from '../../../packages/shared/src/components/Icon/Icon';
 import styles from './Dock.module.css';
 
 export type DockItemProps = {

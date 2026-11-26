@@ -1,6 +1,6 @@
-import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import type { SurfacePatchAnchor } from './SurfacePatchAnchor';
 
 /**

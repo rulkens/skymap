@@ -1,6 +1,6 @@
 import type { CameraArmBasisCtx } from './CameraArmBasisCtx';
 import type { PivotFraming } from './PivotFraming';
-import type { Vec2 } from '../../math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { CameraTuning } from '../orbitCamera/CameraTuning';
 import type { ArmFocus } from './ArmFocus';
 import type { ViewFrustum } from '../projection/ViewFrustum';

@@ -8,7 +8,7 @@
  */
 
 import type { DebugLine } from './DebugLine';
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export type DebugLineRenderer = {
   /** Human-readable identifier (`'debugLineRenderer'`). Part of `Renderer`. */

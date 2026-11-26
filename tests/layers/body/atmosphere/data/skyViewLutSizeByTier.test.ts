@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../../../src/layers/body/atmosphere/data/skyViewLutSizeByTier';
-import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../../../packages/shared/src/data/tierLadder';
 
 describe('SKY_VIEW_LUT_SIZE_BY_TIER', () => {
   it('has a texel size for every tier in TIER_LADDER', () => {

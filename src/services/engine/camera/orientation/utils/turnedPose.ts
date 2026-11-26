@@ -1,6 +1,6 @@
 import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import { poseWithBasisTurn } from './poseWithBasisTurn';
 import { rotatedAboutPoint } from './rotatedAboutPoint';
 

@@ -17,13 +17,13 @@ import upsampleFragmentCode from '../shaders/bloom/upsampleFragment.wesl?static'
 import foldFragmentCode from '../shaders/bloom/foldFragment.wesl?static';
 import streakFragmentCode from '../shaders/bloom/streakFragment.wesl?static';
 import veilFragmentCode from '../shaders/bloom/veilFragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { BloomPyramid } from '../../../@types/rendering/BloomPyramid';
 import type { BrightParams } from '../../../@types/rendering/BrightParams';
 import type { FoldKind } from '../../../@types/rendering/FoldKind';
 import type { StreakTaps } from '../../../@types/rendering/StreakTaps';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import { BLOOM_LEVELS, FOLD_KINDS, VEIL_SIGMA_TEXELS } from '../../../data/bloomConstants';
 
 /** Written to the bright uniform's `u.y`; the shader derives its knee from the threshold and ignores this lane. */

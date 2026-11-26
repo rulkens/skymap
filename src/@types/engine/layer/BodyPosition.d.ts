@@ -3,7 +3,7 @@ import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { EphemerisCorrection } from '../../scene/EphemerisCorrection';
 import type { BarycentricPair } from '../../scene/BarycentricPair';
 import type { SampledBody } from '../../scene/SampledBody';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** One variant per position table a moved row lands in. */
 export type BodyPosition =

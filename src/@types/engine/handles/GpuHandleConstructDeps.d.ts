@@ -1,7 +1,7 @@
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
-import type { GpuContext } from '../../rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 
 // Shared prerequisites every row's `construct` may read — and ONLY what a

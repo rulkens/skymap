@@ -4,8 +4,8 @@
  * Selection slider must still hold its value and let the grid be coarsened.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
-import { snapToStep } from '../../../../../../../src/utils/math/snapToStep';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
+import { snapToStep } from '../../../../../../../packages/shared/src/utils/math/snapToStep';
 import type { GridSlice } from '../../../../../../../tools/mcpm-workbench/@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import { voxelSizeFloorMpc } from '../../../../../../../tools/mcpm-workbench/src/grid/voxelSize/voxelSizeFloorMpc';

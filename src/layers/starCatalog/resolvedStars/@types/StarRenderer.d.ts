@@ -16,7 +16,7 @@
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export type StarRenderer = Renderer & {
   /**

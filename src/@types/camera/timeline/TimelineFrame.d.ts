@@ -3,7 +3,7 @@
  * the stop whose planet it frames with the craft (null when it frames the Sun).
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { TimelineStop } from './TimelineStop';
 
 export type TimelineFrame = {

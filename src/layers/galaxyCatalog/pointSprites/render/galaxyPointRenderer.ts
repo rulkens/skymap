@@ -38,13 +38,13 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { GalaxyPointDrawSettings } from '../@types/GalaxyPointDrawSettings';
 import type { GalaxyPointRenderer } from '../@types/GalaxyPointRenderer';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 // `?static` runs the WESL linker at build time and hands back a plain
 // WGSL string with imports resolved.
 import vsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
 import colorFsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/colorFragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../../@types/rendering/FocusUniformsBgl';

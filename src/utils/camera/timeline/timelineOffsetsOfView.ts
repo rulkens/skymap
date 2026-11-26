@@ -5,7 +5,7 @@
 
 import type { TimelineCameraFrame } from '../../../@types/camera/timeline/TimelineCameraFrame';
 import type { TimelineOffsets } from '../../../@types/camera/timeline/TimelineOffsets';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { dot3 } from '../../math/dot3';
 
 export function timelineOffsetsOfView(

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { uniformInSphere } from '../../../src/utils/random/uniformInSphere';
-import { mulberry32 } from '../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../packages/shared/src/utils/random/mulberry32';
 
 describe('uniformInSphere', () => {
   it('returns points inside the unit ball (x²+y²+z² ≤ 1)', () => {

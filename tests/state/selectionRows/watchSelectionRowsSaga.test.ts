@@ -54,7 +54,7 @@ import type {
   StarRowFixture,
   StructureRowFixture,
 } from '../../support/selectionResolverOver';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';

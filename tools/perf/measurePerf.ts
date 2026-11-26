@@ -71,8 +71,8 @@ import { classifyBound } from '../utils/perf/classifyBound';
 import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
 import type { MemorySnapshot } from '../../src/@types/perf/MemorySnapshot';
-import type { Tier } from '../../src/@types/data/Tier';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import type { Tier } from '../../packages/shared/src/@types/data/Tier';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 
 // Fixed viewport for every non-sweep run: pixel area is part of what determines
 // pass cost, so it stays constant across scenarios and only --dpr scales the

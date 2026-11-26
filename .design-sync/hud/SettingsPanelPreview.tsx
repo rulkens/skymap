@@ -14,7 +14,7 @@
 import { useState } from 'react';
 
 import { Panel } from '../../src/components/common/Panel/Panel';
-import Button from '../../src/components/common/Button/Button';
+import Button from '../../packages/shared/src/components/common/Button/Button';
 import { TierChip } from '../../src/components/SettingsPanel/TierChip';
 import GalaxiesSection from '../../src/components/SettingsPanel/GalaxiesSection';
 import StarsSection from '../../src/components/SettingsPanel/StarsSection';
@@ -32,7 +32,7 @@ import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { LABEL_CATEGORIES } from '../../src/data/structure/labelCategories';
 
-import type { Tier } from '../../src/@types/data/Tier';
+import type { Tier } from '../../packages/shared/src/@types/data/Tier';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { BiasMode as BiasModeT } from '../../src/@types/data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../../src/@types/data/ToneMapCurve';

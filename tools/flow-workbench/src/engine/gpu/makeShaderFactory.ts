@@ -13,7 +13,7 @@
  * shape. One line of glue, but it keeps the reuse honest (the tool shares the
  * runtime's shader-error discipline rather than re-deriving a weaker version).
  */
-import { createShaderModuleWithDevLog } from '../../../../../src/services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 export function makeShaderFactory(
   device: GPUDevice,

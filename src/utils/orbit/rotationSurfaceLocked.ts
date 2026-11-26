@@ -6,12 +6,12 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { cross3 } from '../math/cross3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { projectOntoPlane3 } from '../math/projectOntoPlane3';
 import { degToRad } from '../math/degToRad';
 import { mat3FromColumns } from '../math/mat3FromColumns';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 
 export function rotationSurfaceLocked(
   bodyPosMpc: Readonly<Vec3>,

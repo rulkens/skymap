@@ -5,8 +5,8 @@
  * this type directly.
  */
 
-import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export type InstancedQuadRenderer = {
   /**

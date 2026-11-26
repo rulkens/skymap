@@ -6,7 +6,7 @@
  */
 
 import type { ViewFrustum } from '../../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import { symmetricFrustum } from '../../../../../utils/camera/frustum/symmetricFrustum';
 
 export function shiftedFrustum(

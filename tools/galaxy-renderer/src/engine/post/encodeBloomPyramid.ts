@@ -19,7 +19,7 @@
  * a strength knob the shared compositor has no slot for.
  */
 import type { BloomPyramid } from '../../../../../src/@types/rendering/BloomPyramid';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import { BLOOM_LEVELS } from '../../../../../src/data/bloomConstants';
 import { DEFAULT_BLOOM_CAP } from '../../../../../src/data/defaults';
 

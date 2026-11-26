@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { tiltFromNadirRad } from '../../../../src/utils/camera/surfaceFrame/tiltFromNadirRad';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 describe('tiltFromNadirRad', () => {
   it('reads the polar angle and folds both azimuth sides to one magnitude', () => {

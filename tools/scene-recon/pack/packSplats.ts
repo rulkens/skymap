@@ -8,9 +8,9 @@
  * whole-word unpack builtin (`unpack4x8snorm`, `unpack2x16float`,
  * `unpack4x8unorm`); the two pad bytes are what keep those words intact.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../src/@types/math/Vec4';
-import { f32ToF16Bits } from '../../../src/utils/math/f32ToF16Bits';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
+import { f32ToF16Bits } from '../../../packages/shared/src/utils/math/f32ToF16Bits';
 import {
   SPLATS_MAGIC,
   SPLATS_FORMAT_VERSION,

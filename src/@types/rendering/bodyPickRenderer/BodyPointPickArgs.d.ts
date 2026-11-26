@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { BodyPointPick } from './BodyPointPick';
 import type { BodyGlintPick } from './BodyGlintPick';
 

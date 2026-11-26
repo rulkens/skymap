@@ -13,7 +13,7 @@ import type { SurfaceTileId } from '../../../../../../src/layers/body/surfaceTil
 import type { SurfaceTileManifest } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTileResidency } from '../../../../../../src/layers/body/surfaceTiles/stream/@types/SurfaceTileResidency';
 import type { SurfaceTileOver } from '../../../../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTileOver';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 const walk = vi.hoisted(() => {
   const state: { demand: SurfaceTileDemand | null; calls: number } = { demand: null, calls: 0 };

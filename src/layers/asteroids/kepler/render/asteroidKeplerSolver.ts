@@ -12,7 +12,7 @@ import type { AsteroidKeplerFrame } from '../@types/AsteroidKeplerFrame';
 import type { AsteroidCatalog } from '../../catalog/@types/AsteroidCatalog';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
 import computeCode from '../../../../services/gpu/shaders/asteroids/kepler/compute.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
 
 /** Byte offsets inside `KeplerUniforms` (`asteroids/kepler/compute.wesl`). */

@@ -1,6 +1,6 @@
 import type { PickWindow } from '../../@types/engine/frame/PickWindow';
 import type { PickWindowNdc } from '../../@types/engine/frame/PickWindowNdc';
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * A canvas-px window as a canvas-NDC rectangle. Pixel y grows down while NDC

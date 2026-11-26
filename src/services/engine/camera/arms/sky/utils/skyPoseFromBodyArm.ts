@@ -8,7 +8,7 @@
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../../../@types/camera/pose/SkyPose';
 import type { SkySpot } from '../../../../../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { dot3 } from '../../../../../../utils/math/dot3';
 import { refAzimuthOf } from '../../../../../../utils/camera/surfaceFrame/refAzimuthOf';
 import { siteEyeFrame } from '../../utils/siteEyeFrame';

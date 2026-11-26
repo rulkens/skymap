@@ -4,7 +4,7 @@
  */
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
-import type { NavAxis } from '../../@types/camera/input/NavAxis';
+import type { NavAxis } from '../../../packages/shared/src/@types/camera/input/NavAxis';
 import type { NavigatorState } from '../../@types/camera/input/NavigatorState';
 
 // OpenSpace's `velocityScaleFromFriction` guard: friction 0 divides by this, not by 0.

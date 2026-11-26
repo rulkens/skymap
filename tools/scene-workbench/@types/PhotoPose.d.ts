@@ -3,9 +3,9 @@
  * metre frame. `bakeSplats` writes these into COLMAP's `cameras.txt` /
  * `images.txt` to seed Brush; nothing renders them in v1.
  */
-import type { Vec2 } from '../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../src/@types/math/Vec4';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 export type PhotoPose = {
   readonly id: string;

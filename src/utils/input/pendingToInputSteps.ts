@@ -10,7 +10,7 @@
 
 import type { RawInputStep } from '../../@types/camera/input/RawInputStep';
 import type { PendingStep } from '../../@types/input/PendingStep';
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import { NAV_INTENT_AXIS } from '../../data/input/navIntentAxis';
 import { unitToViewPx } from './unitToViewPx';
 

@@ -47,8 +47,8 @@ import type { SeededStarCatalogId } from '../../../../../src/layers/starCatalog/
 import type { StarCatalogSettings } from '../../../../../src/layers/starCatalog/@types/StarCatalogSettings';
 import type { PositionedStar } from '../../../../../src/layers/starCatalog/seededStars/@types/PositionedStar';
 import type { PositionedSceneBody } from '../../../../../src/@types/engine/frame/PositionedSceneBody';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
 import { testPickCode } from '../../../../support/testPickCode';

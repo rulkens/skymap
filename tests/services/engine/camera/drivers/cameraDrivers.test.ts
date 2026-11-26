@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { easeOutCubic } from '../../../../../src/utils/math/easeOutCubic';
-import { lerp } from '../../../../../src/utils/math/lerp';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
 
 import type { CameraDriver } from '../../../../../src/@types/engine/camera/CameraDriver';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';

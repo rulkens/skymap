@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The octree's quantisation grid, in the catalog unit (pc for stars). */
 export type OctreeGrid = {

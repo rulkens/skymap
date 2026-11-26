@@ -5,7 +5,7 @@
  * pose the capture will get without a browser in the loop.
  */
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -14,8 +14,8 @@ import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFra
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
-import { normalize3 } from '../../../src/utils/math/normalize3';
-import { cross3 } from '../../../src/utils/math/cross3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { SUBJECT_FILL } from './shotDefaults';

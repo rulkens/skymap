@@ -3,8 +3,8 @@ import type { DragStep } from '../@types/DragStep';
 import type { DraggedSurfacePose } from '../@types/DraggedSurfacePose';
 import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
 import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { TILT_GAIN } from '../data/tiltGain';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from './anchoredDragRotation';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
@@ -15,10 +15,10 @@ import { pickOnBody } from './pickOnBody';
 import { rotatedAboutPoint } from '../../../../orientation/utils/rotatedAboutPoint';
 import { tiltFloorBudgetRad } from './tiltFloorBudgetRad';
 import { dot3 } from '../../../../../../../utils/math/dot3';
-import { multiplyQuat } from '../../../../../../../utils/math/multiplyQuat';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../../../../utils/math/quatFromAxisAngle';
-import { rotateVec3ByQuat } from '../../../../../../../utils/math/rotateVec3ByQuat';
+import { multiplyQuat } from '../../../../../../../../packages/shared/src/utils/math/multiplyQuat';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
+import { rotateVec3ByQuat } from '../../../../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 
 export function draggedSurfacePose(
   arm: BodyFixedPose,

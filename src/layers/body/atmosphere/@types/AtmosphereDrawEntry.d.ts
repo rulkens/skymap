@@ -9,7 +9,7 @@
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { AtmosphereParams } from './AtmosphereParams';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export type AtmosphereDrawEntry = {
   readonly body: EarthBody | PlanetBody;

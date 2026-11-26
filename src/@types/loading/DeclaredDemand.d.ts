@@ -1,6 +1,6 @@
 import type { NearGate } from './NearGate';
 import type { SizeGate } from './SizeGate';
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { VisibilityAddress } from '../animation/VisibilityAddress';
 
 /** The object form of `AssetDemand`: what the row draws, which tiers ship it, how near or large it loads. */

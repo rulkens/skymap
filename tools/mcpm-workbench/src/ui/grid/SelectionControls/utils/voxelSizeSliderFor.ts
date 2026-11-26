@@ -1,4 +1,4 @@
-import type { SliderProps } from '../../../../../../../src/components/common/Slider/Slider';
+import type { SliderProps } from '../../../../../../../packages/shared/src/components/common/Slider/Slider';
 import type { GridSlice } from '../../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../grid/deriveGridBox';
 import { voxelSizeFloorMpc } from '../../../../grid/voxelSize/voxelSizeFloorMpc';

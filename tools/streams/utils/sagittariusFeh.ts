@@ -1,4 +1,4 @@
-import { lerp } from '../../../src/utils/math/lerp';
+import { lerp } from '../../../packages/shared/src/utils/math/lerp';
 import { clamp } from '../../utils/textures/clamp';
 import { SGR_FEH_BOUND, SGR_FEH_OLD, SGR_FEH_OLD_STRIP_GYR } from '../data/streamsBuild.constants';
 

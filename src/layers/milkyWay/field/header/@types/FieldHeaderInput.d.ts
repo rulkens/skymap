@@ -3,7 +3,7 @@
  * per-pass. `packFieldHeaderUniforms` is the only reader.
  */
 
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 import type { DebugViewWeights } from './DebugViewWeights';
 import type { FieldView } from '../../@types/FieldView';

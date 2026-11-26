@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /** Inputs for `computeAngularWeights`. */
 export type ComputeAngularWeightsInput = {

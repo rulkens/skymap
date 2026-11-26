@@ -8,7 +8,7 @@
  * the runtime.
  */
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function applyMat3(m: Mat3, v: Vec3): Vec3 {
   return [

@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { EarthSettings } from '../../@types/EarthSettings';
 
 /** The Earth tuning knobs shown in the DebugPanel. */

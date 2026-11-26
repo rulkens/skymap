@@ -4,7 +4,7 @@
  * Glassmorphic mini-panel; deliberately uses the softest surface tint
  * (`--surface-soft`) so it reads as ambient telemetry rather than an
  * interactive control.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * `packages/shared/src/styles/global.css`.
  */
 
 /*

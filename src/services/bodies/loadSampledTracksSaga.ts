@@ -9,7 +9,7 @@ import { all, call, getContext, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { engineStatusChanged } from '../../state/engine/engineSlice';
-import { dataUrl } from '../loading/fetchWithProgress';
+import { dataUrl } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 import { trajectoryRegistry } from './trajectoryRegistry';
 import { parseSampledTracks } from './parseSampledTracks';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';

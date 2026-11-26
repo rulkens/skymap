@@ -12,7 +12,7 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { FocusFraming } from '../../../@types/camera/pose/FocusFraming';

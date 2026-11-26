@@ -31,7 +31,7 @@ import {
   type Crop,
   type Bounds,
 } from '../../../../tools/famous-curator/ui/cropMath';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 const bounds: Bounds = { width: 1000, height: 800 };
 

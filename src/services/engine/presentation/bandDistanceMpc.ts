@@ -6,7 +6,7 @@
 
 import type { EntryBand } from '../../../@types/engine/layer/EntryBand';
 import type { BandEye } from '../../../@types/engine/presentation/BandEye';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { isBodyRegionId } from '../../../utils/regions/isBodyRegionId';
 import { regionById } from '../../../utils/regions/regionById';

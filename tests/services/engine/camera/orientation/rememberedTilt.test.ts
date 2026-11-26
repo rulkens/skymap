@@ -15,10 +15,10 @@ import { bodyUpWeight } from '../../../../../src/services/engine/camera/orientat
 import { DEFAULT_CAMERA_TUNING } from '../../../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { CameraTuning } from '../../../../../src/@types/camera/orbitCamera/CameraTuning';
-import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const R = 1;

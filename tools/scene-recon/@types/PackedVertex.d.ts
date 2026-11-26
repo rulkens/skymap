@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /** One output vertex of a pack — xatlas splits vertices along chart seams, so `xref` is the only
  *  link back to the source mesh (spec §3). */

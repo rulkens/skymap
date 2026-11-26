@@ -12,7 +12,7 @@
 import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
 import type { BodyLocalRay } from '../../../@types/camera/terrain/BodyLocalRay';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import { bodyFixedEyeM } from '../surfaceFrame/bodyFixedEyeM';
 
 export function cursorRayBodyLocal(

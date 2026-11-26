@@ -1,10 +1,10 @@
 import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { rotateBasisByQuat } from '../../../../orientation/utils/rotateBasisByQuat';
-import { multiplyQuat } from '../../../../../../../utils/math/multiplyQuat';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../../../../utils/math/quatFromAxisAngle';
+import { multiplyQuat } from '../../../../../../../../packages/shared/src/utils/math/multiplyQuat';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 /**
  * Turns the view about the eye by screen radians. Yaw is about the LOCAL

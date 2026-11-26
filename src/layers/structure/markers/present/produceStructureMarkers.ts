@@ -31,7 +31,7 @@
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
 import type { StructureStore } from '../../catalog/@types/StructureStore';

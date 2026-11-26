@@ -5,8 +5,8 @@
  * the stacked pair; the container query in sidebar.module.css picks which show.
  */
 import type { ReactNode } from 'react';
-import ChevronLeftIcon from '../../../../../../src/components/icons/ChevronLeftIcon/ChevronLeftIcon';
-import ChevronRightIcon from '../../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
+import ChevronLeftIcon from '../../../../../../packages/shared/src/components/icons/ChevronLeftIcon/ChevronLeftIcon';
+import ChevronRightIcon from '../../../../../../packages/shared/src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import styles from './SidebarToggle.module.css';
 

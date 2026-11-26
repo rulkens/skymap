@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Ray } from '../../../../../tools/mcpm-workbench/@types/gizmo/Ray';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { dragRotate } from '../../../../../tools/mcpm-workbench/src/gizmo/dragRotate';
-import { multiplyQuat } from '../../../../../src/utils/math/multiplyQuat';
-import { quatFromAxisAngle } from '../../../../../src/utils/math/quatFromAxisAngle';
-import { rotateVec3ByQuat } from '../../../../../src/utils/math/rotateVec3ByQuat';
+import { multiplyQuat } from '../../../../../packages/shared/src/utils/math/multiplyQuat';
+import { quatFromAxisAngle } from '../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
+import { rotateVec3ByQuat } from '../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 
 // Ring in the xy plane (axisDir = +z), referenceDir = +x (0°-angle reference), so
 // perp = axisDir x referenceDir = +y (90°-angle reference) — a plain unit circle.

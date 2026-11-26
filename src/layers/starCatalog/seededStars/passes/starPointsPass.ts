@@ -72,7 +72,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyPointPick } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPick';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { sceneBodyPresentation } from '../../../../services/engine/frame/sceneBodyPresentation';

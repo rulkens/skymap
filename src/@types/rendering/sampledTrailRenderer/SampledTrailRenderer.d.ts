@@ -5,7 +5,7 @@
  * `drawTrail` per piece drawn (`trailDrawsAt`), at most `MAX_TRAILS` per `beginFrame` (per view).
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Renderer } from '../Renderer';
 import type { SampledTrailFrame } from './SampledTrailFrame';

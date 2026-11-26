@@ -10,7 +10,7 @@ import { ellipseFromStateVector } from '../../../../utils/orbit/ellipseFromState
 import { EARTH_GM_KM3_S2 } from '../../../../data/earthGmKm3S2';
 import { julianDaysToUnixMs } from '../../../../utils/time/julianDaysToUnixMs';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitConic } from '../../../../@types/scene/OrbitConic';
 
 const MS_PER_MINUTE = 60_000;

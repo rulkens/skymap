@@ -12,7 +12,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { BodySurface } from '../../../@types/scene/BodySurface';
 import type { OccluderBody } from '../../../@types/scene/OccluderBody';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';

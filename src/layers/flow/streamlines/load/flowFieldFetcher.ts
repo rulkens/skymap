@@ -17,12 +17,15 @@
  */
 
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../../../data/volume/scalarFieldFormat';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+} from '../../../../../packages/shared/src/data/volume/scalarFieldFormat';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 export const flowFieldFetcher: Fetcher<ScalarCube, void> = async (_req, signal, onProgress) => {
   const buf = await fetchWithProgress(

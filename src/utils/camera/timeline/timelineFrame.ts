@@ -7,12 +7,12 @@
 
 import type { TimelineFrame } from '../../../@types/camera/timeline/TimelineFrame';
 import type { TimelineStop } from '../../../@types/camera/timeline/TimelineStop';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { TIMELINE_FLYBY_LEAD_DAYS } from '../../../data/exhibits/timeline/timelineFlybyLeadDays';
 import { TIMELINE_FRAME_MARGIN } from '../../../data/camera/timeline/timelineFrameMargin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { DAY_MS } from '../../../data/time/dayMs';
-import { lerpVec3 } from '../../math/lerpVec3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
 import { julianDaysToUnixMs } from '../../time/julianDaysToUnixMs';
 import { timelineEventMs } from '../../exhibits/timeline/timelineEventMs';
 

@@ -3,7 +3,7 @@
  * controls, section headers, the block-width button modifier). Buttons and
  * sliders render through the app's own `Button`/`Slider` primitives; this
  * file no longer owns their chrome. Design tokens live in the main app's
- * `src/styles/global.css`, imported once from the tool's `main.tsx`, so a
+ * `packages/shared/src/styles/global.css`, imported once from the tool's `main.tsx`, so a
  * look tuned here transfers directly to the app's own UI. This file owns
  * only the three tool-local status colours with no app equivalent.
  *

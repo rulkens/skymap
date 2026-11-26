@@ -7,7 +7,7 @@
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeChunkRoot } from '../../../@types/octree/OctreeChunkRoot';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { OCTREE_FAMILIES } from '../../../data/octree/octreeFamilies';
 import {

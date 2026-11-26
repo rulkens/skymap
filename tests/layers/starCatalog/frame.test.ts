@@ -14,7 +14,7 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Octree } from '../../../src/@types/octree/Octree';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';

@@ -4,7 +4,7 @@
  * so a skip or Prev starts its pull-out from the same view.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { degToRad } from '../../../utils/math/degToRad';
 import { ECLIPTIC_FRAME } from '../../../data/bodies/orbitPlaneFrames';

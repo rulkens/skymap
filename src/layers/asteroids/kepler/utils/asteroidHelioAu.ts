@@ -2,7 +2,7 @@
  * asteroidHelioAu — row k's heliocentric position at `simJd` (TT), equatorial J2000, in AU: the
  * compute pass's maths in f64, from the same decoded f32 basis, so follow, card and ring sit on the dot.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidCatalog } from '../../catalog/@types/AsteroidCatalog';
 import { solveKeplerFixed } from '../../../../utils/orbit/solveKeplerFixed';
 

@@ -8,7 +8,7 @@
  * version header; the fix is "regenerate via `npm run build-tiers`".
  */
 
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogColumn } from '../@types/GalaxyCatalogColumn';
 import type { GalaxyCatalogFieldSpec } from '../@types/GalaxyCatalogFieldSpec';
 import { galaxyMedianAbsMag } from '../../../../utils/galaxy/galaxyMedianAbsMag';

@@ -32,7 +32,7 @@
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import Button from '../../common/Button/Button';
+import Button from '../../../../packages/shared/src/components/common/Button/Button';
 import { useDismissablePopover } from '../../../hooks/useDismissablePopover';
 import { parseDatetimeLocalUtc } from '../../../utils/time/parseDatetimeLocalUtc';
 import { toDatetimeLocalUtc } from '../../../utils/time/toDatetimeLocalUtc';

@@ -58,7 +58,7 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();

@@ -10,7 +10,7 @@ import { segmentsTouch } from './segmentsTouch';
 import type { ClipVertex } from '../@types/ClipVertex';
 import type { HalfPlane2 } from '../@types/HalfPlane2';
 import type { TexturedMeshGeometry } from '../pack/packMeshGlb';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export function cropMeshGeometry(
   geometry: TexturedMeshGeometry,

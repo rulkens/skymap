@@ -1,7 +1,7 @@
 /** Every nightly live dataset: the workflow matrix reads this; the app hard-codes the ids and file names it fetches. */
 import type { LiveDataset } from '../../@types/live/LiveDataset';
 import { bodyTextureFilename } from '../../utils/bodyTextures/bodyTextureFilename';
-import { TIER_LADDER } from '../tierLadder';
+import { TIER_LADDER } from '../../../packages/shared/src/data/tierLadder';
 
 export const LIVE_DATASETS: readonly LiveDataset[] = [
   {

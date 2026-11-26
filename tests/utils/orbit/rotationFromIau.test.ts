@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import type { RotationElements } from '../../../src/@types/scene/RotationElements';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Apply a column-major Mat3 to a column vector: result[r] = Σ_c m[c*3 + r]·v[c].
 // A local restatement (not the source's helper) so the test observes the matrix

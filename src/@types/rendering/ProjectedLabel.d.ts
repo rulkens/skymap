@@ -5,7 +5,7 @@
  * a fisheye still places a direction under its horizon, outside the circle.
  */
 
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export type ProjectedLabel = {
   px: Vec2;

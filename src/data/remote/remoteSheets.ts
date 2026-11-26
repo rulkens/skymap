@@ -1,7 +1,7 @@
 /** REMOTE_SHEETS: the library's tiles in order, each opening the sheet of the same id. */
 
 import type { ComponentType } from 'react';
-import type { IconProps } from '../../components/Icon/Icon';
+import type { IconProps } from '../../../packages/shared/src/components/Icon/Icon';
 import ClipIcon from '../../components/icons/ClipIcon/ClipIcon';
 import ExhibitIcon from '../../components/icons/ExhibitIcon/ExhibitIcon';
 import LabelsIcon from '../../components/icons/LabelsIcon/LabelsIcon';

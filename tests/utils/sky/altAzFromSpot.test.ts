@@ -9,7 +9,7 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('altAzFromSpot', () => {
   it('returns finite values at latitude 89.9°, where east/north degenerate', () => {

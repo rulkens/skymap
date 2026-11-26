@@ -4,7 +4,7 @@
  * counts as changed by its hue's hex (the picker's resolution, and the row keeps the luminance), so
  * re-picking the default leaves it out; float tails are rounded. The look modes are not table rows.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidTuning } from '../../@types/AsteroidTuning';
 import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
 import { ASTEROID_CLASS_LOOK } from '../../points/data/asteroidClassLook';

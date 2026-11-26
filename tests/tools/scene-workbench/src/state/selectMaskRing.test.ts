@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import {
   draftStarted,
   maskToggled,

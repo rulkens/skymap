@@ -24,7 +24,7 @@ import type { HiiSegment } from '../starFormation/@types/HiiSegment';
 import type { HiiTextureLanes } from '../header/@types/HiiTextureLanes';
 import type { HiiTier } from '../starFormation/@types/HiiTier';
 import type { StageGraph } from '../../../../@types/gpu/StageGraph';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import {
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,

@@ -1,7 +1,7 @@
 /** PrevIcon: skip back, a bar and a solid left-pointing triangle. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function PrevIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { IconProps } from '../../components/Icon/Icon';
+import type { IconProps } from '../../../packages/shared/src/components/Icon/Icon';
 import type { RemoteCommand } from './RemoteCommand';
 import type { RemoteMenu } from './RemoteMenu';
 import type { RemoteTakeover } from './RemoteTakeover';

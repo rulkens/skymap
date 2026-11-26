@@ -13,10 +13,13 @@
  */
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { decodeGalaxyCatalog } from '../data/galaxyCatalogFormat';
 import { tierFilenameForSource } from '../data/tierTargets';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 export const galaxyCatalogFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async (
   req,

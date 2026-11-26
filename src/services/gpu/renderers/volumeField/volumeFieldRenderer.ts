@@ -10,16 +10,19 @@
  */
 
 import { mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
+import {
+  buildPaletteLut,
+  PALETTE_LUT_SIZE,
+} from '../../../../../packages/shared/src/data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 

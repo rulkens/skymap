@@ -12,7 +12,7 @@ import { distance3 } from '../../../../../utils/math/distance3';
 import type { GalaxyArmRidgeNode } from '../@types/GalaxyArmRidgeNode';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { armFadeEnvelope } from './armFadeEnvelope';
 import { armRidgeCurvePoint } from './armRidgeCurvePoint';
 

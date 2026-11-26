@@ -9,7 +9,7 @@
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { altAzFromSpot } from './altAzFromSpot';
 

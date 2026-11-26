@@ -21,14 +21,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
-import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
+import { packLogTraceVoxels } from '../../packages/shared/src/utils/volume/packLogTraceVoxels';
 import { logNormalMedian } from '../utils/volume/logNormalMedian';
 import {
   encodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../src/data/volume/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+} from '../../packages/shared/src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /** Fixed Sun-centered box the resample step always produces (spec grill Q2). */

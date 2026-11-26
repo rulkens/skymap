@@ -1,7 +1,7 @@
 /** AlertIcon: an exclamation mark in a circle, beside a problem that needs the person. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function AlertIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

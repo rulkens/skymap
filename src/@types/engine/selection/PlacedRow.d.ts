@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * The uniform placement every focusable kind's row carries, filled once by its Layer's

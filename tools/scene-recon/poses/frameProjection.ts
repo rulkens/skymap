@@ -10,7 +10,7 @@
  */
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
 import type { SkraafotoStacItem } from '../@types/SkraafotoStacItem';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const DEG = Math.PI / 180;
 /** Central meridian of EPSG:25832 (UTM zone 32N), degrees. */

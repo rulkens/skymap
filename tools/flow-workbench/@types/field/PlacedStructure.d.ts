@@ -7,7 +7,7 @@
  * view-projection to screen space. (Separate from `CatalogStructure` so the
  * pure observational catalog stays free of presentation coordinates.)
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type PlacedStructure = {
   readonly name: string;

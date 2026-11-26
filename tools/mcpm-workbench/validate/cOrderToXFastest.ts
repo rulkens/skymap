@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * cOrderToXFastest — the inverse of `xFastestToCOrder` / `packLogTraceVoxels`'s C-order

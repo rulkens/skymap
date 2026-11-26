@@ -10,12 +10,12 @@
 import type { StellarStreamsRenderer } from '../@types/StellarStreamsRenderer';
 import type { StellarStreamsLook } from '../@types/StellarStreamsLook';
 import type { StellarStreamsFocus } from '../@types/StellarStreamsFocus';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 import vsCode from '../../../../services/gpu/shaders/stellarStreams/streaks/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/stellarStreams/streaks/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import {
   CAMERA_UNIFORM_BYTES,

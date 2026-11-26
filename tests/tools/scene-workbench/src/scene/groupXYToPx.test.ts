@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import { sceneCameraView } from '../../../../../tools/scene-workbench/src/render/sceneCameraView';
 import { groupXYToPx } from '../../../../../tools/scene-workbench/src/scene/groupXYToPx';
 import { pxToGroupXY } from '../../../../../tools/scene-workbench/src/scene/pxToGroupXY';

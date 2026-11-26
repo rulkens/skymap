@@ -1,6 +1,6 @@
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Mat3 } from '../../math/Mat3';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * The camera in one body's FIXED axes, SI metres, f64 — anchor-relative so the

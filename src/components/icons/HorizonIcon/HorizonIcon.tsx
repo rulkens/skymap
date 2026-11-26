@@ -1,7 +1,7 @@
 /** HorizonIcon: the Sun half over a horizon line, with rays. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function HorizonIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

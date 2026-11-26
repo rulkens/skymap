@@ -5,7 +5,7 @@
  * the decimation tolerance only holds if both evaluate the same curve.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 export function hermiteSegmentKm(

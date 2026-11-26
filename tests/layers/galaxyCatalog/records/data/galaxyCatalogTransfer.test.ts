@@ -34,7 +34,7 @@
 import { describe, it, expect } from 'vitest';
 import { cloneGalaxyCatalogForTransfer } from '../../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogTransfer';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(count: number): GalaxyCatalog {
   // Each field gets a distinct fill value so we can later assert which

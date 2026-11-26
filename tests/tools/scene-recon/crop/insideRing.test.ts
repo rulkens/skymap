@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { insideRing } from '../../../../tools/scene-recon/crop/insideRing';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 describe('insideRing', () => {
   it('insideRing puts a point in a concave notch outside', () => {

@@ -10,7 +10,7 @@
  * which scales the same direction by a distance — do not conflate them.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const RAD = Math.PI / 180;
 

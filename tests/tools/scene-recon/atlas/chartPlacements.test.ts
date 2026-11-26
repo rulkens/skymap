@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { chartPlacements } from '../../../../tools/scene-recon/atlas/chartPlacements';
 import type { PackedAtlas } from '../../../../tools/scene-recon/@types/PackedAtlas';
 import type { PackedVertex } from '../../../../tools/scene-recon/@types/PackedVertex';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 const SOURCE_SIZE_PX = 8;
 // A 4-corner square at source texels (0,0)-(8,8), xref 0..3, normalized to 0..1.

@@ -1,11 +1,11 @@
 import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
 import type { EyeFrame } from '../../../@types/camera/pose/EyeFrame';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { refAzimuthOf } from './refAzimuthOf';
 import { tiltFromNadirRad } from './tiltFromNadirRad';
-import { normalize3 } from '../../math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 /**
  * The pose's orientation readout in the band-blended reference ENU

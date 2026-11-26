@@ -18,6 +18,6 @@
 
 import { createAction } from '@reduxjs/toolkit';
 
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 export const requestTier = createAction<Tier>('tier/requestTier');

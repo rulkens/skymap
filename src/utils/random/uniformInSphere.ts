@@ -41,7 +41,7 @@
  *              same seeded source yields the same sequence of points.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function uniformInSphere(rand: () => number): Vec3 {
   let x: number, y: number, z: number, r2: number;

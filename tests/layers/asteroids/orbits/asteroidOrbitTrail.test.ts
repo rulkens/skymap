@@ -3,7 +3,7 @@ import { asteroidOrbitTrail } from '../../../../src/layers/asteroids/orbits/util
 import { asteroidHelioAu } from '../../../../src/layers/asteroids/kepler/utils/asteroidHelioAu';
 import { eccentricAnomalyFromMean } from '../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { FIXTURE_EPOCH_JD, loadedAsteroids } from '../fixtures/loadedAsteroids';
 import { relErr } from '../../../support/relErr';
 

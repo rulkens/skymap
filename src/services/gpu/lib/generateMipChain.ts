@@ -44,7 +44,7 @@
  */
 
 import mipBlitCode from '../shaders/lib/mipBlit.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 /**
  * Number of mip levels in a full chain for a `width` × `height` texture:

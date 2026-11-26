@@ -4,7 +4,7 @@ import { tiltTurnedPose } from '../../../../../../src/services/engine/camera/ori
 import { tiltFromNadirRad } from '../../../../../../src/utils/camera/surfaceFrame/tiltFromNadirRad';
 import type { BodyFixedPose } from '../../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 
 /** Right | up | forward at heading 0, tilt θ from nadir, eye on +Z. */

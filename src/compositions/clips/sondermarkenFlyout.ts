@@ -11,7 +11,7 @@
  */
 
 import type { Clip } from '../../@types/animation/Clip';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import {
   aimAlong,
   all,
@@ -23,7 +23,7 @@ import {
 } from '../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { linkedPoseToWorld } from '../../services/engine/camera/arms/utils/linkedPoseToWorld';
-import { normalize3 } from '../../utils/math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { northUpRoll } from '../../utils/camera/orbitPose/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';

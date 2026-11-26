@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMemberCount';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 

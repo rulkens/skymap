@@ -24,7 +24,7 @@ import { localGroupDwell } from '../../../../src/compositions/tours/grandTour/lo
 import { neighbourhoodReveal } from '../../../../src/compositions/tours/grandTour/neighbourhoodReveal';
 import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitPose/orbitAnglesLookingAlong';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Effect } from '../../../../src/@types/animation/Effect';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 

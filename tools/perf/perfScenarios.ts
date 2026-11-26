@@ -39,7 +39,7 @@
 import { absoluteArm } from '../../src/utils/camera/arms/absoluteArm';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 export type PerfScenario = { readonly name: string; readonly pose: PerfPose };
 

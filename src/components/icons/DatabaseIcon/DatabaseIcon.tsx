@@ -1,7 +1,7 @@
 /** DatabaseIcon: a stack of disks, a catalog of rows. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function DatabaseIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

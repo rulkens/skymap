@@ -17,7 +17,7 @@ import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
 import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import type { OctreeRawColumn } from '../@types/octree/OctreeRawColumn';
 import { octreeChunkFileName, OFFSET_FRACTION_LEVELS } from '../../src/data/octree/octreeFormat';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../packages/shared/src/utils/math/f32ToF16Bits';
 import { contentHash8 } from '../utils/data/contentHash8';
 import { encodeOctreeObject } from './encodeOctreeObject';
 

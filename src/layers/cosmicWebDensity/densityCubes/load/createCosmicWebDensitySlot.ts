@@ -6,7 +6,7 @@ import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { cosmicWebDensityFetcher } from './cosmicWebDensityFetcher';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';

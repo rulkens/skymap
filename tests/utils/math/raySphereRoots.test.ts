@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Every expectation below is hand-computed from the quadratic
 //   m = ro - center;  b = dot(m, rd);  c = dot(m, m) - r²;  discr = b² - c

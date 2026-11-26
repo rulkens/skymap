@@ -5,7 +5,7 @@
  * km of sag per step) in the line.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { hermiteTrackAt } from '../orbit/hermiteTrackAt';

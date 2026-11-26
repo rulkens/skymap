@@ -8,7 +8,7 @@
  * on the unit sphere), suitable as one column of a frame-rotation matrix.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const RAD = Math.PI / 180;
 

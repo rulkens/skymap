@@ -5,7 +5,7 @@
  * `reflex`), not a replacement for them.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitalElements } from './OrbitalElements';
 import type { EphemerisCorrection } from './EphemerisCorrection';
 import type { BarycentricReflex } from './BarycentricReflex';

@@ -22,7 +22,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createCatalogStore } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/catalogStore';
 import type { BuildRunner } from '../../../../../src/layers/galaxyCatalog/pointSprites/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 

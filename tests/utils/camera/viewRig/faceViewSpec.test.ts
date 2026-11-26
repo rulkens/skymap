@@ -10,10 +10,10 @@ import { describe, it, expect } from 'vitest';
 import { faceViewSpec } from '../../../../src/utils/camera/viewRig/faceViewSpec';
 import { cameraBasisWorld } from '../../../../src/utils/camera/orbitPose/cameraBasisWorld';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
-import { cross3 } from '../../../../src/utils/math/cross3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 

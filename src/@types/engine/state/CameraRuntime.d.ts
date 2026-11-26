@@ -17,7 +17,7 @@ import type { TiltMemory } from '../../camera/orientation/TiltMemory';
 import type { ZoomLimitPress } from '../../camera/input/ZoomLimitPress';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
-import type { Vec2 } from '../../math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,

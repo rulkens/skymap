@@ -11,8 +11,8 @@
  * Roots come as the stable pair `q = −(b + sign(b)·s)`, since `−b − s` cancels
  * once b² ≫ c — an eye metres above a planet-radius sphere.
  */
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function raySphereRoots(
   ro: Readonly<Vec3>,

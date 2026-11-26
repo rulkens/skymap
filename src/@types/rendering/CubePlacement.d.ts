@@ -12,9 +12,9 @@
  * constructs one from `FlowFieldMeta` + an identity rotation (flow cubes ship
  * axis-aligned, so their per-cube rotation is the identity quaternion).
  */
-import type { Vec3 } from '../math/Vec3';
-import type { Vec4 } from '../math/Vec4';
-import type { ScalarFieldFrameKind } from '../data/volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
+import type { ScalarFieldFrameKind } from '../../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
 
 export type CubePlacement = {
   /** Coordinate frame the cube lives in; mapped to world by the builder. */

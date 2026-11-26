@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import { cameraBasis } from '../../../../../../tools/mcpm-workbench/src/render/camera/cameraBasis';
-import { quatFromAxisAngle } from '../../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 const dot = (a: readonly number[], b: readonly number[]): number =>
   a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;

@@ -5,7 +5,7 @@ import type { AtlasImage } from '../../../../tools/scene-recon/@types/AtlasImage
 import type { ChartPlacement } from '../../../../tools/scene-recon/@types/ChartPlacement';
 import type { PackedAtlas } from '../../../../tools/scene-recon/@types/PackedAtlas';
 import type { PackedVertex } from '../../../../tools/scene-recon/@types/PackedVertex';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 const SOURCE_SIZE_PX = 8;
 const DEST_SIZE_PX = 16;

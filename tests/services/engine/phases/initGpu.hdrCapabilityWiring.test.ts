@@ -32,7 +32,7 @@ function makeStub(name: string): Stub {
   return stub;
 }
 
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   initGpu: vi.fn(async () => ({
     // `initGpu` constructs the real `createBloomPyramid(device, ...)`, so the stub device needs the
     // shader-module/sampler/layout/pipeline/buffer methods; the shader module carries
@@ -173,7 +173,7 @@ vi.mock('../../../../src/services/gpu/resources/loadEnvBrdfLut', () => ({
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // The mocked `watchHdrCapability`: tests read `.mock.calls` to recover the callback `initGpu`
 // actually registered and invoke it directly.
-import { watchHdrCapability } from '../../../../src/services/gpu/device';
+import { watchHdrCapability } from '../../../../packages/shared/src/services/gpu/device';
 import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineSlice';
 // The mocked `loadFontAtlases` itself: overridden to reject in one test below
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that

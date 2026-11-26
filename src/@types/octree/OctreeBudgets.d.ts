@@ -1,4 +1,4 @@
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 /**
  * A survey star source's per-tier limits. `drawBudget` bounds the instances

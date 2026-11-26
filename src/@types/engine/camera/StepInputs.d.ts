@@ -13,7 +13,7 @@ import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
 import type { RawInputStep } from '../../camera/input/RawInputStep';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
-import type { Vec2 } from '../../math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { InsetsPx } from '../../layout/InsetsPx';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';

@@ -13,7 +13,7 @@ import { describe, it, expect } from 'vitest';
 
 import { bodyApparentDiameterPx } from '../../../src/utils/scene/bodyApparentDiameterPx';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;

@@ -1,10 +1,10 @@
 import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { turnedPose } from './turnedPose';
-import { cross3 } from '../../../../../utils/math/cross3';
-import { normalize3 } from '../../../../../utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../../utils/math/quatFromAxisAngle';
+import { cross3 } from '../../../../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 /**
  * The pose tilted by `dTiltRad` (+ raises the view toward the horizon) about

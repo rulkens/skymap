@@ -8,7 +8,7 @@
  */
 
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { AltAz } from '../../@types/sky/AltAz';
@@ -16,7 +16,7 @@ import { siteEyeFrame } from '../../services/engine/camera/arms/utils/siteEyeFra
 import { skySpotRadial } from '../geo/skySpotRadial';
 import { spotWorldMpc } from './spotWorldMpc';
 import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 
 export function altAzFromSpot(
   spot: SkySpot,

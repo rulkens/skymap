@@ -1,5 +1,5 @@
 import type { SurfacePatchAnchor } from '../@types/SurfacePatchAnchor';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * patchOriginRelEyeM — the patch origin corner relative to the eye, in the

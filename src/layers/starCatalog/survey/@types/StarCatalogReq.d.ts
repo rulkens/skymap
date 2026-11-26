@@ -1,5 +1,5 @@
 import type { StarCatalogId } from '../../@types/StarCatalogId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 /**
  * Request shape for `starCatalogFetcher`: which star-catalog source, and at

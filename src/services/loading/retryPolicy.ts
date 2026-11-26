@@ -19,7 +19,7 @@
 import type { RetryDecision } from '../../@types/loading/RetryDecision';
 import type { RetryPolicy } from '../../@types/loading/RetryPolicy';
 import { FormatVersionError } from '../../data/formatVersionError';
-import { HttpError } from './fetchWithProgress';
+import { HttpError } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const BACKOFF_MS = [1000, 3000];
 

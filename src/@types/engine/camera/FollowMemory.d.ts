@@ -7,7 +7,7 @@
  */
 
 import type { CameraPose } from '../../camera/pose/CameraPose';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type FollowMemory = {
   readonly from: CameraPose | null;

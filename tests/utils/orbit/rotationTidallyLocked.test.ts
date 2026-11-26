@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { rotationTidallyLocked } from '../../../src/utils/orbit/rotationTidallyLocked';
 import { dot3 } from '../../../src/utils/math/dot3';
-import { cross3 } from '../../../src/utils/math/cross3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const col = (m: Mat3, c: number): Vec3 => [m[c * 3]!, m[c * 3 + 1]!, m[c * 3 + 2]!];
 

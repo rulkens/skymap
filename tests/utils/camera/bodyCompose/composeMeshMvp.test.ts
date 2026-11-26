@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { mat4d, vec4 } from 'wgpu-matrix';
 
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { composeMeshMvp } from '../../../../src/utils/camera/bodyCompose/composeMeshMvp';
 
 // A real perspective·lookAt, not identity, so a swapped multiply order shows.

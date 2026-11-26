@@ -9,7 +9,7 @@
 
 import type { StarBody } from '../../../../@types/scene/StarBody';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export type PositionedStar = StarBody & {
   readonly positionMpc: Readonly<Vec3>; // this frame's resolved position, from BodyState

@@ -15,7 +15,7 @@
  * Reference: Pen 1999 (ApJS 120, 49), eq. 4; Hogg 1999 (astro-ph/9905116).
  */
 
-import { HUBBLE_TIME_GYR } from './constants';
+import { HUBBLE_TIME_GYR } from '../../../packages/shared/src/utils/math/constants';
 
 /**
  * Lookback time in gigayears (Gyr) — how long ago the light we see now left

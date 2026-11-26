@@ -18,7 +18,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-comoving',
     text: 'The integral has no closed form, so we integrate it by Simpson’s rule in 64 steps. The constant in front, c/H₀, is 4,283 megaparsecs. The straight-line rule, distance = cz/H₀, would put a redshift of 0.1 at 428 megaparsecs and a redshift of 1 at 4,283: 2.5 per cent and 31 per cent too far.',
-    source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
+    source: `${REPO_BLOB}/packages/shared/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -150,7 +150,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-snapshot',
     text: 'The map mixes times. A galaxy stands at the distance it has today, yet its light, and so its redshift, left it long ago. Inside the Solar System bodies are placed where they are at the clock’s instant, with no delay for the travel of light.',
-    source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
+    source: `${REPO_BLOB}/packages/shared/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
   },

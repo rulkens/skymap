@@ -7,9 +7,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { siteEyeFrame } from '../../../../../../src/services/engine/camera/arms/utils/siteEyeFrame';
-import { cross3 } from '../../../../../../src/utils/math/cross3';
+import { cross3 } from '../../../../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../../../../../../src/utils/math/dot3';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 function expectOrthonormalRightHanded(p: Vec3): void {
   const { localUp, east, north } = siteEyeFrame(p);

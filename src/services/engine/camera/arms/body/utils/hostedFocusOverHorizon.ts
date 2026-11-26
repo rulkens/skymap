@@ -12,7 +12,7 @@
  */
 
 import type { HostBody } from '../../@types/HostBody';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { hostedFocusPivotM } from './hostedFocusPivotM';
 import { surfaceFloorM } from './surfaceFloorM';
 import type { PositionedId } from '../../../../../../@types/scene/PositionedId';

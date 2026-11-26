@@ -1,7 +1,7 @@
 /** CheckIcon: a tick, for a step or a task that is done. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function CheckIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

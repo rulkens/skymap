@@ -7,7 +7,7 @@
  * track, so nothing here assumes the Sun sits at the origin.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';

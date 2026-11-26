@@ -26,7 +26,7 @@ import type { SurfaceTilePayload } from '../@types/SurfaceTilePayload';
 import type { SurfaceTileStream } from '../@types/SurfaceTileStream';
 import type { SurfaceTileStreamDeps } from '../@types/SurfaceTileStreamDeps';
 import type { Destroyable } from '../../../../../@types/rendering/Destroyable';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { ResidentHeightLookup } from '../@types/ResidentHeightLookup';
 import { createTileStreamSubsystem } from '../../../../../services/engine/subsystems/tileStreamSubsystem';
 import { TextureAtlas } from '../../../../../services/gpu/resources/textureAtlas';

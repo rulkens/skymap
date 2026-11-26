@@ -20,7 +20,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/fore
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/slabs/present/bodySlabRows';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -28,7 +28,7 @@ import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 

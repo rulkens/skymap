@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { f16ToFloat } from '../../../src/utils/math/f16ToFloat';
-import { floatToF16 } from '../../../src/utils/math/floatToF16';
+import { floatToF16 } from '../../../../../src/utils/math/floatToF16';
 
 describe('f16ToFloat', () => {
   it('decodes 0x3c00 to 1.0', () => {

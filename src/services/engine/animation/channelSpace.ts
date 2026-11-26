@@ -34,7 +34,7 @@
 
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Space } from '../../../@types/animation/Space';
-import { lerp } from '../../../utils/math/lerp';
+import { lerp } from '../../../../packages/shared/src/utils/math/lerp';
 
 /**
  * CHANNEL_SPACE — the canonical Channel → Space mapping.

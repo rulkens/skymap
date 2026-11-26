@@ -11,7 +11,7 @@ import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCo
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { testPickCode } from '../../../../support/testPickCode';
 

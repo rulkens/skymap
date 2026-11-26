@@ -11,11 +11,11 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../data/volume/ScalarCube';
+import type { ScalarCube } from '../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
 
 export type VolumeFieldRenderer<Id extends string = string> = {

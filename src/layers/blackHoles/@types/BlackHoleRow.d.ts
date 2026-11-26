@@ -8,7 +8,7 @@
 
 import type { BlackHoleId } from './BlackHoleId';
 import type { BLACK_HOLE_SKY_CAPTURES } from '../lensing/data/blackHoleSkyCaptures';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type BlackHoleRow = {
   readonly id: BlackHoleId;

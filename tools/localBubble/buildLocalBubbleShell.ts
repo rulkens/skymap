@@ -10,9 +10,9 @@ import { dirname } from 'node:path';
 
 import type { ShellMesh } from '../../src/layers/localBubble/@types/ShellMesh';
 import type { ShellMeshDtype } from '../../src/layers/localBubble/@types/ShellMeshDtype';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { encodeShellMesh } from '../../src/layers/localBubble/shell/data/shellMeshFormat';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../packages/shared/src/utils/math/f32ToF16Bits';
 import type { FitsColumn } from '../parsers/@types/FitsColumn';
 import { parseFitsBinTable } from '../parsers/parseFitsBinTable';
 import { rawDataPath } from '../utils/io/rawDataRegistry';

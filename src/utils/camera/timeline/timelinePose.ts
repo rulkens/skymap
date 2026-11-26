@@ -9,7 +9,7 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { DriverOutput } from '../../../@types/engine/camera/DriverOutput';
@@ -32,8 +32,8 @@ import { timelineViewDirection } from './timelineViewDirection';
 import { timelineStops } from './timelineStops';
 import { orbitAnglesLookingAlong } from '../orbitPose/orbitAnglesLookingAlong';
 import { sphereFitDistance } from '../orbitCamera/sphereFitDistance';
-import { lerpVec3 } from '../../math/lerpVec3';
-import { normalize3 } from '../../math/normalize3';
+import { lerpVec3 } from '../../../../packages/shared/src/utils/math/lerpVec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { smoothstep } from '../../math/smoothstep';
 import { isSceneBodyId } from '../../scene/isSceneBodyId';
 

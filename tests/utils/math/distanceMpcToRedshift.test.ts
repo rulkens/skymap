@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { distanceMpcToRedshift } from '../../../src/utils/math/distanceMpcToRedshift';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 describe('distanceMpcToRedshift', () => {
   it('returns 0 for d ≤ 0', () => {

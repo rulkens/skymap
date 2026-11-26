@@ -31,7 +31,7 @@ import { seededBodyStates } from '../../../../helpers/frame/seededBodyStates';
 import type { SceneBody } from '../../../../../src/@types/scene/SceneBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { viewBandOf } from '../../../../../src/services/engine/presentation/viewBandOf';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';

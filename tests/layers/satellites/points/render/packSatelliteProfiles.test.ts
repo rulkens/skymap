@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { packSatelliteProfiles } from '../../../../../src/layers/satellites/points/render/packSatelliteProfiles';
 import { SATELLITE_PROFILES } from '../../../../../src/layers/satellites/points/data/satelliteProfiles';
 import type { SatelliteProfileId } from '../../../../../src/layers/satellites/points/@types/SatelliteProfileId';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 describe('packSatelliteProfiles', () => {
   it('writes each row at its stride', () => {

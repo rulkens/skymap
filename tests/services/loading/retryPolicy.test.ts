@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultRetryPolicy } from '../../../src/services/loading/retryPolicy';
-import { HttpError } from '../../../src/services/loading/fetchWithProgress';
+import { HttpError } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 import { FormatVersionError } from '../../../src/data/formatVersionError';
 
 describe('defaultRetryPolicy', () => {

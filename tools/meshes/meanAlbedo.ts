@@ -8,7 +8,7 @@
  * that once darkened Bennu's glint by a quarter.
  */
 
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { Geometry } from './@types/Geometry';
 import { triangleArea } from '../utils/meshes/triangleArea';
 import { srgbToLinear } from '../../src/utils/color/srgbToLinear';

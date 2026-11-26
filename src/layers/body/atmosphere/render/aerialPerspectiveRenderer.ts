@@ -12,7 +12,7 @@ import { DUAL_SOURCE_BLEND, DUAL_SOURCE_FEATURE } from '../../../../data/renderi
 import { FROXEL_DIMS } from '../data/froxelVolume';
 import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import bakeCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
 import applyCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
 import dualSourceCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragmentDualSource.wesl?static';

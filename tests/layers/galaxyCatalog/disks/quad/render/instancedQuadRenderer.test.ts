@@ -19,7 +19,7 @@ import {
   FLOATS_PER_INSTANCE,
   UNIFORM_BYTES,
 } from '../../../../../../src/layers/galaxyCatalog/disks/quad/render/instancedQuadRenderer';
-import type { GpuContext } from '../../../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { FocusUniformsBgl } from '../../../../../../src/@types/rendering/FocusUniformsBgl';
 
 // Stub focus BGL — the factory only forwards it into the pipeline layout;

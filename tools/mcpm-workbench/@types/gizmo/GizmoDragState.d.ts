@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import type { GridBox } from '../grid/GridBox';
 import type { GizmoHandleId } from './GizmoHandleId';
 

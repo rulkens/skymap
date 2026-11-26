@@ -11,7 +11,7 @@ import { GALACTIC_DISC_FORWARD, INITIAL_DISTANCE_MPC } from './cameraFraming';
 import type { EngineHomeConfig } from '../../../../@types/engine/EngineHomeConfig';
 import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export function homePose(
   home: EngineHomeConfig,

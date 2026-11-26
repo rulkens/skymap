@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { floatToF16 } from '../../../src/utils/math/floatToF16';
-import { f16ToFloat } from '../../../src/utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../packages/shared/src/utils/math/f16ToFloat';
 
 describe('floatToF16', () => {
   it('encodes 1.0 as the canonical f16 bit pattern (0x3c00)', () => {

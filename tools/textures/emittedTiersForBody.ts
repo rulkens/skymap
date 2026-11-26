@@ -1,8 +1,8 @@
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
-import type { Tier } from '../../src/@types/data/Tier';
+import type { Tier } from '../../packages/shared/src/@types/data/Tier';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/textures/data/bodyTextureRegistry';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 
 /**
  * emittedTiersForBody — the tiers `build-textures` may ever ship for a body's

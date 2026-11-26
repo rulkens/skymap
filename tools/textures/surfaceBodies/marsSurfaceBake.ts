@@ -15,7 +15,7 @@ import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites'
 import { WHOLE_GLOBE_BOUNDS } from '../../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import { SURFACE_TILE_PX } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
-import { TIER_LADDER } from '../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../packages/shared/src/data/tierLadder';
 import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { rawDataPath, type RawDataKey } from '../../utils/io/rawDataRegistry';
 import { heightLatticeStepDeg } from '../../utils/textures/heightLatticeStepDeg';

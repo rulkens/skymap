@@ -7,7 +7,7 @@
  */
 
 import type { SceneBodyId } from '../../../../../../@types/scene/SceneBodyId';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { positionDriverOrNull } from '../../../../../../data/bodies/positionDrivers';
 import { siteGroundRadiusM } from '../../../../../../utils/camera/arms/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../../../utils/camera/arms/sitePointBodyFixed';

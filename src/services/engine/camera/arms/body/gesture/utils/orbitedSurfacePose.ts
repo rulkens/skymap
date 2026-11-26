@@ -1,9 +1,9 @@
 import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../../data/camera/bodyLocalFrame';
 import { rotatedAboutPoint } from '../../../../orientation/utils/rotatedAboutPoint';
-import { multiplyQuat } from '../../../../../../../utils/math/multiplyQuat';
-import { quatFromAxisAngle } from '../../../../../../../utils/math/quatFromAxisAngle';
+import { multiplyQuat } from '../../../../../../../../packages/shared/src/utils/math/multiplyQuat';
+import { quatFromAxisAngle } from '../../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 /**
  * Orbits the body centre AGAINST the screen-radian motion, which is what

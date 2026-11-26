@@ -1,6 +1,6 @@
 /** RaymarchRowsContainer — store boundary for the raymarch's Rendering rows. */
 import { memo, useCallback, type ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import {
   setAdditive,
   setDivisor,

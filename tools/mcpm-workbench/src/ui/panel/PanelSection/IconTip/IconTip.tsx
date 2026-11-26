@@ -5,7 +5,7 @@
  * fade-out: a live tip, like the Simulation one, would otherwise re-render while hidden.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import CompactInfoTip from '../../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './IconTip.module.css';
 
 export type IconTipProps = {

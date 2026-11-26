@@ -6,10 +6,10 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
 import type { GalaxyPointStats } from './GalaxyPointStats';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 export type GalaxyPointRenderer = {
   /** Part of the shared `Renderer` contract (`Renderer.d.ts`). */

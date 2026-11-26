@@ -1,7 +1,7 @@
 /** PaletteRow — a labelled palette picker in the panel's row chrome. */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import { PALETTE_IDS } from '../../../../../../src/data/volume/scalarFieldPalettes';
+import type { ScalarFieldPaletteId } from '../../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
+import { PALETTE_IDS } from '../../../../../../packages/shared/src/data/volume/scalarFieldPalettes';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import Select from '../../../../../../src/components/common/Select/Select';
 import { PALETTE_ICONS } from './data/paletteIcons.constant';

@@ -12,7 +12,7 @@
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';

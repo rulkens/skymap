@@ -62,7 +62,7 @@ import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import { composeSelectionRows } from './selection/composeSelectionRows';
-import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../packages/shared/src/utils/url/hasUrlGate';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup

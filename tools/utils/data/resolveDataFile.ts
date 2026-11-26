@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { DataManifest } from '../../../src/@types/data/DataManifest';
+import type { DataManifest } from '../../../packages/shared/src/@types/data/DataManifest';
 
 /**
  * The on-disk path of a logical data file: the manifest's hashed name where

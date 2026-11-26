@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { SplatGpuAsset } from '../../render/renderResources';
 import { uploadGaussianSplat } from '../../render/uploadGaussianSplat';
 import { parseSplats } from '../parseSplats';

@@ -12,7 +12,7 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { TerrainPickMarkerRenderer } from '../@types/TerrainPickMarkerRenderer';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import vsCode from '../../../../services/gpu/shaders/devTools/terrainPickMarker/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/devTools/terrainPickMarker/fragment.wesl?static';
 

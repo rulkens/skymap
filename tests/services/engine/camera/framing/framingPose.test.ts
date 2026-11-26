@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
 

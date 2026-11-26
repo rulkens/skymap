@@ -1,5 +1,5 @@
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import type { ColourTreatment } from './ColourTreatment';
 

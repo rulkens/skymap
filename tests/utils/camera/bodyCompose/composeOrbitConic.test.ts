@@ -20,8 +20,8 @@ import { describe, expect, it } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
 
 import { composeOrbitConic } from '../../../../src/utils/camera/bodyCompose/composeOrbitConic';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // ── Shared fixture: a tilted ellipse viewed by a plain perspective camera ────
 

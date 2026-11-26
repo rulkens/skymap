@@ -1,6 +1,6 @@
 /** The focus-move knobs, Eased first, then Geodesic. Durations are seconds on screen; the component converts to ms. */
 
-import type { SliderField } from '../../@types/data/SliderField';
+import type { SliderField } from '../../../packages/shared/src/@types/data/SliderField';
 
 export const FOCUS_MOVE_SLIDER_FIELDS: readonly SliderField<
   'easedS' | 'rho' | 'velocity' | 'minS' | 'maxS'

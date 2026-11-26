@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import type { DataManifest } from '../../../src/@types/data/DataManifest';
+import type { DataManifest } from '../../../packages/shared/src/@types/data/DataManifest';
 import { logicalDataName } from '../../utils/data/logicalDataName';
 import { walkDataFiles } from '../../utils/data/walkDataFiles';
 import { allowDataFile } from './allowDataFile';

@@ -3,7 +3,7 @@
  * the loaded catalog, so a box fitted far from the origin can still be nudged.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import type { GridSlice } from '../../../../../../../../tools/mcpm-workbench/@types/grid/GridSlice';
 import { defaultGridSlice } from '../../../../../../../../tools/mcpm-workbench/src/state/grid/gridSlice';
 import { centerSliderFor } from '../../../../../../../../tools/mcpm-workbench/src/ui/grid/SelectionControls/utils/centerSliderFor';

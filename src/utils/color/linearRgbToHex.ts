@@ -2,7 +2,7 @@
  * Inverse of `hexToLinearRgb` — same transfer-function provenance.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { HexString } from '../../@types/math/HexString';
 import { linearToSrgbByte } from './linearToSrgbByte';
 

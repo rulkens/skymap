@@ -1,4 +1,4 @@
-import { lerp } from '../../../src/utils/math/lerp';
+import { lerp } from '../../../packages/shared/src/utils/math/lerp';
 import { clamp } from '../../utils/textures/clamp';
 import {
   STREAM_POPULATION_METAL_POOR as POOR,

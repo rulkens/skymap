@@ -10,7 +10,7 @@
  */
 
 import type { CameraRuntime } from '../../../../@types/engine/state/CameraRuntime';
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
 import { matrixToQuaternion } from '../../../../utils/math/matrixToQuaternion';
 
 export function liveUpBasisQuat(cameraRuntime: CameraRuntime): Vec4 {

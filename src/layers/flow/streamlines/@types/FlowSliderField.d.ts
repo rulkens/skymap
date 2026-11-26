@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { FlowSliderKey } from './FlowSliderKey';
 import type { FlowSliderSurface } from './FlowSliderSurface';
 

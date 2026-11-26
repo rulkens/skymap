@@ -7,7 +7,7 @@
  * before the quadratic runs.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** (h/R)·(2 + h/R) for h = |eyeRelBodyM| − radiusM — dimensionless, 0 at the surface. */
 export function bodySlabCamAltitudeSq(eyeRelBodyM: Readonly<Vec3>, radiusM: number): number {

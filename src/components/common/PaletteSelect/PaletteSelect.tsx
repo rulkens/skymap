@@ -18,8 +18,8 @@
  * specialisation of it.
  */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
-import { PALETTE_IDS } from '../../../data/volume/scalarFieldPalettes';
+import type { ScalarFieldPaletteId } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
+import { PALETTE_IDS } from '../../../../packages/shared/src/data/volume/scalarFieldPalettes';
 import styles from './PaletteSelect.module.css';
 
 export type PaletteSelectProps = {

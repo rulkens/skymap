@@ -10,7 +10,7 @@ import { lonLatFocusPose } from '../../../../src/utils/camera/arms/lonLatFocusPo
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../../src/utils/camera/surfaceFrame/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../../src/data/camera/bodyLocalFrame';
 import type { LonLatDeg } from '../../../../src/@types/scene/LonLatDeg';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';

@@ -72,7 +72,7 @@ import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
 import type { SeqOverlap } from './SeqOverlap';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { GeodesicTuning } from '../camera/focusMotion/GeodesicTuning';
 
 export type Effect =

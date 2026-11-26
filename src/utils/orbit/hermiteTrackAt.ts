@@ -6,7 +6,7 @@
  */
 
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { countAtOrBefore } from '../math/countAtOrBefore';
 import { hermiteSegmentKm } from './hermiteSegmentKm';
 

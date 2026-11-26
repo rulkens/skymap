@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { frustumRayAxis } from '../../../../src/utils/camera/frustum/frustumRayAxis';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const S = Math.SQRT1_2;
 // Off the world axes, so a swapped term can't hide behind a zero component.

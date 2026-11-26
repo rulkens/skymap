@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { PickWindow } from '../../../../src/@types/engine/frame/PickWindow';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import { windowedSlabView } from '../../../../src/services/engine/frame/windowedSlabView';
 import { pickWindowCrop } from '../../../../src/utils/gpu/pickWindowCrop';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';

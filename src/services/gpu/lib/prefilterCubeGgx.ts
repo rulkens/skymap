@@ -9,7 +9,7 @@
  */
 
 import prefilterCode from '../shaders/prefilterCube/prefilterCube.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 // Hammersley taps per texel. The source is 128 px faces, so the roughness-1
 // mip integrates a hemisphere of ~100k texels into one; fewer taps let a

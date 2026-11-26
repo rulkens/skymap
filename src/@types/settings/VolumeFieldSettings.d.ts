@@ -15,7 +15,7 @@
  */
 
 import type { DataItemSettings } from './DataItemSettings';
-import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */

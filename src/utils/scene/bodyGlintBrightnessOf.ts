@@ -3,7 +3,7 @@
  * The one rule, so the pick pass recomputes exactly the drawn value rather than a copy of it.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_FADE_BANDS } from '../../data/scaleFadeBands';
 import { fadeBand } from '../math/fadeBand';

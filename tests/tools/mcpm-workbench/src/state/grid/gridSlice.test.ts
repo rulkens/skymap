@@ -8,7 +8,7 @@
  * same as a hand-dragged slider.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { GridBox } from '../../../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import type { GridSlice } from '../../../../../../tools/mcpm-workbench/@types/grid/GridSlice';
 import type { SimLaneCounts } from '../../../../../../tools/mcpm-workbench/@types/sim/SimLaneCounts';

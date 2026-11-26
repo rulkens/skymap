@@ -4,7 +4,7 @@
  * and image-right is dome right, matching the plan's "Pixel → NDC" table.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function fisheyeDirection(ndcX: number, ndcY: number): Vec3 | null {
   const r = Math.hypot(ndcX, ndcY);

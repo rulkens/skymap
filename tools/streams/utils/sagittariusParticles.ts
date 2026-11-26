@@ -7,8 +7,8 @@
  * time (metal-rich core, metal-poor old debris); brightness does not follow it, so the old arms
  * are not dimmed into invisibility.
  */
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
-import { normalize3 } from '../../../src/utils/math/normalize3';
+import { raDecDistToEqCart } from '../../../packages/shared/src/utils/math/raDecDistToEqCart';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { galToEq } from '../../utils/math/galToEq';
 import { splitmix64Rng } from '../../utils/random/splitmix64Rng';

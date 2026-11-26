@@ -4,7 +4,7 @@ import {
   dedupeByProximity,
   type ProximityPoint,
 } from '../../../tools/curation/dedupeByProximity.js';
-import type { Vec3 } from '../../../src/@types/math/Vec3.js';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3.js';
 
 describe('dedupeByProximity', () => {
   it('applies the floor when anchor radius is smaller than the floor', () => {

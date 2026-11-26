@@ -5,7 +5,7 @@ import type { AgentInitMode } from './AgentInitMode';
 import type { HistogramReadback } from './HistogramReadback';
 import type { McpmParams } from './McpmParams';
 import type { TraceReadback } from './TraceReadback';
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 
 /**
  * McpmHarness — the stepping MCPM simulation: GPU buffers, pipelines and the

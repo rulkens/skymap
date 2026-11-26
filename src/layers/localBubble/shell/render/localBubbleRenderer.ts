@@ -27,10 +27,10 @@ import { mat4 } from 'wgpu-matrix';
 import type { ShellMesh } from '../../@types/ShellMesh';
 import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 import shellCode from '../../../../services/gpu/shaders/localBubble/shell.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SHELL_VERTEX_FORMAT } from '../data/shellVertexFormats';
 import { FRAME_TO_WORLD } from '../../../../data/frameToWorld';

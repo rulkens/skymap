@@ -1,4 +1,7 @@
-import { H0_KM_S_MPC, OMEGA_M } from '../../../../../../../src/utils/math/constants';
+import {
+  H0_KM_S_MPC,
+  OMEGA_M,
+} from '../../../../../../../packages/shared/src/utils/math/constants';
 import type { CatalogImportFields } from '../../../../../@types/catalog/import/CatalogImportFields';
 
 // The app's own cosmology; weights taken as stored.

@@ -60,7 +60,7 @@
  * rejects old bins until the build pipeline re-emits them.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
 import type { SkstNode } from '../../@types/data/starCatalog/SkstNode';
 import { compressStarBin, decompressStarBin } from './starBinCodec';

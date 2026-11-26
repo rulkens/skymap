@@ -22,7 +22,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { imagePlaneBasis } from '../../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../../src/utils/camera/orbitPose/frameUp';
-import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
@@ -40,7 +40,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { SeededBody } from '../../../../helpers/frame/SeededBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceTileDrawArgs } from '../../../../../src/layers/body/surfaceTiles/patch/@types/SurfaceTileDrawArgs';
 
 // Mocked so tests can assert which vp/pose they consumed by argument identity and hand the

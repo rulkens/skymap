@@ -12,7 +12,7 @@ import { setOrientation } from '../../../src/state/settings/core/orientationSlic
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../src/data/orientation/orientationFrames';
 import { cameraRoute, settingsRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
-import type { Vec4 } from '../../../src/@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));

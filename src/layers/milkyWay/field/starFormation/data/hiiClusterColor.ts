@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * The embedded OB association — hotter and bluer than `ARM_COLOR_YOUNG`. NOT on

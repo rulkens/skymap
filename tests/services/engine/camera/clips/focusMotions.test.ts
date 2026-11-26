@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -26,7 +26,7 @@ import { makeCameraSimHarness } from '../../../../helpers/camera/makeCameraSimHa
 import { relErr } from '../../../../support/relErr';
 import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();

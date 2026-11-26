@@ -34,15 +34,15 @@
  * the swap chain underneath, not double-expose.
  */
 
-import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SelectionRingRenderer } from '../../../../@types/rendering/SelectionRingRenderer';
 import vsCode from '../../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../../shaders/selectionRing/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/selectionRing/fragmentOcclude.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { SampledDepthSceneOcclusion } from '../../../../@types/rendering/SampledDepthSceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,

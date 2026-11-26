@@ -6,7 +6,7 @@
 import type { ComponentType } from 'react';
 import cx from 'classnames';
 import type { ControlSchemeId } from '../../../@types/engine/camera/ControlSchemeId';
-import type { IconProps } from '../../Icon/Icon';
+import type { IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 import PlanetIcon from '../../icons/PlanetIcon/PlanetIcon';
 import SparkleIcon from '../../icons/SparkleIcon/SparkleIcon';
 import controls from '../remoteControls.module.css';

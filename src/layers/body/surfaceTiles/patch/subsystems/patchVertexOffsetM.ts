@@ -1,5 +1,5 @@
 import type { SurfacePatchAnchor } from '../@types/SurfacePatchAnchor';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * patchVertexOffsetM — a template vertex's offset from its patch's origin

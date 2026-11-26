@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseRegalade, parseRegaladeLine } from '../../../tools/parsers/regalade';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 /**
  * Twenty rows copied verbatim from the head of `regalade.dat` (VizieR

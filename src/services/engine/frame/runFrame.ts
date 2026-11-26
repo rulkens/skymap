@@ -10,7 +10,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { FrameReadoutCtx } from '../../../@types/engine/frame/FrameReadoutCtx';
 
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/orientDeltas';
@@ -18,7 +18,7 @@ import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { resizeCanvasToDisplay } from '../../gpu/device';
+import { resizeCanvasToDisplay } from '../../../../packages/shared/src/services/gpu/device';
 import { canvasDpr } from '../../../utils/browser/canvasDpr';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runLabel3DProducers } from './runLabel3DProducers';

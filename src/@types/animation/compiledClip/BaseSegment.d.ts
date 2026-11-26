@@ -2,7 +2,7 @@ import type { Channel } from '../Channel';
 import type { SegmentCurve } from './SegmentCurve';
 import type { Space } from '../Space';
 import type { PoseFrame } from '../../camera/pose/PoseFrame';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * BaseSegment — one `[startSec, endSec)` window on a channel's base layer.

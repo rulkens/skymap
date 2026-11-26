@@ -5,7 +5,7 @@
 import earcut from 'earcut';
 
 import type { HalfPlane2 } from '../@types/HalfPlane2';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export function triangulateOutline(ringM: readonly Vec2[]): HalfPlane2[][] {
   const triangles = earcut(ringM.flat());

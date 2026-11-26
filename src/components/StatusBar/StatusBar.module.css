@@ -4,7 +4,7 @@
  * Only renders when the engine reports a fatal error — see StatusBar.tsx
  * for the rule.
  *
- * All atoms reference tokens from `src/styles/global.css`.
+ * All atoms reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 .status {

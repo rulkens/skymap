@@ -5,8 +5,8 @@
  * All drivers (mouse input, tour storyboard, animated tweens) converge to this shape.
  */
 
-import type { Vec2 } from '../../math/Vec2';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type CameraPose = {
   target: Vec3;

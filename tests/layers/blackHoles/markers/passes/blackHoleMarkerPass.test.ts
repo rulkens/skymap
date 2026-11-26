@@ -21,7 +21,7 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(

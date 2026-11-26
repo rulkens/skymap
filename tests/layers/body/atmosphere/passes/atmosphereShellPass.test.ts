@@ -28,7 +28,7 @@ import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRunt
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // packAtmosphereUniforms runs for real so the packed bottomRadius reveals which
 // ATMOSPHERE_PARAMS row fed it.

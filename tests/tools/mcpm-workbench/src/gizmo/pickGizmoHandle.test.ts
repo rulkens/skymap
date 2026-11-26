@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GizmoHandleGeometry } from '../../../../../tools/mcpm-workbench/@types/gizmo/GizmoHandleGeometry';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import type { Ray } from '../../../../../tools/mcpm-workbench/@types/gizmo/Ray';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { gizmoHandleGeometry } from '../../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
 

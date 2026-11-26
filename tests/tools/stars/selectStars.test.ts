@@ -4,7 +4,7 @@ import {
   type GaiaSelectedRow,
   type HipBrightRow,
 } from '../../../tools/stars/selectStars';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Distinct sentinel positions/colours so an assertion proves WHICH row survived,
 // not merely that some star came through.

@@ -6,7 +6,7 @@
  * stops, same soft cyan glow.  The bar is the network-progress sibling
  * of that decorative element — same visual language, different role.
  *
- * All atoms reference tokens from `src/styles/global.css`.
+ * All atoms reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 /*

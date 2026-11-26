@@ -19,7 +19,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ARRIVAL_GLIDE_SEC } from '../../../../src/data/sky/arrivalGlideSec';
 import { ARRIVAL_LOOK_UP_RAD } from '../../../../src/data/sky/arrivalLookUpRad';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const EARTH = asSceneBodyId('earth');
 const B = ORIENTATION_FRAMES.ecliptic;

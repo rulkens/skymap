@@ -8,7 +8,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { isSurfaceTileBodyId } from '../../surfaceTiles/format/utils/isSurfaceTileBodyId';
 import { terrainPickUnderCursor } from '../present/terrainPickUnderCursor';
 

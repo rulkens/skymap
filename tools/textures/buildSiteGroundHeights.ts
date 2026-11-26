@@ -12,10 +12,10 @@ import { fileURLToPath } from 'node:url';
 
 import type { GeodeticAnchor } from '../../src/@types/geo/GeodeticAnchor';
 import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
-import { normalize3 } from '../../src/utils/math/normalize3';
+import { normalize3 } from '../../packages/shared/src/utils/math/normalize3';
 import { findByIdOrThrow } from '../../src/utils/object/findByIdOrThrow';
 import { enuOffsetM } from '../utils/geo/enuOffsetM';
 import { MESH_SOURCES } from '../utils/io/meshSources';
@@ -75,7 +75,7 @@ function serialize(heights: ReadonlyMap<string, number>, ups: ReadonlyMap<string
   return (
     GENERATED_BANNER +
     '\n' +
-    "import type { Vec3 } from '../../@types/math/Vec3';\n" +
+    "import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';\n" +
     '\n' +
     "/** Site id -> ground height, metres above the host's datum, the posed body\n" +
     ' *  is seated at: resting on the highest drawn ground under its footprint\n' +

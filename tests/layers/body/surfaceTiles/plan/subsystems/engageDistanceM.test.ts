@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
 
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { engageDistanceM } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/engageDistanceM';
 import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { surfaceTileBandFromBounds } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';

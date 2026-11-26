@@ -9,7 +9,7 @@
  * Infinity sits at the off end and cannot pass for a real reading.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { distanceMpc } from '../math/distanceMpc';

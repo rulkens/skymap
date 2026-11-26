@@ -32,7 +32,7 @@
 
 import vsCode from '../shaders/pickDebugOverlay/vertex.wesl?static';
 import fsCode from '../shaders/pickDebugOverlay/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { PREMULTIPLIED_OVER_BLEND } from '../lib/blendStates';
 import type { PickDebugOverlay } from '../../../@types/rendering/PickDebugOverlay';
 

@@ -42,7 +42,7 @@
  * tint the survey-scale star point cloud straight from that column.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { srgbToLinear } from '../../../../utils/color/srgbToLinear';
 
 /**

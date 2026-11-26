@@ -11,7 +11,7 @@ import { arrivalFraming } from './arrivalFraming';
 import { BODY_FOCUS } from '../../../../data/selection/bodyFocus';
 import { bodyHostId, positionDriverOrNull } from '../../../../data/bodies/positionDrivers';
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
-import { normalize3 } from '../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 

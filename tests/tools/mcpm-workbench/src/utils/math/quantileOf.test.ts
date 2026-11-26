@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { quantileOf } from '../../../../../../tools/mcpm-workbench/src/utils/math/quantileOf';
 
 // Type-7 read straight off the sorted array: the definition quantileOf must match.

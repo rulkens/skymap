@@ -3,7 +3,7 @@
  * channel (untouched, the identity anchor). See `GalaxyDustParams.redness`
  * for the physical rationale.
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export function stretchExtinctionChroma(rgb: Vec3, redness: number): Vec3 {
   const g = rgb[1];

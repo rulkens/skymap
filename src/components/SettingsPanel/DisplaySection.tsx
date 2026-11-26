@@ -43,7 +43,7 @@ import { LENS_MIN_DEG } from '../../data/camera/lensMinDeg';
 import { LENS_MAX_DEG } from '../../data/camera/lensMaxDeg';
 import { formatLensDeg } from '../../utils/format/formatLensDeg';
 import CollapsibleSection from './CollapsibleSection';
-import Slider from '../common/Slider/Slider';
+import Slider from '../../../packages/shared/src/components/common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────

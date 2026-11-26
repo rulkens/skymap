@@ -4,7 +4,7 @@
  * its folded summary. The sidebar's rows that read more own their containers.
  */
 import { memo, useCallback, type ReactNode } from 'react';
-import type { Tier } from '../../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../../packages/shared/src/@types/data/Tier';
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { deriveGridBox } from '../../../grid/deriveGridBox';
 import { setCatalogSources, setCatalogTier } from '../../../state/catalog/catalogSlice';

@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/jost/wght.css';
-import '../../../../src/styles/tokens.css';
+import '../../../shared/src/styles/tokens.css';
 import '../control/control.css';
 import './brand.css';
 import type { MarkDrawing } from '../../../website/src/@types/MarkDrawing';
