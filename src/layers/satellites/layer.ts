@@ -14,6 +14,7 @@ import { satellitesSourceCounts } from './catalog/load/satellitesSourceCounts';
 import { satellitesPlanner } from './frame';
 import { satellitesPass } from './points/passes/satellitesPass';
 import { satelliteOrbitsPass } from './orbits/passes/satelliteOrbitsPass';
+import SatelliteTuningSectionContainer from './controls/ui/SatelliteTuningSectionContainer';
 import SatellitesSectionContainer from './controls/ui/SatellitesSectionContainer';
 import SatelliteDetailCard from './focus/ui/SatelliteDetailCard/SatelliteDetailCard';
 import CompactSatelliteCard from './focus/ui/CompactSatelliteCard/CompactSatelliteCard';
@@ -40,6 +41,7 @@ export const satellitesLayer = defineLayer({
   search: (runtime) => satellitesSearch(runtime),
   ui: [
     { slot: 'main', content: SatellitesSectionContainer, title: 'Satellites' },
+    { slot: 'debug', content: SatelliteTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'satellite', Detail: SatelliteDetailCard, Compact: CompactSatelliteCard },

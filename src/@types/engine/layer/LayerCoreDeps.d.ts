@@ -12,7 +12,9 @@ import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
+import type { Tier } from '../../data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
+import type { MeshBodiesSink } from './MeshBodiesSink';
 
 export type LayerCoreDeps<Facts = undefined> = {
   readonly ctx: GpuContext;
@@ -25,8 +27,12 @@ export type LayerCoreDeps<Facts = undefined> = {
   readonly settings: () => Readonly<EngineSettingsState>;
   /** Core UI fact: whether the debug panel is open, read lazily. */
   readonly debugPanelOpen: () => boolean;
+  /** The store's active data tier, read at call time. */
+  readonly tier: () => Tier;
   /** `state.subsystems.scheduler.requestRender` — core's render-wake. */
   readonly requestRender: () => void;
   /** This app's pick code for one of the Layer's pick sources; stable for the session, never persisted. */
   readonly pickCode: (pickSourceId: string) => number;
+  /** What a Layer's mesh asset rows commit to and release from (`meshAssetRow`). */
+  readonly meshBodies: MeshBodiesSink;
 } & ([Facts] extends [undefined] ? object : { readonly publish: (patch: Partial<Facts>) => void });

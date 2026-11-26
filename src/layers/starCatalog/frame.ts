@@ -19,6 +19,8 @@ import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import { NODE_FADE_MS } from '../../data/octree/octreeNodeFade';
 import { STAR_PLAN_INTERVAL_FRAMES } from './octreeCut/data/starPlanIntervalFrames';
+import { viewBehindABody } from '../../services/engine/frame/viewBehindABody';
+import { NEAR0 } from '../../services/engine/frame/slabs';
 import { starCutInputs } from './octreeCut/render/starCutInputs';
 import { sameOctreeCut } from '../../utils/octree/sameOctreeCut';
 import { resizeStarPools } from './survey/load/resizeStarPools';
@@ -30,8 +32,6 @@ export function starCatalogPlanner(
 ): Extract<FrameContentPlanner<void, 'starCatalog'>, { scope: 'once' }> {
   let anchor: OctreeCutSpec | null = null;
   let changedAtMs = -Infinity;
-  // The pool's LRU clock; any strictly increasing count serves.
-  let frameIndex = 0;
   // A landing chunk changes the cut without changing `sameOctreeCut`'s inputs.
   const seenEpoch = new WeakMap<OctreeChunkStream<StarColumns>, number>();
   // The cut and frame of the last chunk plan, and whether it left chunks wanted.
@@ -62,7 +62,9 @@ export function starCatalogPlanner(
       const inputs = starCutInputs(runtime, state.settings.starCatalogs, fade, views);
       const nowMs = views[0]!.snapshot.nowMs;
       if (nowMs < changedAtMs) changedAtMs = nowMs;
-      frameIndex++;
+      // This planner runs once per rendered frame, so the frame index paces the chunk plans and
+      // serves as the pool's LRU clock (any strictly increasing count does).
+      const { frameIndex } = state;
 
       let inFlight = 0;
       let residencyChanged = false;
@@ -120,7 +122,9 @@ export function starCatalogPlanner(
         anchor = inputs.cut;
         changedAtMs = nowMs;
       }
-      const recut = !(moving && recutLast);
+      // No view shows a star (`starCatalogVisible`): the passes skip, so keep the last lists.
+      const hidden = views.every((view) => viewBehindABody(state, view, NEAR0));
+      const recut = !hidden && !(moving && recutLast);
       recutLast = recut;
       runtime.renderer.setFrameCut(inputs, recut);
       const awake = inputs !== null && (nowMs - changedAtMs < NODE_FADE_MS || inFlight > 0);

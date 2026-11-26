@@ -20,4 +20,6 @@ export type SatelliteInfo = {
   readonly inclinationDeg: number;
   /** When CelesTrak's orbit was fitted, Unix ms. */
   readonly epochMs: number;
+  /** Sim time minus the fit, days; negative before it. Re-read every frame while selected. */
+  readonly fitAgeDays: number;
 };

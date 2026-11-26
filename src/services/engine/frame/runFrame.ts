@@ -19,8 +19,11 @@ import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { canvasDpr } from '../../../utils/browser/canvasDpr';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runLabel3DProducers } from './runLabel3DProducers';
+import { runLabelDirector } from './runLabelDirector';
+import { COSMO, NEAR0 } from './slabs';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
@@ -39,6 +42,7 @@ import { selectPendingInput } from '../../../state/input/selectors';
 import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
+import { hostOf } from '../camera/arms/hostOf';
 import { selectionKindShown } from '../presentation/selectionKindShown';
 import { isRecedingFocusRow } from '../../../utils/selection/isRecedingFocusRow';
 
@@ -115,13 +119,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (orientDeltasWatched()) {
     recordOrientDeltas(
       cameraDofAnglesOf({
-        storedFrame: rootState.camera.base.frame,
+        storedFrame: rootState.camera.intent.base.frame,
         worldPose,
         poseBasis,
         upBasis,
         bodyStates,
         rememberedTiltRad: next.tilt.rememberedTiltRad,
-        tuning: rootState.camera.tuning,
+        tuning: rootState.camera.intent.tuning,
       }),
     );
   }
@@ -151,9 +155,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     canvasCssPx: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
     camPosMpc: cam.position,
     fovYRad: cam.fovYRad,
+    frustum: next.outputs.frustum,
+    framed: next.register.pose,
+    host: hostOf(next.register.pose.frame, {
+      bodies: bodyStates,
+      poseBasis,
+      upBasis,
+      terrainHeightAt: state.terrainHeightAt,
+    }),
     altitudeMpc: input.altitudeMpc,
     focusRow: state.selectionRows.focus,
     bodyStates,
+    stored,
   };
   for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
   if (!snapshot.isReady) {
@@ -165,21 +178,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's views, once (mono is `[canvas]`). `deriveView` reads no stamp, so it can
   // run ahead of focus/plans, and must run ahead of every planner row so each can walk
   // every view's frustum.
-  const canvas = deriveView(
-    snapshot,
-    cam,
-    mainViewSpec(
-      { width: deps.canvas.width, height: deps.canvas.height },
-      state.cameraRuntime.outputs.frustum,
-    ),
+  const canvasSpec = mainViewSpec(
+    { width: deps.canvas.width, height: deps.canvas.height },
+    state.cameraRuntime.outputs.frustum,
+    canvasDpr(deps.canvas),
   );
+  const canvas = deriveView(snapshot, cam, canvasSpec, state.previousViews.get(canvasSpec.id));
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
   // makes the shared-snapshot invariant structural.
   const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
   const views =
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
-      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
+      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec, state.previousViews.get(spec.id)));
+  // `vp` is minted fresh per derivation (`computeViewProj`), so holding it needs no copy.
+  state.previousViews = new Map(
+    [canvas, ...views].map((view) => [
+      view.id,
+      { vp: view.vp, canvasSize: view.canvasSize, stillFrames: view.stillFrames },
+    ]),
+  );
+  // View ids exist only now, after `reconcile`: retained rows keep a texture per view id.
+  snapshot.renderTargets.reconcileViews(
+    state,
+    views.map((view) => view.id),
+  );
   // Next pass's size gates measure against this frame's views.
   state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 
@@ -200,14 +223,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
 
-  // Before the GPU dispatch (they upload the label buffers). Three statements,
-  // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
+  // Before the GPU dispatch (they upload the label buffers). Separate statements,
+  // not `a() || b() || c()`: each call uploads as a side effect and `||`
   // short-circuits.
   const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  const cosmoLabelsAnimating = runLabelDirector(state, canvas, COSMO);
   if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
   const nearStartMs = cpuSpans.on ? performance.now() : 0;
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  const nearLabelsAnimating = runLabelDirector(state, canvas, NEAR0);
   if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;

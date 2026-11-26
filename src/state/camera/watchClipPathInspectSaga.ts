@@ -4,7 +4,7 @@
  *
  * The DebugPanel dispatches `inspectClipPath(id)` (the "Calculate" button)
  * instead of reaching an engine handle. This watcher resolves the id against
- * `clipRegistry`, waits for its foci + the camera runtime, resolves the foci to
+ * `APP_CLIP_REGISTRY`, waits for its foci + the camera runtime, resolves the foci to
  * world positions, and calls `clipPathInspect.compute(id, resolved)` — the seam
  * samples the route into the `clipPathInspector` subsystem, which the
  * `clipPathDebugPass` reads each frame. `clearClipPath` drops the snapshot.
@@ -46,7 +46,7 @@ import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import type { PathTuning } from '../../services/engine/animation/applyPathTuning';
 import type { SplineConfig } from '../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../@types/animation/PassByConfig';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../compositions/appClips';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipFociReady } from '../tour/clipFociReady';
@@ -66,7 +66,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const seam = yield* getContext<SagaContext['clipPathInspect']>('clipPathInspect');
   const selection = yield* getContext<SagaContext['selection']>('selection');
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
-  const clip = clipRegistry[clipId];
+  const clip = APP_CLIP_REGISTRY[clipId];
 
   // Block until every id-bearing cue resolves AND the camera runtime (which
   // carries the FOV resolveClipFoci needs) exists — same gate as clipBodySaga.

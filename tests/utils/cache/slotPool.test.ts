@@ -181,4 +181,12 @@ describe('SlotPool slot state machine', () => {
       expect(a.allocate('late', 1)).toBe(2);
     });
   });
+
+  it('never hands out a reserved slot, even when full and recycling', () => {
+    const a = new SlotPool(3, 1);
+    expect(a.allocate('a', 1)).toBe(1);
+    expect(a.allocate('b', 2)).toBe(2);
+    expect(a.allocate('c', 3)).toBe(1);
+    expect(a.slotOf('a')).toBeUndefined();
+  });
 });

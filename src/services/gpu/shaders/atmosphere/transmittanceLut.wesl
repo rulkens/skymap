@@ -46,25 +46,25 @@ const TRANSMITTANCE_STEPS: f32 = 40.0;
 
 // opticalDepthToTop — integrate the total extinction (1/km) from (r, mu) to the
 // top of atmosphere, returning the per-channel optical depth. The ray starts on
-// the +z axis at radius r (azimuth is irrelevant by spherical symmetry) and
+// the +z axis at radius 'radius' (azimuth is irrelevant by spherical symmetry) and
 // marches 'TRANSMITTANCE_STEPS' equal segments to the top boundary, sampling the
 // medium at each segment MIDPOINT (midpoint rule — second-order accurate, and it
 // never samples exactly at the boundary where density can underflow).
-fn opticalDepthToTop(r: f32, mu: f32) -> vec3<f32> {
-  let dist = distanceToTop(r, mu, params.atmosphereTopKm);
-  let dt = dist / TRANSMITTANCE_STEPS;
-  let p0 = vec3<f32>(0.0, 0.0, r);
-  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
+fn opticalDepthToTop(radius: f32, viewZenithCos: f32) -> vec3<f32> {
+  let dist = distanceToTop(radius, viewZenithCos, params.atmosphereTopKm);
+  let stepLength = dist / TRANSMITTANCE_STEPS;
+  let rayStart = vec3<f32>(0.0, 0.0, radius);
+  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos)), 0.0, viewZenithCos);
 
   var opticalDepth = vec3<f32>(0.0);
-  var i: u32 = 0u;
+  var stepIndex: u32 = 0u;
   loop {
-    if (f32(i) >= TRANSMITTANCE_STEPS) { break; }
-    let t = (f32(i) + 0.5) * dt;
-    let pos = p0 + dir * t;
-    let m = sampleMediumIsotropic(params, pos);
-    opticalDepth = opticalDepth + m.extinction * dt;
-    i = i + 1u;
+    if (f32(stepIndex) >= TRANSMITTANCE_STEPS) { break; }
+    let sampleDistance = (f32(stepIndex) + 0.5) * stepLength;
+    let pos = rayStart + dir * sampleDistance;
+    let medium = sampleMediumIsotropic(params, pos);
+    opticalDepth = opticalDepth + medium.extinction * stepLength;
+    stepIndex = stepIndex + 1u;
   }
   return opticalDepth;
 }

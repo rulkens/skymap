@@ -17,7 +17,7 @@ import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
-import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
 import { buildStaticAnchorStructures } from '../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
@@ -45,9 +45,9 @@ const structureIds = new Set(buildStaticAnchorStructures().map((structure) => st
 
 /** Whether the app has something behind an id of a `focus` link, by the same decoder or table the app resolves it with. */
 const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
-  sun: (id) => decodeStarFocusId(id, false) !== null,
-  star: (id) => decodeStarFocusId(id, false) !== null,
-  sStar: (id) => decodeStarFocusId(id, false) !== null,
+  sun: (id) => decodeStarFocusId(id, false).kind === 'hit',
+  star: (id) => decodeStarFocusId(id, false).kind === 'hit',
+  sStar: (id) => decodeStarFocusId(id, false).kind === 'hit',
   planet: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   moon: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   spacecraft: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),

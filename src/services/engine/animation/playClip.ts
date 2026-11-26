@@ -7,7 +7,7 @@
 
 import { CANCEL } from 'redux-saga';
 
-import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice';
+import { resolveClipStart, clipStarted } from '../../../state/camera/cameraIntentSlice';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
@@ -35,7 +35,7 @@ export function createPlayClip(
     atEnd: ClipSceneEnd,
   ): Promise<void> {
     // Fresh object every call, even when `start` was already concrete: the clip
-    // epoch resets on `camera.clip` reference identity.
+    // epoch resets on `camera.intent.clip` reference identity.
     const resolvedClip = resolveClipStart(clip, getLivePose());
 
     // Resolver registered before clipStarted dispatches, so a zero-duration clip
@@ -50,7 +50,7 @@ export function createPlayClip(
 
     // `frame` is pinned at dispatch time so a later orientation switch re-expresses
     // the clip's pose instead of reinterpreting it (clip row in cameraDrivers.ts).
-    store.dispatch(clipStarted({ data: resolvedClip, frame, atEnd }));
+    store.dispatch(clipStarted({ data: resolvedClip, frame, by: 'player', atEnd }));
 
     return p;
   };

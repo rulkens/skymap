@@ -4,7 +4,7 @@
 import package::lightTime::io::Uniforms;
 import package::lightTime::io::VsOut;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 const CORNERS = array<vec2<f32>, 6>(
   vec2<f32>(-1.0, -1.0),
@@ -17,9 +17,9 @@ const CORNERS = array<vec2<f32>, 6>(
 
 @vertex
 fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
-  let p = mix(u.rect.xy, u.rect.zw, CORNERS[vid] * 0.5 + 0.5);
+  let ndc = mix(uniforms.rect.xy, uniforms.rect.zw, CORNERS[vid] * 0.5 + 0.5);
   var out: VsOut;
-  out.clipPos = vec4<f32>(p, 0.0, 1.0);
-  out.ndc = p;
+  out.clipPos = vec4<f32>(ndc, 0.0, 1.0);
+  out.ndc = ndc;
   return out;
 }

@@ -1,7 +1,7 @@
 /**
  * labelsWorldPass — draws the world-space (3D) MSDF lettering the
  * `label3DRenderer` was fed this frame, e.g. the Zone of Avoidance band's
- * curved caption. The 2D twins are `labelsCosmoPass` / `labelsNearPass`.
+ * curved caption. The 2D twins are the `labels-cosmo` pass / the `labels-near` pass.
  *
  * No `fade`: each producer's label already carries its own opacity.
  * `gateWorldLabelProducer` (layer/) gates each producer on its own visibility

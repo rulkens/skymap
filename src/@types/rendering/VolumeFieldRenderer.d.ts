@@ -16,6 +16,7 @@ import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
+import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
 
 export type VolumeFieldRenderer<Id extends string = string> = {
   /**
@@ -43,7 +44,8 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * per-field tunables are read each frame from `settingsOf`.
    * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
    * is re-uploaded in place when `settingsOf(id).paletteId` diverges
-   * from what's resident.
+   * from what's resident. `inputs` (jitter index, step count, blend
+   * weight) holds for every field of this call.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -53,6 +55,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
+    inputs: VolumeFieldDrawInputs,
   ): void;
   destroy(): void;
 };

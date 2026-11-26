@@ -10,7 +10,7 @@ load-bearing; each is an independent cleanup.
 1. **Orphaned WESL helpers + inverted parity authority** — `hash21`,
    `valueNoise2`, `raySphere`, `worldToGalactic`, `galacticToShader` in
    `src/services/gpu/shaders/lib/util.wesl` lost their last consumer with
-   the MW impostor teardown (`hash21Hq` is still live via scalarVolume).
+   the MW impostor teardown (`hash21Hq` is still live via blackHoleLensing).
    Zero runtime cost (WESL links per entry point), but the
    `milkyWayModelMatrix` parity test now scrapes `GAL_*_EQ` from a WESL
    original whose only live user is the TS mirror — authority inverted.

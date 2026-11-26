@@ -52,22 +52,22 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let safeLayer = max(in.hiResLayerIdx, 0);
   let hiSample = textureSampleLevel(hiResTex, hiResSmp, in.cornerUv, safeLayer, 0.0);
   let mixAmt = select(0.0, in.hiResCrossfadeAlpha, in.hiResLayerIdx >= 0);
-  let c = mix(rgba, hiSample, mixAmt);
+  let blendedRgba = mix(rgba, hiSample, mixAmt);
   // Soft circular mask — the disk geometry is already tilted in world
   // space, so the on-screen shape is a true ellipse from projection;
   // the mask just rounds the four corners of the (square) UV space.
-  let r = length(in.cornerUv - vec2<f32>(0.5, 0.5));
-  let mask = circularMask(r, 0.45, 0.5);
+  let radius = length(in.cornerUv - vec2<f32>(0.5, 0.5));
+  let mask = circularMask(radius, 0.45, 0.5);
   // Brightness-derived alpha — same trick as quads.wesl, lets the dark
   // sky in the cutout JPEG bleed transparent against the dot field.
-  // Applied to the BLENDED 'c' so a hi-res tile's dark sky is gated
+  // Applied to the blended 'blendedRgba' so a hi-res tile's dark sky is gated
   // identically to the atlas tile's.
-  let lum = max(c.r, max(c.g, c.b));
+  let lum = max(blendedRgba.r, max(blendedRgba.g, blendedRgba.b));
   let lumGate = lumAlpha(lum, 0.05, 0.30);
   let alpha = lumGate * mask * in.fadeAlpha * in.focusDim;
   // Discard near-transparent fragments so we don't waste blend
   // bandwidth on near-zero contributions.  See 'quads.wesl' for
   // the longer note — same reasoning applies here.
   if (alpha < 0.01) { discard; }
-  return vec4<f32>(c.rgb * alpha, alpha);
+  return vec4<f32>(blendedRgba.rgb * alpha, alpha);
 }

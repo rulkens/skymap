@@ -16,7 +16,7 @@
 //
 // ## The ray, and why the direction is normalized AFTER interpolation
 //
-// 'u.camPosLocal' is the camera in the body's local frame in body radii (the
+// 'uniforms.camPosLocal' is the camera in the body's local frame in body radii (the
 // same vector the Minnaert term already needs), so it is the ray origin with no
 // extra uniform. 'in.localPos' is the interpolated point on the PROXY shell --
 // scaled up by 'PROXY_SCALE', so it is NOT a unit vector and its interpolant is
@@ -47,11 +47,13 @@ import package::lib::analyticSphere::equirectUvGradients;
 import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::sphere::TexturedBodyUniforms;
-import package::lib::bodyLighting::litShade;
+import package::lib::bodyLighting::AMBIENT;
+import package::lib::bodyLighting::bodyDirectShade;
+import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
 
-@group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
+@group(0) @binding(0) var<uniform> uniforms: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
 @group(0) @binding(2) var bodyTexture: texture_2d<f32>;
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
@@ -70,23 +72,23 @@ struct FSOut {
 // this body still sees through Saturn's rings. Its twin -- the planet's shadow
 // cast onto the ring -- lives in 'ring/fragment.wesl'. Local rather than in a
 // lib because it is the only copy and the ring pair's two halves share no maths.
-fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRatio: f32) -> f32 {
+fn ringSunVisibility(surfacePoint: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRatio: f32) -> f32 {
   if (outerRatio <= 0.0) {
     return 1.0;
   }
   if (sunDir.z == 0.0) {
     return 1.0;
   }
-  let t = -p.z / sunDir.z;
-  if (t <= 0.0) {
+  let distanceToRingPlane = -surfacePoint.z / sunDir.z;
+  if (distanceToRingPlane <= 0.0) {
     return 1.0;
   }
-  let hit = p + t * sunDir;
-  let r = length(hit.xy);
-  if (r < innerRatio || r > outerRatio) {
+  let hit = surfacePoint + distanceToRingPlane * sunDir;
+  let ringRadius = length(hit.xy);
+  if (ringRadius < innerRatio || ringRadius > outerRatio) {
     return 1.0;
   }
-  let uCoord = (r - innerRatio) / (outerRatio - innerRatio);
+  let uCoord = (ringRadius - innerRatio) / (outerRatio - innerRatio);
   let ringAlpha = textureSampleLevel(ringTexture, bodySampler, vec2<f32>(uCoord, 0.5), 0.0).a;
   return 1.0 - ringAlpha;
 }
@@ -94,18 +96,18 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
 @fragment
 fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────
-  let ro = u.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the 'PROXY_SCALE'-scaled
   // proxy, so neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
+  let rayDir = normalize(in.localPos - rayOrigin);
 
-  // 'u.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
-  let surface = hitUnitSphere(ro, rd, u.camAltitudeSq);
+  // 'uniforms.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
+  let surface = hitUnitSphere(rayOrigin, rayDir, uniforms.camAltitudeSq);
   // Unit length in both branches, so it is the exact geometric normal.
-  let ng = surface.point;
+  let surfaceNormal = surface.point;
 
   // ── Analytic equirectangular uv + wrap-corrected gradients ────────────────
-  let uv = equirectUvFromDir(ng);
+  let uv = equirectUvFromDir(surfaceNormal);
   let grad = equirectUvGradients(uv);
 
   // Every derivative is now taken; from here the missed lanes contribute
@@ -115,23 +117,27 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   }
 
   // ── Shading ───────────────────────────────────────────────────────────────
-  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
+  let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), surfaceNormal));
+  let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
-  let sunVis = ringSunVisibility(ng, u.sunDirLocal, u.ringInnerRatio, u.ringOuterRatio);
-  let shade = litShade(n, u.sunDirLocal * sunVis);
-  let noL = max(dot(n, u.sunDirLocal), 0.0);
-  // 'ng - ro = rd * t' exactly, so 'v = -rd' -- no re-subtract, no renormalize.
-  let v = -rd;
-  let noV = max(dot(n, v), 0.0);
-  let limb = limbDarkening(noL, noV, u.limbStrength, u.limbExponent);
-  let colour = albedo * shade * limb;
+  let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
+  let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
+  // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
+  let viewDir = -rayDir;
+  let noV = max(dot(shadingNormal, viewDir), 0.0);
+  let limb = limbDarkening(noL, noV, uniforms.limbStrength, uniforms.limbExponent);
+  let colour = composeSurfaceLight(
+    albedo * bodyDirectShade(shadingNormal, uniforms.sunDirLocal) * limb,
+    albedo * AMBIENT * limb,
+    sunVis,
+    1.0,
+  );
 
   var out: FSOut;
   out.colour = vec4<f32>(colour, 1.0);
   // Eye-relative frame: the hit relative to the eye, through the
-  // translation-free 'u.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
+  // translation-free 'uniforms.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
   // section.
-  out.depth = fragDepthFromClip(u.vpCamRelLocal, rd * surface.t);
+  out.depth = fragDepthFromClip(uniforms.vpCamRelLocal, rayDir * surface.t);
   return out;
 }

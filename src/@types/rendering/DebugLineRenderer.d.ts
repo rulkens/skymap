@@ -2,11 +2,9 @@
  * Public handle returned by `createDebugLineRenderer` — the dedicated
  * debug-draw pass's thick-line renderer.
  *
- * Same screen-quad technique as `MarkerLineRenderer` (it reuses the
- * `shaders/markerLines/*` shaders), but its input is the leaner `DebugLine`:
- * no id / fade / owner. Debug overlays rebuild and upload their whole line set
- * each frame, so there is no reconcile or declutter contract to honour — just
- * geometry + premultiplied colour.
+ * Its input is the lean `DebugLine`: no id / fade / owner. Debug overlays
+ * rebuild and upload their whole line set each frame, so there is no reconcile
+ * or declutter contract to honour — just geometry + premultiplied colour.
  */
 
 import type { DebugLine } from './DebugLine';

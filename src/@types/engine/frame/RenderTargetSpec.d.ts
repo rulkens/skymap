@@ -80,4 +80,10 @@ export type RenderTargetSpec = {
    * track it.
    */
   allocateWhen?: (state: EngineState, isAllocated: boolean) => boolean;
+  /** Keep contents across frames: one texture per view id, cleared on (re)allocation and whenever
+   *  the drawing step's planner value says `restart`. Rejected at construction with `depth`,
+   *  `layers`, a function `scale` or `fixedSizePx.size`, or `allocateWhen`: a state-driven
+   *  reallocation would clear it without the planner learning of it. Draw it only from per-view
+   *  sections: in dome, once-scope sections execute on `canvas`, which is not a reconciled view. */
+  retained?: true;
 };

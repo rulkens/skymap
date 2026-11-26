@@ -29,7 +29,7 @@ import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSe
 import { watchSelectionRevealSaga } from '../../../src/state/selection/watchSelectionRevealSaga';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { selectSettings } from '../../../src/state/settings/selectSettings';
-import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectFocusRef, selectSelectedRef } from '../../../src/state/selection/selectors';
 import {
@@ -41,13 +41,15 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelecti
 import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import type { MilkyWayRef } from '../../../src/layers/milkyWay/selection/@types/MilkyWayRef';
+import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
 import { satellitesSelectionRow } from '../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
-import { EARTH_HOME } from '../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../src/compositions/appHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
@@ -95,9 +97,9 @@ const PROJECTION = { fovYRad: LIVE.fovYRad, aspect: 1, near: 1e-20, far: 1e5 };
 
 function build({
   milkyWayLanded = true,
-  home = EARTH_HOME,
+  home = APP_HOME,
   nextFrame = () => Promise.resolve(),
-}: { milkyWayLanded?: boolean; home?: typeof EARTH_HOME; nextFrame?: () => Promise<void> } = {}) {
+}: { milkyWayLanded?: boolean; home?: typeof APP_HOME; nextFrame?: () => Promise<void> } = {}) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
@@ -110,6 +112,15 @@ function build({
   });
   let booted = false;
   const layerRows = { landed: milkyWayLanded };
+  // A catalog still loading: its row claims the id and answers pending until it lands.
+  const milkyWay = milkyWaySelectionRow(milkyWayPickCode());
+  const lateMilkyWay: SelectionKindRow<MilkyWayRef> = {
+    ...milkyWay,
+    focusId: {
+      ...milkyWay.focusId!,
+      decode: (id) => (layerRows.landed ? milkyWay.focusId!.decode(id) : { kind: 'pending' }),
+    },
+  };
   // Demand loads the catalog only while the section is shown.
   const satellites = {
     propagator: {
@@ -122,7 +133,7 @@ function build({
       () => [
         bodySelectionRow({ pickCodes: bodyPickCodes() }),
         structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
-        ...(layerRows.landed ? [milkyWaySelectionRow(milkyWayPickCode())] : []),
+        lateMilkyWay,
         satellitesSelectionRow(satellites),
       ],
       () => NO_KINDS_OFF,
@@ -218,7 +229,7 @@ describe('arrivalSaga', () => {
         upBasis: B,
         terrainHeightAt: datumOnlyTerrainHeight,
       });
-    const landed = worldArmOf(h.store.getState().camera.base);
+    const landed = worldArmOf(h.store.getState().camera.intent.base);
     sim.frame(1);
     const first = shown();
     sim.frame(60);
@@ -241,11 +252,11 @@ describe('arrivalSaga', () => {
     expect(h.arrivalCommits()).toBe(0);
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await flush();
 
     expect(h.arrivalCommits()).toBe(1);
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+    expect(worldArmOf(h.store.getState().camera.intent.base).distance).toBe(
       framingPose(MILKY_WAY_ROW, LIVE.fovYRad, LIVE.from).distance,
     );
     expect(h.status()).toEqual({ status: 'arrived' });
@@ -283,8 +294,8 @@ describe('arrivalSaga', () => {
 
   it('the backstop times out to failed', async () => {
     vi.useFakeTimers();
-    const h = build();
-    h.arrive({ view: { kind: 'focus', id: 'pgc-99999999' } });
+    const h = build({ milkyWayLanded: false });
+    h.arrive({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } });
     h.boot();
     await vi.advanceTimersByTimeAsync(ARRIVAL_TIMEOUT_MS - 1);
     expect(h.status().status).toBe('pending');
@@ -303,7 +314,7 @@ describe('arrivalSaga', () => {
     await flush();
 
     const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get(asSceneBodyId('mars'))!.positionMpc;
-    const target = worldArmOf(h.store.getState().camera.base).target;
+    const target = worldArmOf(h.store.getState().camera.intent.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });
   });
@@ -333,8 +344,8 @@ describe('arrivalSaga', () => {
     // Framed against the wall-clock sun: the store's seed anchor is J2000.
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
-    const landed = worldArmOf(root.camera.base);
+    const expected = worldArmOf(homePose(APP_HOME, LIVE.fovYRad, now, B));
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });
@@ -353,15 +364,15 @@ describe('arrivalSaga', () => {
     expect(seeded.orientation).toBe(selectOrientation(root));
     const simDays = deriveSimDays(root.time, performance.now());
     const expected = worldArmOf(
-      homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
+      homePose(APP_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
     );
-    const landed = worldArmOf(root.camera.base);
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });
 
   it('a home that does not seed the selection focuses but never selects', async () => {
-    const h = build({ home: { ...EARTH_HOME, seedSelection: false } });
+    const h = build({ home: { ...APP_HOME, seedSelection: false } });
     h.arrive({ view: { kind: 'home' } });
     h.boot();
     await flush();
@@ -380,7 +391,7 @@ describe('arrivalSaga', () => {
     expect(h.status()).toEqual({ status: 'failed', reason: 'timeout' });
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await vi.advanceTimersByTimeAsync(0);
 
     expect(selectFocusRef(h.store.getState())).toEqual(EARTH_REF);
@@ -400,7 +411,7 @@ describe('arrivalSaga', () => {
     expect(h.status().status).toBe('pending');
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await flush();
 
     expect(h.status()).toEqual({ status: 'arrived' });

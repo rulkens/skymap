@@ -176,7 +176,7 @@ export const FACTS: readonly Fact[] = [
     id: 'sondermarken-flyout',
     about: 'app',
     text: 'The “Søndermarken to the Edge” clip opens over Søndermarken, a park in Copenhagen, about 46 metres above the sphere of 6,371 kilometres radius that Skymap uses for Earth’s surface, and pulls back in one continuous move to the edge of the observable universe.',
-    source: `${REPO_BLOB}/src/data/animation/clips/sondermarkenFlyout.ts`,
+    source: `${REPO_BLOB}/src/compositions/clips/sondermarkenFlyout.ts`,
     sourceLabel: 'the clip, in the Skymap repository',
     checked: CHECKED,
   },
@@ -433,12 +433,12 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'grand-tour-steps',
     about: 'app',
-    text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
+    text: '“The Long Way Out” has 18 captioned steps, from a park in Copenhagen to the edge of the observable universe and back to Earth.',
     short:
-      '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
-    source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
+      '“The Long Way Out” is a tour in 18 captioned steps, from a park in Copenhagen out to the edge of the observable universe and back.',
+    source: `${REPO_BLOB}/src/compositions/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the Skymap repository',
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   // The Features page sets one of these large beside each place it shows.
   {

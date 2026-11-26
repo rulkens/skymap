@@ -15,7 +15,7 @@
  *      watcher's one job, the same as for every other settings write.
  *      `orientation` lives on `SceneSnapshot` (not inside `settings`), so it
  *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
- *      header. A raw write to `orientation` would leave `camera.base`
+ *      header. A raw write to `orientation` would leave `camera.intent.base`
  *      expressed in the OLD basis while the pole flips under it — the same
  *      "eye jumps" landmine the LOOP re-expresses `base` to avoid on every
  *      orientation switch (`stepCameraRuntime`).
@@ -23,12 +23,12 @@
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
  *      uses: `watchOrientationChangeSaga` rolls the up-basis, and the LOOP
- *      re-expresses `camera.base` into the frame the same way it does for
+ *      re-expresses `camera.intent.base` into the frame the same way it does for
  *      any other orientation switch, rather than snapping only the setting.
  *
  *   3. `put(setFovYRad(fovYRad))` — the viewer's lens: camera state, so not a cluster.
  *
- *   4. `put(updateSelectionFocus(focus))` — focus reverts through the same
+ *   4. `put(updateSelectionFocus(focus))`, when it differs — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
  *      through dispatch keeps the store coherent: the selection reconciler saga
  *      re-computes `selectionRows`, and the ring / isolation dim / camera tween
@@ -53,12 +53,14 @@
  * never intent), so transient fade-to-black effects need no undo here.
  */
 
-import { put } from 'typed-redux-saga';
+import { put, select } from 'typed-redux-saga';
 
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
+import { selectFocusRef } from '../selection/selectors';
+import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
 import { requestOrientationChange } from '../camera/orientationActions';
-import { setFovYRad } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraIntentSlice';
 import { restoreTime } from '../time/timeSlice';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
@@ -67,7 +69,11 @@ export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
   yield* put(setFovYRad(snapshot.fovYRad));
-  yield* put(updateSelectionFocus(snapshot.focus));
+  // Only a changed focus: the reconciler re-extracts the row on any focus action, and
+  // a new row is a new focus to the follow rows, which fly to frame it.
+  if (!shallowEqualRef(yield* select(selectFocusRef), snapshot.focus)) {
+    yield* put(updateSelectionFocus(snapshot.focus));
+  }
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }
 

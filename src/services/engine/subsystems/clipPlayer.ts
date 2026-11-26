@@ -13,7 +13,7 @@ import { clipFactorAt } from '../animation/clipFactorAt';
 import { countAtOrBefore } from '../../../utils/animation/countAtOrBefore';
 import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { liveUpBasisQuat } from '../camera/orientation/liveUpBasisQuat';
-import { clipEnded, startFrameTween } from '../../../state/camera/cameraSlice';
+import { clipEnded, startFrameTween } from '../../../state/camera/cameraIntentSlice';
 import { FRAME_TWEEN_MS } from '../../../state/camera/watchOrientationChangeSaga';
 import { mergeSnapshot } from '../../../state/settings/mergeSnapshotAction';
 import { setOrientation } from '../../../state/settings/core/orientationSlice';
@@ -22,7 +22,7 @@ import { captureSettings } from '../../../state/scene/captureSettings';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { ClipPlayerDeps } from '../../../@types/engine/subsystems/ClipPlayerDeps';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
-import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../@types/camera/orbitCamera/CameraIntentState';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { SceneApplied } from '../../../@types/animation/compiledClip/SceneApplied';
 import type { SceneStep } from '../../../@types/animation/compiledClip/SceneStep';
@@ -39,7 +39,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   // The live play and its scene at t. `applied` is replaced only when a count moves, so its
   // identity keys the view memo.
-  let clip: CameraState['clip'] = null;
+  let clip: CameraIntentState['clip'] = null;
   let compiled: CompiledClip | null = null;
   let t = 0;
   let applied = NOTHING_APPLIED;
@@ -127,7 +127,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   // A new play. One replacing a live clip hands its published scene over to the new clip's
   // start and leaves the end resolver to the play that registered it.
-  function begin(next: NonNullable<CameraState['clip']>, root: RootState): void {
+  function begin(next: NonNullable<CameraIntentState['clip']>, root: RootState): void {
     const replacing = clip !== null;
     clip = next;
     compiled = compileClip(next.data);
@@ -183,11 +183,11 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
       finish();
       // Advanced against the POST-dispatch clip: the resolver may start the
       // next clip synchronously, and the driver reads this epoch this frame.
-      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.clip, nowMs) };
+      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.intent.clip, nowMs) };
     }
 
     const root = store.getState();
-    const next = root.camera.clip;
+    const next = root.camera.intent.clip;
     let epoch = advanceEpoch(clipEpoch, next, nowMs);
     if (next === null) return { clipEpoch: epoch };
     if (next !== clip) begin(next, root);

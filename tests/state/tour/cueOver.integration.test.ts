@@ -13,7 +13,7 @@ import { seedVisibilityFades } from '../../../src/services/engine/wiring/seedVis
 import { syncVisibilityTargets } from '../../../src/services/engine/wiring/syncVisibilityTargets';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { hide, hold, show } from '../../../src/services/engine/animation/effectHelpers';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
@@ -42,11 +42,11 @@ function playOnce(steps: readonly Effect[], boot: readonly Action[] = []) {
     getCameraRuntime: () => {
       throw new Error('no frame roll here');
     },
-    extractFocusRow: () => ({ row: null, focusId: null }),
+    extractFocusRow: () => ({ row: null, id: null }),
     syncVisibility: (settings, overMs) => syncVisibilityTargets({ ...state, settings }, overMs),
   });
   const data = { start: START, timeline: [...steps, hold(20)] };
-  store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
+  store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }));
   player.tick(UNSTARTED_EPOCHS.clip, 0);
   return fades;
 }

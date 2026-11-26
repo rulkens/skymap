@@ -13,7 +13,8 @@ import type { ViewKind } from './ViewKind';
 export type ViewSpec = {
   /** This view's name, minted by whoever builds the spec — `'canvas'` for the
    *  main view, `'<capture key>:<face>'` for a cubemap face. `FrameView.id`
-   *  copies it; `timingSlotForView` is the one place that reads it. */
+   *  copies it. Keyed on by `timingSlotForView`, a retained render-target row's per-view texture
+   *  (`RenderTargets.viewOf(id, viewId)`), per-view planner memory (`prev`) and `stillFrames`. */
   readonly id: string;
   /** View right | up | forward as columns, in the camera's right | up | forward basis. */
   readonly rotation: Readonly<Mat3>;
@@ -21,6 +22,8 @@ export type ViewSpec = {
   readonly eyeOffsetMpc: Vec3;
   readonly frustum: ViewFrustum;
   readonly sizePx: Size;
+  /** Device pixels per CSS pixel of the display this view lands on (`FrameView.dpr`). */
+  readonly dpr: number;
   /** View-slot uniform ring index — see `FrameView.viewSlot`. */
   readonly slot: number;
   /** What the view renders — a capture face says so here rather than being
@@ -28,6 +31,8 @@ export type ViewSpec = {
   readonly kind: ViewKind;
   /** Where this view's `swap` resolves; absent = the canvas. */
   readonly output?: GPUTextureView;
+  /** The array layer this view owns in any layered target its program names. */
+  readonly layer?: number;
   /** WebGPU rasterizes top-left; a capture face's basis table is the GL
    *  bottom-left convention, which no rotation can absorb — only a capture
    *  sets this. `deriveView` applies it at every projection it builds (the

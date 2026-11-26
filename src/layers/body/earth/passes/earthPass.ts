@@ -12,7 +12,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
@@ -50,7 +50,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
       // The deck and the shadow it casts must dissolve together. Known gap: the fade
       // does not reach the night-side city-lights dimming (nightLights reads
-      // cloudAlphaHere with no strength scalar).
+      // cloudCoverageHere with no strength scalar).
       const cloudFade = cloudDeckFade(
         bodyCameraDistanceMpc(earthState.positionMpc, ctx.drawCamPos),
         radiusMpc,
@@ -77,8 +77,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       );
     },
 
-    // Earth is the sole body of 'earth' (seed index 0); PICK_SENTINEL_OFFSET
-    // keeps a real hit distinct from the cleared no-hit texel.
+    // Earth is the sole body of 'earth' (seed index 0).
     drawPick(pass, view, ctx, state) {
       const pickRenderer = state.gpu.bodyPickRenderer;
       if (pickRenderer === null) return;
@@ -97,7 +96,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
+        packedId: packPickWord(runtime.pickCodes.pickCodeOf('earth'), 0),
       });
     },
   };

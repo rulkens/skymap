@@ -2,10 +2,9 @@
  * createScalarVolumePass — shared factory behind a half-resolution
  * scalar-volume raymarch content pass: draws into `row.targetId`, gated by
  * `row.liveness` (see `ScalarVolumePassRow.d.ts`). Passes the TARGET's size,
- * not the canvas's, as `viewportPx` — `VolumeFieldRenderer.draw` normalises
- * its per-fragment jitter-dither spatial frequency against it, and the
- * target is smaller than the canvas, so the canvas size would shift the
- * dither frequency finer on the upsampled output.
+ * not the canvas's, as `viewportPx` (and scales `pxPerRad` to it): the camera
+ * prefix describes the target the fragments land in, which is smaller than
+ * the canvas.
  */
 
 import type { ShowKey } from '../../../../@types/animation/ShowKey';
@@ -40,6 +39,7 @@ export function createScalarVolumePass<Id extends string, K extends ShowKey = Sh
         view.camPos,
         liveness.settingsOf,
         liveness.fadeOpacityOf,
+        erased.inputs(state, ctx),
       );
     },
   } as ContentPass as ContentPass<K>;

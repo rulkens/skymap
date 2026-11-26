@@ -12,6 +12,7 @@ import type { CaptureFaceRef } from './CaptureFaceRef';
 import type { CompositeStep } from './CompositeStep';
 import type { ContentPass } from './ContentPass';
 import type { DepthSampleSource } from './DepthSampleSource';
+import type { MaskSampleSource } from './MaskSampleSource';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -30,10 +31,17 @@ export type FrameStep =
        */
       depth?: 'clear' | 'load' | DepthSampleSource;
       /**
+       * The target row whose colour this step's overlays read as their occlusion
+       * mask (`SlabView.sampledMask`), in place of the `foreground:0` joint.
+       */
+      mask?: MaskSampleSource;
+      /**
        * Authored GPU-timing slot suffix (`RenderStepSpec.slot`); a merged step
        * keeps the FIRST line's. Absent ⇒ bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
+      /** See `RenderStepSpec`'s `restartPlanner`. */
+      readonly restartPlanner?: string;
     } & (
       | /** A render-target row by id. */ { target: string; capture?: undefined }
       /**

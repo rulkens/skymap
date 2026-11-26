@@ -1,7 +1,7 @@
 /**
  * earthSceneMeshesPass — Søndermarken as a lit mesh on Earth's body-m row, through core's one
- * mesh handle (the slot stays core's). Unpicked: it has no pick seed, and `body-soendermarken`
- * stays claimed by the `body` selection kind.
+ * mesh handle. Unpicked: it has no pick seed, and `body-soendermarken` stays claimed by the
+ * `body` selection kind.
  */
 
 import { meshBodiesPassOver } from '../../../../services/engine/frame/meshBodiesPassOver';

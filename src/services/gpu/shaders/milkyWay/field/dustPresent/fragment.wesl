@@ -10,7 +10,7 @@
 // needs no second read.
 
 import package::lib::fullscreenTri::FullscreenOut;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::dustMapTex;
 
 @fragment
@@ -35,13 +35,13 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // column depth, then ramps black -> deep red -> orange -> white. Tuned by
   // eye for a JWST/MIRI dust-map look; none of these four colours or the
   // 1.5 rate is a measured quantity.
-  let i = 1.0 - exp(-tau * 1.5);
+  let intensity = 1.0 - exp(-tau * 1.5);
   let black = vec3<f32>(0.0, 0.0, 0.0);
   let deepRed = vec3<f32>(0.55, 0.08, 0.02);
   let orange = vec3<f32>(1.0, 0.45, 0.1);
   let white = vec3<f32>(1.0, 1.0, 1.0);
-  let warm = mix(mix(black, deepRed, smoothstep(0.0, 0.5, i)), orange, smoothstep(0.5, 0.8, i));
-  let color = mix(warm, white, smoothstep(0.8, 1.0, i));
+  let warm = mix(mix(black, deepRed, smoothstep(0.0, 0.5, intensity)), orange, smoothstep(0.5, 0.8, intensity));
+  let color = mix(warm, white, smoothstep(0.8, 1.0, intensity));
 
   // Alpha 0, matching every emission fragment's fs (fieldSplat/fragment.wesl,
   // hiiSplat's fragments): this target's alpha channel feeds
@@ -51,5 +51,5 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // debugView.x is this view's own crossfade weight (io.wesl's debugView
   // doc) — 0 with the slider off, which keeps this pass's contribution to
   // the additive composite at zero even on a frame where it still runs.
-  return vec4<f32>(color * u.debugView.x, 0.0);
+  return vec4<f32>(color * uniforms.debugView.x, 0.0);
 }

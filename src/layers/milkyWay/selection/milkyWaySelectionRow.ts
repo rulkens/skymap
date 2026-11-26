@@ -27,7 +27,7 @@ export function milkyWaySelectionRow(pickCode: number): SelectionKindRow<MilkyWa
     }),
     focusId: {
       claims: (id) => id === MILKY_WAY_FOCUS_ID,
-      decode: () => ({ type: 'milkyWay' }),
+      decode: () => ({ kind: 'hit', ref: { type: 'milkyWay' } }),
       encode: () => MILKY_WAY_FOCUS_ID,
     },
   };

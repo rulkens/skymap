@@ -1,7 +1,6 @@
 /**
  * downloadStem — `mcpm-<yyyymmdd-hhmm>`, local time. One stem names both the
- * `.npy` and its `.json` sidecar so the download pair can never drift apart
- * (spec §8's "the download button enforces" note).
+ * `.npy` and its `.json` sidecar so the download pair can never drift apart.
  */
 export function downloadStem(now: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');

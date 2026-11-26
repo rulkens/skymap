@@ -2,11 +2,12 @@
  * The body Layer: owns the body settings clusters (`bodies`, `earth`, `orbitTrails`),
  * their visibility entries, the Orbit trails toggle row, the Earth, planet and moon
  * body rows with their source rows, the `body` selection kind and card, palette rows,
- * name captions, orbit trails, the Solar System exhibit and the Earth and planet slab
- * rows. It draws Earth, the planets, moons and rings: its own renderers, texture slots,
- * passes and the two atmosphere computes. It streams and plans the surface tiles, is
- * the ground core's camera reads, and publishes the DebugPanel's tile readouts. The
- * shape-model moons draw through core's one mesh handle (the mesh slots stay core's).
+ * name captions, orbit trails, the sampled small bodies' track load and trails, the Solar
+ * System exhibit and the Earth and planet slab rows. It draws Earth, the planets, moons
+ * and rings: its own renderers, texture slots, passes and the two atmosphere computes. It
+ * streams and plans the surface tiles, is the ground core's camera reads, and publishes the
+ * DebugPanel's tile readouts. The shape-model moons and asteroids draw through core's one
+ * mesh handle, from its own mesh rows.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -33,15 +34,19 @@ import { atmosphereRosterPlanner } from './atmosphere/present/atmosphereRosterPl
 import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiveCompute';
 import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
+import { meshPresentationsOf } from '../../utils/meshBodies/meshPresentationsOf';
+import { meshAssetRow } from '../../services/engine/wiring/meshAssetRow';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { bodySelectionRow } from './selection/bodySelectionRow';
 import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
-import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
+import { BODY_SAMPLED_TRAIL_ROWS } from './sampledTrails/data/bodySampledTrailRows';
+import { BODY_TRACK_IDS } from './sampledTrails/data/bodyTrackIds';
+import { loadSampledTracksSaga } from '../../services/bodies/loadSampledTracksSaga';
+import { bodyLabelSource } from './labels/present/bodyLabelSource';
 import { bodyLayerExhibits } from './exhibits/exhibits';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
@@ -84,23 +89,25 @@ export const bodyLayer = defineLayer({
     bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
-  assets: bodyAssetRows,
+  assets: (runtime) => [
+    ...bodyAssetRows(runtime),
+    ...meshPresentationsOf(BODY_BODY_ROWS).map((p) => meshAssetRow(runtime.meshBodies, p)),
+  ],
   planners: (runtime) => [surfaceTilePlanner(runtime), atmosphereRosterPlanner],
-  sagas: [watchDebugPanelWakeSaga],
+  sagas: [watchDebugPanelWakeSaga, loadSampledTracksSaga(BODY_TRACK_IDS)],
   heightAt,
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'sceneBodyCaptions',
-        label: 'body',
-        produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
-      },
-    ],
+    screenLabels: [bodyLabelSource(runtime)],
     orbitTrails: {
       show: 'orbitTrails',
       rows: BODY_TRAIL_ELEMENTS,
       selectedOnly: SMALL_BODY_TRAIL_IDS,
+    },
+    // 2026 QQ8's months near Earth read as loops only in Earth's frame.
+    sampledTrails: {
+      show: 'orbitTrails',
+      rows: BODY_SAMPLED_TRAIL_ROWS,
+      nearPlanets: () => true,
     },
   }),
   selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },

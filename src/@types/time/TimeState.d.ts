@@ -31,6 +31,6 @@ export type TimeState = {
   /** Sign of playback: `1` forward, `-1` reverse. Not a ladder entry. */
   readonly direction: 1 | -1;
   readonly paused: boolean;
-  /** The mission clock's wall→sim table; while set it overrides the anchor, and any time action drops it. */
+  /** A timeline exhibit's wall→sim table; while set it overrides the anchor, and any time action drops it. */
   readonly profile: ClockProfile | null;
 };

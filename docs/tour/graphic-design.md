@@ -57,7 +57,7 @@ frame's own margin). Centre and top stay clear for the subject.
   weighted by length, with a floor so a short line still holds. Text appears
   as the stage settles; to put words over motion, author the motion as the
   beat's dwell (`neighbourhoodFlythrough`).
-- `tests/data/animation/tours/subtitleFit.test.ts` fails when any line gets
+- `tests/compositions/tours/subtitleFit.test.ts` fails when any line gets
   less than `SUBTITLE_MIN_READ_SEC` — lengthen the dwell or re-break the
   lines; never lower the floor.
 

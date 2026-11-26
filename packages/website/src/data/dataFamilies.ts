@@ -59,7 +59,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
       'The orbits of the planets, moons and Earth’s satellites, the positions they are corrected to, and the figures on each body’s card.',
     pages: 'each',
     sections: [],
-    ids: ['jpl-elements', 'horizons', 'celestrak', 'seed-planet-facts'],
+    ids: ['jpl-elements', 'horizons', 'celestrak', 'mpcorb', 'sbdb-diameters', 'seed-planet-facts'],
     step: 'planets-moons-and-their-positions',
   },
   {
@@ -68,7 +68,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     about: 'The photographs and mosaics on galaxies, planets, moons and Earth.',
     pages: 'each',
     sections: ['Galaxy imagery', 'Solar-system textures', 'Earth imagery and terrain'],
-    ids: ['viking'],
+    ids: ['viking', 'lroc-wac'],
     step: 'imagery-and-terrain',
   },
   {
@@ -77,7 +77,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     about:
       'Height data for Earth, Mars and the moons: what lifts the ground and shades the relief.',
     pages: 'each',
-    sections: ['Mars surface'],
+    sections: ['Mars surface', 'Moon surface'],
     ids: [
       'etopo',
       'skadi',

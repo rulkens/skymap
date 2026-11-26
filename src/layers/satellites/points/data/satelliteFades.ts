@@ -6,7 +6,11 @@
 export const SATELLITE_FADES = {
   fullWithinKm: 300_000,
   goneBeyondKm: 600_000,
-  /** Days from the data's fetch time: full inside, gone past the second (spec §5.3). */
-  epochFullDays: 12,
-  epochGoneDays: 14,
+  /**
+   * Days before the data's fetch time: full inside, gone past the second. Only the past fades:
+   * earlier than the fetch, the catalog holds objects not yet launched. Later, positions only
+   * drift, and the detail card says so instead.
+   */
+  pastFullDays: 12,
+  pastGoneDays: 14,
 } as const;

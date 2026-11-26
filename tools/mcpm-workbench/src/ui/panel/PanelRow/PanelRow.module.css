@@ -1,0 +1,81 @@
+.root {
+  composes: row from '../panelGrid.module.css';
+}
+
+/* Label text in the label column, the control in the control column, its end
+   on the edge every row's control shares. */
+.labelled {
+  grid-column: label-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  cursor: pointer;
+}
+
+.control {
+  display: flex;
+  justify-self: end;
+}
+
+/* No inset: a label starts on the content edge, where a slider pill's border does. */
+.labelText {
+  composes: label from '../../../../../../src/components/common/Slider/Slider.module.css';
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A readout wraps instead of truncating; it is read, not scanned. */
+.readout {
+  composes: labelText;
+  grid-column: label-start / control-end;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+}
+
+/* A grid, so a ButtonTip's inline wrapper stretches and its button fills the row. */
+.wide {
+  grid-column: label-start / control-end;
+  display: grid;
+  min-width: 0;
+}
+
+/* Flex, not a line box: an inline ⓘ's strut would make a row with one taller than its neighbours. */
+.info {
+  grid-column: info;
+  justify-self: center;
+  display: flex;
+}
+
+.infoIcon {
+  composes: infoIcon from '../../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  transition:
+    color var(--duration-color) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard);
+}
+
+/* Pointing at or focusing into a row lights its ⓘ to the body text; the ⓘ's
+   own hover and focus go one step brighter. */
+@media (hover: hover) {
+  .root:hover .infoIcon {
+    opacity: 1;
+    color: var(--color-fg-base);
+  }
+}
+
+.root:focus-within .infoIcon {
+  opacity: 1;
+  color: var(--color-fg-base);
+}
+
+.root .infoIcon:is(:hover, :focus-visible) {
+  color: var(--color-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infoIcon {
+    transition: none;
+  }
+}

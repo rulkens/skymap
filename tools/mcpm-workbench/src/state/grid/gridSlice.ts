@@ -1,17 +1,19 @@
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
-import type { GridSlice } from '../../../@types/GridSlice';
-import type { GridBox } from '../../../@types/GridBox';
-import type { GridBudget } from '../../../@types/GridBudget';
-import type { GridElement } from '../../../@types/GridElement';
+import { createSlice, current, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { voxelSizeFittingMemory } from '../../grid/voxelSize/voxelSizeFittingMemory';
+import type { AutoFitRequest } from '../../../@types/grid/AutoFitRequest';
+import type { GridSlice } from '../../../@types/grid/GridSlice';
+import type { GridBox } from '../../../@types/grid/GridBox';
+import type { GridElement } from '../../../@types/grid/GridElement';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 
 /**
- * defaultGridSlice — the manual 200 Mpc origin-centred cube is the boot
- * view (an auto-fit-on-boot box would stretch to the catalog's outliers
- * until the local volume is a sliver of it). `manualVoxelSizeMpc: 0.75` is
- * a deliberate choice, denser than a divisor-1 default's implicit 0.78125
- * Mpc/vox: boot dims come out 272³ (decision record, Q4).
+ * defaultGridSlice — a manual origin-centred cube is the boot view (an
+ * auto-fit-on-boot box would stretch to the catalog's outliers until the
+ * local volume is a sliver of it). `manualSizeMpc` is a request: 200 Mpc rounds
+ * up to 272³ voxels, a 204 Mpc box, which is what the panel shows. It stays
+ * 200 because `?probe` coarsens this same request to 64³ at 3.125 Mpc/vox
+ * (defaultAppState.ts), the grid its energy band was measured on.
  */
 export const defaultGridSlice: GridSlice = {
   manualVoxelSizeMpc: 0.75,
@@ -21,35 +23,28 @@ export const defaultGridSlice: GridSlice = {
   manualRotation: [0, 0, 0, 1],
   importedBox: null,
   resolvedElement: null,
-  byteBudget: null,
-  showGridBox: true,
   maxBufferBytes: null,
-  autoFitPercent: 100,
+  autoFitPercent: 97,
 };
 
 export const gridSlice = createSlice({
   name: 'grid',
   initialState: defaultGridSlice,
   reducers: {
-    // V3 ruling: every setter below a user reaches through the grid-controls UI
-    // clears `importedBox` — a loaded preset's box wins until the user steers
-    // the controls again, then the override has to die (setResolvedGrid, below,
-    // is NOT one of these: it records a completed build, not a user edit).
+    // Every setter a user reaches through the grid controls clears `importedBox`:
+    // a loaded preset's box wins until the user steers the controls again.
+    // setResolvedGrid and setMaxBufferBytes record facts, not edits, and keep it.
     setVoxelSizeMpc: (state, action: PayloadAction<number>) => {
       state.manualVoxelSizeMpc = action.payload;
       state.importedBox = null;
     },
+    // Refused, not clamped: the field passes NaN while it is empty or mid-edit.
     setPaddingMpc: (state, action: PayloadAction<number>) => {
+      if (!(Number.isFinite(action.payload) && action.payload >= 0)) return;
       state.paddingMpc = action.payload;
       state.importedBox = null;
     },
-    /**
-     * setAutoFitPercent — same shape as `setPaddingMpc` above: a one-shot input
-     * to the NEXT "auto fit" click, not a live modifier of the box already
-     * showing, but still a grid-controls edit under the V3 ruling so it clears
-     * `importedBox`. Clamped here (not just at the slider) so a stray dispatch
-     * can't push the fit below the 80% floor `denseFractionBounds` assumes.
-     */
+    // Clamped here, not just at the slider: `denseFractionBounds` assumes the 80% floor.
     setAutoFitPercent: (state, action: PayloadAction<number>) => {
       state.autoFitPercent = Math.min(100, Math.max(80, Math.round(action.payload)));
       state.importedBox = null;
@@ -62,23 +57,12 @@ export const gridSlice = createSlice({
       state.manualSizeMpc = action.payload;
       state.importedBox = null;
     },
-    /**
-     * setRotation — F2.5's rotate-ring setter, same shape as its three siblings above
-     * (manualCenterMpc/manualSizeMpc/…): a ring drag is "the user reaching through the
-     * grid controls" exactly like a slider nudge, so it clears `importedBox` (V3) too.
-     */
     setRotation: (state, action: PayloadAction<Readonly<Vec4>>) => {
       state.manualRotation = action.payload as Draft<Vec4>;
       state.importedBox = null;
     },
-    /**
-     * installImportedBox — the load-side setter: installs a preset's grid box verbatim AND
-     * syncs the manual center/size/rotation/voxel-size fields to match, so the sliders (which
-     * read those fields directly, not importedBox) show the loaded values, and a later
-     * translate/resize/rotate drag — which clears importedBox onto the manual path — continues
-     * from the imported orientation instead of snapping to identity. importedBox still wins in
-     * deriveGridBox until that later edit clears it.
-     */
+    /** Installs a preset's box verbatim AND syncs the manual fields to it, so the sliders
+     *  show the loaded values and a later drag continues from the imported orientation. */
     installImportedBox: (state, action: PayloadAction<GridBox>) => {
       const importedBox = action.payload;
       state.importedBox = importedBox as Draft<GridBox>;
@@ -88,16 +72,14 @@ export const gridSlice = createSlice({
       state.manualVoxelSizeMpc = importedBox.voxelSizeMpc;
     },
     /**
-     * fitBoxToCatalog — "auto fit" as a one-shot ACTION, not a persistent mode:
-     * snapshots `boundsMpc` into `manualCenterMpc`/`manualSizeMpc` once, and
-     * from then on the box is an ordinary manual one (editable, survives a
-     * catalog reload, etc — no boolean remembers how it got here). `paddingMpc`
-     * bakes in at click time: it's an input to the NEXT fit, not a live modifier
-     * of whatever box is already showing. A grid-control edit per the V3 ruling,
-     * so it clears `importedBox` too.
+     * fitBoxToCatalog — Auto fit as a one-shot ACTION: snapshots the bounds into the
+     * manual center and size once; from then on the box is an ordinary manual one.
+     * The voxel size is kept unless the fitted sim would put the GPU bar in its warn
+     * zone; then it is raised until it does not. The panel's and the load dialog's
+     * Auto fit both run through here, so the dialog's preview (fittedGrid) matches.
      */
-    fitBoxToCatalog: (state, action: PayloadAction<{ min: Vec3; max: Vec3 }>) => {
-      const { min, max } = action.payload;
+    fitBoxToCatalog: (state, action: PayloadAction<AutoFitRequest>) => {
+      const { min, max } = action.payload.bounds;
       state.manualCenterMpc = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
       state.manualSizeMpc = [
         max[0] - min[0] + 2 * state.paddingMpc,
@@ -105,29 +87,13 @@ export const gridSlice = createSlice({
         max[2] - min[2] + 2 * state.paddingMpc,
       ];
       state.importedBox = null;
+      state.manualVoxelSizeMpc = voxelSizeFittingMemory(current(state), action.payload.lanes);
     },
-    /**
-     * F1.7: persistent box-wireframe visibility, not a grid-control edit — unlike
-     * every setter above, this does NOT clear `importedBox` (view state, no
-     * bearing on which box is loaded).
-     */
-    setShowGridBox: (state, action: PayloadAction<boolean>) => {
-      state.showGridBox = action.payload;
-    },
-    /** Records a completed fit: the resolved element and its byte budget. */
-    setResolvedGrid: (
-      state,
-      action: PayloadAction<{ resolvedElement: GridElement; byteBudget: GridBudget }>,
-    ) => {
+    /** Records a completed build's element. */
+    setResolvedGrid: (state, action: PayloadAction<{ resolvedElement: GridElement }>) => {
       state.resolvedElement = action.payload.resolvedElement;
-      state.byteBudget = action.payload.byteBudget;
     },
-    /**
-     * setMaxBufferBytes — V2's device-limit setter, same shape as `setResolvedGrid`
-     * above: it records a fact about the hardware, not a user edit, so it does NOT
-     * clear `importedBox`. Viewport calls it once, right after its first successful
-     * GPU init, with `device.limits.maxStorageBufferBindingSize`.
-     */
+    /** After each build, with `bufferLimitBytes(device.limits)`, the limit planGridBudget refuses against. */
     setMaxBufferBytes: (state, action: PayloadAction<number>) => {
       state.maxBufferBytes = action.payload;
     },
@@ -143,7 +109,6 @@ export const {
   setRotation,
   installImportedBox,
   fitBoxToCatalog,
-  setShowGridBox,
   setResolvedGrid,
   setMaxBufferBytes,
 } = gridSlice.actions;

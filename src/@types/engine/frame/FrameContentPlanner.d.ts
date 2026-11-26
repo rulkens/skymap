@@ -10,7 +10,8 @@
  * `snapshot.plans.get(planner, view)`.
  *
  * A planner declaring `fade` (required once `K` is narrowed) gets that entry's handed value as `plan`'s last argument
- * and is never skipped: the passes reading its output run their own gate.
+ * and is never skipped: the passes reading its output run their own gate. A `'perView'` planner
+ * also gets `prev`, its own value for this view id last frame (`undefined` when it has none).
  */
 
 import type { FrameView } from './FrameView';
@@ -39,7 +40,13 @@ export type FrameContentPlanner<T, K extends ShowKey = ShowKey> = (
   | {
       readonly name: string;
       readonly scope: 'perView';
-      plan(view: FrameView, state: PassState, ...fade: FadeParam<K, ShowKey>): PlannerResult<T>;
+      /** `prev` sits before `fade`: nothing may follow a rest parameter. */
+      plan(
+        view: FrameView,
+        state: PassState,
+        prev: T | undefined,
+        ...fade: FadeParam<K, ShowKey>
+      ): PlannerResult<T>;
     }
 ) &
   ([ShowKey] extends [K] ? { readonly fade?: K } : { readonly fade: K });

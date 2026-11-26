@@ -26,7 +26,11 @@ const ROOT = deepFreeze(
     setFlowEnabled(false),
     setVisibility({ cluster: 'galaxyCatalogs', item: 'sdss', field: 'enabled', on: false }),
     updateSelectionFocus(INTENT_FOCUS),
-    setSelectionRow({ slot: 'focus', row: { type: 'galaxy' }, focusId: 'm31' }),
+    setSelectionRow({
+      slot: 'focus',
+      row: { type: 'galaxy' },
+      id: { id: 'm31', ref: INTENT_FOCUS },
+    }),
   ].reduce<ReturnType<typeof rootReducer>>(
     (s, a: Action) => rootReducer(s, a),
     rootReducer(undefined, { type: '@@init' }),
@@ -58,24 +62,24 @@ describe('sceneView', () => {
 
   it('focus: a null step clears, no focus step leaves the intent focus', () => {
     const tracks = tracksOf([seq([wait(1), { kind: 'focus', ref: null }])]);
-    const cleared = sceneView(ROOT, tracks, { steps: 0, focus: 1 }, { row: null, focusId: null });
+    const cleared = sceneView(ROOT, tracks, { steps: 0, focus: 1 }, { row: null, id: null });
     expect(cleared.selection.focus).toBeNull();
     expect(cleared.selectionRows.focus).toBeNull();
-    expect(cleared.selectionRows.focusId).toBeNull();
+    expect(cleared.selectionRows.ids.focus).toBeNull();
 
     const kept = sceneView(ROOT, tracksOf([show(['flow'])]), { steps: 1, focus: 0 }, null);
     expect(kept.selection).toBe(ROOT.selection);
     expect(kept.selectionRows).toBe(ROOT.selectionRows);
   });
 
-  it('focus: the row and focusId come from the focusRow argument', () => {
+  it('focus: the row and its id come from the focusRow argument', () => {
     const ref = { type: 'galaxy', id: 'm87' };
     const tracks = tracksOf([{ kind: 'focus', ref }]);
     const row = { type: 'galaxy', name: 'M87' };
-    const view = sceneView(ROOT, tracks, { steps: 0, focus: 1 }, { row, focusId: 'm87' });
+    const view = sceneView(ROOT, tracks, { steps: 0, focus: 1 }, { row, id: { id: 'm87', ref } });
     expect(view.selection.focus).toEqual(ref);
     expect(view.selectionRows.focus).toBe(row);
-    expect(view.selectionRows.focusId).toBe('m87');
+    expect(view.selectionRows.ids.focus).toEqual({ id: 'm87', ref });
   });
 
   it('with nothing applied is the root itself', () => {

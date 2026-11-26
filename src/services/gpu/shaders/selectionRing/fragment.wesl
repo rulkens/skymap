@@ -31,23 +31,23 @@ import package::selectionRing::io::VsOut;
 fn shadeRing(input: VsOut) -> vec4<f32> {
   // Radial distance² from the quad centre.  UV is in [-1, +1]², so
   // 'dot(uv, uv)' is r² in unit-quad space.
-  let r2 = dot(input.uv, input.uv);
+  let radiusSq = dot(input.uv, input.uv);
 
   // Outside the outer disc — discard before the smoothstep can leak
   // fragments to clamped-zero alpha.
-  if (r2 > 1.0) { discard; }
+  if (radiusSq > 1.0) { discard; }
 
   let bandFraction = min(0.15, 4.0 / max(input.ringRadiusPx, 1.0));
   let innerR = 1.0 - bandFraction;
-  let r = sqrt(r2);
+  let radius = sqrt(radiusSq);
 
   // Inside the inner disc — the ring is hollow.
-  if (r < innerR) { discard; }
+  if (radius < innerR) { discard; }
 
   // Soft edges on both sides of the band; window = 1/10th of band width.
   let edgeFade = bandFraction * 0.1;
-  let inEdge   = smoothstep(innerR, innerR + edgeFade, r);
-  let outEdge  = 1.0 - smoothstep(1.0 - edgeFade, 1.0, r);
+  let inEdge   = smoothstep(innerR, innerR + edgeFade, radius);
+  let outEdge  = 1.0 - smoothstep(1.0 - edgeFade, 1.0, radius);
   let alpha    = inEdge * outEdge;
 
   // Premultiplied-alpha OVER blend (set on the JS pipeline descriptor), so the

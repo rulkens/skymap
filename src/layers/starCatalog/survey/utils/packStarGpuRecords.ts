@@ -1,7 +1,7 @@
 /**
  * Star records as the vertex stage reads them (`vertex.wesl`): two u32 per record,
  * the photometry re-quantised to the frozen LUT indices (the columns hold bin centres,
- * so nothing is lost). w0 = x | y << 16; w1 = z | absMagIdx << 16 | colorIdx << 23.
+ * so nothing is lost). xyWord = x | y << 16; zMagColourWord = z | absMagIdx << 16 | colorIdx << 23.
  */
 import type { StarColumns } from '../@types/StarColumns';
 import { absMagToLutIndex, bpRpToColorIdx } from '../../../../data/starCatalog/starCatalogFormat';

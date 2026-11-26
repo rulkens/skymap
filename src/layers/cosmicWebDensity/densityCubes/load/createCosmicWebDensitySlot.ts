@@ -1,5 +1,7 @@
 /**
- * createCosmicWebDensitySlot — one density row's asset slot, construction-pure.
+ * createCosmicWebDensitySlot — one density row's asset slot, construction-pure. Its commit waits
+ * for the jitter mask, so no frame marches a cube with zero jitter (a visible step grid) while the
+ * mask is still on its way.
  */
 
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
@@ -14,12 +16,14 @@ import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 export function createCosmicWebDensitySlot(
   entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number],
   renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>,
+  jitterMaskReady: Promise<void>,
 ): AssetSlot<ScalarCube, CosmicWebDensityReq> {
   const id = entry.id;
   return createAssetSlot<ScalarCube, CosmicWebDensityReq>({
     name: id,
     fetch: cosmicWebDensityFetcher,
     commit: async (cube) => {
+      await jitterMaskReady;
       renderer.upload(id, cube, entry);
     },
     onRelease: () => renderer.unload(id),

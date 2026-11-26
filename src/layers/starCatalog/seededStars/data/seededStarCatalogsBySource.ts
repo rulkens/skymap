@@ -5,9 +5,9 @@
  * famous star and break every saved `star-` link.
  */
 
-import { SEEDED_STAR_CATALOGS } from '../../../../data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from './seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
-import type { SeededStarCatalogId } from '../../../../@types/data/starCatalog/SeededStarCatalogId';
+import type { SeededStarCatalogId } from '../../@types/SeededStarCatalogId';
 import type { SeededStarCatalogRow } from '../@types/SeededStarCatalogRow';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 

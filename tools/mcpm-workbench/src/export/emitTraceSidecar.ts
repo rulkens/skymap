@@ -1,14 +1,15 @@
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
-import type { McpmParams } from '../../@types/McpmParams';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { McpmParams } from '../../@types/sim/McpmParams';
+import type { UserFileProvenance } from '../../@types/catalog/UserFileProvenance';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
-import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
-import { buildParamsPayload } from '../state/exportParams';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
+import { buildParamsPayload } from '../params/buildParamsPayload';
 
-// Local time with a numeric (no-colon) UTC offset — "+0200", matching the
-// spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so
+// Local time with a numeric (no-colon) UTC offset — "+0200". parsePolyphyTraceSidecar
+// stores provenance untyped, so
 // this exact format is this exporter's convention, not a parsed contract.
 function formatProducedAt(d: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
@@ -25,7 +26,7 @@ function formatProducedAt(d: Date): string {
 
 /**
  * emitTraceSidecar — the `polyphy-trace` v1 JSON `parsePolyphyTraceSidecar`/
- * `buildRhizomeVolume` expect next to the `.npy`, same basename (spec §8).
+ * `buildRhizomeVolume` expect next to the `.npy`, same basename.
  * `voxel_size_mpc` repeats `box.voxelSizeMpc` three times: GridBox's voxels
  * are cubic by construction (autoFitGridBox), so the importer's 0.5% spread
  * assert passes with zero margin consumed, not just under the line.
@@ -42,8 +43,28 @@ export function emitTraceSidecar(input: {
   readonly steps: number;
   readonly seed: number;
   readonly producedAt: Date;
+  /** The loaded file the trace was built from; null otherwise. */
+  readonly userFile: UserFileProvenance | null;
 }): string {
-  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt } = input;
+  const { box, points, weights, tier, params, agentCount, steps, seed, producedAt, userFile } =
+    input;
+  // `frame` below stays 'equatorial-cartesian' with a file loaded: the importer
+  // checks it against a closed list, and for an x, y, z file it is the user's claim.
+  const userFileBlock = userFile && {
+    name: userFile.fileName,
+    n_points: userFile.nPoints,
+    format: userFile.settings.format.kind,
+    weight_kind: userFile.settings.weight.kind,
+    ...(userFile.settings.weight.kind === 'linear' && {
+      weight_scale: userFile.settings.weight.scale,
+    }),
+    ...(userFile.settings.format.kind === 'raDecRedshift' && {
+      h0_km_s_mpc: userFile.settings.format.h0KmSMpc,
+      omega_m: userFile.settings.format.omegaM,
+      // redshiftToDistanceMpc's kind: line-of-sight comoving, not luminosity or angular-diameter.
+      distance_kind: 'comoving',
+    }),
+  };
   const half = boxHalfExtentMpc(box.sizeMpc);
   const originMpc = [
     box.centerMpc[0] - half[0],
@@ -57,7 +78,7 @@ export function emitTraceSidecar(input: {
     dims: box.dims,
     origin_mpc: originMpc,
     voxel_size_mpc: [box.voxelSizeMpc, box.voxelSizeMpc, box.voxelSizeMpc],
-    // Honest metadata, not an instruction the importer acts on (spec §8's non-goal) —
+    // Honest metadata, not an instruction the importer acts on —
     // buildRhizomeVolume/the comparator keep treating the cube as the flat grid-space
     // array it is; a downstream consumer that cares reads this and applies it itself,
     // pivoting about the box CENTER, not origin_mpc (worldToBoxLocal.ts: it subtracts
@@ -74,9 +95,9 @@ export function emitTraceSidecar(input: {
         tier,
         n_points: points.count,
         nan_mass_filled: weights.nanCount,
+        ...(userFileBlock && { user_file: userFileBlock }),
       },
-      // V3's exportParams preset carries the SAME object, via the same
-      // buildParamsPayload — spec §10's "keep the two shapes identical".
+      // The params preset carries the SAME object, via the same buildParamsPayload.
       params: buildParamsPayload(params),
       n_agents: agentCount,
       steps,

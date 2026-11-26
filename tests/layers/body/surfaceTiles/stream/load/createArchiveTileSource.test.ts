@@ -14,6 +14,9 @@ const idx = (...e: ReturnType<typeof entry>[]) => encodeSurfaceTileArchiveIndex(
 const ok = (body: Uint8Array, status = 200) =>
   new Response(body as Uint8Array<ArrayBuffer>, { status });
 
+const MISSING = { kind: 'missing' };
+const FAILED = { kind: 'failed' };
+
 const fetchMock = vi.fn();
 beforeEach(() => vi.stubGlobal('fetch', fetchMock));
 afterEach(() => {
@@ -26,8 +29,8 @@ it('reads a tile with one Range request after one index fetch', async () => {
   fetchMock
     .mockResolvedValueOnce(ok(idx(entry(1, 100, 50))))
     .mockResolvedValueOnce(ok(new Uint8Array(50), 206));
-  const bytes = await createArchiveTileSource('earth-tiles/v11').readTile(tile(1));
-  expect(bytes?.byteLength).toBe(50);
+  const read = await createArchiveTileSource('earth-tiles/v11').readTile(tile(1));
+  expect(read.kind === 'bytes' && read.bytes.byteLength).toBe(50);
   expect(fetchMock).toHaveBeenCalledTimes(2);
   const [indexCall, packCall] = fetchMock.mock.calls;
   expect(indexCall?.[0]).toMatch(/earth-tiles\/v11\/albedo\/z3\.idx$/);
@@ -46,17 +49,24 @@ it('memoises the level index across tiles', async () => {
   expect(fetchMock.mock.calls.filter(([u]) => u.endsWith('.idx'))).toHaveLength(1);
 });
 
-it('returns null for a tile absent from the index without requesting it', async () => {
-  fetchMock.mockResolvedValueOnce(ok(idx(entry(1, 0, 4))));
-  expect(await createArchiveTileSource('p').readTile(tile(2))).toBeNull();
+it('zero-length entry reads empty without fetching', async () => {
+  // Bug caught: a `bytes=o-(o-1)` Range sent for a flat tile, or empty read as failed.
+  fetchMock.mockResolvedValueOnce(ok(idx(entry(1, 40, 0))));
+  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual({ kind: 'empty' });
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
-it('treats an index 404 as an empty level and does not refetch it', async () => {
+it('key absent from the index reads missing', async () => {
+  fetchMock.mockResolvedValueOnce(ok(idx(entry(1, 0, 4))));
+  expect(await createArchiveTileSource('p').readTile(tile(2))).toEqual(MISSING);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('a level whose index 404s reads missing and is not refetched', async () => {
   fetchMock.mockImplementation(async () => new Response(null, { status: 404 }));
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toBeNull();
-  expect(await source.readTile(tile(2))).toBeNull();
+  expect(await source.readTile(tile(1))).toEqual(MISSING);
+  expect(await source.readTile(tile(2))).toEqual(MISSING);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
@@ -66,33 +76,34 @@ it('retries the index after a network error', async () => {
     .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
     .mockResolvedValueOnce(ok(new Uint8Array(4), 206));
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toBeNull();
-  expect((await source.readTile(tile(1)))?.byteLength).toBe(4);
+  expect(await source.readTile(tile(1))).toEqual(FAILED);
+  expect((await source.readTile(tile(1))).kind).toBe('bytes');
 });
 
-it('returns null and warns once when a part answers 200 instead of 206', async () => {
+it('reads failed and warns once when a part answers 200 instead of 206', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   fetchMock.mockImplementation(async (url: string) =>
     url.endsWith('.idx') ? ok(idx(entry(1, 0, 4), entry(2, 4, 4))) : ok(new Uint8Array(100)),
   );
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toBeNull();
-  expect(await source.readTile(tile(2))).toBeNull();
+  expect(await source.readTile(tile(1))).toEqual(FAILED);
+  expect(await source.readTile(tile(2))).toEqual(FAILED);
   expect(warn).toHaveBeenCalledTimes(1);
 });
 
-it('returns null when a 206 body length differs from the entry length', async () => {
+it('a short body reads failed', async () => {
   fetchMock
     .mockResolvedValueOnce(ok(idx(entry(1, 0, 8))))
     .mockResolvedValueOnce(ok(new Uint8Array(5), 206));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toBeNull();
+  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
 });
 
-it('reads a level whose index has a bad magic as empty and does not refetch it', async () => {
+it('a level whose index has a bad magic reads failed and is not refetched', async () => {
+  // Bug caught: a broken deploy passing as a level with nothing baked.
   fetchMock.mockImplementation(async () => ok(new Uint8Array(64)));
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toBeNull();
-  expect(await source.readTile(tile(2))).toBeNull();
+  expect(await source.readTile(tile(1))).toEqual(FAILED);
+  expect(await source.readTile(tile(2))).toEqual(FAILED);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
@@ -102,8 +113,8 @@ it('retries the index after a 5xx', async () => {
     .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
     .mockResolvedValueOnce(ok(new Uint8Array(4), 206));
   const source = createArchiveTileSource('p');
-  expect(await source.readTile(tile(1))).toBeNull();
-  expect((await source.readTile(tile(1)))?.byteLength).toBe(4);
+  expect(await source.readTile(tile(1))).toEqual(FAILED);
+  expect((await source.readTile(tile(1))).kind).toBe('bytes');
 });
 
 it('cancels the body of a 200 so a whole pack is not downloaded', async () => {
@@ -113,6 +124,6 @@ it('cancels the body of a 200 so a whole pack is not downloaded', async () => {
   fetchMock
     .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
     .mockResolvedValueOnce(new Response(body, { status: 200 }));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toBeNull();
+  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
   await vi.waitFor(() => expect(cancel).toHaveBeenCalled());
 });

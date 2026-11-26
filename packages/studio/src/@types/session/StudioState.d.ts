@@ -1,5 +1,5 @@
 /**
- * The injected `studio` slice (ADR 0016). The app's `RootState` does not know it; it is read
+ * The injected `studio` slice (ADR 0017). The app's `RootState` does not know it; it is read
  * through the slice's own selectors. Kept after Close, so reopening the same clip keeps the draft.
  */
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';

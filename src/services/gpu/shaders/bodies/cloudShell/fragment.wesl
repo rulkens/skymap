@@ -1,19 +1,19 @@
 // cloudShell/fragment.wesl — fragment stage for the translucent cloud shell.
 //
-// Samples an equirectangular cloud map at the mesh uv -- RGB is the cloud colour
-// (sRGB, hardware-linearised on read), '.a' is the coverage that becomes the
-// shell's alpha -- then shades it with the shared sun-relative Lambert term
-// (the 'u.ambientLight' floor + direct term) so the clouds go dark on the night
+// Samples an equirectangular grey cloud map ('r8unorm', raw) at the mesh uv --
+// its one byte is the coverage that becomes the shell's alpha AND, decoded as
+// sRGB, the cloud's grey colour -- then shades it with the shared sun-relative
+// Lambert term (the 'uniforms.ambientLight' floor + direct term) so the clouds go dark on the night
 // side (down to that ambient floor) and stay bright in daylight. The result is
 // emitted as STRAIGHT alpha into the rgba16float foreground colour target; the
 // renderer's OVER blend composites it over the opaque surface already drawn.
 //
 // ## Composition
 //
-//   c       = textureSample(cloudTexture, cloudSampler, uv) // rgb colour, a coverage
+//   v       = textureSample(cloudTexture, cloudSampler, uv).r  // coverage, sRGB grey
 //   lambert = max(dot(normalize(normalLocal), sunDirLocal), 0)
 //   lit     = ambientLight + (1 - ambientLight) * lambert * sunIrradiance  // direct scaled
-//   out     = vec4(c.rgb * lit, c.a * cloudOpacity)         // straight alpha
+//   out     = vec4(srgbToLinear(v) * lit, v * cloudOpacity)    // straight alpha
 //
 // ## Why 'sunIrradiance' scales only the direct term
 //
@@ -22,7 +22,7 @@
 // unscaled. Left unscaled the shell's lit output would top out at the raw Lambert
 // term (peak ~1) -- so the clouds, the brightest real feature (albedo ~0.8),
 // rendered DIMMER than the ~3x-brighter ground beneath them. Scaling the same
-// direct portion here matches the two. The 'u.ambientLight' floor stays unscaled,
+// direct portion here matches the two. The 'uniforms.ambientLight' floor stays unscaled,
 // so the night-side deck is unchanged -- exactly the surface's split.
 // 'sunIrradiance' is the SAME constant, packed at byte 80 from
 // 'EARTH_SURFACE_PARAMS.sunIrradiance' (single source of truth), never a second
@@ -30,7 +30,7 @@
 //
 // ## Why 'ambientLight' is a uniform, not the shared const
 //
-// The ambient floor here is 'u.ambientLight' (packed at byte 84 from
+// The ambient floor here is 'uniforms.ambientLight' (packed at byte 84 from
 // 'EARTH_SURFACE_PARAMS.ambientLight'), the SAME Earth-scoped, user-tunable value
 // the surface reads -- NOT the shared 'AMBIENT' const the flat + textured planets
 // use. Reading it from the uniform keeps the deck's night side dimming in lockstep
@@ -66,32 +66,33 @@
 // Output @location(0) writes to the rgba16float foreground colour target with
 // STRAIGHT (non-premultiplied) colour -- the renderer's pipeline uses OVER
 // blending ('src-alpha' / 'one-minus-src-alpha'), the standard translucent
-// overlay. The cloud texture is 'rgba8unorm-srgb', so the sampled RGB is already
-// linear, correct for the HDR target.
+// overlay. 'srgbToLinear' gives the HDR target linear colour, as the old
+// 'rgba8unorm-srgb' RGBA map did in hardware.
 
 import package::bodies::cloudShell::io::VSOut;
 import package::lib::sphere::CloudShellUniforms;
+import package::lib::srgb::srgbToLinear;
 
-@group(0) @binding(0) var<uniform> u: CloudShellUniforms;
+@group(0) @binding(0) var<uniform> uniforms: CloudShellUniforms;
 @group(0) @binding(1) var cloudSampler: sampler;
 @group(0) @binding(2) var cloudTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The mesh uv is
-  // already registered on the prime meridian (see the '## uv / orientation' note),
-  // so it samples straight through. Its u runs 0.5..1.5 unwrapped and the sampler
-  // uses addressModeU 'repeat', so the hardware closes the turn.
-  let c = textureSample(cloudTexture, cloudSampler, in.uv);
+  // The mesh uv is already registered on the prime meridian (see the
+  // '## uv / orientation' note), so it samples straight through. Its u runs
+  // 0.5..1.5 unwrapped and the sampler uses addressModeU 'repeat', so the
+  // hardware closes the turn.
+  let cloudCover = textureSample(cloudTexture, cloudSampler, in.uv).r;
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
-  // by the same irradiance while its ambient floor is not. The 'u.ambientLight'
+  // by the same irradiance while its ambient floor is not. The 'uniforms.ambientLight'
   // floor stays unscaled so the night-side deck never dissolves to pure black at
   // the terminator, and night-side brightness is unchanged by the irradiance
   // boost.
-  let lambert = max(dot(normalize(in.normalLocal), u.sunDirLocal), 0.0);
-  let lit = u.ambientLight + (1.0 - u.ambientLight) * lambert * u.sunIrradiance;
+  let lambert = max(dot(normalize(in.normalLocal), uniforms.sunDirLocal), 0.0);
+  let lit = uniforms.ambientLight + (1.0 - uniforms.ambientLight) * lambert * uniforms.sunIrradiance;
   // Straight-alpha OVER: colour shaded by the light term, coverage scaled by the
   // per-shell opacity multiplier.
-  return vec4<f32>(c.rgb * lit, c.a * u.cloudOpacity);
+  return vec4<f32>(vec3<f32>(srgbToLinear(cloudCover)) * lit, cloudCover * uniforms.cloudOpacity);
 }

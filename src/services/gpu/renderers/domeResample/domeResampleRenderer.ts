@@ -1,6 +1,7 @@
 /**
  * domeResampleRenderer — a covering triangle that fisheye-resamples the five
- * `dome-cube` faces into `hdr` (`shaders/domeResample`). One sampled texture,
+ * `dome-cube` faces into `hdr` (`shaders/domeResample`), and a second pipeline
+ * that carries their occlusion masks to the same image. One sampled texture,
  * no uniforms: the tilt lives only in the face rotations baked into
  * `dome-cube`'s layers. Bind group rebuilt per draw, same reason as
  * `cubeFaceBlitRenderer`: a cached group could bind a view `reconcile()` replaced.
@@ -10,13 +11,15 @@ import type { DomeResampleRenderer } from '../../../../@types/rendering/DomeResa
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import vsCode from '../../shaders/domeResample/vertex.wesl?static';
 import fsCode from '../../shaders/domeResample/fragment.wesl?static';
+import fsOcclusionCode from '../../shaders/domeResample/fragmentOcclusion.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 export function createDomeResampleRenderer(init: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;
+  readonly occlusionFormat: GPUTextureFormat;
 }): DomeResampleRenderer {
-  const { device, targetFormat } = init;
+  const { device, targetFormat, occlusionFormat } = init;
 
   const sampler = device.createSampler({
     label: 'domeResample-sampler',
@@ -52,6 +55,49 @@ export function createDomeResampleRenderer(init: {
     primitive: { topology: 'triangle-list' },
   });
 
+  // The masks are a 32-bit float texture: unfilterable, read by `textureLoad` alone.
+  const occlusionLayout = device.createBindGroupLayout({
+    label: 'domeResample-occlusion-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'unfilterable-float', viewDimension: '2d-array' },
+      },
+    ],
+  });
+  const occlusionPipeline = device.createRenderPipeline({
+    label: 'domeResample-occlusion-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'domeResample-occlusion-pipeline-layout',
+      bindGroupLayouts: [occlusionLayout],
+    }),
+    vertex: { module: vsModule, entryPoint: 'vs' },
+    fragment: {
+      module: createShaderModuleWithDevLog(
+        device,
+        fsOcclusionCode,
+        'domeResample.fragmentOcclusion',
+      ),
+      entryPoint: 'fs',
+      targets: [{ format: occlusionFormat }],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  function drawOcclusion(pass: GPURenderPassEncoder, faceMasks: GPUTextureView): void {
+    pass.setPipeline(occlusionPipeline);
+    pass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'domeResample-occlusion-bg',
+        layout: occlusionLayout,
+        entries: [{ binding: 0, resource: faceMasks }],
+      }),
+    );
+    pass.draw(3);
+  }
+
   function draw(pass: GPURenderPassEncoder, faces: GPUTextureView): void {
     const bindGroup = device.createBindGroup({
       label: 'domeResample-bg',
@@ -68,7 +114,12 @@ export function createDomeResampleRenderer(init: {
 
   function destroy(): void {}
 
-  const renderer: DomeResampleRenderer = { label: 'domeResampleRenderer', draw, destroy };
+  const renderer: DomeResampleRenderer = {
+    label: 'domeResampleRenderer',
+    draw,
+    drawOcclusion,
+    destroy,
+  };
   renderer satisfies Renderer;
   return renderer;
 }

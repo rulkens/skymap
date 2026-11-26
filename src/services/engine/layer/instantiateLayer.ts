@@ -30,6 +30,7 @@ export function instantiateLayer<
     screenLabels: guides?.screenLabels ?? [],
     worldLabels: guides?.worldLabels ?? [],
     orbitTrails: guides?.orbitTrails ? [guides.orbitTrails] : [],
+    sampledTrails: guides?.sampledTrails ? [guides.sampledTrails] : [],
     selection: layer.selection?.rows(runtime) ?? [],
     search: layer.search?.(runtime),
     sourceCounts: layer.sourceCounts?.(runtime),

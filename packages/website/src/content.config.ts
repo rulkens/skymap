@@ -13,19 +13,11 @@ import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
 import type { PageSection } from './@types/PageSection';
-import { SITE_SHOTS } from './data/siteShots';
 
 // One object for every written page, so each collection means the same by each field.
 const pageFields = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
-  image: z
-    .string()
-    .refine(
-      (id) => SITE_SHOTS.some((shot) => shot.id === id && shot.widths.length > 0),
-      'not a shot id with files in data/siteShots.ts',
-    )
-    .optional(),
 });
 
 const docs = defineCollection({

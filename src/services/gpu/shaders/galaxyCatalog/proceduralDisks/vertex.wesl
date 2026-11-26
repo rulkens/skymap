@@ -21,7 +21,7 @@
 // imported from io.wesl, the @group/@binding declaration lives in
 // the consuming file, and the layout matches what the renderer
 // builds. The fragment stage doesn't declare the binding because it
-// doesn't read 'u' — only the vertex stage consumes 'cam.viewProj'.
+// doesn't read 'uniforms' — only the vertex stage consumes 'cam.viewProj'.
 
 import package::galaxyCatalog::proceduralDisks::io::Uniforms;
 import package::galaxyCatalog::proceduralDisks::io::InstanceIn;
@@ -57,7 +57,7 @@ import package::lib::orientation::diskAxes;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 // @group(1) focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
 // parks it at @group(3)). Single shared binding: one structure focused at a time.
@@ -133,7 +133,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let worldPos = pos + worldOffset;
 
   var out: VsOut;
-  out.clipPos = worldToClip(u.cam, worldPos);
+  out.clipPos = worldToClip(uniforms.cam, worldPos);
   out.uv = corner;
   out.colourIndex = instance.extras.x;
   out.crossfadeAlpha = instance.extras.y;

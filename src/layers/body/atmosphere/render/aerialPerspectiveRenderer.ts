@@ -8,12 +8,14 @@
 
 import type { AerialBundleResources } from '../@types/AerialBundleResources';
 import type { AerialPerspectiveRenderer } from '../@types/AerialPerspectiveRenderer';
+import { DUAL_SOURCE_BLEND, DUAL_SOURCE_FEATURE } from '../../../../data/rendering/dualSourceBlend';
 import { FROXEL_DIMS } from '../data/froxelVolume';
 import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import bakeCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
 import applyCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
+import dualSourceCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragmentDualSource.wesl?static';
 
 /** Matches `bake.wesl`'s `@workgroup_size(8, 8, 1)` over (x, y); z is its loop. */
 const BAKE_WORKGROUP_SIZE = 8;
@@ -128,12 +130,13 @@ export function createAerialPerspectiveRenderer(
     entryPoint: string,
     blend: GPUBlendState,
     depthStencil?: GPUDepthStencilState,
+    fragmentModule: GPUShaderModule = applyModule,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: applyPipelineLayout,
       vertex: { module: applyModule, entryPoint: 'vs' },
-      fragment: { module: applyModule, entryPoint, targets: [{ format: targetFormat, blend }] },
+      fragment: { module: fragmentModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: { topology: 'triangle-list' },
       ...(depthStencil === undefined ? {} : { depthStencil }),
     });
@@ -161,6 +164,23 @@ export function createAerialPerspectiveRenderer(
     'fsAerialAdd',
     ADD_BLEND,
   );
+  // One draw where the device blends two sources, so `aerialSample` runs once per
+  // pixel, not twice; the pair is the fallback. In draw order either way.
+  const applyPipelines = device.features.has(DUAL_SOURCE_FEATURE)
+    ? [
+        createApplyPipeline(
+          'atmosphere-aerial-dual-source-pipeline',
+          'fsAerialDualSource',
+          DUAL_SOURCE_BLEND,
+          undefined,
+          createShaderModuleWithDevLog(
+            device,
+            dualSourceCode,
+            'atmosphere.aerialPerspective.fragmentDualSource',
+          ),
+        ),
+      ]
+    : [applyMultiplyPipeline, applyAddPipeline];
   // The ground passes after the probe sky overdraw it.
   const skyMultiplyPipeline = createApplyPipeline(
     'atmosphere-probe-sky-multiply-pipeline',
@@ -183,7 +203,7 @@ export function createAerialPerspectiveRenderer(
     applyEntries: readonly GPUBindGroupEntry[];
     /** Last built apply group, keyed on the depth view it was built over. */
     applyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
-    /** The probe faces' own uniform record, so `bake`'s write stays the main view's alone. */
+    /** The probe faces' own uniform record, so `writeUniforms`' write stays the main view's alone. */
     readonly probeSkyUniformBuffer: GPUBuffer;
     probeSkyGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null;
   };
@@ -263,11 +283,13 @@ export function createAerialPerspectiveRenderer(
     binding.probeSkyGroup = null;
   }
 
-  function bake(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void {
-    const binding = bindingFor(bodyId);
-    device.queue.writeBuffer(binding.shellUniformBuffer, 0, uniforms);
+  function writeUniforms(bodyId: string, uniforms: Float32Array): void {
+    device.queue.writeBuffer(bindingFor(bodyId).shellUniformBuffer, 0, uniforms);
+  }
+
+  function bake(pass: GPUComputePassEncoder, bodyId: string): void {
     pass.setPipeline(bakePipeline);
-    pass.setBindGroup(0, binding.bakeGroup);
+    pass.setBindGroup(0, bindingFor(bodyId).bakeGroup);
     pass.dispatchWorkgroups(bakeDispatchX, bakeDispatchY, 1);
   }
 
@@ -289,10 +311,10 @@ export function createAerialPerspectiveRenderer(
     // MULTIPLY strictly before ADD: the multiply draw scales whatever is
     // already in the target, so running it second would attenuate this pass's
     // own in-scatter by its own transmittance.
-    pass.setPipeline(applyMultiplyPipeline);
-    pass.draw(3);
-    pass.setPipeline(applyAddPipeline);
-    pass.draw(3);
+    for (const pipeline of applyPipelines) {
+      pass.setPipeline(pipeline);
+      pass.draw(3);
+    }
   }
 
   // Every pixel takes the apply's sky branch: the far placeholder is the depth it reads, and
@@ -333,5 +355,13 @@ export function createAerialPerspectiveRenderer(
     froxelTransmittanceTex.destroy();
   }
 
-  return { label: 'aerialPerspectiveRenderer', bake, draw, drawSky, rebind, destroy };
+  return {
+    label: 'aerialPerspectiveRenderer',
+    writeUniforms,
+    bake,
+    draw,
+    drawSky,
+    rebind,
+    destroy,
+  };
 }

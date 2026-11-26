@@ -3,4 +3,6 @@
 import { observableUniverse } from './observableUniverse/observableUniverse';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 
-export const cosmicHorizonLayerExhibits: readonly Exhibit[] = [observableUniverse];
+export const cosmicHorizonLayerExhibits = [
+  observableUniverse,
+] as const satisfies readonly Exhibit[];

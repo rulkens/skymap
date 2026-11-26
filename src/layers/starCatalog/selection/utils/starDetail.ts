@@ -1,6 +1,6 @@
 import { apparentMagnitudeFromAbs } from '../../../../utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../utils/star/spectralClassFromBpRp';
-import { sStarOrbitInfo } from '../../../../data/bodies/sStarOrbitInfo';
+import { sStarOrbitInfo } from '../../bodies/sStarOrbitInfo';
 import type { StarInfoDetail } from '../../@types/StarInfoDetail';
 import type { StarCatalogSelectionRow } from '../@types/StarCatalogSelectionRow';
 

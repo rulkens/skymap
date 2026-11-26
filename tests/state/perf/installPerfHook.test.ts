@@ -278,6 +278,6 @@ describe('installPerfHook', () => {
     installPerfHook(store, fakeEngine());
     await getHook()!.setPose({ framed });
 
-    expect(store.getState().camera.base).toEqual(framed);
+    expect(store.getState().camera.intent.base).toEqual(framed);
   });
 });

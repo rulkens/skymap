@@ -14,8 +14,8 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
-import { aimCamera } from '../../../../src/state/camera/cameraSlice';
-import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
+import { aimCamera } from '../../../../src/state/camera/cameraIntentSlice';
+import { setTimelineLane } from '../../../../src/state/settings/core/timelineSlice';
 import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
@@ -36,10 +36,10 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   h.store.dispatch(setSimDays({ simDays: unixMsToJulianDays(Date.UTC(1990, 0, 1)), nowMs: 0 }));
   h.focus(null);
   h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
-  h.store.dispatch(setMissionCraft('voyager1'));
+  h.store.dispatch(setTimelineLane('voyager1'));
   h.store.dispatch(aimCamera({ ease: false }));
   h.frame(30);
-  expect(h.state.cameraRuntime.register.winner).toBe('mission');
+  expect(h.state.cameraRuntime.register.winner).toBe('timeline');
   const lastEye = displayedEye(h.state);
   const shown = h.state.cameraRuntime.outputs.displayed;
   if (!isWorldArm(shown)) throw new Error('the mission flies the world arm');
@@ -51,7 +51,7 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   expect(h.state.cameraRuntime.register.winner).toBe(successor);
   const edgeEye = displayedEye(h.state);
   const step = Math.hypot(...edgeEye.map((v, i) => v - lastEye[i]!));
-  return { step: step / shown.pose.distance, base: h.store.getState().camera.base, shown };
+  return { step: step / shown.pose.distance, base: h.store.getState().camera.intent.base, shown };
 }
 
 describe('exiting a mission', () => {

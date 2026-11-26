@@ -10,6 +10,7 @@ import { call, put } from 'typed-redux-saga';
 import { applyLayerSwitchesSaga } from './applyLayerSwitchesSaga';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { setOrientation } from '../settings/core/orientationSlice';
+import { setFilmEnabled } from '../settings/core/filmSlice';
 import type { LinkIntent } from '../../@types/url/LinkIntent';
 
 export function* applyLinkSettingsSaga(intent: LinkIntent) {
@@ -17,5 +18,6 @@ export function* applyLinkSettingsSaga(intent: LinkIntent) {
     for (const action of manualPausedAtActions(new Date(intent.t))) yield* put(action);
   }
   if (intent.orientation !== undefined) yield* put(setOrientation(intent.orientation));
+  if (intent.film !== undefined) yield* put(setFilmEnabled(intent.film));
   if (intent.layers !== undefined) yield* call(applyLayerSwitchesSaga, intent.layers);
 }

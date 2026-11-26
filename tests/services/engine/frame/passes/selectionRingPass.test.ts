@@ -307,6 +307,7 @@ describe('selectionRingPass.draw', () => {
       typeof makeRendererSpy
     >;
     expect(rendererSpy.draw.mock.calls[0]![5]).toEqual({
+      kind: 'sampled-depth',
       colorView: sentinelColorView,
       depthView: farDepthView,
       frame: null,

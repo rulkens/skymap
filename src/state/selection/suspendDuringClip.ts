@@ -18,7 +18,7 @@
  * WHAT it protects:
  *
  *   While a clip owns the camera at driver-priority 95, `watchFocusTweenSaga` must not
- *   plant a `camera.tween`. A tween planted during a clip is dormant only while the
+ *   plant a `camera.intent.tween`. A tween planted during a clip is dormant only while the
  *   clip@95 driver wins priority — the instant `clipEnded` fires and the clip driver
  *   yields, the leftover tween@60 outranks `resting`@0 and snaps the camera to a
  *   stale focus target. The `clipEnded` reducer clears tweens planted BEFORE the

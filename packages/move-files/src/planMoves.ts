@@ -43,6 +43,9 @@ export function planMoves(
   const exists = (path: string) => snapshot.texts.has(path) || snapshot.fileExists(path);
   const isSource = (path: string) => snapshot.listed.has(path) && exists(path);
 
+  // A folder row stands for one row per listed file under it, so every check below
+  // sees exactly the batch those rows would make.
+  const listedUnder = (dir: string) => [...snapshot.listed].filter((p) => p.startsWith(`${dir}/`));
   const inside: MovePair[] = [];
   for (const pair of request) {
     const outside = [pair.from, pair.to].filter((p) => {
@@ -50,9 +53,18 @@ export function planMoves(
       return path === '..' || path.startsWith('../');
     });
     for (const path of outside) refuse('outside-repo', path, 'is outside the repository');
-    if (pair.to.endsWith('/')) refuse('invalid-destination', pair.to, 'names a folder, not a file');
-    else if (outside.length === 0 && abs(pair.from) !== abs(pair.to))
-      inside.push({ from: rel(abs(pair.from)), to: rel(abs(pair.to)) });
+    const [from, to] = [abs(pair.from), abs(pair.to)];
+    const isInside = outside.length === 0;
+    const folder = isInside && !isSource(from) ? listedUnder(from) : [];
+    if (isInside && folder.length === 0 && snapshot.directoryExists(from))
+      refuse('missing-source', rel(from), 'is a folder holding no file git lists; check case');
+    else if (folder.length === 0 && pair.to.endsWith('/'))
+      refuse('invalid-destination', pair.to, 'names a folder, not a file');
+    else if (isInside && from !== to) {
+      if (folder.length === 0) inside.push({ from: rel(from), to: rel(to) });
+      for (const file of folder)
+        inside.push({ from: rel(file), to: rel(posix.join(to, posix.relative(from, file))) });
+    }
   }
 
   const existsRel = (path: string) => isSource(abs(path));

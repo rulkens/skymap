@@ -21,7 +21,7 @@ import fsPickCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragmen
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { ZoneOfAvoidanceRenderer } from '../@types/ZoneOfAvoidanceRenderer';
 import type { ZoneOfAvoidanceShell } from '../@types/ZoneOfAvoidanceShell';
@@ -125,7 +125,7 @@ export function createZoneOfAvoidanceRenderer(
   // The band's pick identity never changes across its lifetime — write it
   // once directly into the shared uniform scratch below (see `packedId`'s
   // offset in io.wesl's byte table), rather than every `writeUniforms` call.
-  const packedId = packSelection(pickCode, 0) + PICK_SENTINEL_OFFSET;
+  const packedId = packPickWord(pickCode, 0);
 
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE);

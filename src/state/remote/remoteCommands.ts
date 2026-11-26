@@ -7,9 +7,10 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../compositions/appClips';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { RATE_LADDER } from '../../data/time/rateLadder';
+import { SKY_HOSTS } from '../../data/sky/skyHosts';
 import { setControlScheme } from '../settings/core/cameraControlsSlice';
 import { remotePairingToggled } from './remoteSlice';
 import { goHome } from '../selection/goHome';
@@ -62,6 +63,17 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
         ? { kind: 'flyTo', lonDeg, latDeg, altKm }
         : undefined;
     }
+    case 'sky': {
+      const { spot } = raw;
+      if (spot === 'here') return { kind: 'sky', spot };
+      if (!isRecord(spot) || typeof spot.body !== 'string') return undefined;
+      const body = [...SKY_HOSTS].find((id) => id === spot.body);
+      const { lonRad, latRad } = spot;
+      if (body === undefined || !isFiniteIn(lonRad, -Math.PI, Math.PI)) return undefined;
+      return isFiniteIn(latRad, -Math.PI / 2, Math.PI / 2)
+        ? { kind: 'sky', spot: { body, lonRad, latRad } }
+        : undefined;
+    }
     default:
       return undefined;
   }
@@ -97,7 +109,7 @@ export const REMOTE_COMMANDS: {
   tourTogglePause: noPayloadRow(togglePause),
   clipStart: {
     parse: (raw) =>
-      isRecord(raw) && typeof raw.clipId === 'string' && isKeyOf(clipRegistry, raw.clipId)
+      isRecord(raw) && typeof raw.clipId === 'string' && isKeyOf(APP_CLIP_REGISTRY, raw.clipId)
         ? { clipId: raw.clipId }
         : undefined,
     toActions: ({ clipId }) => [startClip(clipId)],

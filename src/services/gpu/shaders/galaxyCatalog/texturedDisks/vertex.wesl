@@ -62,7 +62,7 @@ import package::lib::orientation::diskAxes;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 // @group(1) focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
 // parks it at @group(3)). Single shared binding: one structure focused at a time.
@@ -108,7 +108,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let localCorner = corner - instance.hiRes.zw;
   let world = center + (major * localCorner.x + minor_3d * localCorner.y) * halfSize;
   var out: VsOut;
-  out.clipPos = worldToClip(u.cam, world);
+  out.clipPos = worldToClip(uniforms.cam, world);
 
   // 'quadUv' returns the unit-square corner remapped to [0, 1]² (same
   // vertex-index ordering as 'quadCorner'). Matches the atlas's

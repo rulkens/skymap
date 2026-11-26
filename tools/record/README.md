@@ -2,7 +2,7 @@
 
 An offline authoring tool that plays a skymap take — a tour ("The Long Way
 Out" and any other entry in `APP_TOUR_REGISTRY`), optionally windowed to a beat
-range, or a standalone clip from `clipRegistry` — frame by frame and encodes
+range, or a standalone clip from `APP_CLIP_REGISTRY` — frame by frame and encodes
 it straight to an mp4: a deterministic, film-quality take, not a live
 capture. It drives headless Chromium with Playwright, hands the page's clock
 to this Node process via Chrome DevTools Protocol **virtual time** (each step
@@ -27,7 +27,7 @@ full design and the spike's findings.
   (`--serve`)](#serving-a-production-build---serve) below. With the default,
   run `npm run dev` (default `http://localhost:5173`) first. Either way the
   recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
-  only the canvas + tour captions.
+  only the canvas + tour captions (and the debug panel while `d` has it open).
 - **A GPU, and the Playwright `chromium` channel installed.** The recorder
   launches Playwright's `channel: 'chromium'` (the full Chromium build, not
   the default headless _shell_ — the shell exposes `navigator.gpu` but yields
@@ -53,7 +53,7 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 
 | Flag         | Default                                             | Notes                                                                                                                                                                                                    |
 | ------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--clip`     | none — the take is a tour                           | clip id, must exist in `clipRegistry`; the take plays whole (`--beats` is rejected alongside it)                                                                                                         |
+| `--clip`     | none — the take is a tour                           | clip id, must exist in `APP_CLIP_REGISTRY`; the take plays whole (`--beats` is rejected alongside it)                                                                                                    |
 | `--beats`    | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based; tour-only, rejected alongside `--clip`                                                                                                                                       |
 | `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                                                                         |
 | `--fps`      | `60`                                                | positive integer                                                                                                                                                                                         |
@@ -64,6 +64,7 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                                          |
 | `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                                       |
 | `--dome`     | off                                                 | fulldome fisheye take — see [Fulldome (Wisdome)](#fulldome-wisdome); implies `--size 4096x4096 --dpr 1 --fps 30` (`--fps 60` also accepted), encodes with `libx264` at level 6.1 instead of VideoToolbox |
+| `--film`     | off                                                 | play the take with the film look on (grade, grain, anamorphic glow, 2.39:1 letterbox): appends `&film=1` to the boot hash, the same row the Display switch writes                                        |
 | `--frames`   | none — plays to the take's natural end              | stop after this many CAPTURED frames (positive integer); the take ends at min(natural end, a looping clip's cycle, `--frames`) — never a way to run a loop twice                                         |
 | positional   | `grandTour`                                         | tour id, must exist in `APP_TOUR_REGISTRY`; rejected alongside `--clip`                                                                                                                                  |
 
@@ -168,10 +169,11 @@ full take's hour-plus.
 npm run record-clip -- flyout
 ```
 
-Clip ids come from `src/@types/animation/ClipId.ts` and are keyed in
-`clipRegistry` (`src/data/animation/clips/clipRegistry.ts`). Six ids are
+Clip ids are the keys of `APP_CLIP_REGISTRY` (`src/compositions/appClips.ts`). Ten ids are
 standalone clips and the interesting ones to record this way — `flyout`,
-`earthFlyout`, `flowOrbit`, `flyPathDemo`, `famousFlythrough`, `cosmicFlows`.
+`earthFlyout`, `sondermarkenFlyout`, `perseveranceToSondermarken`,
+`earthUniverseLoop`, `earthCosmicWebLoop`, `flowOrbit`, `flyPathDemo`,
+`famousFlythrough`, `cosmicFlows`.
 The rest (`tourXxx`) are grand-tour beats: they exist to be stitched into a
 tour's timeline, not played alone, so film them as a windowed tour take
 (`npm run record-tour -- grandTour --beats a..b`) instead.
@@ -199,7 +201,7 @@ automatically: no flag, nothing to remember. It records exactly
 recording one seamless cycle (N frames)`. The artifact is exactly one cycle,
 frames `[0, duration)` — the closing frame is deliberately excluded because a
 looping clip is authored so `pose(duration) ≡ pose(0)` (the seam contract;
-see `src/data/animation/clips/earthUniverseLoop.ts`), and including it would
+see `src/compositions/clips/earthUniverseLoop.ts`), and including it would
 duplicate a frame at the mp4's loop splice. If `durationSec × fps` is not a
 whole number the recorder rounds to the nearest frame and logs a notice —
 the resulting sub-frame seam offset is imperceptible at these camera speeds,

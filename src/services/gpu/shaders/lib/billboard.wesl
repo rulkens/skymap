@@ -21,9 +21,7 @@
 // just 'CameraUniforms.viewportPx' that every renderer already has.
 //
 // That variant lives at its call sites, each composing 'worldLenToPx' +
-// 'pxToClipOffset' (the two primitives 'labels/vertex.wesl' — the
-// original instance of this pattern — already used inline) around its
-// own eye-tuned size constant.
+// 'pxToClipOffset' around its own eye-tuned size constant.
 
 // CameraUniforms carries 'viewportPx', which 'expandBillboardScreen'
 // below needs to convert pixel sizes into clip-space offsets.

@@ -3,7 +3,7 @@
  * `regionById`: an unclaimed body must drop the chip, never throw mid-row.
  */
 
-import { constellationOfBody } from '../../../../utils/scene/constellationOfBody';
+import { constellationOfBody } from './constellationOfBody';
 import { regionOfBody } from '../../../../utils/regions/regionOfBody';
 
 export function seededStarChip(bodyId: string): string | undefined {

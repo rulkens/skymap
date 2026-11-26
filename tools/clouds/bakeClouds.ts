@@ -11,6 +11,7 @@ import { parseArgs } from 'node:util';
 
 import { bmngMonthKey } from '../utils/io/bmngMonthKey';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { yesterdayUtc } from '../utils/time/yesterdayUtc';
 
 const { values } = parseArgs({
   options: { date: { type: 'string' }, out: { type: 'string' }, offline: { type: 'boolean' } },
@@ -21,8 +22,7 @@ if (!values.out) {
   process.exit(2);
 }
 
-const MS_PER_DAY = 86_400_000;
-const day = values.date ?? new Date(Date.now() - MS_PER_DAY).toISOString().slice(0, 10);
+const day = values.date ?? yesterdayUtc(new Date());
 if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
   console.error(`bakeClouds: --date must be YYYY-MM-DD, got ${day}`);
   process.exit(2);

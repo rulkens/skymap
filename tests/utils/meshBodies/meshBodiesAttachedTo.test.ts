@@ -1,27 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// The seed table is mocked so this tests the JOIN, not today's two rows: an
-// assertion over the real `SCENE_MESH_BODIES` would pass for a function that
+// The presentation table is mocked so this tests the JOIN, not today's rows: an
+// assertion over the real `MESH_PRESENTATIONS` would pass for a function that
 // ignored the host entirely. The ids stay real so `meshBodySlabHostId` (reading
 // the real position-driver tables) resolves their host to `'earth'`.
-vi.mock('../../../src/data/bodies/sceneMeshBodies', () => ({
-  SCENE_MESH_BODIES: [
-    {
-      id: 'whale',
-      label: 'Whale',
-      radiusM: 1,
-      albedo: [1, 1, 1],
-      meshKey: 'whale',
-      description: '',
-    },
-    {
-      id: 'petunias',
-      label: 'Petunias',
-      radiusM: 1,
-      albedo: [1, 1, 1],
-      meshKey: 'petunias',
-      description: '',
-    },
+vi.mock('../../../src/data/bodies/meshPresentations', () => ({
+  MESH_PRESENTATIONS: [
+    { id: 'whale', meshKey: 'whale', boundingRadiusM: 1, resolvePx: 3 },
+    { id: 'petunias', meshKey: 'petunias', boundingRadiusM: 1, resolvePx: 3 },
   ],
 }));
 

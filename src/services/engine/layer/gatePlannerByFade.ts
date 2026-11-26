@@ -36,7 +36,7 @@ export function gatePlannerByFade<T>(
   }
   return {
     ...planner,
-    plan: (view: FrameView, s: PassState) =>
-      planner.plan(view, s, resolveViewFadeValue(state, view, address)),
+    plan: (view: FrameView, s: PassState, prev: T | undefined) =>
+      planner.plan(view, s, prev, resolveViewFadeValue(state, view, address)),
   };
 }

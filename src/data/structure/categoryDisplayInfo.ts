@@ -11,8 +11,8 @@
  * (`buildDisplayInfo` throws on a row missing the three copy fields).
  *
  * Distinct from the presentation style tables (`structureMarkerStyles.ts` +
- * `famousLabelStyle.ts`) — those own *rendering* config (halo/ring colors,
- * pixel sizes, fade bands).  This owns *display* metadata (human labels).
+ * `LABEL_STYLES`) — those own *rendering* config (halo/ring/label colours,
+ * sizes, fade bands).  This owns *display* metadata (human labels).
  */
 
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';

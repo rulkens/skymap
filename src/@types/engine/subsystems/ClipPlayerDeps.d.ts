@@ -6,7 +6,7 @@ import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 
 /** What `createClipPlayer` needs from the engine; `engine.ts` builds each from its own state. */
 export type ClipPlayerDeps = {
-  /** Reads `camera.clip` (intent, never the view) and takes the end commit and frame rolls. */
+  /** Reads `camera.intent.clip` (intent, never the view) and takes the end commit and frame rolls. */
   readonly store: { getState(): RootState; dispatch: AppDispatch };
   /** Live, read when a frame roll starts: the roll begins at the drawn up-basis. */
   readonly getCameraRuntime: () => CameraRuntime;

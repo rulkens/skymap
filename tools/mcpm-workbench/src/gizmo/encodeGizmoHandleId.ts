@@ -1,8 +1,8 @@
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
+import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
 
 /**
  * encodeGizmoHandleId — flattens a GizmoHandleId to a single int for the boxPreviewPass GPU
- * uniform (F1.4): `kind*100 + axis*10 + (sign === -1 ? 1 : 0)`, kind 0 translate / 1 resize /
+ * uniform: `kind*100 + axis*10 + (sign === -1 ? 1 : 0)`, kind 0 translate / 1 resize /
  * 2 rotate; `null` (no hover/active handle) encodes to `-1`.
  */
 export function encodeGizmoHandleId(id: GizmoHandleId | null): number {

@@ -14,7 +14,7 @@ import {
   clipEnded,
   resolveClipStart,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import {
   UNSTARTED_EPOCHS,
@@ -46,7 +46,7 @@ import type { SelectionRefBase } from '../../../../src/@types/engine/selection/S
 
 const LIVE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const VIRGO = { type: 'structure', id: 'virgo' };
-const VIRGO_ROW = { row: { type: 'structure' }, focusId: 'virgo' };
+const VIRGO_ROW = { row: { type: 'structure' }, id: { id: 'virgo', ref: VIRGO } };
 
 type TestStore = ReturnType<typeof makeStore>;
 
@@ -58,13 +58,13 @@ function makeStore() {
 
 function installClip(store: TestStore, data: ClipData, atEnd: ClipSceneEnd = 'revert'): void {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, atEnd }));
+  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, by: 'player', atEnd }));
 }
 
 function makePlayer(store: TestStore) {
   const syncVisibility = vi.fn<(settings: EngineSettingsState, overMs?: number) => void>();
   const extractFocusRow = vi.fn((ref: SelectionRefBase | null) =>
-    ref === null ? { row: null, focusId: null } : VIRGO_ROW,
+    ref === null ? { row: null, id: null } : VIRGO_ROW,
   );
   const runtime = { outputs: { upBasis: IDENTITY_MAT3 } } as unknown as CameraRuntime;
   const player = createClipPlayer({
@@ -168,7 +168,7 @@ describe('clipPlayer scene', () => {
     const dispatch = vi.spyOn(store, 'dispatch');
 
     tick(2000);
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
     expect(view()).toBe(store.getState());
     expect(syncVisibility).toHaveBeenCalledWith(store.getState().settings);
     expect(syncVisibility.mock.calls[0]![0].flow.enabled).toBe(false);
@@ -229,7 +229,7 @@ describe('clipPlayer scene', () => {
     tick(1000);
 
     player.stop();
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
     expect(store.getState().settings.flow.enabled).toBe(true);
     expect(store.getState().settings.milkyWay.labelEnabled).toBe(true);
   });
@@ -290,7 +290,7 @@ describe('clipPlayer scene', () => {
     tick(1500);
     expect(syncVisibility.mock.calls.at(-1)![1]).toBe(2000);
     expect(onEnd).not.toHaveBeenCalled();
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
   });
 
   it('view is memoized: the same root and applied counts return the same object', () => {
@@ -318,11 +318,11 @@ describe('clipPlayer lifecycle', () => {
     tick(2000);
     // The produce step of this frame runs saturated, with the clip still active.
     expect(typesOf(dispatch.mock.calls)).not.toContain(clipEnded.type);
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     tick(3000);
     expect(typesOf(dispatch.mock.calls)).toContain(clipEnded.type);
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 
   it('loop: true rebases the epoch instead of ending; stop still terminates it', () => {
@@ -333,10 +333,10 @@ describe('clipPlayer lifecycle', () => {
     tick(0);
     tick(2000);
     tick(4100);
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     player.stop();
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 
   it("a looping clip's rewind returns a rebased epoch, not a mutated one", () => {
@@ -365,7 +365,7 @@ describe('clipPlayer lifecycle', () => {
 
     const { clipEpoch } = player.tick(UNSTARTED_EPOCHS.clip, 5000);
 
-    expect(clipEpoch.ref).toBe(store.getState().camera.clip);
+    expect(clipEpoch.ref).toBe(store.getState().camera.intent.clip);
     expect(elapsedMs(clipEpoch, 5000)).toBe(0);
   });
 
@@ -373,7 +373,10 @@ describe('clipPlayer lifecycle', () => {
     const store = makeStore();
     const { player } = makePlayer(store);
     installClip(store, { timeline: [hold(5)] });
-    const handed: CameraEpochs['clip'] = { ref: store.getState().camera.clip, startMs: 1000 };
+    const handed: CameraEpochs['clip'] = {
+      ref: store.getState().camera.intent.clip,
+      startMs: 1000,
+    };
 
     const { clipEpoch } = player.tick(handed, 1500);
 

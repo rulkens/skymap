@@ -24,7 +24,7 @@ import { hostOf } from '../camera/arms/hostOf';
 import { isBodyArm } from '../camera/arms/body/isBodyArm';
 import { isWorldArm } from '../camera/arms/world/isWorldArm';
 import { refoldTo } from '../camera/arms/refoldTo';
-import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
+import { bodyPresent } from '../../../utils/scene/bodyPresent';
 import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
 import { poseFromBodyArm } from '../../../utils/camera/arms/poseFromBodyArm';
 import { ZERO_FOCUS } from '../subsystems/recedingFocusSubsystem';
@@ -55,20 +55,19 @@ export function deriveFrameContext(
   // never 0, so body rows stay aligned once a roll is set.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
-  // The ONE presence filter: an absent craft is parked on or in Earth, so every
-  // consumer (slab rows, partition, glints, picks) reads this list, never the static roster.
-  const meshBodies = SCENE_MESH_BODIES.filter((body) => spacecraftPresent(body.id, simDays));
+  // The presence filter: an absent body still has a parked snapshot position, so every
+  // consumer (slab rows, partition, glints, picks) reads these lists or `sceneBodies`, never the roster.
+  const meshBodies = SCENE_MESH_BODIES.filter((body) => bodyPresent(body.id, simDays));
   // A hostless mesh body (its driver hangs off something with no row of its own)
-  // gets a row here; every other row is a Layer's (`state.slabRows`).
-  const hostlessMeshBodies = HOSTLESS_MESH_BODIES.filter((body) =>
-    spacecraftPresent(body.id, simDays),
-  );
-  // A banded row exists only while its band is open. Keyed on the FRAME camera, not a
-  // view's offset eye: eye separation is metres against a band in AU.
+  // gets a row here; every other row is a Layer's (`state.slabRows`). A banded row exists
+  // only while its band is open. Keyed on the FRAME camera, not a view's offset eye: eye
+  // separation is metres against a band in AU.
   const slabBodyCandidates: readonly SlabRow[] = [
     ...state.slabRows,
-    ...hostlessMeshBodies.map(bodySlabRowOf),
-  ].filter((row) => slabRowActive(row, cam.position, bodyStates));
+    ...HOSTLESS_MESH_BODIES.map(bodySlabRowOf),
+  ].filter(
+    (row) => bodyPresent(row.anchorId, simDays) && slabRowActive(row, cam.position, bodyStates),
+  );
 
   // Provider B serves ONLY the engaged body, from its own stored pose (no Mpc round
   // trip); everything else, and the whole absolute arm, stays on provider A. Gated on
@@ -117,7 +116,7 @@ export function deriveFrameContext(
     if (!(coverage.get(body.id)?.coveredBy ?? []).every(isAboveZero)) return;
     sceneBodies.push({ body, positionMpc: bodyStates.get(body.id)!.positionMpc });
   };
-  for (const body of SCENE_PLANETS) admit(body);
+  for (const body of SCENE_PLANETS) if (bodyPresent(body.id, simDays)) admit(body);
   for (const body of meshBodies) admit(body);
   // A covered planet or mesh body was offered above; its coverage only gates it.
   for (const { body } of coverage.values()) {

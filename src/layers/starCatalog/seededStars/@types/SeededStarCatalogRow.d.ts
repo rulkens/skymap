@@ -1,4 +1,4 @@
-import type { SeededStarCatalogId } from '../../../../@types/data/starCatalog/SeededStarCatalogId';
+import type { SeededStarCatalogId } from '../../@types/SeededStarCatalogId';
 import type { StarBody } from '../../../../@types/scene/StarBody';
 
 /** One seeded catalog's `SEEDED_STAR_CATALOGS_BY_SOURCE` row — its own seed

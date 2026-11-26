@@ -38,8 +38,8 @@
 // output. The '21' suffix encodes the type signature (vec2→f32) in
 // the GLSL noise-library tradition where you'll also see 'hash22',
 // 'hash33', etc.
-fn hash21(co: vec2<f32>) -> f32 {
-  return fract(sin(dot(co, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+fn hash21(coord: vec2<f32>) -> f32 {
+  return fract(sin(dot(coord, vec2<f32>(12.9898, 78.233))) * 43758.5453);
 }
 
 // hash21Hq — higher-quality 2D-to-1D hash in [0, 1).
@@ -59,10 +59,10 @@ fn hash21(co: vec2<f32>) -> f32 {
 // start offset, dithered alpha) should default to this; reserve hash21
 // for one-shot uses where the input domain is so sparse the banding
 // doesn't manifest (e.g. per-octave seeds).
-fn hash21Hq(p: vec2<f32>) -> f32 {
-  var p3 = fract(vec3<f32>(p.x, p.y, p.x) * 0.1031);
-  p3 = p3 + dot(p3, p3.yzx + vec3<f32>(33.33));
-  return fract((p3.x + p3.y) * p3.z);
+fn hash21Hq(coord: vec2<f32>) -> f32 {
+  var hashState = fract(vec3<f32>(coord.x, coord.y, coord.x) * 0.1031);
+  hashState = hashState + dot(hashState, hashState.yzx + vec3<f32>(33.33));
+  return fract((hashState.x + hashState.y) * hashState.z);
 }
 
 // hashAvalanche — the mixing tail shared by integerHash3 below and
@@ -71,10 +71,10 @@ fn hash21Hq(p: vec2<f32>) -> f32 {
 // with its own z-prime, then normalizes by a slightly different constant),
 // so only this shared tail is factored out — extracting more would change
 // what one of the two callers returns.
-fn hashAvalanche(h: u32) -> u32 {
-  var hh = h;
-  hh = (hh ^ (hh >> 13u)) * 1274126177u;
-  return hh ^ (hh >> 16u);
+fn hashAvalanche(word: u32) -> u32 {
+  var scrambled = word;
+  scrambled = (scrambled ^ (scrambled >> 13u)) * 1274126177u;
+  return scrambled ^ (scrambled >> 16u);
 }
 
 // integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
@@ -82,12 +82,12 @@ fn hashAvalanche(h: u32) -> u32 {
 // (warpNoiseBake.wesl, starGrainBake.wesl) needed the exact same tileable-3D
 // hash dustNoiseBake.wesl already had — no diagonal banding at the low
 // lattice resolutions those bakes sample (8..128 cells/axis).
-fn integerHash3(p: vec3<i32>) -> f32 {
-  let x = bitcast<u32>(p.x);
-  let y = bitcast<u32>(p.y);
-  let z = bitcast<u32>(p.z);
-  let h = x * 374761393u + y * 668265263u + z * 2246822519u;
-  return f32(hashAvalanche(h)) / 4294967295.0;
+fn integerHash3(cell: vec3<i32>) -> f32 {
+  let bitsX = bitcast<u32>(cell.x);
+  let bitsY = bitcast<u32>(cell.y);
+  let bitsZ = bitcast<u32>(cell.z);
+  let summedWord = bitsX * 374761393u + bitsY * 668265263u + bitsZ * 2246822519u;
+  return f32(hashAvalanche(summedWord)) / 4294967295.0;
 }
 
 // valueNoise2 — 2D analytic noise via products of cosines.
@@ -96,7 +96,7 @@ fn integerHash3(p: vec3<i32>) -> f32 {
 // no per-cell hashed value being interpolated. Instead it's a
 // 4-cosine product that visually behaves like value noise: smooth,
 // band-limited, with controllable scale via the input frequency. The
-// 'tm' parameter animates two of the four cosines so the noise
+// 'time' parameter animates two of the four cosines so the noise
 // evolves over time without retiling.
 //
 // The 'p * tanh(0.1 * length(p))' prefix gives radial attenuation:
@@ -107,13 +107,13 @@ fn integerHash3(p: vec3<i32>) -> f32 {
 // Named valueNoise2, not a numbered slot: the name describes the shape
 // (value-noise-like) rather than an arbitrary sequence position. The '2'
 // suffix is the input dimensionality, matching 'hash21'.
-fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
-  let p = p_in * tanh(0.1 * length(p_in));
-  let a = cos(p.x);
-  let b = cos(p.y);
-  let c = cos(p.x * sqrt(3.5) + tm);
-  let d = cos(p.y * sqrt(1.5) + tm);
-  return a * b * c * d;
+fn valueNoise2(point: vec2<f32>, time: f32) -> f32 {
+  let attenuated = point * tanh(0.1 * length(point));
+  let cosX = cos(attenuated.x);
+  let cosY = cos(attenuated.y);
+  let cosXAnimated = cos(attenuated.x * sqrt(3.5) + time);
+  let cosYAnimated = cos(attenuated.y * sqrt(1.5) + time);
+  return cosX * cosY * cosXAnimated * cosYAnimated;
 }
 
 // ── color ────────────────────────────────────────────────────────────
@@ -129,11 +129,11 @@ fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
 // (pickDebugOverlay/fragment.wesl's per-source golden-angle hue,
 // milkyWay/ismMap/orientationPresent.wesl's orientation-angle hue) — the
 // shared home keeps the two from drifting apart.
-fn hueToRgb(h: f32) -> vec3<f32> {
-  let r = abs(h * 6.0 - 3.0) - 1.0;
-  let g = 2.0 - abs(h * 6.0 - 2.0);
-  let b = 2.0 - abs(h * 6.0 - 4.0);
-  return clamp(vec3<f32>(r, g, b), vec3<f32>(0.0), vec3<f32>(1.0));
+fn hueToRgb(hue: f32) -> vec3<f32> {
+  let red = abs(hue * 6.0 - 3.0) - 1.0;
+  let green = 2.0 - abs(hue * 6.0 - 2.0);
+  let blue = 2.0 - abs(hue * 6.0 - 4.0);
+  return clamp(vec3<f32>(red, green, blue), vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 // ── geometry / raycast ───────────────────────────────────────────────
@@ -141,54 +141,54 @@ fn hueToRgb(h: f32) -> vec3<f32> {
 // raySphere — analytic ray vs sphere intersection.
 //
 // Returns the two roots (entry, exit) of the quadratic
-// '|ro + t*rd - center|² = radius²' as a vec2. If the ray misses, or
-// the sphere is entirely behind the ray origin (both 'c > 0' meaning
-// origin outside, and 'b > 0' meaning sphere centre is behind), we
+// '|rayOrigin + t*rayDir - center|² = radius²' as a vec2. If the ray misses, or
+// the sphere is entirely behind the ray origin (both 'originAltitudeSq > 0' meaning
+// origin outside, and 'originAlongRay > 0' meaning sphere centre is behind), we
 // return 'vec2(-1, -1)' as a sentinel — caller is expected to test
 // 'hits.y > 0.0' before using.
 //
-// Standard formulation: with 'm = ro - center', the quadratic
+// Standard formulation: with 'originOffset = rayOrigin - center', the quadratic
 // coefficients reduce to
 //
-//   a = dot(rd, rd) = 1   (since rd is assumed unit-length)
-//   b = dot(m, rd)
-//   c = dot(m, m) - r²
+//   a = dot(rayDir, rayDir) = 1   (since rayDir is assumed unit-length)
+//   originAlongRay = dot(originOffset, rayDir)
+//   originAltitudeSq = dot(originOffset, originOffset) - r²
 //
 // and the roots are the stable pair below. The early-exit checks save
 // the sqrt cost when the ray clearly misses.
 //
 // CPU twin: 'utils/math/raySphereRoots.ts'. It omits the behind-origin
-// 'c > 0 && b > 0' sentinel — callers there inspect the returned root
+// 'originAltitudeSq > 0 && originAlongRay > 0' sentinel — callers there inspect the returned root
 // signs themselves rather than relying on the vec2(-1, -1) miss marker.
-fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
-  let m = ro - center;
-  let b = dot(m, rd);
-  let c = dot(m, m) - radius * radius;
-  if (c > 0.0 && b > 0.0) { return vec2<f32>(-1.0, -1.0); }
-  // 'b * b - c' subtracts two ~|m|^2 numbers: past ~1e3 radii that is f32 noise
-  // across the whole disc. The closest-approach offset 'h' keeps it at ~|m| ulps.
-  let h = m - b * rd;
-  let discr = radius * radius - dot(h, h);
+fn raySphere(rayOrigin: vec3<f32>, rayDir: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
+  let originOffset = rayOrigin - center;
+  let originAlongRay = dot(originOffset, rayDir);
+  let originAltitudeSq = dot(originOffset, originOffset) - radius * radius;
+  if (originAltitudeSq > 0.0 && originAlongRay > 0.0) { return vec2<f32>(-1.0, -1.0); }
+  // 'originAlongRay * originAlongRay - originAltitudeSq' subtracts two ~|originOffset|^2 numbers: past ~1e3 radii that is f32 noise
+  // across the whole disc. The closest-approach offset 'closestOffset' keeps it at ~|originOffset| ulps.
+  let closestOffset = originOffset - originAlongRay * rayDir;
+  let discr = radius * radius - dot(closestOffset, closestOffset);
   if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
-  let s = sqrt(discr);
-  // Stable pair 'q = -(b + sign(b)*s)' and 'c / q': neither root cancels,
-  // where '-b - s' loses every digit once b² >> c — a ray leaving ground level.
-  let q = -(b + select(-s, s, b >= 0.0));
-  // q == 0 needs b = s = 0, hence c = 0: a tangent ray leaving the surface.
-  let other = select(c / q, 0.0, q == 0.0);
-  return vec2<f32>(min(q, other), max(q, other));
+  let sqrtDiscr = sqrt(discr);
+  // Stable pair 'stableRoot = -(originAlongRay + sign(originAlongRay)*sqrtDiscr)' and 'originAltitudeSq / stableRoot': neither root cancels,
+  // where '-originAlongRay - sqrtDiscr' loses every digit once originAlongRay² >> originAltitudeSq — a ray leaving ground level.
+  let stableRoot = -(originAlongRay + select(-sqrtDiscr, sqrtDiscr, originAlongRay >= 0.0));
+  // stableRoot == 0 needs originAlongRay = sqrtDiscr = 0, hence originAltitudeSq = 0: a tangent ray leaving the surface.
+  let other = select(originAltitudeSq / stableRoot, 0.0, stableRoot == 0.0);
+  return vec2<f32>(min(stableRoot, other), max(stableRoot, other));
 }
 
 // rayPlaneY0 — ray intersection with the horizontal plane y=0 (a disc's own
 // plane in the frame milkyWay/ismMap's Present shaders share). Returns the
-// hit parameter t such that 'ro + t*rd' lies in the plane, or -1.0 — same
+// hit parameter hitParam such that 'rayOrigin + hitParam*rayDir' lies in the plane, or -1.0 — same
 // miss-sentinel idiom as raySphere above — when the ray is (near-)parallel
 // to the plane (the 1e-6 guard keeps a near-parallel ray from dividing into
-// a wild, spuriously-positive t) or the intersection sits behind the origin.
-fn rayPlaneY0(ro: vec3<f32>, rd: vec3<f32>) -> f32 {
-  if (abs(rd.y) < 1e-6) { return -1.0; }
-  let t = -ro.y / rd.y;
-  return select(t, -1.0, t <= 0.0);
+// a wild, spuriously-positive hitParam) or the intersection sits behind the origin.
+fn rayPlaneY0(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> f32 {
+  if (abs(rayDir.y) < 1e-6) { return -1.0; }
+  let hitParam = -rayOrigin.y / rayDir.y;
+  return select(hitParam, -1.0, hitParam <= 0.0);
 }
 
 // ── galactic-frame transforms ────────────────────────────────────────
@@ -220,8 +220,8 @@ const GAL_Z_EQ = vec3<f32>(-0.867666, -0.198076,  0.455984);
 // Pure rotation (no translation), so the function is correct for both
 // position vectors (relative to the world origin = Sun position) and
 // direction vectors (camera ray, etc).
-fn worldToGalactic(v: vec3<f32>) -> vec3<f32> {
-  return vec3<f32>(dot(GAL_X_EQ, v), dot(GAL_Y_EQ, v), dot(GAL_Z_EQ, v));
+fn worldToGalactic(equatorial: vec3<f32>) -> vec3<f32> {
+  return vec3<f32>(dot(GAL_X_EQ, equatorial), dot(GAL_Y_EQ, equatorial), dot(GAL_Z_EQ, equatorial));
 }
 
 // galacticToShader — swizzle a galactic-frame vector into the
@@ -238,6 +238,6 @@ fn worldToGalactic(v: vec3<f32>) -> vec3<f32> {
 // Cheap: it's a pure swizzle, no FLOPs. Kept as a named function
 // rather than inlined because the call site reads as a domain
 // operation ('galactic to shader'), not a coordinate juggle.
-fn galacticToShader(g: vec3<f32>) -> vec3<f32> {
-  return vec3<f32>(g.x, g.z, g.y);
+fn galacticToShader(galactic: vec3<f32>) -> vec3<f32> {
+  return vec3<f32>(galactic.x, galactic.z, galactic.y);
 }

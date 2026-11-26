@@ -3,4 +3,4 @@
 import { voyagerMissions } from './voyagerMissions/voyagerMissions';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 
-export const missionsLayerExhibits: readonly Exhibit[] = [voyagerMissions];
+export const missionsLayerExhibits = [voyagerMissions] as const satisfies readonly Exhibit[];

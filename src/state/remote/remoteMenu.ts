@@ -4,7 +4,7 @@
  */
 
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../compositions/appClips';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import type { RemoteMenuItem } from '../../@types/remote/RemoteMenuItem';
 import type { RemoteMenu } from '../../@types/remote/RemoteMenu';
@@ -16,5 +16,5 @@ const listed = <Id extends string>(
 export const REMOTE_MENU: RemoteMenu = {
   tours: listed(Object.values(APP_TOUR_REGISTRY)),
   exhibits: listed(Object.values(APP_EXHIBIT_REGISTRY)),
-  clips: listed(Object.values(clipRegistry)),
+  clips: listed(Object.values(APP_CLIP_REGISTRY)),
 };

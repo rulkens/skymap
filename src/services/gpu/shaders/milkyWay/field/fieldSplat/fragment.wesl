@@ -10,7 +10,7 @@ import package::milkyWay::field::fieldSplat::io::FieldSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
 import package::lib::camera::cameraRayFromNdc;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::dustAttenuation::componentEmission;
 
@@ -28,13 +28,13 @@ import package::milkyWay::field::dustAttenuation::componentEmission;
 fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC rather than
   // passing one down from the vertex stage: cheap and avoids an extra varying.
-  let d = cameraRayFromNdc(input.ndc, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
-  let o = u.eye.xyz;
+  let rayDir = cameraRayFromNdc(input.ndc, uniforms.camRight.xyz, uniforms.camUp.xyz, uniforms.camFwd.xyz, uniforms.frustum);
+  let rayOrigin = uniforms.eye.xyz;
 
   let rec = comps[input.inst];
-  let po = o - rec.center;
+  let originFromCenter = rayOrigin - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, d, rec.invCovDiagonal, rec.invCovOffDiagonal);
+  let coeffs = gaussianRayCoeffs(originFromCenter, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   // q (coeffs.z) is the ray's own closest-approach squared Mahalanobis
   // distance. Exceeding SPLAT_CUT^2 means this fragment sits on a
@@ -55,17 +55,17 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   // lanes carry them) — every OTHER component (disc/bulge/ridge chain,
   // extras) falls outside both and reads scale 1, a no-op multiply.
   var renormScale = 1.0;
-  let armStart = u32(u.perf.z);
-  let armEnd = u32(u.perf.w);
-  let spurStart = u32(u.counts2.x);
-  let spurEnd = u32(u.dustCarve.w);
+  let armStart = u32(uniforms.perf.z);
+  let armEnd = u32(uniforms.perf.w);
+  let spurStart = u32(uniforms.counts2.x);
+  let spurEnd = u32(uniforms.dustCarve.w);
   if (input.inst >= armStart && input.inst < armEnd) {
     renormScale = armCloudRenorm[0];
   } else if (input.inst >= spurStart && input.inst < spurEnd) {
     renormScale = spurCloudRenorm[0];
   }
 
-  let primaryCount = u32(u.counts.w);
+  let primaryCount = u32(uniforms.counts.w);
   let emission = componentEmission(
     input.pos.xy,
     input.inst,
@@ -82,5 +82,5 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   // every debug view off, so this multiply is a no-op at the default.
   // Alpha 0: the additive upsample folds this into HDR and the compositor
   // forces 1.0, so a quad writing coverage would swamp nothing usefully.
-  return vec4<f32>(emission * u.eye.w * u.debugView.w, 0.0);
+  return vec4<f32>(emission * uniforms.eye.w * uniforms.debugView.w, 0.0);
 }

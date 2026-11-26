@@ -8,7 +8,7 @@ import type { CameraTweenDescriptor } from '../../camera/focusMotion/CameraTween
 import type { FrameTween } from '../../camera/focusMotion/FrameTween';
 import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { CameraAim } from '../../camera/pose/CameraAim';
-import type { CameraState } from '../../camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../camera/orbitCamera/CameraIntentState';
 import type { SelectionRowBase } from '../selection/SelectionRowBase';
 
 export type CameraEpochs = {
@@ -16,7 +16,7 @@ export type CameraEpochs = {
   readonly frameTween: Epoch<FrameTween>;
   readonly autoRotate: Epoch<FramedCameraPose>;
   readonly follow: Epoch<SelectionRowBase>;
-  readonly clip: Epoch<NonNullable<CameraState['clip']>>;
-  /** Ref: the `camera.aim` token, which every re-aim replaces. */
+  readonly clip: Epoch<NonNullable<CameraIntentState['clip']>>;
+  /** Ref: the `camera.intent.aim` token, which every re-aim replaces. */
   readonly aim: Epoch<CameraAim>;
 };

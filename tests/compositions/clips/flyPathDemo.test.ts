@@ -1,0 +1,131 @@
+/**
+ * flyPathDemo tests — the stage-03-shaped `flyPath` clip resolves its named
+ * group waypoints, compiles to one composite track, and evaluates as a smooth path
+ * from the live start pose through to the final group (Sculptor).
+ *
+ * The clip mixes `atFocus` (catalog-resolved) and `atPoint` (hand-placed)
+ * waypoints, so unlike `flyout` it must run through `resolveClipFoci` before it
+ * can compile. We supply a minimal structure store that resolves the three group
+ * ids to known structures (mirroring the resolveClipFoci suite's fixture), so
+ * the test does not depend on linked catalog data.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { flyPathDemo } from '../../../src/compositions/clips/flyPathDemo';
+import { resolveClipFoci } from '../../../src/services/engine/animation/resolveClipFoci';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
+import { resolveClipStart } from '../../../src/state/camera/cameraIntentSlice';
+import { compileClip } from '../../../src/services/engine/animation/compileClip';
+import { evaluateClip } from '../../../src/services/engine/camera/clips/evaluateClip';
+import { arrivalFraming } from '../../../src/services/engine/camera/framing/arrivalFraming';
+import { selectionKindOf } from '../../../src/services/engine/selection/selectionKindOf';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
+
+const FOV_Y = 0.8;
+const TEST_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
+// Arbitrary — no waypoint here resolves a body ref, only structures.
+const SIM_DAYS = 2451545;
+
+/** Reconstruct the eye position from a pose via the orbit convention. */
+function eyeOf(p: CameraPose): [number, number, number] {
+  const cp = Math.cos(p.pitch);
+  const dir: [number, number, number] = [
+    cp * Math.sin(p.yaw),
+    Math.sin(p.pitch),
+    cp * Math.cos(p.yaw),
+  ];
+  return [
+    p.target[0] + p.distance * dir[0],
+    p.target[1] + p.distance * dir[1],
+    p.target[2] + p.distance * dir[2],
+  ];
+}
+
+const GROUPS: Record<string, StructureInfo> = {
+  'galaxy-group-m81-group': {
+    type: 'structure',
+    category: 'galaxy-group',
+    id: 'galaxy-group-m81-group',
+    name: 'M81 Group',
+    worldPos: [10, 0, 0],
+    featured: true,
+    physicalRadiusMpc: 2,
+  } as StructureInfo,
+  'galaxy-group-cen-a-group': {
+    type: 'structure',
+    category: 'galaxy-group',
+    id: 'galaxy-group-cen-a-group',
+    name: 'Centaurus A Group',
+    worldPos: [0, 10, 0],
+    featured: true,
+    physicalRadiusMpc: 3,
+  } as StructureInfo,
+  'galaxy-group-sculptor-group': {
+    type: 'structure',
+    category: 'galaxy-group',
+    id: 'galaxy-group-sculptor-group',
+    name: 'Sculptor Group',
+    worldPos: [0, 0, 10],
+    featured: true,
+    physicalRadiusMpc: 2,
+  } as StructureInfo,
+};
+
+const STRUCTURES: StructureRowFixture = { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] };
+const RESOLVER = selectionResolverOver(STRUCTURES);
+
+/** Resolve foci + live start, then compile — the play-time pipeline. */
+function prepared() {
+  const foci = resolveClipFoci(flyPathDemo.data, RESOLVER, FOV_Y, TEST_POSE, SIM_DAYS);
+  return resolveClipStart(foci, TEST_POSE);
+}
+
+describe('flyPathDemo clip', () => {
+  it('starts at the live eye and flies the camera through to the Sculptor group', () => {
+    const resolved = prepared();
+    const dur = compileClip(resolved).durationSec; // real (dwelled) take length
+
+    // The camera (eye) starts where it is — the live pose's eye at [0,0,5].
+    const start = eyeOf(evaluateClip(resolved, 0));
+    expect(start[0]).toBeCloseTo(0, 4);
+    expect(start[2]).toBeCloseTo(5, 4);
+
+    // …and ends SETTLED FRAMED on the Sculptor group: the look-at target is the
+    // group centre at the framing distance (the eye stops short, it does not fly
+    // through the centre like the en-route waypoints).
+    const end = evaluateClip(resolved, dur);
+    expect(end.target[0]).toBeCloseTo(0, 2);
+    expect(end.target[1]).toBeCloseTo(0, 2);
+    expect(end.target[2]).toBeCloseTo(10, 2); // Sculptor worldPos
+    expect(end.distance).toBeCloseTo(
+      arrivalFraming(
+        { type: 'structure', positionMpc: [0, 0, 0], radiusMpc: 2 },
+        selectionKindOf('structure').focus!,
+        FOV_Y,
+      ).distance,
+      2,
+    );
+  });
+
+  it('moves the camera continuously through the take (no freeze, no teleport)', () => {
+    const resolved = prepared();
+    const dur = compileClip(resolved).durationSec;
+    let prev = eyeOf(evaluateClip(resolved, 0));
+    let moved = 0;
+    for (let i = 1; i <= 60; i++) {
+      const eye = eyeOf(evaluateClip(resolved, (i / 60) * dur));
+      const step = Math.hypot(eye[0] - prev[0], eye[1] - prev[1], eye[2] - prev[2]);
+      expect(step).toBeLessThan(8); // no single step jumps across the path
+      moved += step;
+      prev = eye;
+    }
+    expect(moved).toBeGreaterThan(10); // the camera actually traversed it
+  });
+});

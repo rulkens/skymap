@@ -8,6 +8,7 @@
 
 import sharp from 'sharp';
 
+import { WHOLE_GLOBE_BOUNDS } from '../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import type { HeightSource } from './@types/HeightSource';
 import { geoTiffHeightSource } from './geoTiffHeightSource';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -18,8 +19,6 @@ const ETOPO_MAX_LEVEL = 8;
 
 /** `gdalinfo`'s `NoData Value` for the shipped GeoTIFF. */
 const ETOPO_NODATA = -99999;
-
-const WHOLE_GLOBE = { west: -180, east: 180, south: -90, north: 90 } as const;
 
 const ETOPO_PROVENANCE = {
   sourceId: 'etopo-2022-30s-surface',
@@ -40,7 +39,7 @@ export async function etopoHeightSource(): Promise<HeightSource> {
     id: 'etopo-2022-30s',
     attribution: ETOPO_PROVENANCE.attribution,
     provenance: ETOPO_PROVENANCE,
-    grid: { path, width, height, bounds: WHOLE_GLOBE },
+    grid: { path, width, height, bounds: WHOLE_GLOBE_BOUNDS },
     nodata: ETOPO_NODATA,
     offsetM: 0,
     maxLevel: ETOPO_MAX_LEVEL,

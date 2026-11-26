@@ -20,7 +20,7 @@
  * instanced draw per non-empty bucket, binding that category's
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 6-bit `sourceCode`, which the ringPick fragment composes into
- * `(sourceCode << 26) | structureIndex + PICK_SENTINEL_OFFSET` — the same
+ * `packPickWord(sourceCode, structureIndex)`'s word — the same
  * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
  * the categories handed to the factory (one instance per slab), so a new
  * structure source needs no change here.
@@ -34,7 +34,7 @@
  * Constructed with a null device for unit tests.  GPU resource
  * allocation is guarded by `if (device)` so `setMarkers` packs the
  * CPU scratch buffer + bumps the counter without touching the GPU.
- * Mirrors `markerLineRenderer.ts`'s null-device pattern.
+ * Mirrors `labelRenderer.ts`'s null-device pattern.
  *
  * ### Pipeline layout
  *

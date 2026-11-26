@@ -17,6 +17,7 @@ import type { BodyFacts } from './BodyFacts';
 import type { TrailingThrottle } from '../../../@types/utils/TrailingThrottle';
 import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
 import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
+import type { MeshBodiesSink } from '../../../@types/engine/layer/MeshBodiesSink';
 
 /** The Layer's whole runtime. Non-null: `create` builds it before returning. */
 export type BodyRuntime = {
@@ -43,4 +44,6 @@ export type BodyRuntime = {
   readonly publish: (patch: Partial<BodyFacts>) => void;
   readonly debugPanelOpen: () => boolean;
   readonly readoutGate: TrailingThrottle;
+  /** Core's one mesh renderer, which this Layer's mesh slots commit to. */
+  readonly meshBodies: MeshBodiesSink;
 };

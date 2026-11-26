@@ -3,7 +3,7 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 
 /**
  * fetchSurfaceTileBitmap — one virtual-texture tile, decoded ready for atlas
- * upload, or `null` if it is not there.
+ * upload, `'empty'` if stored empty, or `null` if it is not there.
  *
  * A miss (no bytes, or an undecodable payload) returns `null` and logs
  * nothing; the stream subsystem memoises it as failed.
@@ -18,11 +18,12 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 export async function fetchSurfaceTileBitmap(
   tile: SurfaceTileId,
   source: SurfaceTileSource,
-): Promise<ImageBitmap | null> {
+): Promise<ImageBitmap | 'empty' | null> {
   try {
-    const bytes = await source.readTile(tile);
-    if (bytes === null) return null;
-    return await createImageBitmap(new Blob([bytes], { type: 'image/webp' }), {
+    const read = await source.readTile(tile);
+    if (read.kind === 'empty') return 'empty';
+    if (read.kind !== 'bytes') return null;
+    return await createImageBitmap(new Blob([read.bytes], { type: 'image/webp' }), {
       premultiplyAlpha: 'none',
     });
   } catch {

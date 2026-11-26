@@ -3,7 +3,7 @@
  * snapshot resolves for it: what `StarPointRenderer.setStars` uploads.
  *
  * `pickCode` + `seedIndex` ride along so a pass packs the star's pick id straight
- * from the record (`packSelection(pickCode, seedIndex + PICK_SENTINEL_OFFSET)`)
+ * from the record (`packPickWord(pickCode, seedIndex)`)
  * instead of searching the seed tables for its id.
  */
 

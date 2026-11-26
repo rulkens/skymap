@@ -129,7 +129,9 @@ describe('KEYBOARD_SHORTCUTS', () => {
     const clip = stateWith({
       time: time(3, false),
       takeover: { active: { kind: 'clip' as const, id: 'cosmicFlows' } },
-    } as Partial<RootState>);
+      selection: { select: null },
+      sky: { view: null },
+    } as unknown as Partial<RootState>);
     expect(byKeys('escape').run(clip)).not.toBeNull();
     expect(byKeys('\\').run(clip)).not.toBeNull();
   });

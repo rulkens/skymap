@@ -19,7 +19,7 @@
  *
  * On tile-based GPUs (Apple Silicon M1/M2, Adreno, Mali) the render target
  * lives in tile-local memory for the duration of one open render pass — no DRAM
- * round-trip between draws. Premultiplied-OVER layers (marker-lines, labels)
+ * round-trip between draws. Premultiplied-OVER layers (labels)
  * read `dst.color` from the same tile their predecessor wrote into, so the OVER
  * blend is computed against fully-coherent state. The `'merged'` strategy keeps
  * a target's whole group in one `beginRenderPass`, preserving that coherency —
@@ -46,10 +46,11 @@
  * path's dedicated no-draw clear pass, folding the clear into the first
  * enabled layer's pass is safe here because the group is already filtered to
  * enabled layers — a non-empty group always has a first layer to carry the
- * clear. A SEPARATE, frame-wide fact — which targets hold this FRAME's
- * content, for the overlay passes that sample `foreground:0` — lives on
- * `ctx.snapshot.renderedTargets` instead; see that field's own doc for why it
- * is not the same set as `touched`.
+ * clear. A `retained` row keeps its contents across frames, so its first touch
+ * loads unless the step's `restartPlanner` value says `restart`. A SEPARATE,
+ * frame-wide fact — which targets hold this FRAME's content, for the overlay
+ * passes that sample `foreground:0` — lives on `ctx.snapshot.renderedTargets`
+ * instead; see that field's own doc for why it is not the same set as `touched`.
  *
  * A capture render step (`step.capture !== undefined`) is the one exception: it
  * names a capture ROW, whose six faces are LAYERS of one texture, but `touched`
@@ -93,8 +94,11 @@ import {
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
 import { captureTimingSlotName } from './timing/captureTimingSlotName';
 import { captureFaceAttachment } from './captureFaceAttachment';
+import { layerViewFor } from './layerViewFor';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
+import { sampledMaskFor } from './sampledMaskFor';
+import { restartRequested } from './restartRequested';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
@@ -115,7 +119,7 @@ import { cpuSpans } from '../../../utils/perf/cpuSpans';
  */
 function viewFor(id: string, ctx: FrameView, swapView: GPUTextureView): GPUTextureView {
   if (id === 'swap') return ctx.output ?? swapView;
-  return ctx.snapshot.renderTargets.viewOf(id);
+  return ctx.snapshot.renderTargets.viewOf(id, ctx.id);
 }
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
@@ -170,6 +174,7 @@ type Destination = {
   readonly depth: { readonly view: GPUTextureView; readonly loadOp: GPULoadOp } | undefined;
   readonly touchSet: Set<string>;
   readonly touchKey: string;
+  readonly alreadyTouched: boolean;
 };
 
 export function executeFrame(args: ExecuteFrameArgs): void {
@@ -263,7 +268,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // carry no sample marker (`bodyRowSteps`'s module header), so a
         // capture step never takes this branch.
         const slab = slabViewOf(stepCtx, step.slab);
-        const view: SlabView =
+        const sampled: SlabView =
           step.capture === undefined && typeof step.depth === 'object'
             ? {
                 ...slab,
@@ -274,6 +279,17 @@ export function executeFrame(args: ExecuteFrameArgs): void {
                 ),
               }
             : slab;
+        const view: SlabView =
+          step.mask === undefined
+            ? sampled
+            : {
+                ...sampled,
+                sampledMask: sampledMaskFor(
+                  step.mask.sample,
+                  frameRendered,
+                  ctx.snapshot.renderTargets,
+                ),
+              };
         const group = step.passes.filter(
           (l) => l.enabled(state, stepCtx, view) && disabledPasses[l.name] !== true,
         );
@@ -309,10 +325,22 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           const spec = ctx.snapshot.renderTargets.specOf(step.target);
           const loadOp = depthLoadOpFor(depth, touched.has(step.target));
           if (loadOp === 'clear') lastDepthClear.set(step.target, view.slab);
+          let alreadyTouched = touched.has(step.target);
+          if (!alreadyTouched && spec.retained) {
+            if (step.restartPlanner === undefined) {
+              throw new Error(
+                `executeFrame: retained target '${step.target}' needs a restartPlanner`,
+              );
+            }
+            alreadyTouched = !restartRequested(step.restartPlanner, ctx, state.planners);
+          }
           destination = {
             label: step.target,
             dest: {
-              view: viewFor(step.target, ctx, swapView),
+              view:
+                (spec.layers ?? 1) > 1
+                  ? layerViewFor(step.target, ctx)
+                  : viewFor(step.target, ctx, swapView),
               clearValue: clearValueOf(spec, state),
             },
             depth:
@@ -321,6 +349,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
                 : undefined,
             touchSet: touched,
             touchKey: step.target,
+            alreadyTouched,
           };
         } else {
           const face = captureFaceAttachment(step.capture, ctx, state);
@@ -337,6 +366,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
                 : undefined,
             touchSet: touchedFaces,
             touchKey,
+            alreadyTouched: touchedFaces.has(touchKey),
           };
         }
         renderGroup(strategy, {
@@ -351,7 +381,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           view,
           groupKey,
           captureSlot,
-          alreadyTouched: destination.touchSet.has(destination.touchKey),
+          alreadyTouched: destination.alreadyTouched,
         });
         destination.touchSet.add(destination.touchKey);
         // Frame-wide content fact: only an ordinary (non-capture) target — a

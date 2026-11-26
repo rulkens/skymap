@@ -1,4 +1,4 @@
-import type { TakeoverSource } from '../takeover/TakeoverSource';
+import type { LinkTakeoverKind } from './LinkTakeoverKind';
 import type { FramedCameraPose } from '../camera/pose/FramedCameraPose';
 
 /**
@@ -11,4 +11,4 @@ export type LinkView =
   | { readonly kind: 'home' }
   | { readonly kind: 'focus'; readonly id: string; readonly pose?: FramedCameraPose }
   | { readonly kind: 'pose'; readonly pose: FramedCameraPose }
-  | { readonly kind: TakeoverSource['kind']; readonly id: string };
+  | { readonly kind: LinkTakeoverKind; readonly id: string };

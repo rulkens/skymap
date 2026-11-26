@@ -23,7 +23,7 @@ import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { SHOT_ENCODING } from './shotEncoding';
 import { SITE_SHOTS_DIR as OUT_DIR } from './SITE_SHOTS_DIR';
 import { captureSiteShot } from './utils/captureSiteShot';
-import { makeSiteOgCard } from './utils/makeSiteOgCard';
+import { makeShareCards } from './utils/makeShareCards';
 import { parseSize } from './utils/parseSize';
 import { shotFileIndex } from './utils/shotFileIndex';
 import { shotFileName } from './utils/shotFileName';
@@ -148,7 +148,7 @@ try {
       console.log(`${name}  ${sizes.join(' · ')} (AVIF)`);
     }
   }
-  await makeSiteOgCard(browser, MASTERS_DIR);
+  await makeShareCards(browser, MASTERS_DIR);
 } finally {
   await browser.close();
 }

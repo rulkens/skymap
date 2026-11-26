@@ -5,6 +5,8 @@
 // carries the whole occlusion verdict, resolved in the vertex stage (vertexOcclude.wesl).
 
 import package::labels::io::VsOut;
+import package::labels::io::LeaderVsOut;
+import package::labels::fragment::shadeLeader;
 import package::lib::msdf::shadeMsdf;
 import package::lib::sceneDepth::sceneTransmittance;
 
@@ -12,4 +14,9 @@ import package::lib::sceneDepth::sceneTransmittance;
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let shaded = shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
   return shaded * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
+}
+
+@fragment
+fn fsLeaderOcclude(input: LeaderVsOut) -> @location(0) vec4<f32> {
+  return shadeLeader(input) * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
 }

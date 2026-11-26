@@ -41,7 +41,7 @@ reducer does not handle drops silently (`extraReducers`).
 | `src/services/engine/subsystems/clipPlayer.ts`, `src/@types/engine/subsystems/ClipPlayer.d.ts` | rewrite / modify | evaluate, publish, end |
 | `src/services/engine/presentation/resolveVisibilityOpacity.ts` | modify | `clipOpacityOf(address)` |
 | `src/services/animation/applySceneEffect.ts`, `src/services/animation/clipOpacityChannel.ts`, `src/@types/animation/ClipOpacityChannel.d.ts` + their tests | delete | the edge-triggered path |
-| `docs/animation/clip-primitives.md`, `docs/adrs/0017-*.md`, comments named in Task 3.1, `tools/record/README.md` | modify / create | docs |
+| `docs/animation/clip-primitives.md`, `docs/adrs/0018-*.md`, comments named in Task 3.1, `tools/record/README.md` | modify / create | docs |
 
 ---
 
@@ -382,7 +382,7 @@ this task listed landed with Task 2.2.
 
 ### Task 3.1: docs, comments and the ADR
 
-**Files:** `docs/adrs/0017-clip-scene-is-an-overlay.md` (next free number; create via the `adr` skill),
+**Files:** `docs/adrs/0018-clip-scene-is-an-overlay.md` (next free number; create via the `adr` skill),
 `docs/animation/clip-primitives.md` (Scene effects section, the opacity section, the `cosmicFlows` idiom note,
 Layer 1 vs 2), `src/@types/animation/SceneEffect.d.ts` header (cues → steps evaluated at t; show/hide no longer write
 intent), `src/@types/animation/compiledClip/CompiledClip.d.ts` header, `src/state/camera/clipBodySaga.ts` header
@@ -395,7 +395,7 @@ ADR content: a clip's scene is an overlay folded over intent at t and never disp
 subsystems that animate user changes; `revert` by default, `keep` for tours with the commit in the end tick; why
 not affine overlays or a concatenated tour (spec §8). Comment budget per `comments.md`.
 
-As built: ADR 0017 (`docs/adrs/0017-clip-scene-is-an-overlay.md`), written to S4 spec §9.4 (a paused frame
+As built: ADR 0018 (`docs/adrs/0018-clip-scene-is-an-overlay.md`), written to S4 spec §9.4 (a paused frame
 inside a roll shows the destination; the ADR promises no mid-roll pole). Beyond the list above, the stale
 mechanism comments in `EngineSubsystemHandles.d.ts`, `effectHelpers.ts` (`fade`), `compileClip.ts`,
 `runFrame.ts`, `docs/tour/implementation-notes.md` and the emphasize-cue backlog detail now name the overlay
@@ -416,7 +416,7 @@ and factor tracks. "Cue" stays as authoring vocabulary in tour files (a step tha
   `selection`, `selectionRows`, enforced by `tests/conventions/engineRootRead.test.ts`.
 - `applySceneEffect`, `clipOpacityChannel`, `ClipOpacityChannel`, `SceneCue` and the cue cursor deleted; no
   `cues` left in `CompiledClip`.
-- ADR 0017 (or the next free number); `clip-primitives.md` describes steps, the overlay, revert and keep.
+- ADR 0018 (or the next free number); `clip-primitives.md` describes steps, the overlay, revert and keep.
 
 **Observable behaviours (manual smoke, on this worktree's dev server)**
 

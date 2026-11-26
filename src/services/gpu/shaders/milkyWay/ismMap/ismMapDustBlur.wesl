@@ -25,14 +25,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // dstTex is exactly srcTex/BLUR_FACTOR (ISM_MAP_AZ/ISM_MAP_RINGS both divide
   // evenly), so each dst texel owns one whole, non-overlapping 8x8 src block.
   var sum: f32 = 0.0;
-  for (var j: u32 = 0u; j < BLUR_FACTOR; j++) {
-    for (var i: u32 = 0u; i < BLUR_FACTOR; i++) {
-      let t = textureLoad(
+  for (var blockRow: u32 = 0u; blockRow < BLUR_FACTOR; blockRow++) {
+    for (var blockColumn: u32 = 0u; blockColumn < BLUR_FACTOR; blockColumn++) {
+      let srcTexel = textureLoad(
         srcTex,
-        vec2<i32>(i32(gid.x * BLUR_FACTOR + i), i32(gid.y * BLUR_FACTOR + j)),
+        vec2<i32>(i32(gid.x * BLUR_FACTOR + blockColumn), i32(gid.y * BLUR_FACTOR + blockRow)),
         0,
       );
-      sum += max(t.w - ISM_MAP_AMBIENT_DUST, 0.0);
+      sum += max(srcTexel.w - ISM_MAP_AMBIENT_DUST, 0.0);
     }
   }
   // rgba16float: the one storage format that is ALSO filterable, which

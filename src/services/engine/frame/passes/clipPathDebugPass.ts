@@ -3,7 +3,7 @@
  * speed-coloured eye route + the scrub-instant camera gizmo).
  *
  * A swap-target layer, drawn post-tone-map onto the swap chain via the shared
- * swap render step — same family as `markerLinesPass`, but fed by the
+ * swap render step — fed by the
  * dedicated `debugLineRenderer` (no label-director coupling). The geometry is
  * NOT in Redux: the snapshot is held by the `clipPathInspector` subsystem
  * (precomputed once on the debug panel's "Calculate"), and only the scalar

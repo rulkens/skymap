@@ -51,7 +51,7 @@
 
 /*
  * We are a point at the centre, so it is labelled as the app labels its own "You are here": a stem
- * straight up from the point, the words centred over it 6px clear (milkyWayLabelStyle, leaderLineStyle).
+ * straight up from the point, the words centred over it 6px clear (the `milkyWay` row of `LABEL_STYLES`).
  * The stem runs past the galaxies, which reach 0.4 of the radius above us, so the words stand on black.
  */
 :root[data-flight-live] .here {

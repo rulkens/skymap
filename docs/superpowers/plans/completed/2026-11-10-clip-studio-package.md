@@ -80,7 +80,7 @@ package owns its state type, and the app imports nothing from the package.
 Rejected: a studio-owned store. The studio needs the app's saga context (selection resolver, camera runtime),
 takeover and clock actions, and later the engine seams; a second store means a second saga middleware and
 cross-store sync. RTK 2's injection is the stock answer and `combineSlices` already composes the settings root
-(`src/state/settings/combinedSettingsReducer.ts`). Recorded as **ADR 0016** (Task 1.2).
+(`src/state/settings/combinedSettingsReducer.ts`). Recorded as **ADR 0017** (Task 1.2).
 
 ### A4. The studio is a takeover
 
@@ -307,10 +307,10 @@ module map of A1, the A2 boundary, in ≤ 60 lines), `tsconfig.json`, `vitest.co
       rules must still run (assert the swept file list is defined, not non-empty).
 - [x] `npm run typecheck:fast`, `npm test -- conventions` green.
 
-### Task 1.2: root reducer becomes `combineSlices`; injection seam; ADR 0016
+### Task 1.2: root reducer becomes `combineSlices`; injection seam; ADR 0017
 
 **Files:** `src/store/rootReducer.ts`, `src/store/types.ts` (only if `RootState` inference needs it),
-`tests/store/rootReducer.test.ts` (new), `docs/adrs/0016-lazy-slices-inject-into-the-root-reducer.md` (new)
+`tests/store/rootReducer.test.ts` (new), `docs/adrs/0017-lazy-slices-inject-into-the-root-reducer.md` (new)
 **review: yes**
 
 **Contract:** `export const rootReducer = combineSlices({ [settingsRoute]: …, … })` with the same routes and
@@ -320,7 +320,7 @@ reducers; `RootState = ReturnType<typeof rootReducer>` unchanged in shape.
       after`: a throwaway `createSlice` injected into `rootReducer` after `createAppStore()`; its `injectInto`
       selector returns `initialState` immediately, and the reduced value after one of its actions.
 - [x] `createAppStore.test.ts` and the full store tests stay green (no static route changes).
-- [x] ADR 0016: context (lazy chunk needs state, Q26's open question), decision (A3), consequences (app
+- [x] ADR 0017: context (lazy chunk needs state, Q26's open question), decision (A3), consequences (app
       `RootState` unaware of lazy slices; a lazy slice reads through `injectInto` selectors; the serializable
       and immutable checks walk injected state too).
 
@@ -878,7 +878,7 @@ Nothing selected → the clip head (label, duration, `Start` readout). Dense pro
 **Deliverables**
 - `packages/studio/` with README; root typecheck, lint and test cover it; `studioImportBoundary` green.
 - `CompiledClip.spans`, `EffectSpan.knotSecs`, `ClipCompileError` (paths, reason, partial spans).
-- Root reducer on `combineSlices`; ADR 0016; `withFrozenClockSaga`; `#studio=<clipId>` takeover route.
+- Root reducer on `combineSlices`; ADR 0017; `withFrozenClockSaga`; `#studio=<clipId>` takeover route.
 - `ROW_KINDS` covering every `Effect['kind']` plus `start` and `waypoint`.
 - Backlog index line + detail file for the engine groundwork.
 

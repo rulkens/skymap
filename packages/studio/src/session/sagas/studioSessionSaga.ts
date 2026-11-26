@@ -12,7 +12,7 @@ import { studioOpened } from '../state/studioSlice';
 import { withFrozenClockSaga } from '../../../../../src/state/time/withFrozenClockSaga';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
 import { selectOrientation } from '../../../../../src/state/settings/selectors';
-import { clipFactories } from '../../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../../../../src/compositions/appClips';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { SagaContext } from '../../../../../src/store/types';
 
@@ -24,7 +24,7 @@ export function* studioSessionSaga(id: ClipId): Generator {
     const frame = yield* select(selectOrientation);
     // A copy: the runtime may hand out the engine's own displayed pose, and the store freezes state.
     const preview = { startPose: structuredClone(from), simDays, frame, fovYRad };
-    yield* put(studioOpened({ clipId: id, draft: clipFactories[id](simDays).data, preview }));
+    yield* put(studioOpened({ clipId: id, draft: APP_CLIP_FACTORIES[id](simDays).data, preview }));
     yield* fork(pickObjectSaga);
     yield* call(resolveDraftSaga);
   });

@@ -24,11 +24,11 @@ The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0
 
 - **Galaxies**: about 3 million from SDSS, 2MRS, GLADE, and Milliquas. Each is a dot until you approach, then a procedural disk, then a real thumbnail ([how](docs/science.md#galaxy-level-of-detail)).
 - **Cosmic web**: a DisPerSE filament skeleton and an MCPM slime-mould density volume trace the structure between the points.
-- **Structures**: clusters, superclusters, voids, and groups from MCXC, MSCC, and other VizieR catalogs, with markers and labels.
+- **Structures**: clusters, superclusters, voids, and groups from MCXC, MSCC, and other VizieR catalogs, plus the Milky Way's open clusters, globulars, and nebulae, with markers and labels.
 - **Famous galaxies**: curated thumbnails and descriptions for the well-known Messier and NGC objects.
 - **Stars**: 16.8 million from Gaia DR3, extended by the GCNS and Hipparcos-2 supplements. Stars close enough to resolve become true-scale spheres.
 - **Galactic centre**: the S-stars orbit Sagittarius A\* on their measured Keplerian elements, with trails.
-- **Solar system**: runs on a live clock. All the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
+- **Solar system**: runs on a live clock. All the planets and their major moons, Pluto and Charon, Saturn's rings, the numbered asteroids, Earth's satellites, the Voyagers, Hubble and the Mars rovers, orbit trails, the Sun with bloom.
 - **Earth**: PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
 - **Time**: jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
 - **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets; `#exhibit=`, `#tour=`, and `#clip=` links open a curated view or set it playing.
@@ -60,7 +60,7 @@ _The point cloud, filament skeleton, and MCPM volume at supercluster scale._
 
 ## The data
 
-Every dataset skymap renders is listed below. [docs/science.md](docs/science.md) explains how catalogue brightness, colour, and selection effects turn into pixels. Full citations and license terms live in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+The main datasets skymap renders are listed below. [docs/science.md](docs/science.md) explains how catalogue brightness, colour, and selection effects turn into pixels. Every source, with full citations and license terms, is in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 **Sky**
 
@@ -85,6 +85,7 @@ Every dataset skymap renders is listed below. [docs/science.md](docs/science.md)
 | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation) + [EOX s2cloudless](https://s2maps.eu) | Earth whole-globe imagery and a deeper Sentinel-2 tile band                                                                                                                                                                                                                                                                          |
 | Planet, moon, and ring textures                                                                                                                    | [Solar System Scope](https://www.solarsystemscope.com/textures/), [USGS Astrogeology](https://astrogeology.usgs.gov/), and NASA mission mosaics                                                                                                                                                                                      |
+| Spacecraft and small-body models                                                                                                                   | NASA 3D models of the Voyagers, Hubble, and the Mars rovers; mission shape models of Phobos, Deimos, Vesta, Ceres, and Bennu from NASA's Planetary Data System                                                                                                                                                                       |
 | Whale and bowl of petunias                                                                                                                         | ["Livyatan melvillei"](https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by [Major](https://sketchfab.com/majorgalah) and ["Flowers Petunia White"](https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by [Marianne Goudriaan](https://sketchfab.com/mariannegoudriaan), CC BY 4.0 |
 
 ## Quickstart

@@ -6,12 +6,12 @@ From the [add-Pluto/Charon grill session](../grill-sessions/add-pluto-charon-202
 
 The focus graph is strictly one-hop: `OrbitalElements.focusId` makes a body orbit its parent's *center* (`src/services/engine/frame/deriveBodyStates.ts` resolves positions along `focusResolveOrder`). Real binary-ish systems orbit a shared barycentre:
 
-- **Pluto–Charon**: Charon is ~12% of Pluto's mass; the barycentre sits ~2,130 km from Pluto's centre — 1.8 Pluto radii, i.e. ~940 km *above* the surface. The shipped model (Charon as a Moon-style satellite of Pluto) pins Pluto at its heliocentric position — an error of ~10% of the pair separation, visible only when parked near the barycentre with time running. Earth–Moon no longer has this error: see the pair table below.
+- **Pluto–Charon**: Charon is ~12% of Pluto's mass; the barycentre sits ~2,130 km from Pluto's centre — 1.8 Pluto radii, i.e. ~940 km *above* the surface. The shipped model (Charon as a Moon-style satellite of Pluto) pins Pluto at its heliocentric position — an error of ~10% of the pair separation, visible only when parked near the barycentre with time running. Earth–Moon no longer has this error: see the pair field below.
 - **Pluto's minor moons** — Styx, Nix, Kerberos, Hydra — orbit the *barycentre*, not Pluto, at wider radii where the approximation grows proportionally worse. They are deliberately absent until this lands (grill Q5): four sub-pixel irregular rocks drawn dishonestly around Pluto's center add clutter without honesty.
 
 ## What exists now
 
-`BARYCENTRIC_PAIRS` (`src/data/bodies/barycentricPairs.ts`) treats a primary's element row as the pair barycentre, and `deriveBodyStates` subtracts the secondary's mass-weighted reflex from the primary. Earth–Moon is its one row. Pluto's wobble is therefore one more row (`pluto`/`charon`, Charon's mass fraction ≈ 0.1086), once Pluto's row is re-fitted to the Pluto-system barycentre. The minor moons still need the invisible node below, because they orbit the barycentre rather than either body.
+A primary's body row may carry `pair: { secondaryId, secondaryMassFraction }` (`BodyPosition`'s orbit arm): its elements are then the pair barycentre, and `deriveBodyStates` subtracts the secondary's mass-weighted reflex from the primary. Earth's row (`src/layers/body/bodies/planets/earth.ts`) is the one that does. Pluto's wobble is therefore one more `pair` (on Pluto's row, secondary `charon`, mass fraction ≈ 0.1086), once Pluto's row is re-fitted to the Pluto-system barycentre. The minor moons still need the invisible node below, because they orbit the barycentre rather than either body.
 
 ## Shape of a fix (minor moons)
 
@@ -19,5 +19,5 @@ An invisible barycentre node in the focus graph that both partners orbit. Touchp
 
 ## Follow-on once landed
 
-- Let Pluto wobble: add the `pluto`/`charon` row to `BARYCENTRIC_PAIRS`; delete the "looks wrong, don't fix" comment on Charon's row.
+- Let Pluto wobble: add `pair: { secondaryId: 'charon', … }` to Pluto's body row; delete the "looks wrong, don't fix" comment on Charon's row.
 - Add Styx/Nix/Kerberos/Hydra as ordinary satellite rows parented on the barycentre node (no textures — no usable maps exist; flat albedo + glint only).

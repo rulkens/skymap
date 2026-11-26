@@ -15,9 +15,9 @@ import { MISSION_CRAFT_IDS } from '../../src/layers/missions/craft/present/missi
 import { EARTH_SCENE_BODY_IDS } from '../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { PROBE_SPHERE_ROSTER } from '../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { SCENE_BODIES } from '../../src/data/bodies/sceneBodies';
-import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
-import { SCENE_STARS } from '../../src/data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../src/data/bodies/sceneSStars';
+import { SCENE_SUN } from '../../src/layers/starCatalog/bodies/sceneSun';
+import { SCENE_STARS } from '../../src/layers/starCatalog/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../src/layers/starCatalog/bodies/sceneSStars';
 import { isBodyKindId } from '../../src/layers/body/selection/present/isBodyKindId';
 import { bodyPickCodes, missionsPickCode } from '../support/layerPickCodes';
 import { NO_KINDS_OFF } from '../support/noKindsOff';
@@ -38,7 +38,7 @@ describe('body-<id> focus claims', () => {
   it("every scene body's focus id is claimed by the kind that owns it", () => {
     expect(EARTH_SCENE_BODY_IDS.size).toBeGreaterThan(0);
     for (const { id } of SCENE_BODIES) {
-      const ref = resolver.resolveFocusId(`body-${id}`);
+      const resolution = resolver.resolveFocusId(`body-${id}`);
       const kind = MISSION_CRAFT_IDS.has(id)
         ? 'craft'
         : EARTH_SCENE_BODY_IDS.has(id)
@@ -50,11 +50,11 @@ describe('body-<id> focus claims', () => {
               : null;
       if (kind === null) {
         expect(STAR_IDS.has(id), `${id} is owned by no kind`).toBe(true);
-        expect(ref).toBeNull();
+        expect(resolution).toEqual({ kind: 'absent' });
         continue;
       }
-      expect(ref).toEqual({ type: kind, id });
-      expect(resolver.focusIdOf(ref!)).toBe(`body-${id}`);
+      expect(resolution).toEqual({ kind: 'hit', ref: { type: kind, id } });
+      expect(resolver.focusIdOf({ type: kind, id })).toBe(`body-${id}`);
     }
   });
 });

@@ -14,8 +14,8 @@ const TEXEL_BYTE_MAX: f32 = 255.0;
 // so both tiles on a shared edge decode a post to the same f32. May differ
 // from the CPU's codeHeightM by about one f32 ulp.
 fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32 {
-  let b = vec3<u32>(round(textureLoad(tex, coord, 0).rgb * TEXEL_BYTE_MAX));
-  let code = (b.r << 16u) | (b.g << 8u) | b.b;
+  let texelBytes = vec3<u32>(round(textureLoad(tex, coord, 0).rgb * TEXEL_BYTE_MAX));
+  let code = (texelBytes.r << 16u) | (texelBytes.g << 8u) | texelBytes.b;
   return HEIGHT_CODE_OFFSET_M + f32(code) * HEIGHT_CODE_STEP_M;
 }
 
@@ -24,12 +24,12 @@ fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32 {
 // the south neighbour. 'stride' 2 walks every second post, which IS a
 // one-level-coarser neighbour's own lattice (R1's strict decimation).
 fn latticeCellM(tex: texture_2d<f32>, origin: vec2<u32>, cell: vec2<u32>, stride: u32) -> vec4<f32> {
-  let nw = origin + cell;
+  let northWestPost = origin + cell;
   return vec4<f32>(
-    postHeightM(tex, nw),
-    postHeightM(tex, nw + vec2<u32>(stride, 0u)),
-    postHeightM(tex, nw + vec2<u32>(0u, stride)),
-    postHeightM(tex, nw + vec2<u32>(stride, stride)),
+    postHeightM(tex, northWestPost),
+    postHeightM(tex, northWestPost + vec2<u32>(stride, 0u)),
+    postHeightM(tex, northWestPost + vec2<u32>(0u, stride)),
+    postHeightM(tex, northWestPost + vec2<u32>(stride, stride)),
   );
 }
 
@@ -44,23 +44,23 @@ fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>,
   let east = min(post.x + 1u, cells);
   let north = max(post.y, 1u) - 1u;
   let south = min(post.y + 1u, cells);
-  let hW = postHeightM(tex, origin + vec2<u32>(west, post.y));
-  let hE = postHeightM(tex, origin + vec2<u32>(east, post.y));
-  let hN = postHeightM(tex, origin + vec2<u32>(post.x, north));
-  let hS = postHeightM(tex, origin + vec2<u32>(post.x, south));
-  return vec2<f32>((hE - hW) / f32(east - west), (hN - hS) / f32(south - north));
+  let westHeightM = postHeightM(tex, origin + vec2<u32>(west, post.y));
+  let eastHeightM = postHeightM(tex, origin + vec2<u32>(east, post.y));
+  let northHeightM = postHeightM(tex, origin + vec2<u32>(post.x, north));
+  let southHeightM = postHeightM(tex, origin + vec2<u32>(post.x, south));
+  return vec2<f32>((eastHeightM - westHeightM) / f32(east - west), (northHeightM - southHeightM) / f32(south - north));
 }
 
-// Bilinear height at lattice position 'p' (posts from 'origin', fractional
+// Bilinear height at lattice position 'latticePos' (posts from 'origin', fractional
 // once the leaf inherits a coarser ancestor's lattice). At a multiple of the
 // stride both weights are 0 and the result is that post, bit-for-bit. The
 // clamp is because a leaf seven levels up has ONE cell, where a doubled
 // stride would read past the sub-rect into another leaf's ground (R15).
-fn latticeHeightM(tex: texture_2d<f32>, origin: vec2<u32>, p: vec2<f32>, stride: f32, cells: f32) -> f32 {
-  let s = min(stride, cells);
-  let g = p / s;
-  let q = floor(g);
-  let f = g - q;
-  let h = latticeCellM(tex, origin, vec2<u32>(q * s), u32(s));
-  return mix(mix(h.x, h.y, f.x), mix(h.z, h.w, f.x), f.y);
+fn latticeHeightM(tex: texture_2d<f32>, origin: vec2<u32>, latticePos: vec2<f32>, stride: f32, cells: f32) -> f32 {
+  let clampedStride = min(stride, cells);
+  let strideCoord = latticePos / clampedStride;
+  let strideCell = floor(strideCoord);
+  let cellFraction = strideCoord - strideCell;
+  let cornerHeightsM = latticeCellM(tex, origin, vec2<u32>(strideCell * clampedStride), u32(clampedStride));
+  return mix(mix(cornerHeightsM.x, cornerHeightsM.y, cellFraction.x), mix(cornerHeightsM.z, cornerHeightsM.w, cellFraction.x), cellFraction.y);
 }

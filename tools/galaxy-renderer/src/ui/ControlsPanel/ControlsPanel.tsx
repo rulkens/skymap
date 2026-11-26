@@ -18,6 +18,9 @@ import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeRea
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 import type { ParamSpecEntry } from '../../../@types/data/ParamSpecEntry';
+import type { SliderDisplayed } from '../../../../../src/@types/components/SliderDisplayed';
+import { degToRad } from '../../../../../src/utils/math/degToRad';
+import { radToDeg } from '../../../../../src/utils/math/radToDeg';
 import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
 import Button from '../../../../../src/components/common/Button/Button';
 import CompactInfoTip from '../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
@@ -86,6 +89,7 @@ type SliderSpec = {
   readonly key: GalaxySliderKey;
   readonly label: string;
   readonly format?: (value: number) => string;
+  readonly displayed?: SliderDisplayed;
   readonly seedKey?: 'asymSeed' | 'clumpSeed' | 'waveSeed';
   /** Hover explainer, for the knobs whose label alone gets misread. */
   readonly info?: string;
@@ -120,7 +124,12 @@ function specFor(key: GalaxySliderKey): ParamSpecEntry {
  * goal-and-history.md`), and a section holding nothing else deletes with it.
  */
 const STAR_BUDGET_SLIDERS: SliderSpec[] = [
-  { key: 'starCount', label: 'Star density', format: (v) => `${Math.round(v / 1000)}k` },
+  {
+    key: 'starCount',
+    label: 'Star density',
+    format: (v) => `${Math.round(v / 1000)}k`,
+    displayed: { fromValue: (v) => v / 1000, toValue: (k) => k * 1000 },
+  },
 ];
 
 // Always radius/irregularity; bulge/disk/warp
@@ -162,6 +171,7 @@ function buildShapeSliders(category: ReturnType<typeof classifyHubbleType>): Sli
       key: 'warpTwist',
       label: 'Warp twist',
       format: (v) => `${Math.trunc(v * 57.3)}°`,
+      displayed: { fromValue: radToDeg, toValue: degToRad },
     });
   }
   specs.push({ key: 'irregularity', label: 'Randomness / asymmetry', seedKey: 'asymSeed' });
@@ -464,6 +474,7 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
         max={max}
         step={step}
         format={spec.format}
+        displayed={spec.displayed}
         onChange={(v) =>
           dispatch(paramsPatched(patchGalaxyField(galaxy, spec.key, coerceInteger(spec.key, v))))
         }

@@ -19,27 +19,27 @@ const BASE_CELLS: u32 = 8u;
 fn tileableValueNoise3D(uv: vec3<f32>, cells: u32) -> f32 {
   let cellsI = i32(cells);
   let i0f = floor(uv);
-  let f = uv - i0f;
-  let t = f * f * (3.0 - 2.0 * f);
-  let i0 = vec3<i32>(i0f) % vec3<i32>(cellsI);
-  let i1 = (i0 + vec3<i32>(1)) % vec3<i32>(cellsI);
+  let fraction = uv - i0f;
+  let fade = fraction * fraction * (3.0 - 2.0 * fraction);
+  let cornerLow = vec3<i32>(i0f) % vec3<i32>(cellsI);
+  let cornerHigh = (cornerLow + vec3<i32>(1)) % vec3<i32>(cellsI);
 
-  let c000 = integerHash3(vec3<i32>(i0.x, i0.y, i0.z));
-  let c100 = integerHash3(vec3<i32>(i1.x, i0.y, i0.z));
-  let c010 = integerHash3(vec3<i32>(i0.x, i1.y, i0.z));
-  let c110 = integerHash3(vec3<i32>(i1.x, i1.y, i0.z));
-  let c001 = integerHash3(vec3<i32>(i0.x, i0.y, i1.z));
-  let c101 = integerHash3(vec3<i32>(i1.x, i0.y, i1.z));
-  let c011 = integerHash3(vec3<i32>(i0.x, i1.y, i1.z));
-  let c111 = integerHash3(vec3<i32>(i1.x, i1.y, i1.z));
+  let c000 = integerHash3(vec3<i32>(cornerLow.x, cornerLow.y, cornerLow.z));
+  let c100 = integerHash3(vec3<i32>(cornerHigh.x, cornerLow.y, cornerLow.z));
+  let c010 = integerHash3(vec3<i32>(cornerLow.x, cornerHigh.y, cornerLow.z));
+  let c110 = integerHash3(vec3<i32>(cornerHigh.x, cornerHigh.y, cornerLow.z));
+  let c001 = integerHash3(vec3<i32>(cornerLow.x, cornerLow.y, cornerHigh.z));
+  let c101 = integerHash3(vec3<i32>(cornerHigh.x, cornerLow.y, cornerHigh.z));
+  let c011 = integerHash3(vec3<i32>(cornerLow.x, cornerHigh.y, cornerHigh.z));
+  let c111 = integerHash3(vec3<i32>(cornerHigh.x, cornerHigh.y, cornerHigh.z));
 
-  let x00 = mix(c000, c100, t.x);
-  let x10 = mix(c010, c110, t.x);
-  let x01 = mix(c001, c101, t.x);
-  let x11 = mix(c011, c111, t.x);
-  let y0 = mix(x00, x10, t.y);
-  let y1 = mix(x01, x11, t.y);
-  return mix(y0, y1, t.z);
+  let x00 = mix(c000, c100, fade.x);
+  let x10 = mix(c010, c110, fade.x);
+  let x01 = mix(c001, c101, fade.x);
+  let x11 = mix(c011, c111, fade.x);
+  let faceZ0 = mix(x00, x10, fade.y);
+  let faceZ1 = mix(x01, x11, fade.y);
+  return mix(faceZ0, faceZ1, fade.z);
 }
 
 // WARP_MEAN_R — the ridged fold's empirical mean (JS-mirror audit,
@@ -49,13 +49,13 @@ const WARP_MEAN_R: f32 = 0.70;
 
 // centerFold — recentres a ridged band around WARP_MEAN_R (not the naive
 // 0.5) so E[centered] == 0.5 by linearity of expectation for ANY slope; the
-// slope 0.5/(1-WARP_MEAN_R) is chosen so the fold's ceiling (r=1) lands
+// slope 0.5/(1-WARP_MEAN_R) is chosen so the fold's ceiling (ridge=1) lands
 // exactly on 1, using the full headroom on the side starGrain.wesl's warp
-// draws from most. Consequence: r below 2*WARP_MEAN_R-1 (~0.4) undershoots
+// draws from most. Consequence: ridge below 2*WARP_MEAN_R-1 (~0.4) undershoots
 // 0 and clips there — a real, not defensive, clamp; the same skew that
 // makes WARP_MEAN_R high also makes that low tail the minority.
-fn centerFold(r: f32) -> f32 {
-  return clamp(0.5 + (r - WARP_MEAN_R) * 0.5 / (1.0 - WARP_MEAN_R), 0.0, 1.0);
+fn centerFold(ridge: f32) -> f32 {
+  return clamp(0.5 + (ridge - WARP_MEAN_R) * 0.5 / (1.0 - WARP_MEAN_R), 0.0, 1.0);
 }
 
 // warpBand — one xyz displacement channel: ridged fold of tileable value
@@ -64,9 +64,9 @@ fn centerFold(r: f32) -> f32 {
 // [0,1] range is what fixes centerFold's clip threshold above.
 fn warpBand(uv: vec3<f32>, freqMul: u32) -> f32 {
   let cells = BASE_CELLS * freqMul;
-  let n = tileableValueNoise3D(uv * f32(cells), cells);
-  let r = 1.0 - abs(2.0 * n - 1.0);
-  return centerFold(r);
+  let valueNoise = tileableValueNoise3D(uv * f32(cells), cells);
+  let ridge = 1.0 - abs(2.0 * valueNoise - 1.0);
+  return centerFold(ridge);
 }
 
 @compute @workgroup_size(4, 4, 4)

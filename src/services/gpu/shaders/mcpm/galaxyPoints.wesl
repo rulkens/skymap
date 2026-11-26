@@ -9,10 +9,8 @@
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;
 
+// pointWeight arrives at mean 1 over the drawn set (buildOverlayCatalog).
 struct OverlayParams {
-  // Multiplying a raw weight by this gives mean 1 across the data rows
-  // (deriveAgentWeights normalises their mean to 1e6 / nDataPoints).
-  weightScale: f32,
   intensity: f32,
   // Screen-constant, not world-constant: the layer answers "where are the galaxies",
   // which a dot shrinking into invisibility with distance would stop doing.
@@ -27,8 +25,7 @@ struct OverlayParams {
 @group(1) @binding(4) var<uniform> overlay: OverlayParams;
 
 const POINT_COLOR: vec3<f32> = vec3<f32>(0.45, 0.75, 1.0);
-// The weights are log-mass, so mean-relative spread is narrow; squaring widens it enough
-// that massive galaxies read brighter without flat dots elsewhere. Floor keeps every
+// Squaring widens the mean-relative spread so massive galaxies read brighter. Floor keeps every
 // catalog point visible; the cap keeps a giant from blooming under additive blend.
 const WEIGHT_CONTRAST: f32 = 2.0;
 const INTENSITY_FLOOR: f32 = 0.06;
@@ -41,17 +38,17 @@ struct PointVsOut {
 };
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PointVsOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) pointIndex: u32) -> PointVsOut {
   var corners = array<vec2<f32>, 6>(
     vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(-1.0, 1.0),
     vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0)
   );
-  let corner = corners[vi];
-  let ndc = voxelToNdc(cam, vec3<f32>(pointX[ii], pointY[ii], pointZ[ii]));
+  let corner = corners[vertexIndex];
+  let ndc = voxelToNdc(cam, vec3<f32>(pointX[pointIndex], pointY[pointIndex], pointZ[pointIndex]));
 
   var out: PointVsOut;
   out.offset = corner;
-  let wNorm = max(pointWeight[ii] * overlay.weightScale, 0.0);
+  let wNorm = max(pointWeight[pointIndex], 0.0);
   // The user knob folds in HERE, not in the fragment: OverlayParams is bound
   // VERTEX-visible only (the lanes beside it cannot be read by a fragment stage).
   out.intensity =
@@ -76,8 +73,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Point
 @fragment
 fn fs(input: PointVsOut) -> @location(0) vec4<f32> {
   // Round and soft-edged: a hard square this small reads as noise over the trace.
-  let r2 = dot(input.offset, input.offset);
-  let a = input.intensity * clamp(1.0 - r2, 0.0, 1.0);
+  let radiusSq = dot(input.offset, input.offset);
+  let alpha = input.intensity * clamp(1.0 - radiusSq, 0.0, 1.0);
   // Premultiplied — the pass blends one/one, so the alpha lane is carried but never read.
-  return vec4<f32>(POINT_COLOR * a, a);
+  return vec4<f32>(POINT_COLOR * alpha, alpha);
 }

@@ -36,9 +36,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let halfExtent = grid.rMax;
   let cellSize = (2.0 * halfExtent) / f32(dims.x);
   let world = (vec2<f32>(gid.xy) + vec2<f32>(0.5, 0.5)) * cellSize - vec2<f32>(halfExtent, halfExtent);
-  let r = length(world);
+  let radius = length(world);
 
-  if (r > grid.rMax) {
+  if (radius > grid.rMax) {
     textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(1.0, 0.0, 0.0, 0.0)); // square corners only — neutral
     return;
   }
@@ -47,7 +47,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // transform since stage 2 deleted dustDetail.wesl's per-fragment ismMapUv;
   // must match the (az, ring) layout the ismMap passes write and
   // ismMapPresent.wesl's fs resolves through the same grid.
-  let rSample = max(r, grid.rMin); // radial clamp: continuous extension inside rMin
+  let rSample = max(radius, grid.rMin); // radial clamp: continuous extension inside rMin
   let theta = atan2(world.y, world.x);
   let ringT = log(rSample / grid.rMin) / log(grid.rMax / grid.rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);

@@ -50,7 +50,8 @@ describe('checkFrameOrder — boot', () => {
   // simply stop hiding behind terrain. Pinned here rather than eye-checked.
   it('both swap-overlay lines sample foreground:0’s depth', () => {
     const swapLines = FRAME_ORDER.filter(
-      (step): step is RenderStepSpec => step.kind === 'render' && step.target === 'swap',
+      (step): step is RenderStepSpec =>
+        step.kind === 'render' && step.target === 'swap' && !step.passes.includes('letterbox'),
     );
     expect(swapLines).toHaveLength(2);
     for (const line of swapLines) {

@@ -40,7 +40,7 @@ import { type ReactNode } from 'react';
 import type { Tier } from '../../@types/data/Tier';
 import styles from './TierChip.module.css';
 
-type Props = {
+type TierChipProps = {
   /** The currently-active tier — drives the `<select>`'s value. */
   tier: Tier;
   /** Called with the new tier when the user picks a different option. */
@@ -57,7 +57,7 @@ const TIER_OPTIONS: readonly { tier: Tier; label: string }[] = [
   { tier: 'large', label: 'Large' },
 ];
 
-export function TierChip({ tier, onTierChange }: Props): ReactNode {
+export function TierChip({ tier, onTierChange }: TierChipProps): ReactNode {
   return (
     <label className={styles.chip} aria-label="Data tier">
       {/*

@@ -221,7 +221,7 @@ whichever orientation frame is live at clip start, the same mechanism
 live-pose dependency — `forward` alone determines the aim, there is no subject
 to look up and no orbit target read. That is what makes it (not `lookAtId`)
 the right tool for a pose that must be reproducible regardless of where the
-camera happened to be before the clip started: `openingTitle`'s cold open uses
+camera happened to be before the clip started: `youAreHere`'s cold open uses
 it for exactly this reason — a `lookAtId` there would silently depend on
 whatever pose the viewer wandered into before the tour started. `over: 0` is a
 legal snap, same as `aimAt`.
@@ -392,7 +392,7 @@ the panel, the remote and the URL keep the user's own settings. At the end the p
 the default durations; `'keep'` (the tour's beat clips) commits it to intent, so the
 next beat starts from it. The animation between targets (a layer's fade, a pole roll)
 runs in the subsystems that animate a user's own change, started as the clock crosses
-the step. See [ADR 0017](../adrs/0017-clip-scene-is-an-overlay.md).
+the step. See [ADR 0018](../adrs/0018-clip-scene-is-an-overlay.md).
 
 | Helper    | Signature                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

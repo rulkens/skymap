@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { GridBox } from '../../@types/GridBox';
-import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
+import type { GridBox } from '../../@types/grid/GridBox';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 
 /** Full-extent floor — a handle dragged through the box must not invert or zero it. */
 export const MIN_SIZE_MPC = 1;

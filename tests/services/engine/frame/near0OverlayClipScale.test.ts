@@ -9,7 +9,9 @@
 import { describe, expect, it } from 'vitest';
 import { vec4 } from 'wgpu-matrix';
 
-import { near0LabelProjection } from '../../../../src/services/engine/frame/near0LabelProjection';
+import { near0OverlayClipScale } from '../../../../src/services/engine/frame/near0OverlayClipScale';
+import { near0OverlayVpF32 } from '../../../../src/services/engine/frame/near0OverlayVpF32';
+import { rebaseViewProj } from '../../../../src/utils/camera/projection/rebaseViewProj';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
@@ -49,7 +51,11 @@ function ctxAt(camDistanceMpc: number): { ctx: FrameView; near: number; far: num
 
 /** Clip `w` of a point `aheadMpc` along the view axis, through the overlay's upload matrix. */
 function clipW(ctx: FrameView, aheadMpc: number): number {
-  const { vpF32 } = near0LabelProjection(ctx);
+  const slab = ctx.slabs[NEAR0]!;
+  const vpF32 = near0OverlayVpF32(
+    rebaseViewProj(slab.vp, ctx.drawCamPos),
+    near0OverlayClipScale(slab.near),
+  );
   // The overlay matrices are rebased about the camera: positions are eye-relative.
   return vec4.transformMat4([0, 0, aheadMpc, 1], vpF32)[3]!;
 }
@@ -72,9 +78,4 @@ describe('near0OverlayClipScale', () => {
       }
     },
   );
-
-  it('hands the label draw the same scale the matrix carries', () => {
-    const { ctx, near } = ctxAt(1e-9);
-    expect(near0LabelProjection(ctx).clipScale * near).toBeCloseTo(1, 12);
-  });
 });
