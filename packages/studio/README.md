@@ -26,7 +26,7 @@ Concern modules first, role folders inside (ADR 0014's shape):
 
 ```
 src/
-  studioEntry.ts   the chunk's only entry: StudioDock + studioSessionSaga
+  studioEntry.ts   the chunk's only entry: StudioDockContainer + studioSessionSaga
   @types/          cross-module contract types (session/, rows/, kinds/), one per .d.ts
   data/            cross-module data (channel families)
   utils/format/    naming-table formatters
@@ -38,6 +38,7 @@ src/
   primitives/      glyphs, tooltip, key chip, inspector grid
   inspector/       field controls and the inspector panel
   shell/           dock, top bar, transport controls, key bar, key table
+  containers/      the store wiring, by concern: each <Name>Container selects and dispatches for <Name>
 ```
 
 ## Boundary
@@ -50,6 +51,6 @@ those live in the main chunk, so the lazy chunk depends on main and never the re
 Its state is a slice injected into the app's root reducer when the chunk loads (ADR 0017): the
 selectors module calls `injectInto`, and every read goes through those selectors, since the app's
 `RootState` does not know the slice.
-Components read the store through `src/store/hooks.ts`, never `react-redux`, and nothing imports
-the design mocks under `src/dev/`. `tests/conventions/studioImportBoundary.test.ts` enforces all of
-this.
+Only `containers/` reads the store, through `src/store/hooks.ts`, never `react-redux`; components
+take props (`tests/conventions/storeBoundary.test.ts`). Nothing imports the design mocks under
+`src/dev/`. `tests/conventions/studioImportBoundary.test.ts` enforces the rest.

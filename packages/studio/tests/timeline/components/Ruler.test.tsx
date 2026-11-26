@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
-import Ruler from '../../../src/timeline/components/Ruler/Ruler';
+import RulerContainer from '../../../src/containers/timeline/RulerContainer';
 import { selectPlayheadSec, selectTransport } from '../../../src/session/state/selectors';
 import { played } from '../../../src/session/state/studioSlice';
 import { selectTimeline } from '../../../src/timeline/state/selectTimeline';
@@ -20,7 +20,7 @@ function mount(window = WINDOW) {
   const store = openStudioStore({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
   render(
     <Provider store={store}>
-      <Ruler timeline={selectTimeline(store.getState())!} window={window} />
+      <RulerContainer timeline={selectTimeline(store.getState())!} window={window} />
     </Provider>,
   );
   const ruler = screen.getByLabelText('Timeline ruler');

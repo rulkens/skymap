@@ -1,44 +1,49 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
-import ClipPicker from '../ClipPicker/ClipPicker';
-import ZoomControls from '../../../timeline/components/ZoomControls/ZoomControls';
-import TransportControls from '../TransportControls/TransportControls';
+import ClipPickerContainer from '../../../containers/shell/ClipPickerContainer';
+import TransportControlsContainer from '../../../containers/shell/TransportControlsContainer';
+import ZoomControlsContainer from '../../../containers/timeline/ZoomControlsContainer';
 import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
-import { exitTakeover } from '../../../../../../src/state/takeover/takeoverActions';
-import { redone, undone } from '../../../session/state/studioSlice';
-import {
-  selectCurrentResolution,
-  selectIsDirty,
-  selectRedoLabel,
-  selectStudioClipId,
-  selectUndoLabel,
-} from '../../../session/state/selectors';
-import { selectFailureLine } from '../../state/selectFailureLine';
-import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
+import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
+import type { StudioResolution } from '../../../@types/session/StudioResolution';
 import s from './TopBar.module.css';
 
 type TopBarProps = {
   readonly keysOpen: boolean;
   readonly onToggleKeys: () => void;
+  readonly clipId: ClipId | null;
+  readonly resolution: StudioResolution | null;
+  /** Why the current revision cannot play; null while it resolves or once it compiles. */
+  readonly failure: string | null;
+  readonly dirty: boolean;
+  readonly undoLabel: string | null;
+  readonly redoLabel: string | null;
+  readonly onUndo: () => void;
+  readonly onRedo: () => void;
+  readonly onClose: () => void;
 };
 
 /** Three groups aligned with the dock's columns below: the clip and its state | transport, zoom | undo, keys, close. */
-function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
-  const dispatch = useAppDispatch();
-  const clipId = useAppSelector(selectStudioClipId);
-  const resolution = useAppSelector(selectCurrentResolution);
-  const failure = useAppSelector(selectFailureLine);
-  const dirty = useAppSelector(selectIsDirty);
-  const undoLabel = useAppSelector(selectUndoLabel);
-  const redoLabel = useAppSelector(selectRedoLabel);
-
+function TopBar({
+  keysOpen,
+  onToggleKeys,
+  clipId,
+  resolution,
+  failure,
+  dirty,
+  undoLabel,
+  redoLabel,
+  onUndo,
+  onRedo,
+  onClose,
+}: TopBarProps) {
   const resolving = failure === null && resolution === null;
 
   return (
     <header className={s.root} aria-label="Clip">
       <div className={s.left}>
-        {clipId !== null && <ClipPicker clipId={clipId} />}
+        {clipId !== null && <ClipPickerContainer clipId={clipId} />}
         <span className={s.tag}>Hand-written</span>
         {failure !== null ? (
           <span className={s.alert} role="alert">
@@ -61,8 +66,8 @@ function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
         )}
       </div>
       <div className={s.centre}>
-        <TransportControls />
-        <ZoomControls />
+        <TransportControlsContainer />
+        <ZoomControlsContainer />
       </div>
       <div className={s.right}>
         <StudioTip name="Undo" keys={['⌘', 'Z']} state={undoLabel ?? undefined}>
@@ -70,7 +75,7 @@ function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
             size="compact"
             aria-label={undoLabel === null ? 'Undo' : `Undo ${undoLabel}`}
             disabled={undoLabel === null}
-            onClick={() => dispatch(undone())}
+            onClick={onUndo}
           >
             <Glyph id="undo" size={16} />
           </Button>
@@ -80,7 +85,7 @@ function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
             size="compact"
             aria-label={redoLabel === null ? 'Redo' : `Redo ${redoLabel}`}
             disabled={redoLabel === null}
-            onClick={() => dispatch(redone())}
+            onClick={onRedo}
           >
             <Glyph id="redo" size={16} />
           </Button>
@@ -97,7 +102,7 @@ function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
           </Button>
         </StudioTip>
         <StudioTip name="Close studio" keys={['Esc']}>
-          <Button size="compact" aria-label="Close studio" onClick={() => dispatch(exitTakeover())}>
+          <Button size="compact" aria-label="Close studio" onClick={onClose}>
             <CloseIcon size={16} />
           </Button>
         </StudioTip>

@@ -15,7 +15,7 @@ import {
 import { setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
 import { setLabelsFocusedOnly } from '../../../../../src/state/settings/core/labelsSlice';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
-import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
+import FieldRowContainer from '../../../src/containers/inspector/FieldRowContainer';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
 import { openStudioStore } from '../../helpers/openStudioStore';
@@ -41,7 +41,7 @@ function setup(draft: ClipData, kind: RowKind, rowRef: RowRef, fieldKey: string)
   const subject = rowSubject(selectDraft(store.getState())!, rowRef)!;
   render(
     <Provider store={store}>
-      <FieldRow spec={spec} subject={subject} rowRef={rowRef} />
+      <FieldRowContainer spec={spec} subject={subject} rowRef={rowRef} />
     </Provider>,
   );
   return store;

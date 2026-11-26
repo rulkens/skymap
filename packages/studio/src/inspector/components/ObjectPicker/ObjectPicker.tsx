@@ -1,13 +1,14 @@
 import { useId, useMemo, useState, type KeyboardEvent } from 'react';
 import cx from 'classnames';
-import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import { objectMatches } from '../../../kinds/utils/object/objectMatches';
 import { wrapIndex } from '../../../../../../src/components/CommandPalette/utils/wrapIndex';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 import type { ObjectMatch } from '../../../@types/kinds/ObjectMatch';
 import s from './ObjectPicker.module.css';
 
 type ObjectPickerProps = {
   readonly label: string;
+  readonly objects: ObjectIndex;
   /** What the field reads while not typing: the object's name, or the position it stored. */
   readonly value: string;
   /** A pick still being located, or one whose object never loaded. */
@@ -21,13 +22,15 @@ type ObjectPickerProps = {
  * Picks an object by name with the app's own search: type to filter, ↑/↓, Enter picks, Escape puts
  * the value back (a second Escape leaves the field). The list opens in place, like LayerPickField.
  */
-function ObjectPicker({ label, value, pending, onPick, onClear }: ObjectPickerProps) {
-  const index = useObjectIndex();
+function ObjectPicker({ label, objects, value, pending, onPick, onClear }: ObjectPickerProps) {
   const listId = useId();
   const [query, setQuery] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const typed = query?.trim() ?? '';
-  const matches = useMemo(() => (typed === '' ? [] : objectMatches(index, typed)), [index, typed]);
+  const matches = useMemo(
+    () => (typed === '' ? [] : objectMatches(objects, typed)),
+    [objects, typed],
+  );
   // Null is None: offered only while the field is emptied, never beside search results.
   const options: readonly (ObjectMatch | null)[] =
     onClear !== undefined && query !== null && typed === '' ? [null] : matches;

@@ -10,25 +10,26 @@ import { rulerSteps } from '../../utils/ruler/rulerSteps';
 import { timeToPercent } from '../../utils/window/timeToPercent';
 import { AFTER_END_CAPTION_PX, EPSILON, HEAD_WIDTH_PX, TICK_LABEL_PX } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
-import { selectPlayheadSec } from '../../../session/state/selectors';
-import { selectShownLoop } from '../../state/selectShownLoop';
-import { useAppSelector } from '../../../../../../src/store/hooks';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { ChannelFamily } from '../../../@types/rows/ChannelFamily';
 import type { Timeline } from '../../../@types/rows/Timeline';
+import type { ClipSpan } from '../../../../../../src/@types/animation/ClipSpan';
+import type { RulerScrub } from '../../@types/RulerScrub';
 import s from './Ruler.module.css';
 
 type RulerProps = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
+  readonly playheadSec: number;
+  /** The span Loop tints; null while Loop is off. */
+  readonly looped: ClipSpan | null;
+  readonly scrub: RulerScrub;
 };
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the looped span, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window }: RulerProps) {
-  const playheadSec = useAppSelector(selectPlayheadSec);
-  const looped = useAppSelector(selectShownLoop);
-  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);
+function Ruler({ timeline, window, playheadSec, looped, scrub }: RulerProps) {
+  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs, scrub);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;
   const { major, minor } = rulerSteps(span, trackPx);

@@ -31,6 +31,15 @@ const SCOPES: readonly Scope[] = [
     compositionRoots: ['tools/mcpm-workbench/src/ui/App/App.tsx'],
     allowed: [],
   },
+  {
+    name: 'clip studio',
+    roots: ['packages/studio/src'],
+    containers: ['packages/studio/src/containers'],
+    storeModules: ['src/store/hooks', 'react-redux'],
+    // Mounted inside the app's <Provider>; the package builds no store of its own.
+    compositionRoots: [],
+    allowed: [],
+  },
 ];
 
 /** The store modules `file` imports or re-exports; a relative specifier is resolved first. */

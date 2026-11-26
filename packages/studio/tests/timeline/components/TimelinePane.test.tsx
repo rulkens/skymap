@@ -13,7 +13,7 @@ import {
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
-import TimelinePane from '../../../src/timeline/components/TimelinePane/TimelinePane';
+import TimelinePaneContainer from '../../../src/containers/timeline/TimelinePaneContainer';
 import { draftResolved, playheadSet, viewportSet } from '../../../src/session/state/studioSlice';
 import {
   selectCollapsed,
@@ -50,7 +50,7 @@ const mount = (draft: ClipData, resolved?: ClipData) => {
     store.dispatch(draftResolved({ revision: selectRevision(store.getState()), data: resolved }));
   render(
     <Provider store={store}>
-      <TimelinePane />
+      <TimelinePaneContainer />
     </Provider>,
   );
   return store;
