@@ -9,6 +9,7 @@ export const MCPM_WORKBENCH_ENTRY = {
   bearsMarker: false,
   binBaseName: 'mcpm-workbench',
   tiered: false, // one cube per workbench run; no per-tier variants
+  priority: 82,
   // Same physical quantity as MCPM/Polyphorm2MRS (log-normalized MCPM trace
   // density), so its presentation defaults mirror theirs — distinct palette
   // (magma, where the two shipping runs both use inferno) so a promoted

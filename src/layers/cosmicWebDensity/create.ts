@@ -15,9 +15,7 @@ import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createBlueNoiseMask } from '../../services/gpu/resources/createBlueNoiseMask';
 import { createVolumeFieldRenderer } from '../../services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';
-import { MCPM_ENTRY } from './sources/mcpm';
-import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
-import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
 import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
 import { createCosmicWebDensityFetcher } from './densityCubes/load/createCosmicWebDensityFetcher';
 
@@ -38,10 +36,12 @@ export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
     renderer,
     upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
     jitterMask,
-    slots: {
-      mcpm: createCosmicWebDensitySlot(MCPM_ENTRY, slotDeps),
-      'polyphorm-2mrs': createCosmicWebDensitySlot(POLYPHORM_2MRS_ENTRY, slotDeps),
-      'mcpm-workbench': createCosmicWebDensitySlot(MCPM_WORKBENCH_ENTRY, slotDeps),
-    },
+    // `Object.fromEntries` widens keys to `string`; the rows tuple names every field id.
+    slots: Object.fromEntries(
+      COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
+        entry.id,
+        createCosmicWebDensitySlot(entry, slotDeps),
+      ]),
+    ) as CosmicWebDensityRuntime['slots'],
   };
 }

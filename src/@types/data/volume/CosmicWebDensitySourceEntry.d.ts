@@ -26,4 +26,6 @@ export type CosmicWebDensitySourceEntry = SourceEntryBase &
      * untiered; MCPM itself is per-tier).
      */
     readonly tiered: boolean;
+    /** Asset-queue rank of this row's cube (`AssetWiringRow.priority`). */
+    readonly priority: number;
   };

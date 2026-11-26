@@ -5,16 +5,9 @@
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { CosmicWebDensityAssetKey } from '../../@types/CosmicWebDensityAssetKey';
-import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
-
-const PRIORITY: Record<CosmicWebDensityFieldId, number> = {
-  mcpm: 70, // the largest single boot payload, and it only reads at the widest rung
-  'polyphorm-2mrs': 82, // default-off, so it rarely competes at boot
-  'mcpm-workbench': 82,
-};
 
 export function cosmicWebDensityAssetRows(
   runtime: CosmicWebDensityRuntime,
@@ -30,7 +23,7 @@ export function cosmicWebDensityAssetRows(
           ? { binBaseName: entry.binBaseName, tier }
           : { binBaseName: entry.binBaseName },
       demand: { near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 } },
-      priority: PRIORITY[entry.id],
+      priority: entry.priority,
       gates: { address: 'cosmicWebDensity', item: entry.id },
     }),
   );

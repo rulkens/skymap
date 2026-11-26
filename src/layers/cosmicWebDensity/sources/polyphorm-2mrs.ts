@@ -9,6 +9,7 @@ export const POLYPHORM_2MRS_ENTRY = {
   bearsMarker: false,
   binBaseName: 'polyphorm-2mrs',
   tiered: true, // small / medium / large `.scfd` variants
+  priority: 82, // default-off, so it rarely competes at boot
   // Same physical quantity as MCPM (log-normalized MCPM trace density), so its
   // presentation defaults mirror MCPM's — INCLUDING the palette. The two are
   // shown together (the Cosmic Web view enables both) to close the sky MCPM's

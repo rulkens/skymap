@@ -302,7 +302,7 @@ readonly priority: number;   // mcpm 70, polyphorm-2mrs 82, mcpm-workbench 82 (t
 
 Steps:
 
-- [ ] As above. `npm run typecheck:fast`; `npm test -- cosmicWebDensity`.
+- [x] As above. `npm run typecheck:fast`; `npm test -- cosmicWebDensity`.
 
 **Commit:** `Density slots and asset priorities come from the source rows`
 
