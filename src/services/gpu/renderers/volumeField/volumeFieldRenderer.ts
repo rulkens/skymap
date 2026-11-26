@@ -357,7 +357,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
       // 256..259  steps            (f32; inputs.steps)
       // 260..263  gain             (f32; from the volume)
-      // 264..267  maxLod           (f32; the volume's mipLevelCount − 1)
+      // 264..267  _pad0
       // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
       // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
       // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
@@ -412,7 +412,6 @@ export function createVolumeFieldRenderer<Id extends string>({
         scratch[63] = jitterIndex;
         scratch[64] = inputs.steps;
         scratch[65] = e.volume.gain;
-        scratch[66] = e.volume.texture.mipLevelCount - 1;
         scratch[67] = e.volume.placement.voxelSize;
         scratch.set(e.volume.nativeBox.offset, 68);
         scratch.set(e.volume.nativeBox.scale, 72);

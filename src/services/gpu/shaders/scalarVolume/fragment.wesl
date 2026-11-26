@@ -91,7 +91,7 @@ struct VolumeUniforms {
   // March steps per ray (an integer, exact in f32).
   steps: f32,
   gain: f32,
-  maxLod: f32,
+  _pad0: f32,
   baseVoxelMpc: f32,
   // The stored box inside the native grid's [0,1]³ (GpuVolume.nativeBox).
   nativeBoxOffset: vec3<f32>,
@@ -228,6 +228,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
                        / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
   // Opacity and the envelope stay in native-grid units, so a cropped box looks like the whole grid.
   let nativeStepLength = stepLength * length(uniforms.nativeBoxScale * rayDirLocal);
+  let maxLod = f32(textureNumLevels(volume) - 1u);
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
   for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {
@@ -235,7 +236,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
     // textureSample's implicit derivatives are undefined.
-    let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, uniforms.maxLod);
+    let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
     let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the

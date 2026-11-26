@@ -23,7 +23,6 @@ const VOLUME: GpuVolume = {
   texture: {
     createView: () => ({}),
     destroy: () => {},
-    mipLevelCount: 4,
   } as unknown as GPUTexture,
   placement: {
     dims: [4, 5, 6],
@@ -118,13 +117,12 @@ describe('VolumeUniforms layout', () => {
       jitterIndex: [409],
       steps: [410],
       gain: [417],
-      maxLod: [3],
       baseVoxelMpc: [7],
       nativeBoxOffset: [411, 412, 413],
       nativeBoxScale: [414, 415, 416],
     };
     for (const { name, type, offset } of struct.fields) {
-      if (type === 'CameraUniforms') continue;
+      if (type === 'CameraUniforms' || name.startsWith('_pad')) continue;
       const expected = sentinels[name];
       if (!expected) throw new Error(`no sentinel for field '${name}'`);
       const at = offset / 4;
