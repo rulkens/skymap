@@ -10,7 +10,7 @@ import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 // staying code must be reported as `shared` so `extract` blocks instead of
 // silently orphaning the remaining references.
 function classifiedFor(source: string, symbol = 'A') {
-  const project = new Project({ useInMemoryFileSystem: true });
+  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
   project.createSourceFile('/src/mod.ts', source);
   return classifyLocalDeps(resolveSymbol(project, { file: '/src/mod.ts', symbol }));
 }
