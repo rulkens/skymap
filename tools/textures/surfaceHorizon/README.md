@@ -14,8 +14,9 @@ npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]
   coarser than z2, the small globe image's source. Tile z is baked as its 16 sub-tiles at z + 2,
   each a 33-post march, and assembled; a sub-tile under 1° everywhere stores byte 0, and where one
   has no heights of its own (around a regional band) its reads fall back to coarser levels. A tile
-  with no height tile under any of its 16 sub-tiles is not baked: it would hold only fallback
-  marches, so the runtime reads its ancestor instead and never requests it once the level's index
+  with no height tile under any of its 16 sub-tiles is not baked: it has no height data of its own,
+  so the runtime reads its ancestor instead (shadows cast into it from across a regional band's edge
+  come out at the ancestor's coarser density) and never requests it once the level's index
   has landed. The manifest gets one `horizon` row per height band at those levels; the height
   rows carry none.
 - **`--band`** indexes `manifest.json`'s bands with heights. Without it every band bakes.

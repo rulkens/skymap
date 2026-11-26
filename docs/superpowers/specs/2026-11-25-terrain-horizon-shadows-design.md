@@ -76,8 +76,9 @@ three products.
   So a leaf at or above its band's horizon max reads its own tile at z + 2 density, and a deeper
   leaf reads a sub-rect of the max level, at the heights' own density, never finer.
 - **Tile set.** A tile exists only where at least one of its 16 sub-tiles has a height tile of
-  its own. One without would be marched entirely on coarser fallback heights, which its ancestor
-  tile already carries, so the leaf reads the ancestor's sub-rect instead (§5).
+  its own. One without has no height data of its own, so the leaf reads the ancestor's sub-rect
+  instead (§5). Shadows cast into it from across a regional band's edge come out at the
+  ancestor's coarser density.
 - **Value.** The horizon elevation angle per post in 16 sectors, sector k centred on azimuth
   k·22.5° clockwise from local north. Each angle is one byte on a piecewise map: −3…27° over
   bytes 0–204 (0.147° steps, under the Mars sun radius), 27…90° over 205–255. The map lives in
