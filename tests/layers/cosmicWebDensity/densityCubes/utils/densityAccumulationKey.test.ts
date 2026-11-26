@@ -42,7 +42,7 @@ describe('densityAccumulationKey', () => {
 
   it('every settings member moves the key', () => {
     // A member missing from the key freezes the converged image on a slider change at rest;
-    // iterating the type's own keys covers a member added later.
+    // the literal's keys, which TS forces complete, cover a member added later.
     const base = keyOf();
     for (const member of Object.keys(settings()) as (keyof VolumeFieldSettings)[]) {
       const changed: Record<string, unknown> = { ...settings() };

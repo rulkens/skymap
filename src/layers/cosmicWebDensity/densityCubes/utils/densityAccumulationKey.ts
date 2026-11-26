@@ -2,7 +2,7 @@
  * densityAccumulationKey — every input outside the view that the density running mean depends on,
  * as one exact string: a change restarts the mean. Numbers are never rounded, so a fade in flight
  * restarts every frame. A `VolumeFieldSettings` member left out here would freeze the converged
- * image on that slider at rest (its test iterates the type's keys).
+ * image on that slider at rest (its test moves each key of a settings literal TS forces complete).
  */
 
 import type { Tier } from '../../../../@types/data/Tier';

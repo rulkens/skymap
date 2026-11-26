@@ -42,8 +42,7 @@ const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
   alpha: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
 };
 
-// The decay draw scales the whole target by (1 − w) once per draw, ahead of every field: a decay
-// per field would fade the fields drawn before it. Single site, like the blend above.
+// Once per draw, never per field (that would fade the fields drawn before it). Single site too.
 const DECAY_COMPONENT: GPUBlendComponent = {
   srcFactor: 'zero',
   dstFactor: 'one-minus-constant',

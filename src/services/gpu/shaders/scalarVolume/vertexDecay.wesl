@@ -1,5 +1,4 @@
-// The decay draw's covering triangle: one pass over the whole density target
-// ahead of the field marches (see decayFragment.wesl).
+// The decay draw's covering triangle (see volumeFieldRenderer.ts).
 
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;

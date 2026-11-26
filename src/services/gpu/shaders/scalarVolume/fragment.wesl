@@ -164,7 +164,7 @@ fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) 
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
   // Trim cuts a fraction of what survives contrast's deadband, so it
-  // bites from just above 0 (a max() hid it behind the deadband).
+  // bites from just above 0.
   let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
   let trimDeadband = clamp(trim, 0.0, 0.95);
   let deadband = contrastDeadband + trimDeadband * (1.0 - contrastDeadband);
