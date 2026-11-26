@@ -1,0 +1,221 @@
+/**
+ * connectEngineBridge — reaction-table tests. Every case drives the real
+ * `createGalaxyStore` reducer graph (so RTK's own reference-identity
+ * guarantees do the diffing, not a mock) against a fake `GalaxyEngineHandle`
+ * of typed `vi.fn`s. The bridge has no debounce or timer machinery left, so
+ * every assertion is a plain synchronous check after a dispatch — no fake
+ * timers required.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { connectEngineBridge } from '../../../../../tools/galaxy-renderer/src/state/engineBridge';
+import {
+  createGalaxyStore,
+  type AppStore,
+} from '../../../../../tools/galaxy-renderer/src/state/createStore';
+import { paramsPatched } from '../../../../../tools/galaxy-renderer/src/state/slices/galaxySlice';
+import { renderPatched } from '../../../../../tools/galaxy-renderer/src/state/slices/renderSlice';
+import {
+  comparePanelToggled,
+  fitFinished,
+  fitStarted,
+  viewRequested,
+} from '../../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
+import { extrasToggled } from '../../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
+import { autoRotateSet } from '../../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
+import { fieldTuningPatched } from '../../../../../tools/galaxy-renderer/src/state/slices/fieldTuningSlice';
+import { DEFAULT_GALAXY_PARAMS } from '../../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
+import { DEFAULT_RENDER_SETTINGS } from '../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
+import { DEFAULT_LOD_SETTINGS } from '../../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
+import { DEFAULT_EXTRAS_STATE } from '../../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
+import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
+import type { GalaxyEngineHandle } from '../../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
+
+type EngineMocks = {
+  readonly setParams: ReturnType<typeof vi.fn<GalaxyEngineHandle['setParams']>>;
+  readonly setRender: ReturnType<typeof vi.fn<GalaxyEngineHandle['setRender']>>;
+  readonly setFieldTuning: ReturnType<typeof vi.fn<GalaxyEngineHandle['setFieldTuning']>>;
+  readonly setView: ReturnType<typeof vi.fn<GalaxyEngineHandle['setView']>>;
+  readonly setAutoRotate: ReturnType<typeof vi.fn<GalaxyEngineHandle['setAutoRotate']>>;
+  readonly setInsets: ReturnType<typeof vi.fn<GalaxyEngineHandle['setInsets']>>;
+  readonly setExtras: ReturnType<typeof vi.fn<GalaxyEngineHandle['setExtras']>>;
+};
+
+function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
+  const mocks: EngineMocks = {
+    setParams: vi.fn<GalaxyEngineHandle['setParams']>().mockResolvedValue(undefined),
+    setRender: vi.fn<GalaxyEngineHandle['setRender']>(),
+    setFieldTuning: vi.fn<GalaxyEngineHandle['setFieldTuning']>(),
+    setView: vi.fn<GalaxyEngineHandle['setView']>(),
+    setAutoRotate: vi.fn<GalaxyEngineHandle['setAutoRotate']>(),
+    setInsets: vi.fn<GalaxyEngineHandle['setInsets']>(),
+    setExtras: vi.fn<GalaxyEngineHandle['setExtras']>().mockResolvedValue(undefined),
+  };
+  const engine: GalaxyEngineHandle = {
+    ...mocks,
+    step: vi.fn<GalaxyEngineHandle['step']>(),
+    sample: vi
+      .fn<GalaxyEngineHandle['sample']>()
+      .mockResolvedValue({ mean: 0, max: 0, litPct: 0, stars: 0 }),
+    grab: vi
+      .fn<GalaxyEngineHandle['grab']>()
+      .mockResolvedValue({ S: 0, data: new Uint8ClampedArray() }),
+    getCamera: vi.fn<GalaxyEngineHandle['getCamera']>().mockReturnValue({ az: 0, el: 0, dist: 1 }),
+    getIsmMapTexture: vi.fn<GalaxyEngineHandle['getIsmMapTexture']>(),
+    getIsmMapData: vi.fn<GalaxyEngineHandle['getIsmMapData']>(),
+    // Nothing under test here ever reaches `handle.probe` (debug-only, sole
+    // consumer is probeGpuErrors.ts) — an empty stand-in satisfies the type.
+    probe: {} as GalaxyEngineHandle['probe'],
+    dispose: vi.fn<GalaxyEngineHandle['dispose']>(),
+  };
+  return { engine, mocks };
+}
+
+describe('connectEngineBridge', () => {
+  let store: AppStore;
+
+  beforeEach(() => {
+    store = createGalaxyStore();
+  });
+
+  it('render changes call setRender immediately and never setParams', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    store.dispatch(renderPatched({ exposure: 1.5 }));
+
+    expect(mocks.setRender).toHaveBeenCalledTimes(2); // initial sync + this change
+    expect(mocks.setRender).toHaveBeenLastCalledWith({
+      ...DEFAULT_RENDER_SETTINGS,
+      exposure: 1.5,
+      ...DEFAULT_LOD_SETTINGS,
+    });
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
+
+    disconnect();
+  });
+
+  it('view intent fires setView once per nonce', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    const pose = { az: 0.6, el: 0.3, dist: 4 };
+
+    store.dispatch(viewRequested(pose));
+    expect(mocks.setView).toHaveBeenCalledTimes(1);
+    expect(mocks.setView).toHaveBeenLastCalledWith(pose);
+
+    // Unrelated dispatch must not re-fire setView.
+    store.dispatch(autoRotateSet(false));
+    expect(mocks.setView).toHaveBeenCalledTimes(1);
+
+    // Same pose, but a fresh request (nonce bump) fires again.
+    store.dispatch(viewRequested(pose));
+    expect(mocks.setView).toHaveBeenCalledTimes(2);
+    expect(mocks.setView).toHaveBeenLastCalledWith(pose);
+
+    disconnect();
+  });
+
+  it('extras enable → immediate setExtras; disable → setExtras([])', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const rng = mulberry32(7);
+    const disconnect = connectEngineBridge(store, engine, { rng });
+
+    store.dispatch(extrasToggled(true));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
+    expect(mocks.setExtras.mock.calls[0]![0]).toHaveLength(DEFAULT_EXTRAS_STATE.count);
+
+    store.dispatch(extrasToggled(false));
+    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
+    expect(mocks.setExtras).toHaveBeenLastCalledWith([]);
+
+    disconnect();
+  });
+
+  it('params changes during compare.fitting still forward to the engine', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+
+    store.dispatch(fitStarted());
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 9 } }));
+    expect(mocks.setParams).toHaveBeenCalledTimes(2);
+    expect(mocks.setParams).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shared: expect.objectContaining({ armCount: 9 }) }),
+    );
+
+    store.dispatch(fitFinished());
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 10 } }));
+    expect(mocks.setParams).toHaveBeenCalledTimes(3);
+    expect(mocks.setParams).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shared: expect.objectContaining({ armCount: 10 }) }),
+    );
+
+    disconnect();
+  });
+
+  it('fieldTuning slice change calls setFieldTuning with the new object; an unrelated slice change does not', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(1); // initial sync only
+
+    const patchedTuning = { ...DEFAULT_GALAXY_FIELD_TUNING, disc: { enabled: false } };
+    store.dispatch(fieldTuningPatched(patchedTuning));
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(2);
+    expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(patchedTuning);
+
+    // Unrelated dispatch must not re-fire setFieldTuning — the bridge gates
+    // on `next.fieldTuning !== prev.fieldTuning` (reference identity), and
+    // this dispatch changes neither that slice nor render.dustCloudEnabled.
+    store.dispatch(renderPatched({ exposure: 1.5 }));
+    expect(mocks.setFieldTuning).toHaveBeenCalledTimes(2);
+
+    disconnect();
+  });
+
+  it('the DUST CLOUD pill zeroes dust.cloud.count for the engine while the store keeps the user count', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+
+    const userCount = 12345;
+    store.dispatch(
+      fieldTuningPatched({
+        dust: {
+          ...DEFAULT_GALAXY_FIELD_TUNING.dust,
+          cloud: { ...DEFAULT_GALAXY_FIELD_TUNING.dust.cloud, count: userCount },
+        },
+      }),
+    );
+    store.dispatch(renderPatched({ dustCloudEnabled: false }));
+
+    expect(mocks.setFieldTuning).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dust: expect.objectContaining({ cloud: expect.objectContaining({ count: 0 }) }),
+      }),
+    );
+    // The pill patches only the OUTGOING copy — the stored slice still shows
+    // what the sliders display, so re-enabling the pill restores it exactly.
+    expect(store.getState().fieldTuning.dust.cloud.count).toBe(userCount);
+
+    disconnect();
+  });
+
+  it('disconnect silences everything', () => {
+    const { engine, mocks } = makeFakeEngine();
+    const disconnect = connectEngineBridge(store, engine);
+    disconnect();
+
+    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 2 } }));
+    store.dispatch(renderPatched({ exposure: 2 }));
+    store.dispatch(autoRotateSet(false));
+    store.dispatch(comparePanelToggled());
+    store.dispatch(extrasToggled(true));
+
+    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
+    expect(mocks.setRender).toHaveBeenCalledTimes(1);
+    expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
+    expect(mocks.setInsets).toHaveBeenCalledTimes(1);
+    expect(mocks.setExtras).toHaveBeenCalledTimes(0);
+  });
+});
