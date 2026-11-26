@@ -1,7 +1,8 @@
 /**
- * The bake must write exactly the horizon tiles the runtime requests (`surfaceTileInBand` over the
- * band two levels up): one it skips is fetched and fails for the session, one coarser than the
- * globe images' lowest source level is a file nothing reads.
+ * The bake writes a horizon tile only where at least one of its 16 sub-tiles has heights of its
+ * own: an all-fallback tile carries nothing its ancestor lacks, so it stays out of the archive and
+ * the runtime reads the ancestor for it (`SurfaceTileResidency.isMissing`). A tile the runtime never
+ * requests, or one coarser than the globe images' lowest source level, is a file nothing reads.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -28,22 +29,38 @@ function claimed(band: SurfaceTileManifestBand, min: number, max: number): strin
   return tiles.sort();
 }
 
-function bakedFrom(band: SurfaceTileManifestBand): string[] {
-  const index = claimed(band, band.min, band.max).map((tile) => `${PREFIX}/height/${tile}.webp`);
+function bakedFrom(band: SurfaceTileManifestBand, heights: readonly string[]): string[] {
+  const index = heights.map((tile) => `${PREFIX}/height/${tile}.webp`);
   return horizonTilesOfBand(index, PREFIX, band, TILE_PX)
     .map(({ z, x, y }) => `${z}/${x}/${y}`)
     .sort();
 }
 
+/** Whether any of tile `z/x/y`'s 16 descendants two levels down is in `heights`. */
+function hasOwnHeights(tile: string, heights: ReadonlySet<string>): boolean {
+  const [z, x, y] = tile.split('/').map(Number) as [number, number, number];
+  for (let q = 0; q < 16; q++) {
+    if (heights.has(`${z + 2}/${4 * x + (q & 3)}/${4 * y + (q >> 2)}`)) return true;
+  }
+  return false;
+}
+
 describe('horizonTilesOfBand', () => {
-  it('yields the tiles the runtime requests two levels above a regional band', () => {
+  it('bakes the requestable tiles two levels above a regional band that have heights of their own', () => {
     const band = {
       bounds: { west: 10.3, east: 12.9, south: 40.2, north: 41.7 },
       min: 6,
       max: 8,
       builtFrom: { height: SOURCE },
     };
-    expect(bakedFrom(band)).toEqual(claimed(band, 4, 6));
+    const heights = claimed(band, band.min, band.max);
+    const own = new Set(heights);
+    const requestable = claimed(band, 4, 6);
+
+    expect(requestable.filter((tile) => !hasOwnHeights(tile, own)).length).toBeGreaterThan(0);
+    expect(bakedFrom(band, heights)).toEqual(
+      requestable.filter((tile) => hasOwnHeights(tile, own)),
+    );
   });
 
   it("starts the global band's horizon at the small globe image's level, z2", () => {
@@ -53,6 +70,6 @@ describe('horizonTilesOfBand', () => {
       max: 4,
       builtFrom: { height: SOURCE },
     };
-    expect(bakedFrom(band)).toEqual(claimed(band, 2, 2));
+    expect(bakedFrom(band, claimed(band, band.min, band.max))).toEqual(claimed(band, 2, 2));
   });
 });
