@@ -1,4 +1,5 @@
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../data/gpu/textureBytesPerTexel';
+import { levelByteLength } from './levelByteLength';
 
 // Module-level, not per-call: a format missing from the table warns ONCE across
 // the whole session rather than once per texture (which would be every frame
@@ -36,7 +37,7 @@ export function textureByteSize(descriptor: GPUTextureDescriptor): number {
   let d = depth;
   let total = 0;
   for (let mip = 0; mip < mipLevelCount; mip++) {
-    total += w * h * d * bytesPerTexel;
+    total += levelByteLength(w, h, d, bytesPerTexel);
     w = Math.max(1, w >> 1);
     h = Math.max(1, h >> 1);
     if (is3d) d = Math.max(1, d >> 1);

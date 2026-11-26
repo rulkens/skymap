@@ -24,7 +24,7 @@ import {
   decodeGalaxyCatalog,
   GALAXY_CATALOG_FIELD_SPECS,
 } from '../../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
-import { FormatVersionError } from '../../../../../src/data/formatVersionError';
+import { FormatVersionError } from '../../../../../packages/shared/src/data/formatVersionError';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 const BYTES_PER_GALAXY = 64;

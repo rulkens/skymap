@@ -47,6 +47,8 @@ const KIND_CFG = {
   normal: { binding: 5, placeholder: [128, 128, 255, 255] },
   // No cloud: coverage 0 keeps the fragment's cloud shadow and night occlusion inert.
   clouds: { binding: 6, placeholder: [0] },
+  // Byte 0 in every sector: the horizon at −3°, fully lit, the whole sky open.
+  horizon: { binding: 7, placeholder: [0, 0, 0, 0] },
 } as const satisfies Record<TextureKind, { binding: number; placeholder: readonly number[] }>;
 
 /** Every `TextureKind`, in `KIND_CFG` order. */
@@ -102,12 +104,16 @@ function concatCubeSphereFaces(resolution: number): {
   return { positions, uvs, tangents, indices };
 }
 
-/** @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved by `resolveDepthCompare`. */
+/**
+ * @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved by `resolveDepthCompare`.
+ * @param horizonConstants `horizonLookupConstants`, passed to the fragment stage as is.
+ */
 export function createEarthRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
+  horizonConstants: Record<string, GPUPipelineConstantValue>,
 ): EarthRenderer {
   // Tangents (unit +u=east) feed the fragment's tangent-space normal mapping.
   const mesh = concatCubeSphereFaces(CUBESPHERE_FACE_RESOLUTION);
@@ -247,6 +253,7 @@ export function createEarthRenderer(
       fragment: {
         module: fsModule,
         entryPoint: 'fs',
+        constants: horizonConstants,
         targets: [{ format: targetFormat }],
       },
       primitive: {
@@ -264,7 +271,10 @@ export function createEarthRenderer(
   const mirroredPipeline = createPipeline('front');
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    const levels = mipLevelCount(bitmap.width, bitmap.height);
+    // Horizon posts are read by `textureLoad` in their baked row order (north first, 2 × 2
+    // texels each): flipped, the block rows would swap sectors; mipped, nothing reads it.
+    const postLattice = kind === 'horizon';
+    const levels = postLattice ? 1 : mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
       label: `earth-${kind}`,
       size: [bitmap.width, bitmap.height, 1],
@@ -277,12 +287,12 @@ export function createEarthRenderer(
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
     // flipY so v=0 is the south row; the material map is co-registered with the albedo.
-    device.queue.copyExternalImageToTexture({ source: bitmap, flipY: true }, { texture: fresh }, [
-      bitmap.width,
-      bitmap.height,
-      1,
-    ]);
-    generateMipChain(device, fresh);
+    device.queue.copyExternalImageToTexture(
+      { source: bitmap, flipY: !postLattice },
+      { texture: fresh },
+      [bitmap.width, bitmap.height, 1],
+    );
+    if (!postLattice) generateMipChain(device, fresh);
     // Retire ONLY a prior committed texture, never the placeholder underneath.
     committed.get(kind)?.destroy();
     committed.set(kind, fresh);
@@ -331,6 +341,10 @@ export function createEarthRenderer(
     return (committed.get(kind) ?? placeholders.get(kind)!).createView();
   }
 
+  function hasMap(kind: TextureKind): boolean {
+    return committed.has(kind);
+  }
+
   function draw(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
     pass.setPipeline(mirrored ? mirroredPipeline : pipeline);
@@ -361,6 +375,7 @@ export function createEarthRenderer(
     clearMap,
     setPlaceholderMap,
     getMapView,
+    hasMap,
     draw,
     destroy,
   };

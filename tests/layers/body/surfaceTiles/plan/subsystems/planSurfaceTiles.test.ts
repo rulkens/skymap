@@ -86,6 +86,7 @@ function residency(over: Partial<SurfaceTileResidency> = {}): SurfaceTileResiden
     isInFlight: () => false,
     hasFailed: () => false,
     isEmpty: () => false,
+    isMissing: () => false,
     inFlightCount: () => 0,
     engagedBodyId: () => EARTH,
     ...over,
@@ -218,6 +219,23 @@ describe('planSurfaceTiles', () => {
       [SEES_EARTH],
       overBody(EARTH),
       residency({ isEmpty: (t) => t === tiles[0], isInFlight: (t) => t === tiles[0] }),
+      LARGE,
+    );
+
+    expect(plan.touched).toEqual([]);
+    expect(plan.requests.map((r) => r.tile)).toEqual([tiles[1]]);
+    expect(plan.lastPlan).toEqual({ requestCount: 2, zWin: BASE + 1, misses: 1 });
+  });
+
+  it('a tile its level index lacks is neither touched, requested nor counted a miss', () => {
+    // Bug caught: a tile the bake left out (no heights of its own under it) allocated a slot
+    // and fetched again each time LRU reclaims its failed one; its leaf climbs regardless.
+    const tiles = [tile(0, 'horizon'), tile(1, 'horizon')];
+    walk.demand = engagedDemand(tiles);
+    const plan = planSurfaceTiles(
+      [SEES_EARTH],
+      overBody(EARTH),
+      residency({ isMissing: (t) => t === tiles[0] }),
       LARGE,
     );
 

@@ -30,7 +30,7 @@ export class TextureAtlas implements SlotStore {
     this.slotSide = config.slotSide;
     this.label = config.label;
     this.slotsPerRow = this.atlasSide / this.slotSide;
-    this.pool = new SlotPool(this.slotsPerRow * this.slotsPerRow, config.reservedSlots);
+    this.pool = new SlotPool(this.slotsPerRow * this.slotsPerRow);
     this.texture = device.createTexture({
       label: this.label,
       size: [this.atlasSide, this.atlasSide, 1],

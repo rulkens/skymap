@@ -89,8 +89,8 @@ function devSource(entry: TextureSourceRow): TextureSource | null {
 }
 
 /** `TEXTURE_SOURCES` widened to the whole `(bodyId, kind)` key space so the
- *  variable-kind lookup type-checks; every key `ALL_BODY_TEXTURE_KEYS` yields is
- *  populated (same registry behind both), so the `!` holds. */
+ *  variable-kind lookup type-checks; every key `ALL_BODY_TEXTURE_KEYS` yields but
+ *  `horizon` is populated (same registry behind both), so the `!` holds. */
 const SOURCE_TABLE = TEXTURE_SOURCES as Record<
   BodyTextureId | RingTextureId,
   Partial<Record<TextureKind, TextureSourceRow>>
@@ -98,9 +98,10 @@ const SOURCE_TABLE = TEXTURE_SOURCES as Record<
 
 /** One entry per `(body, kind)` texture key, in family-key order. A new map kind
  *  on a body joins via `ALL_BODY_TEXTURE_KEYS`, with no edit here. */
-const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS.map(
-  ({ bodyId, kind }) => SOURCE_TABLE[bodyId][kind]!,
-);
+const TEXTURE_ENTRIES: readonly TextureSourceRow[] = ALL_BODY_TEXTURE_KEYS
+  // `bake-horizon` repacks the horizon tiles; no raw source feeds that map.
+  .filter(({ kind }) => kind !== 'horizon')
+  .map(({ bodyId, kind }) => SOURCE_TABLE[bodyId][kind]!);
 
 /**
  * The sixteen BMNG and Black Marble quadrants the Earth tile pyramid is baked from. No whole-globe

@@ -110,4 +110,4 @@ else
   echo "  See tools/deploy/syncR2Secure.sh for first-time setup, or pre-export CLOUDFLARE_API_TOKEN + CLOUDFLARE_ZONE_ID." >&2
 fi
 
-exec npm run sync-r2
+exec npm run sync-r2 -- "$@"

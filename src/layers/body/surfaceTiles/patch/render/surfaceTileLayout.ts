@@ -14,12 +14,12 @@ import type { PatchInstanceWords } from '../@types/PatchInstanceWords';
 /** Bytes of one `PatchInstance` element. The field table and its ordering
  *  landmine live in `io.wesl`'s header; the layout test's per-field
  *  assertions are the only guard against a reorder on one side alone. */
-export const PATCH_INSTANCE_BYTES = 96;
+export const PATCH_INSTANCE_BYTES = 112;
 
 /** Pack one `PatchInstance` block at byte `base` of `view`. */
 export function writePatchInstance(view: DataView, base: number, words: PatchInstanceWords): void {
   const { originRelEyeM, fadeWeight, anchor, albedoRect, fallbackRect, nightRect } = words;
-  const { heightSlotOrigin, edgeCoarser, heightCells } = words;
+  const { heightSlotOrigin, edgeCoarser, heightCells, horizonRect } = words;
   view.setFloat32(base + 0, originRelEyeM[0], true);
   view.setFloat32(base + 4, originRelEyeM[1], true);
   view.setFloat32(base + 8, originRelEyeM[2], true);
@@ -44,6 +44,10 @@ export function writePatchInstance(view: DataView, base: number, words: PatchIns
   view.setUint32(base + 84, heightSlotOrigin[1] >>> 0, true);
   view.setUint32(base + 88, edgeCoarser >>> 0, true);
   view.setUint32(base + 92, heightCells >>> 0, true);
+  view.setFloat32(base + 96, horizonRect[0], true);
+  view.setFloat32(base + 100, horizonRect[1], true);
+  view.setFloat32(base + 104, horizonRect[2], true);
+  view.setFloat32(base + 108, horizonRect[3], true);
 }
 
 /**
@@ -76,6 +80,7 @@ export function writeSurfaceTileUniforms(
   debugLodOverlay: boolean,
   noDisplacement: boolean,
   noSkirts: boolean,
+  sunAngularRadiusRad: number,
 ): void {
   view.setFloat32(0, vp[0]!, true);
   view.setFloat32(4, vp[1]!, true);
@@ -120,5 +125,5 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(160, debugLodOverlay ? 1.0 : 0.0, true);
   view.setFloat32(164, noDisplacement ? 1.0 : 0.0, true);
   view.setFloat32(168, noSkirts ? 1.0 : 0.0, true);
-  // Bytes 172..175 stay the scratch ArrayBuffer's zero fill (true padding).
+  view.setFloat32(172, sunAngularRadiusRad, true);
 }

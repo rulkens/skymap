@@ -7,6 +7,8 @@ import {
   SCFD_HEADER_BYTES,
 } from '../../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../../src/@types/data/volume/ScalarCube';
+import { FormatVersionError } from '../../../src/data/formatVersionError';
+import { defaultRetryPolicy } from '../../../../../src/services/loading/retryPolicy';
 
 function makeFixture(): ScalarCube {
   // Tiny 2x2x2 single-channel cube — 8 voxels — for quick round-trip checks.
@@ -173,13 +175,6 @@ describe('SCFD v3 binary format', () => {
     expect(() => decodeScalarField(buf)).toThrow(/magic/);
   });
 
-  it('rejects unsupported version with regenerate hint', () => {
-    const buf = encodeScalarField(makeFixture());
-    new DataView(buf).setUint32(4, 99, true);
-    expect(() => decodeScalarField(buf)).toThrow(/version/);
-    expect(() => decodeScalarField(buf)).toThrow(/regenerat/);
-  });
-
   it('rejects unknown frameKind on decode', () => {
     const buf = encodeScalarField(makeFixture());
     new DataView(buf).setUint8(23, 99); // frame_kind byte at offset 23
@@ -224,7 +219,18 @@ describe('SCFD v3 binary format', () => {
     // before the size check, but we still size the buffer correctly so a
     // future re-order doesn't mask the version-rejection signal.
     const v2Buf = makeV2HeaderForRejectTest();
-    expect(() => decodeScalarField(v2Buf)).toThrow(/version 2.*regenerate/i);
+    let error: unknown;
+    try {
+      decodeScalarField(v2Buf);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(FormatVersionError);
+    expect(error).toMatchObject({ found: 2, expected: 3 });
+    expect((error as Error).message).toMatch(/regenerat/);
+    // A plain Error made the policy download a stale cube three times and kept the
+    // format-version alert silent.
+    expect(defaultRetryPolicy(0, error as Error)).toBe('give-up');
   });
 });
 

@@ -11,7 +11,7 @@
 
 import type { CameraAim } from '../pose/CameraAim';
 import type { CameraPose } from '../pose/CameraPose';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { TimelineOffsets } from './TimelineOffsets';
 import type { TimelineStop } from './TimelineStop';
 

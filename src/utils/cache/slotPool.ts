@@ -23,17 +23,10 @@ export class SlotPool implements SlotStore {
   private onEvict: SlotEvictHandler | undefined;
 
   private readonly capacity: number;
-  private readonly keyCapacity: number;
 
-  /** `reserved` slots `[0, reserved)` hold a never-stale entry no key can displace, so the
-   *  LRU scan, which picks the lowest stamp, passes over them. */
-  constructor(capacity: number, reserved = 0) {
+  constructor(capacity: number) {
     this.capacity = capacity;
-    this.keyCapacity = capacity - reserved;
     this.slots = new Array(capacity).fill(undefined);
-    for (let i = 0; i < reserved; i++) {
-      this.slots[i] = { key: '', lastSeenFrame: Infinity, seq: -1 };
-    }
   }
 
   /** `undefined` clears; last writer wins, which is the tear-down path. */
@@ -57,7 +50,7 @@ export class SlotPool implements SlotStore {
   allocate(key: string, frame: number, liveSince = frame): number | null {
     const touched = this.touch(key, frame);
     if (touched !== null) return touched;
-    if (this.keyToSlot.size < this.keyCapacity) {
+    if (this.keyToSlot.size < this.capacity) {
       const free = this.slots.indexOf(undefined);
       this.slots[free] = { key, lastSeenFrame: frame, seq: this.seq++ };
       this.keyToSlot.set(key, free);

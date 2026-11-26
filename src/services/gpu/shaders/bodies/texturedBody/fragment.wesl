@@ -52,12 +52,16 @@ import package::lib::bodyLighting::bodyDirectShade;
 import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
+import package::lib::horizonLookup::horizonVisibility;
+import package::lib::horizonLookup::localSunAngles;
 
 @group(0) @binding(0) var<uniform> uniforms: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
 @group(0) @binding(2) var bodyTexture: texture_2d<f32>;
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
+// The whole-globe horizon map (or its lit 1 × 1 placeholder), read by 'lib/horizonLookup.wesl'.
+@group(0) @binding(5) var horizonTexture: texture_2d<f32>;
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
 // the entry point's position comes in through 'TexturedBodyVSOut', and a second
@@ -120,7 +124,15 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), surfaceNormal));
   let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
-  let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
+  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme, so
+  // globe and tiles read the same values at the hand-off. A zero rect (no map) reads lit.
+  let horizonUv = vec2<f32>(fract(uv.x), 1.0 - uv.y);
+  let sunAngles = localSunAngles(surfaceNormal, uniforms.sunDirLocal);
+  let horizon = horizonVisibility(
+    horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
+  );
+  let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio)
+    * horizon.x;
   let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
   // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
   let viewDir = -rayDir;
@@ -130,7 +142,7 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
     albedo * bodyDirectShade(shadingNormal, uniforms.sunDirLocal) * limb,
     albedo * AMBIENT * limb,
     sunVis,
-    1.0,
+    horizon.y,
   );
 
   var out: FSOut;

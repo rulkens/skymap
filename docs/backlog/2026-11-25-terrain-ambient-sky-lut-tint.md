@@ -1,7 +1,7 @@
 # Terrain ambient tinted by the sky-view LUT
 
 **Raised:** 2026-11-25, deferred from the terrain horizon shadows spec
-(`docs/superpowers/specs/2026-11-25-terrain-horizon-shadows-design.md` §6).
+(`docs/superpowers/specs/completed/2026-11-25-terrain-horizon-shadows-design.md` §6).
 
 ## Current state
 

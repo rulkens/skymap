@@ -6,4 +6,7 @@ import type { TileRead } from './TileRead';
 export type SurfaceTileSource = {
   /** Never throws. */
   readonly readTile: (tile: SurfaceTileId) => Promise<TileRead>;
+  /** Already known to read `'missing'`: its level's index has landed without it, or the level
+   *  has none. False until a read of that level has landed. */
+  readonly isMissing: (tile: SurfaceTileId) => boolean;
 };

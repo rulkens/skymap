@@ -9,9 +9,9 @@ import type { TextureKind } from '../../@types/data/TextureKind';
  *  - **sRGB colour** (`surface`, `night`) — pixels are a gamma-encoded
  *    picture. They ship as JPEG, and the GPU samples them through an
  *    `*-srgb` format so the hardware linearises on read.
- *  - **linear-packed data** (`material` and `normal`) — the channels carry
- *    numeric fields (roughness, an ocean mask, a tangent-space normal vector),
- *    NOT a colour. A gamma curve would corrupt those numbers, so they must ship
+ *  - **linear-packed data** (`material`, `normal` and `horizon`) — the channels
+ *    carry numeric fields (roughness, an ocean mask, a normal, horizon angles), NOT
+ *    a colour. A gamma curve would corrupt those numbers, so they must ship
  *    losslessly (WebP lossless — no chroma subsampling, bit-exact bytes) and
  *    sample through a linear (`unorm`) format with no hardware de-gamma.
  *
@@ -23,5 +23,5 @@ import type { TextureKind } from '../../@types/data/TextureKind';
  * on each `TextureKind` — keeps the vocabulary type a plain string union.
  */
 export function isLinearTextureKind(kind: TextureKind): boolean {
-  return kind === 'material' || kind === 'normal';
+  return kind === 'material' || kind === 'normal' || kind === 'horizon';
 }

@@ -8,7 +8,7 @@
  * copy needs the reopen to reach them at all.
  */
 
-import { FormatVersionError } from '../../../data/formatVersionError';
+import { FormatVersionError } from '../../../../packages/shared/src/data/formatVersionError';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 import { reopenSplash } from '../../../state/ui/uiSlice';
 

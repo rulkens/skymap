@@ -9,7 +9,7 @@ import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 // the resulting files. planInline validates (via detectPassthrough) before
 // mutating and never saves, so every assertion reads from the live Project.
 function projectWith(files: Record<string, string>): Project {
-  const project = new Project({ useInMemoryFileSystem: true });
+  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
   for (const [path, content] of Object.entries(files)) {
     project.createSourceFile(path, content);
   }

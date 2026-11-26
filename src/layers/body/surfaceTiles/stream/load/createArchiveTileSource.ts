@@ -24,7 +24,10 @@ const FETCH_DEADLINE_MS = 10_000;
 export function createArchiveTileSource(prefix: string): SurfaceTileSource {
   // A memoised 'failed' is a corrupt index: a broken deploy, which no retry mends.
   const indexes = new Map<string, Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'>>();
+  // The same answers once landed, so the planner can ask synchronously what a level lacks.
+  const landed = new Map<string, SurfaceTileArchiveIndex | 'missing' | 'failed'>();
   let warnedNoRange = false;
+  const levelId = (tile: SurfaceTileId) => `${tile.product}:${tile.z}`;
 
   async function fetchIndex(
     tile: SurfaceTileId,
@@ -43,16 +46,19 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
   }
 
   function indexOf(tile: SurfaceTileId): Promise<SurfaceTileArchiveIndex | 'missing' | 'failed'> {
-    const id = `${tile.product}:${tile.z}`;
+    const id = levelId(tile);
     let pending = indexes.get(id);
     if (!pending) {
       const fetching = fetchIndex(tile);
       pending = fetching;
       indexes.set(id, fetching);
-      // A network error, deadline or 5xx must not poison the level for the session.
-      fetching.catch(() => {
-        if (indexes.get(id) === fetching) indexes.delete(id);
-      });
+      fetching.then(
+        (index) => landed.set(id, index),
+        // A network error, deadline or 5xx must not poison the level for the session.
+        () => {
+          if (indexes.get(id) === fetching) indexes.delete(id);
+        },
+      );
     }
     return pending;
   }
@@ -87,6 +93,14 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
       } catch {
         return { kind: 'failed' };
       }
+    },
+    isMissing(tile: SurfaceTileId): boolean {
+      const index = landed.get(levelId(tile));
+      if (index === undefined || index === 'failed') return false;
+      return (
+        index === 'missing' ||
+        findSurfaceTileArchiveEntry(index, surfaceTileMortonKey(tile.x, tile.y)) === null
+      );
     },
   };
 }

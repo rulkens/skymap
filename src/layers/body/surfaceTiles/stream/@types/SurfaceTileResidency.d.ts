@@ -25,6 +25,9 @@ export type SurfaceTileResidency = {
   hasFailed(tile: SurfaceTileId): boolean;
   /** Read as a zero-length archive entry: answered, with nothing to upload. */
   isEmpty(tile: SurfaceTileId): boolean;
+  /** Absent from its level's landed archive index (open-ocean imagery, a horizon tile with no
+   *  heights of its own under it): never fetched again, and its leaf reads an ancestor. */
+  isMissing(tile: SurfaceTileId): boolean;
   inFlightCount(): number;
   /** The body whose atlases are allocated, or null while none are. */
   engagedBodyId(): (SceneBodyId & SurfaceTileBodyId) | null;

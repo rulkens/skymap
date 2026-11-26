@@ -29,6 +29,8 @@ import { IDLE_SURFACE_TILE_PLAN } from './surfaceTiles/plan/subsystems/idleSurfa
 import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { throttleWithTrailingCall } from '../../utils/throttle/throttleWithTrailingCall';
+import { isCoarsePointer } from '../../utils/browser/isCoarsePointer';
+import { horizonLookupConstants } from './surfaceTiles/horizon/utils/horizonLookupConstants';
 
 /** The rate every textual DebugPanel readout refreshes at. */
 const READOUT_INTERVAL_MS = 250;
@@ -36,12 +38,15 @@ const READOUT_INTERVAL_MS = 250;
 export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
   const { device } = deps.ctx;
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
+  // Read once: pipelines are built here and never rebuilt, so no live listener.
+  const horizonConstants = horizonLookupConstants(!isCoarsePointer());
   const renderers = {
     earthRenderer: createEarthRenderer(
       device,
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
+      horizonConstants,
     ),
     surfaceTileRenderer: createSurfaceTileRenderer(
       device,
@@ -49,6 +54,7 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
       SURFACE_TILE_MESH_RESOLUTION,
+      horizonConstants,
     ),
     terrainPickMarkerRenderer: createTerrainPickMarkerRenderer(
       device,
@@ -61,6 +67,7 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
+      horizonConstants,
     ),
     planetRenderer: createPlanetRenderer(
       device,

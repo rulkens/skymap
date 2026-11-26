@@ -1,7 +1,7 @@
 /**
  * surfaceTileRenderer — one instanced indexed draw of the resident
  * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
- * globe: one shared template index buffer, one 96-byte `PatchInstance` per
+ * globe: one shared template index buffer, one 112-byte `PatchInstance` per
  * patch, all geometry derived in `vertex.wesl`.
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
@@ -35,6 +35,8 @@ import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
+import { horizonPostRect } from '../../horizon/utils/horizonPostRect';
+import { NO_HORIZON_RECT } from '../../../textures/data/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 
@@ -47,6 +49,7 @@ const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
  *   splits `vertex_index` into `(i, j)`. The two must be the same number.
  * @param reversedZ selects this slab's depth convention, resolved through
  *   `resolveDepthCompare` with intent `'nearer-or-equal'` (see the module header).
+ * @param horizonConstants `horizonLookupConstants`, passed to the fragment stage as is.
  */
 export function createSurfaceTileRenderer(
   device: GPUDevice,
@@ -54,6 +57,7 @@ export function createSurfaceTileRenderer(
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
   resolution: number,
+  horizonConstants: Record<string, GPUPipelineConstantValue>,
 ): SurfaceTileRenderer {
   // Mirrors earthRenderer's whole-globe sampler: these views carry the base globe's mip chain.
   const baseSampler = device.createSampler({
@@ -73,6 +77,16 @@ export function createSurfaceTileRenderer(
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
   });
+
+  // A body with no horizon lane still binds a horizon atlas; every rect is then
+  // `NO_HORIZON_RECT`, so this texel is never read.
+  const horizonStandIn = device.createTexture({
+    label: 'surface-tile-horizon-stand-in',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const horizonStandInView = horizonStandIn.createView();
 
   const indices = surfacePatchIndices(resolution);
   const indexCount = indices.length;
@@ -115,6 +129,12 @@ export function createSurfaceTileRenderer(
     7: { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     10: { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    // Horizon angle bytes, `textureLoad`ed and decoded per post (`lib/horizonLookup.wesl`).
+    11: {
+      binding: 11,
+      visibility: GPUShaderStage.FRAGMENT,
+      texture: { sampleType: 'unfilterable-float' },
+    },
   };
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'surfaceTile.vertex');
@@ -148,6 +168,7 @@ export function createSurfaceTileRenderer(
         fragment: {
           module: fsModule,
           entryPoint: 'fs',
+          constants: horizonConstants,
           targets: [{ format: targetFormat }], // opaque replace, alpha=1
         },
         primitive: {
@@ -208,6 +229,7 @@ export function createSurfaceTileRenderer(
       radiusM,
       vp,
       sunDirLocal,
+      sunAngularRadiusRad,
       effects,
       effectInputs,
       shading,
@@ -215,6 +237,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
+      noShadows,
       atlasViews,
     } = args;
     const tileCount = tiles.length;
@@ -253,6 +276,7 @@ export function createSurfaceTileRenderer(
       // Night never reads 'empty' (no empty night tile is baked): the sentinel maps to
       // "no tile" like null, so the fragment falls back to the global map.
       const nightRect = tile.standalone.night === 'empty' ? null : tile.standalone.night;
+      const horizon = tile.standalone.horizon;
       const fadeWeight = surfaceTileFadeWeight(tile.albedo, nowMs);
 
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
@@ -293,6 +317,11 @@ export function createSurfaceTileRenderer(
           (tile.edgeCoarser[2] << 2) |
           (tile.edgeCoarser[3] << 3),
         heightCells: (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
+        // Never an ancestor's rect for 'empty': a flat tile under a hilly ancestor stays lit.
+        horizonRect:
+          noShadows || horizon === null || horizon === 'empty'
+            ? NO_HORIZON_RECT
+            : horizonPostRect(horizon),
       });
     }
 
@@ -317,6 +346,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
+      sunAngularRadiusRad,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
@@ -358,6 +388,7 @@ export function createSurfaceTileRenderer(
 
   function destroy(): void {
     patchBuffer?.destroy();
+    horizonStandIn.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
   }
@@ -365,6 +396,7 @@ export function createSurfaceTileRenderer(
   const renderer: SurfaceTileRenderer = {
     label: 'surfaceTileRenderer',
     draw,
+    horizonStandInView,
     destroy,
   };
   renderer satisfies Renderer;

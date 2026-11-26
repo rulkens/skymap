@@ -99,8 +99,14 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['build-mcpm', 'build-dust', 'build-flow-field', 'build-local-bubble'],
-        does: 'Write the density field of the cosmic web, the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
+        scripts: [
+          'build-mcpm',
+          'build-2mrs',
+          'build-dust',
+          'build-flow-field',
+          'build-local-bubble',
+        ],
+        does: 'Write the two density fields of the cosmic web (SDSS and 2MRS), the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
         manual: DATA,
       },
       {
@@ -132,6 +138,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
         does: 'Resize the maps of planets and moons to the three data sizes, cut Earth and Mars into tiles, and read the height of the ground under each rover and under Søndermarken.',
         manual: DATA,
+      },
+      {
+        scripts: ['bake-horizon'],
+        does: 'Bakes the terrain shadow tiles of Earth, the Moon or Mars from their height tiles, and the whole-globe shadow maps. Options: --body, --band and --workers.',
+        manual: 'tools/textures/surfaceHorizon/README.md',
       },
       {
         scripts: ['fetch-cloud-inputs'],

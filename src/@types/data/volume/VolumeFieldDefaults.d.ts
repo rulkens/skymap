@@ -2,7 +2,7 @@
  * VolumeFieldDefaults — per-id presentation defaults for scalar-volume
  * fields registered with the renderer.
  *
- * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
+ * A field's data file carries only data (dims, frame, voxels, range).  How a
  * field should LOOK on first registration — its palette and
  * `densityScale` — is presentation, not data, and lives on each field's
  * source row (`src/layers/cosmicWebDensity/sources/`), built into

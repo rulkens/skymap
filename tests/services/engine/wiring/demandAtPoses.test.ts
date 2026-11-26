@@ -82,6 +82,7 @@ const surveyPoints = pointRows.filter((r) => r.key !== 'famousGalaxy');
 const famousPoints = pointRows.filter((r) => r.key === 'famousGalaxy');
 const densityRows = cosmicWebDensityAssetRows({
   slots: Object.fromEntries(COSMIC_WEB_DENSITY_SOURCE_ROWS.map((e) => [e.id, slot(e.id)])),
+  jitterMaskSlot: slot('jitter-mask'),
 } as unknown as CosmicWebDensityRuntime);
 const filamentsRows = filamentsAssetRows({ slot: slot('filaments') } as never);
 const flowRows = flowAssetRows({ slot: slot('flow') } as never);

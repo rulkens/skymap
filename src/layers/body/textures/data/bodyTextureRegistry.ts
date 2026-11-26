@@ -11,7 +11,13 @@
 
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { BodyTextureSpec } from '../@types/BodyTextureSpec';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import { MARS_GLOBE_GRADE } from '../../surfaceTiles/format/data/marsSurfaceParams';
+
+// Every globe's `horizon` stops at medium: up close the surface tiles take over, so a large
+// globe image would never be seen. `bake-horizon` repacks it from the horizon tiles, not the
+// texture build, at half the tier's px wide (posts, not texels: its README).
+const HORIZON_CEILING: Tier = 'medium';
 
 // Keyed by id rather than an array so a missing or extra body is a compile error,
 // and so the per-body-per-frame proximity-loader lookup stays O(1).
@@ -42,6 +48,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
       material: 'medium',
       normal: 'medium',
       clouds: 'large',
+      horizon: HORIZON_CEILING,
     },
     provenance: 'nasa',
     treatment: { kind: 'colour' },
@@ -49,7 +56,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // Graded to colour-match the tuned Viking surface tiles (marsAlbedoRecipe.ts).
   mars: {
     bodyId: 'mars',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', horizon: HORIZON_CEILING },
     provenance: 'sss',
     treatment: { kind: 'grade', grade: MARS_GLOBE_GRADE },
   },
@@ -84,7 +91,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // `normal` is baked from the LOLA heightfield, capped at 4 k like Earth's.
   moon: {
     bodyId: 'moon',
-    kinds: { surface: 'large', normal: 'medium' },
+    kinds: { surface: 'large', normal: 'medium', horizon: HORIZON_CEILING },
     provenance: 'sss',
     treatment: { kind: 'colour' },
   },

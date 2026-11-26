@@ -243,6 +243,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       engaged?.lanes[tile.product]?.stream.isFailed(surfaceTilePath(tile, engaged.prefix)) ?? false,
     isEmpty: (tile) =>
       engaged?.lanes[tile.product]?.empty.has(surfaceTilePath(tile, engaged.prefix)) ?? false,
+    isMissing: (tile) => engaged?.source.isMissing(tile) ?? false,
     inFlightCount: () => engagedLanes().reduce((sum, lane) => sum + lane.stream.inFlightCount(), 0),
     engagedBodyId: () => engaged?.bodyId ?? null,
   };

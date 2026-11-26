@@ -47,22 +47,6 @@ vi.mock('../../../../src/layers/structure/catalog/load/structureCatalogFetcher',
   })),
 }));
 
-// MCPM is default-on, so the demand loop fires its load at boot.  Mock the
-// fetcher so the slot resolves without networking.
-vi.mock(
-  '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher',
-  () => ({
-    cosmicWebDensityFetcher: vi.fn(async () => ({
-      dims: [4, 4, 4],
-      voxels: new Float32Array(64),
-      valueMin: 0,
-      valueMax: 1,
-      frame: 'supergalactic',
-      boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-    })),
-  }),
-);
-
 // wireSlots awaits loadDataManifest() before reevaluateDemand. Default resolves immediately; the
 // deferred-manifest test overrides it once with mockReturnValueOnce.
 vi.mock('../../../../packages/shared/src/services/loading/dataManifest', () => ({
@@ -187,10 +171,20 @@ function makeState(
   const densityRenderer = { upload: vi.fn() } as never;
   const densityRuntime = {
     renderer: densityRenderer,
+    jitterMaskSlot: makeFakeSlot('jitter-mask'),
     slots: Object.fromEntries(
       COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
         entry.id,
-        createCosmicWebDensitySlot(entry, densityRenderer, Promise.resolve()),
+        // MCPM is default-on, so the demand loop fires its load at boot; no networking.
+        createCosmicWebDensitySlot(entry, {
+          renderer: densityRenderer,
+          fetch: async () =>
+            ({
+              texture: { destroy: vi.fn() },
+              gain: 1,
+              nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
+            }) as never,
+        }),
       ]),
     ),
   } as unknown as CosmicWebDensityRuntime;

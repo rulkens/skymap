@@ -85,7 +85,7 @@ import {
   encodeFilaments,
   FILAMENT_DATA_PREFIX,
 } from '../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
-import { FormatVersionError } from '../../src/data/formatVersionError';
+import { FormatVersionError } from '../../packages/shared/src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { galaxyCatalogFluxLimit } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';

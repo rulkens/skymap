@@ -25,6 +25,8 @@ export type SurfaceTileDrawArgs = {
   readonly mirrored: boolean;
   /** Sun direction in the engaged body's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
   readonly sunDirLocal: Readonly<Vec3>;
+  /** The sun disc's angular radius seen from the body: the horizon shadow's penumbra width. */
+  readonly sunAngularRadiusRad: number;
   /** The engaged body's registry row: `effects` picks the fragment variant,
    *  `effectInputs` must carry exactly those effects' resources. */
   readonly effects: readonly SurfaceEffect[];
@@ -38,9 +40,13 @@ export type SurfaceTileDrawArgs = {
   readonly noDisplacement: boolean;
   /** `terrain-no-skirts` debug toggle: the skirt ring collapses to zero depth. */
   readonly noSkirts: boolean;
+  /** `terrain-no-shadows` debug toggle: every patch gets `NO_HORIZON_RECT`, so the
+   *  fragment skips the horizon lookup and draws lit. */
+  readonly noShadows: boolean;
   /** Each product's atlas view, bound at its lane row's `binding`: albedo's resident patches
    *  sampled at each tile's resolved rect, height's Terrain-RGB codes `textureLoad`ed at the
    *  patch's own slot (every vertex position reads it, so a cut is never drawn without it),
-   *  night's tile rects or its stand-in when no night lane exists. Not owned here. */
+   *  night's tile rects or its stand-in when no night lane exists, horizon's likewise (a 1 × 1
+   *  lit stand-in). Not owned here. */
   readonly atlasViews: Readonly<Record<SurfaceTileProduct, GPUTextureView>>;
 };

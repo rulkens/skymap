@@ -1,6 +1,6 @@
 # Terrain horizon shadows, PR A: ground preparation
 
-> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../specs/2026-11-25-terrain-horizon-shadows-design.md),
+> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../../specs/completed/2026-11-25-terrain-horizon-shadows-design.md),
 > §9 (Ground preparation), with §5 and §6 for the shapes the prep makes room for.
 > **Branch.** `feat/terrain-horizon-shadows-prep`, worktree `.claude/worktrees/horizon-shadows-prep`.
 > **Packaging.** This PR lands first and alone. The feature PR

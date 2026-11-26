@@ -4,3 +4,14 @@
   gap: 6px;
   cursor: pointer;
 }
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.infoIcon {
+  composes: infoIcon from '../../../packages/shared/src/components/common/ParamSlider/ParamSlider.module.css';
+}

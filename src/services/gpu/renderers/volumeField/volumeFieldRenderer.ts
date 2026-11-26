@@ -1,17 +1,16 @@
 /**
  * VolumeFieldRenderer — multi-field, palette-driven, additive 3D scalar-field raymarch (spec:
- * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). Each field owns its 3D
- * texture, palette LUT, bind groups, uniform buffer, matrices and per-cube statics; the user knobs
- * are read per frame through `settingsOf`, never mirrored, so the caller's settings stay the one
- * truth. The jitter index, step count and blend weight `w` arrive per draw as `inputs`: this
- * renderer holds no frame counter. Below w = 1 one decay triangle scales the target by (1 − w),
- * then every field adds at w, so the target holds a running mean. One shared march pipeline means
- * one bind-group layout, so field bind groups are interchangeable. A palette change rewrites the
- * field's LUT in place (views stay valid: one queue write, zero rebinds).
+ * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). `upload` takes a finished
+ * `GpuVolume` and owns it from then on (AssetSlot's rule: a committed payload belongs to the
+ * consumer); each field adds its palette LUT, bind groups, uniforms, matrices and statics. User
+ * knobs are read per frame through `settingsOf`, never mirrored. The jitter index, step count and
+ * blend weight `w` arrive per draw as `inputs`: this renderer holds no frame counter. Below w = 1
+ * one decay triangle scales the target by (1 − w), then every field adds at w, so the target holds
+ * a running mean. One shared march pipeline means one bind-group layout, so field bind groups are
+ * interchangeable. A palette change rewrites the field's LUT in place (views stay valid).
  */
 
 import { mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
@@ -30,9 +29,9 @@ import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
-// 256 B of fields through jitterIndex, plus steps (260 B), rounded up to 16 for a uniform
-// struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
-const UNIFORM_BYTES = 272;
+// Fields through nativeBoxScale (300 B), rounded up to 16 for a uniform struct. Pinned against
+// fragment.wesl by volumeUniformsLayout.parity.test.ts.
+const UNIFORM_BYTES = 304;
 
 // Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
 // A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
@@ -95,6 +94,7 @@ export function createVolumeFieldRenderer<Id extends string>({
   const volumeSampler = device.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
+    mipmapFilter: 'linear',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
     addressModeW: 'clamp-to-edge',
@@ -204,22 +204,6 @@ export function createVolumeFieldRenderer<Id extends string>({
 
   const fields = new Map<Id, FieldEntry>();
 
-  function uploadCube(cube: ScalarCube): GPUTexture {
-    const tex = device.createTexture({
-      size: { width: cube.dims[0], height: cube.dims[1], depthOrArrayLayers: cube.dims[2] },
-      format: 'r16float',
-      dimension: '3d',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-    });
-    device.queue.writeTexture(
-      { texture: tex },
-      cube.voxels,
-      { bytesPerRow: cube.dims[0] * 2, rowsPerImage: cube.dims[1] },
-      { width: cube.dims[0], height: cube.dims[1], depthOrArrayLayers: cube.dims[2] },
-    );
-    return tex;
-  }
-
   // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
   // setting diverges from `residentPaletteId`.  A single
@@ -236,8 +220,7 @@ export function createVolumeFieldRenderer<Id extends string>({
     return device.createTexture({
       size: { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
-      // dimension defaults to '2d'; named explicitly for symmetry with the
-      // '3d' volume texture above and to document the LUT-as-2D choice.
+      // dimension defaults to '2d'; named to document the LUT-as-2D choice.
       dimension: '2d',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
@@ -253,10 +236,10 @@ export function createVolumeFieldRenderer<Id extends string>({
 
   const renderer: VolumeFieldRenderer<Id> = {
     label: 'volumeFieldRenderer',
-    upload(id, cube, statics) {
+    upload(id, volume, statics) {
       const existing = fields.get(id);
       if (existing) {
-        existing.volumeTexture.destroy();
+        existing.volume.texture.destroy();
         existing.paletteTexture.destroy();
         existing.uniformBuffer.destroy();
         existing.fadeBuffer.destroy();
@@ -267,9 +250,8 @@ export function createVolumeFieldRenderer<Id extends string>({
       // itself.  The user-tunable knobs (enabled, intensity, contrast,
       // densityScale, palette, trim, exposure) are NOT seeded here —
       // they live in the caller's settings and are read per frame in `draw`.
-      const modelMatrix = buildCubeModelMatrix(cube);
+      const modelMatrix = buildCubeModelMatrix(volume.placement);
       const invModelMatrix = mat4.inverse(modelMatrix);
-      const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
       // Seed the resident LUT from the caller's static default so it
       // matches `residentPaletteId`; `draw` re-uploads in place if the
@@ -283,7 +265,7 @@ export function createVolumeFieldRenderer<Id extends string>({
         layout: bindGroupLayout,
         entries: [
           { binding: 0, resource: { buffer: uniformBuffer } },
-          { binding: 1, resource: volumeTexture.createView() },
+          { binding: 1, resource: volume.texture.createView() },
           { binding: 2, resource: volumeSampler },
           { binding: 3, resource: paletteTexture.createView() },
           { binding: 4, resource: paletteSampler },
@@ -311,7 +293,7 @@ export function createVolumeFieldRenderer<Id extends string>({
         residentPaletteId: statics.paletteId,
         modelMatrix,
         invModelMatrix,
-        volumeTexture,
+        volume,
         paletteTexture,
         uniformBuffer,
         bindGroup,
@@ -326,7 +308,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       // unregisters fade identities. Core seeds every visibility identity at
       // boot, so a field's identity stays registered across upload/unload —
       // `unload` just releases this field's GPU resources.
-      entry.volumeTexture.destroy();
+      entry.volume.texture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
       entry.fadeBuffer.destroy();
@@ -359,7 +341,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (272 bytes; mat4 alignment):
+      // Per-field uniform buffer layout (304 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)
       //  72..75   pxPerRad
@@ -377,7 +359,11 @@ export function createVolumeFieldRenderer<Id extends string>({
       // 248..251  trim             (f32; from settingsOf)
       // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
       // 256..259  steps            (f32; inputs.steps)
-      // 260..271  padding          (uniform struct rounded up to 16)
+      // 260..263  gain             (f32; from the volume)
+      // 264..267  _pad0
+      // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
+      // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
+      // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
       for (const [id, e] of fields.entries()) {
@@ -428,6 +414,10 @@ export function createVolumeFieldRenderer<Id extends string>({
         scratch[62] = s.trim;
         scratch[63] = jitterIndex;
         scratch[64] = inputs.steps;
+        scratch[65] = e.volume.gain;
+        scratch[67] = e.volume.placement.voxelSize;
+        scratch.set(e.volume.nativeBox.offset, 68);
+        scratch.set(e.volume.nativeBox.scale, 72);
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.
@@ -440,7 +430,7 @@ export function createVolumeFieldRenderer<Id extends string>({
     },
     destroy() {
       for (const e of fields.values()) {
-        e.volumeTexture.destroy();
+        e.volume.texture.destroy();
         e.paletteTexture.destroy();
         e.uniformBuffer.destroy();
         e.fadeBuffer.destroy();

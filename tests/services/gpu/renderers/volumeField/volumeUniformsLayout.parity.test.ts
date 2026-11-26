@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4, type Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { buildCubeModelMatrix } from '../../../../../src/utils/math/buildCubeModelMatrix';
-import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { GpuVolume } from '../../../../../src/@types/rendering/GpuVolume';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
@@ -19,16 +19,20 @@ const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/scalarVolume');
 const fragment = readFileSync(join(SHADERS, 'fragment.wesl'), 'utf-8');
 const vertex = readFileSync(join(SHADERS, 'vertex.wesl'), 'utf-8');
 
-const CUBE: ScalarCube = {
-  dims: [4, 5, 6],
-  channels: 1,
-  voxels: new Uint16Array(4 * 5 * 6),
-  frameKind: 'equatorial-cartesian',
-  origin: [-101, -102, -103],
-  voxelSize: 7,
-  rotation: [0, 0, 0, 1],
-  valueMin: 0,
-  valueMax: 1,
+const VOLUME: GpuVolume = {
+  texture: {
+    createView: () => ({}),
+    destroy: () => {},
+  } as unknown as GPUTexture,
+  placement: {
+    dims: [4, 5, 6],
+    frameKind: 'equatorial-cartesian',
+    origin: [-101, -102, -103],
+    voxelSize: 7,
+    rotation: [0, 0, 0, 1],
+  },
+  gain: 417,
+  nativeBox: { offset: [411, 412, 413], scale: [414, 415, 416] },
 };
 
 function mockDevice(): GPUDevice {
@@ -58,7 +62,7 @@ describe('VolumeUniforms layout', () => {
       fadeBgl: {} as never,
       jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
     });
-    renderer.upload('field', CUBE, {
+    renderer.upload('field', VOLUME, {
       paletteId: 'viridis',
       contrastCenter: 405,
       envelope: { inner: 406, outer: 407 },
@@ -97,7 +101,7 @@ describe('VolumeUniforms layout', () => {
     const uniformWrite = writes.find((call) => call[2] instanceof Float32Array);
     if (!uniformWrite) throw new Error('draw wrote no uniform scratch');
     const scratch = uniformWrite[2] as Float32Array;
-    const model = buildCubeModelMatrix(CUBE);
+    const model = buildCubeModelMatrix(VOLUME.placement);
     const sentinels: Record<string, ArrayLike<number>> = {
       modelMatrix: model,
       invModelMatrix: mat4.inverse(model),
@@ -112,9 +116,13 @@ describe('VolumeUniforms layout', () => {
       exposure: [408],
       jitterIndex: [409],
       steps: [410],
+      gain: [417],
+      baseVoxelMpc: [7],
+      nativeBoxOffset: [411, 412, 413],
+      nativeBoxScale: [414, 415, 416],
     };
     for (const { name, type, offset } of struct.fields) {
-      if (type === 'CameraUniforms') continue;
+      if (type === 'CameraUniforms' || name.startsWith('_pad')) continue;
       const expected = sentinels[name];
       if (!expected) throw new Error(`no sentinel for field '${name}'`);
       const at = offset / 4;
@@ -126,7 +134,7 @@ describe('VolumeUniforms layout', () => {
     // The scratch's buffer is the one draw wrote; its creation size is the binding's size.
     const buffers = vi.mocked(device.createBuffer).mock;
     const created = buffers.results.findIndex((result) => result.value === uniformWrite[0]);
-    expect(struct.size).toBe(272);
+    expect(struct.size).toBe(304);
     expect(buffers.calls[created]?.[0].size).toBe(struct.size);
     expect(scratch.byteLength).toBe(struct.size);
   });

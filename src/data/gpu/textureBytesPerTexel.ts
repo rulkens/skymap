@@ -25,4 +25,6 @@ export const TEXTURE_BYTES_PER_TEXEL: Readonly<Partial<Record<GPUTextureFormat, 
   r16uint: 2,
   rgba16uint: 8,
   rgba32uint: 16,
+  'astc-6x6-unorm': 16 / 36, // one 16 B block per 6×6 texels of a slice
+  'bc4-r-unorm': 8 / 16, // one 8 B block per 4×4
 };

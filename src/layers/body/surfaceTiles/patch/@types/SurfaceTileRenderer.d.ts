@@ -7,4 +7,6 @@ export type SurfaceTileRenderer = Renderer & {
    * one instanced indexed draw. No-op if `tiles` is empty.
    */
   draw(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs): void;
+  /** A 1 × 1 byte-0 texture: the horizon atlas for a body with no horizon lane (fully lit). */
+  readonly horizonStandInView: GPUTextureView;
 };

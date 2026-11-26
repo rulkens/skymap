@@ -910,7 +910,7 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://github.com/CreativeCodingLab/Polyphorm>
 - **Enters skymap:** as listed under What; the 2MRS run through
   `tools/volumes/extractPolyphormExport.py` → `data/raw/polyphorm/` →
-  `buildRhizomeVolume.ts`; workbench exports through
+  `buildVolumePyramid.ts`; workbench exports through
   `npm run promote-mcpm-workbench`.
 - **Modified:** Yes. Kernels translated from HLSL to WGSL with storage buffers
   in place of 3D textures; ramps resampled to 12 anchors.

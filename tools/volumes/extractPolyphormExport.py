@@ -3,7 +3,8 @@
 extractPolyphormExport.py — convert one Polyphorm MCPM export folder's raw
 trace.bin (headerless f16, C-order z*W*H + y*W + x) into block-mean
 -downsampled `.npy` + `polyphy-trace` v1 sidecar `.json` tiers for
-tools/volumes/buildRhizomeVolume.ts. Cascades d4 = block-mean(d2, 2), d8 =
+tools/volumes/buildVolumePyramid.ts (the sidecars also suit
+buildRhizomeVolume.ts). Cascades d4 = block-mean(d2, 2), d8 =
 block-mean(d4, 2) instead of downsampling from source at each factor —
 exact, since block-mean over equal-sized partitions is associative.
 
@@ -143,6 +144,12 @@ def main() -> None:
     # extractMcpmCube.py's upcast) — go to f32 before averaging.
     current = raw.astype(np.float32)
     del raw
+    # The native peak is buildVolumePyramid's encoding scale (its field row's nativePeak), which no
+    # tier can recover. No p99 here: a percentile copies the 3.5 GB grid.
+    print(
+        f"native stats (shape=(D,H,W)=({D},{H},{W})): "
+        f"min={current.min():.6g}, max={current.max():.6g}, mean={current.mean():.4g}"
+    )
 
     cumulative = 1
     for step in CASCADE_STEPS:

@@ -393,7 +393,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py; `polyphorm_2mrs_d{2,4,8}.npy` feed buildVolumePyramid.ts (`npm run build-2mrs`).',
   },
 
   // ─── MCPM workbench (promoted dev-tool exports) ───────────────────────

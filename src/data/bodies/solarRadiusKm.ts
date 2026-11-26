@@ -10,7 +10,8 @@
  * (the maker's `696340` wins, so authored star radii do not move; the tiny
  * framing shift is accepted).
  *
- * Value is the IAU 2015 nominal solar radius, 696,340 km.
+ * Value is 696,340 km, the maker's figure. It is not the IAU 2015 nominal solar
+ * radius (Resolution B3: 695,700 km, the framing's old `6.957e5`).
  *
  * Lives in `data/` beside the star bodies rather than in `utils/`: it is a
  * physical constant of the domain, not a computation.

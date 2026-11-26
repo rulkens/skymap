@@ -10,6 +10,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { ScalarFieldPaletteId } from '../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
+import type { GpuVolume } from './GpuVolume';
 
 export type FieldEntry = {
   /**
@@ -47,7 +48,8 @@ export type FieldEntry = {
   residentPaletteId: ScalarFieldPaletteId;
   modelMatrix: Mat4;
   invModelMatrix: Mat4;
-  volumeTexture: GPUTexture;
+  /** The uploaded volume; its texture is the renderer's to destroy. */
+  volume: GpuVolume;
   paletteTexture: GPUTexture;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
