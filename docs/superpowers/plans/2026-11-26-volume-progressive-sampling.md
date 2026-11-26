@@ -126,7 +126,7 @@ export function blueNoiseMask(size: number, slices: number, seed: number): Uint8
 
 Steps:
 
-- [ ] Tests first, on a 16 × 16 × 4 grid (fast):
+- [x] Tests first, on a 16 × 16 × 4 grid (fast):
   - `every byte value occurs equally often`: each of the 256 values appears exactly 4 times.
   - `the same seed gives the same bytes`: this catches an unseeded build, which would produce a
     different committed file on each run.
@@ -137,8 +137,8 @@ Steps:
     - Summed over slices, the mask's power is ≤ 0.25 × the control's.
   - `each pixel's values integrate fast over time`: the mean over pixels of
     `|mean of the pixel's 4 values − 127.5|` is ≤ 0.5 × the same statistic for the control.
-- [ ] Implement, add the npm script, run it, and commit the 65,536 B `.bin`.
-- [ ] `npm run typecheck:fast`, `npm test -- blueNoiseMask`.
+- [x] Implement, add the npm script, run it, and commit the 65,536 B `.bin`.
+- [x] `npm run typecheck:fast`, `npm test -- blueNoiseMask`.
 
 **Done when:** `public/lut/blueNoise.bin` exists, is rebuilt byte-identically by
 `npm run build-blue-noise-mask`, and passes the four properties at test scale.
