@@ -121,7 +121,7 @@ describe('loadVolumePyramid', () => {
     expect(device.texture.destroy).not.toHaveBeenCalled();
   });
 
-  it('an ASTC device writes each level in 6×6 blocks: 16 B per block, rows per image in block rows', async () => {
+  it('an ASTC device writes each level whole in 6×6 blocks: 16 B per block, rows per image in block rows', async () => {
     // Base 2 of a 48×48×8 box: L2 12×12×2 is 2×2 blocks per slice (64 B), L3 6×6×1 one block.
     const sidecar = {
       ...SIDECAR,
@@ -141,18 +141,18 @@ describe('loadVolumePyramid', () => {
       `${PREFIX}.astc6.L2.bin`,
     ]);
     const writes = device.queue.writeTexture.mock.calls.map(([, bytes, layout, size]) => ({
-      bytesPerSlice: (bytes as Uint8Array).byteLength / size.depthOrArrayLayers,
+      byteLength: (bytes as ArrayBuffer).byteLength,
       layout,
       size,
     }));
     expect(writes).toEqual([
       {
-        bytesPerSlice: 16,
+        byteLength: 16,
         layout: { bytesPerRow: 16, rowsPerImage: 1 },
         size: { width: 6, height: 6, depthOrArrayLayers: 1 },
       },
       {
-        bytesPerSlice: 64,
+        byteLength: 128,
         layout: { bytesPerRow: 32, rowsPerImage: 2 },
         size: { width: 12, height: 12, depthOrArrayLayers: 2 },
       },
@@ -162,7 +162,7 @@ describe('loadVolumePyramid', () => {
   it('a level of the wrong length throws and destroys the texture', async () => {
     serve(fetch, { [`${PREFIX}.r8.L2.bin`]: () => new Uint8Array(31) });
     const device = mockDevice();
-    await expect(load(device).promise).rejects.toThrow(/31 of 32/);
+    await expect(load(device).promise).rejects.toThrow(/L2\.bin is 31 B, expected 32/);
     expect(device.texture.destroy).toHaveBeenCalledOnce();
   });
 

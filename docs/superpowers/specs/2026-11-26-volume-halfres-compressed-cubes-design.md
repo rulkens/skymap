@@ -307,12 +307,12 @@ The loader takes the first row whose features are all on `device.features`. A pl
    invalid texture never reaches a bind group (that would drop whole frames). Each scope wraps one
    synchronous call and is popped before the next `await`: error scopes belong to the device, so a
    scope held open across a fetch would also catch, and hide, the render loop's errors from the
-   frames drawn in between. Creation's scope is awaited at once; the writes' are awaited together
-   before step 4 returns.
-3. Fetch the levels coarse to fine, one at a time, each streamed through a reader into one
-   8 MiB slab of whole z-slices. A full slab goes out as one `writeTexture` at its z offset and mip,
-   then the buffer is reused (spike: 10.46 MB held at peak, 52 ms on localhost for MCPM ASTC). A
-   length other than the derived one throws.
+   frames drawn in between. Each scope is awaited before the next fetch, so a failed write stops
+   the load at once.
+3. Fetch the levels coarse to fine, one at a time. Each level is held whole while it uploads, as
+   one `writeTexture` into its mip: peak CPU is about twice the largest level for a moment (MCPM
+   ASTC L1 ≈ 27 MB → ≈ 55 MB; r8 fallback ≈ 125 MB) and nothing is kept after, the price of carrying
+   no streaming code. A length other than the derived one throws.
 4. Return the `GpuVolume` only after every level is written: no frame samples a level still being
    filled. Dawn zero-clears a whole 3D mip level through one staging buffer before its first
    partial write. The largest level here is MCPM r8 L1 at 62.7 MB, under the 256 MiB default
@@ -385,8 +385,9 @@ MCPM ASTC, per draw on vs off: inside 0.400 / 0.375 ms, outside 600 Mpc 0.575 / 
   `textureByteSize`, the loader's length check and the builder alike. That is exact because every shipped level is a block multiple
   (§4's crop rule); a partial-block level would be undercounted, and the builder refuses one. Without
   the rows the ledger falls back to 4 B/texel and reads MCPM as 257.6 MiB (the spike saw it).
-- **CPU.** No decoded cube survives a load (today 155 MB at MCPM large stays resident). Peak JS
-  bytes during a pyramid load are one slab plus the reader's chunk in flight.
+- **CPU.** No decoded cube survives a load (today 155 MB at MCPM large stays resident). Each level
+  is held whole while it uploads: peak JS bytes are about twice the largest level for a moment
+  (MCPM ASTC L1 ≈ 55 MB, r8 fallback ≈ 125 MB), nothing kept after.
 
 ## 8. Deploy
 
@@ -452,9 +453,9 @@ Only what can break (testing.md):
 - **Format pick.** ASTC only with both ASTC features; BC4 only with both BC4 features; r8 otherwise;
   ASTC wins when both are present. Catches the `-sliced-3d` landmine.
 - **Gain.** Hand-computed: MCPM 1.0440 (L1), 1.1131 (L2); 2MRS 1.0706, 1.1807.
-- **Slab streaming.** Chunks arriving at arbitrary boundaries produce whole-slice `writeTexture`
-  calls with the right z offsets and mips; a short or long stream throws; the held bytes never
-  exceed one slab; an abort mid-level destroys the texture.
+- **Level upload.** One `writeTexture` per level into its mip, with the compressed layout counted
+  in blocks; a level of the wrong length throws; a failed write on the coarsest level stops the
+  load before the next fetch; an abort mid-level destroys the texture.
 - **Slot ownership.** A superseded, uncommitted volume's texture is destroyed exactly once
   (prep commit). The renderer's existing re-upload and unload tests carry over with a fake
   `GpuVolume`.
@@ -503,7 +504,8 @@ measuring run is time-boxed to about 30 minutes, one pass.
    Pass ≤ 1.10×; a breach halts and goes to the owner. Record which format the phone picks.
 9. **Load time.** `npm run loadtime` on 4G, cold boot to first volume, before and after; shown to
    the owner (medium downloads L1–L3 where it downloaded d4).
-10. **CPU.** Peak JS bytes held during a load ≤ 10.5 MB; no `ScalarCube` retained by any slot.
+10. **CPU.** Peak JS bytes held during a load ≈ twice the largest level (MCPM ASTC ≈ 55 MB, r8
+    ≈ 125 MB) and none after; no `ScalarCube` retained by any slot.
 11. **Fallback.** With the ASTC features dropped (scratch patch), BC4 loads and passes 3. With both
     dropped, r8 loads. With one level file missing, one warning, that field absent, the other drawn,
     no frame lost.

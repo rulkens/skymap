@@ -1,9 +1,10 @@
 /**
  * loadVolumePyramid — a volume pyramid into one `GpuVolume`: the sidecar, one texture in the best
- * format the device takes, then the level files coarse to fine, each streamed through one reused
- * slab. Each level's writes pass their error checks before the next level is fetched, so a failed
- * write stops the download and no frame samples a level still being filled; on any error, abort
- * included, the texture is destroyed. Spec:
+ * format the device takes, then the level files coarse to fine, each held whole for one writeTexture.
+ * Peak CPU is about twice the largest level for a moment (MCPM ASTC L1 ≈ 55 MB, r8 ≈ 125 MB), the
+ * price of no streaming code; nothing is kept after. Each write passes its error check before the
+ * next fetch, so a failed write stops the load and no frame samples a level still being filled; on
+ * any error, abort included, the texture is destroyed. Spec:
  * `docs/superpowers/specs/2026-11-26-volume-halfres-compressed-cubes-design.md` §6.
  */
 
@@ -12,15 +13,13 @@ import type { VolumePyramidSidecar } from '../../../@types/data/volume/VolumePyr
 import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../data/gpu/textureBytesPerTexel';
 import { VOLUME_PYRAMID_DATA_PREFIX } from '../../../data/volume/volumePyramidDataPrefix';
-import { VOLUME_UPLOAD_SLAB_BYTES } from '../../../data/volume/volumeUploadSlabBytes';
 import { levelByteLength } from '../../../utils/gpu/memory/levelByteLength';
 import { scopedGpuCall } from '../../../utils/gpu/scopedGpuCall';
 import { pickVolumePyramidFormat } from '../../../utils/volume/pickVolumePyramidFormat';
-import { streamLevelSlabs } from '../../../utils/volume/streamLevelSlabs';
 import { volumePyramidLevelPath } from '../../../utils/volume/volumePyramidLevelPath';
 import { volumePyramidLevels } from '../../../utils/volume/volumePyramidLevels';
 import { volumePyramidPlacement } from '../../../utils/volume/volumePyramidPlacement';
-import { dataUrl, HttpError } from '../fetchWithProgress';
+import { dataUrl, fetchWithProgress, HttpError } from '../fetchWithProgress';
 
 export async function loadVolumePyramid(
   device: GPUDevice,
@@ -55,44 +54,31 @@ export async function loadVolumePyramid(
       });
     });
     const target = texture!;
-    const slab = new Uint8Array(VOLUME_UPLOAD_SLAB_BYTES);
-    let loaded = 0;
-    for (const { level, mip, dims } of [...levels].reverse()) {
+    let done = 0;
+    for (const { level, mip, dims, byteLength } of [...levels].reverse()) {
       const url = dataUrl(volumePyramidLevelPath(binBaseName, format, level));
-      const res = await fetch(url, { signal });
-      if (!res.ok) {
-        void res.body?.cancel();
-        throw new HttpError(res.status, url);
-      }
-      if (!res.body) throw new Error(`loadVolumePyramid: no body streams from ${url}`);
-      const [w, h, depth] = dims;
-      // A compressed copy counts in blocks: a row is one row of blocks, an image h / blockEdge rows.
-      const layout = {
-        bytesPerRow: levelByteLength(w, blockEdge, 1, bytesPerTexel),
-        rowsPerImage: h / blockEdge,
-      };
-      const writeChecks: Promise<void>[] = [];
-      await streamLevelSlabs(
-        res.body.getReader(),
-        { sliceBytes: levelByteLength(w, h, 1, bytesPerTexel), depth },
-        slab,
-        (bytes, z, sliceCount) => {
-          const check = scopedGpuCall(device, () =>
-            device.queue.writeTexture(
-              { texture: target, mipLevel: mip, origin: { x: 0, y: 0, z } },
-              bytes,
-              layout,
-              { width: w, height: h, depthOrArrayLayers: sliceCount },
-            ),
-          );
-          // Handled now, awaited below: a rejection mid-stream must not surface as uncaught.
-          check.catch(() => {});
-          writeChecks.push(check);
-        },
-        (byteCount) => onProgress((loaded += byteCount), total),
+      const bytes = await fetchWithProgress(url, signal, (loaded) =>
+        onProgress(done + loaded, total),
       );
-      // Before the next fetch, so a failed write stops the download.
-      await Promise.all(writeChecks);
+      if (bytes.byteLength !== byteLength) {
+        throw new Error(
+          `loadVolumePyramid: ${url} is ${bytes.byteLength} B, expected ${byteLength}`,
+        );
+      }
+      const [w, h, depth] = dims;
+      await scopedGpuCall(device, () =>
+        device.queue.writeTexture(
+          { texture: target, mipLevel: mip },
+          bytes,
+          // A compressed copy counts in blocks: a row is one row of blocks, an image h / blockEdge rows.
+          {
+            bytesPerRow: levelByteLength(w, blockEdge, 1, bytesPerTexel),
+            rowsPerImage: h / blockEdge,
+          },
+          { width: w, height: h, depthOrArrayLayers: depth },
+        ),
+      );
+      done += byteLength;
     }
     return { texture: target, ...volumePyramidPlacement(sidecar, baseLevel) };
   } catch (error) {
