@@ -5,16 +5,10 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { PNG } from 'pngjs';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-
-// basisu flags as the spike measured them (spec §5); never hand-fill a block, since an all-zero
-// ASTC block decodes as an error block.
-const BASISU_ARGS = {
-  bc4: { flags: ['-dds', '-dds_format', 'BC4', '-linear'], ext: 'dds' },
-  astc6: { flags: ['-ldr_6x6', '-tl', '-effort', '3', '-ktx2_no_zstandard'], ext: 'ktx2' },
-} as const;
-const DDS_DX10_HEADER_BYTES = 148; // magic 4 + DDS_HEADER 124 + DDS_HEADER_DXT10 20
-const KTX2_LEVEL0_INDEX = 80; // after the 48 B header and the 32 B dfd/kvd/sgd index
-const GREY = { colorType: 0, inputColorType: 0 } as const; // one byte per texel in, as stored
+import { BASISU_ARGS } from '../data/basisuArgs';
+import { DDS_DX10_HEADER_BYTES } from '../data/ddsDx10HeaderBytes';
+import { GREY_PNG } from '../data/greyPng';
+import { KTX2_LEVEL0_INDEX } from '../data/ktx2Level0Index';
 
 /** One r8 level through basisu as a 2D array of grey z-slices; returns the headerless blocks. */
 export async function basisuEncodeLevel(
@@ -28,7 +22,7 @@ export async function basisuEncodeLevel(
     const slices = Array.from({ length: d }, (_, z) => {
       const path = join(dir, `z${String(z).padStart(4, '0')}.png`);
       const data = Buffer.from(r8.buffer, r8.byteOffset + z * w * h, w * h);
-      writeFileSync(path, PNG.sync.write({ width: w, height: h, data }, GREY));
+      writeFileSync(path, PNG.sync.write({ width: w, height: h, data }, GREY_PNG));
       return path;
     });
     const { flags, ext } = BASISU_ARGS[format];

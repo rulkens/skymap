@@ -15,6 +15,9 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { encodeVolumeLevel } from './utils/encodeVolumeLevel';
 import { basisuEncodeLevel } from './utils/basisuEncodeLevel';
 import { VOLUME_PYRAMID_FIELDS } from './data/volumePyramidFields';
+import { MAX_CROP_LOSS } from './data/maxCropLoss';
+import { PYRAMID_LEVELS } from './data/pyramidLevels';
+import { VISIBLE_CODE } from './data/visibleCode';
 import { VOLUME_PYRAMID_FORMATS } from '../../src/data/volume/volumePyramidFormats';
 import { VOLUME_PYRAMID_DATA_PREFIX } from '../../src/data/volume/volumePyramidDataPrefix';
 import { volumePyramidLevelPath } from '../../src/utils/volume/volumePyramidLevelPath';
@@ -22,10 +25,6 @@ import { volumePyramidLevels } from '../../src/utils/volume/volumePyramidLevels'
 import type { VolumePyramidFieldRow } from '../@types/volumes/VolumePyramidFieldRow';
 import type { VolumePyramidSidecar } from '../../src/@types/data/volume/VolumePyramidSidecar';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-
-const LEVELS = [1, 2, 3] as const;
-const VISIBLE_CODE = 86; // "visible" as the crop search defined it (spec §4)
-const MAX_LOSS = 0.001; // of L1's visible voxels, at most this share may fall outside the box
 
 const shift = (v: Vec3, k: number): Vec3 => [v[0] >> k, v[1] >> k, v[2] >> k];
 
@@ -67,7 +66,7 @@ function checkCropRule({ gridDims, dataBox: { originVox, dims } }: VolumePyramid
 
 async function buildVolumePyramid(row: VolumePyramidFieldRow): Promise<void> {
   checkCropRule(row);
-  const values = LEVELS.map((k) => readLevel(row, k));
+  const values = PYRAMID_LEVELS.map((k) => readLevel(row, k));
   const sidecar: VolumePyramidSidecar = {
     gridDims: row.gridDims,
     voxelMpc: row.voxelMpc,
@@ -89,7 +88,7 @@ async function buildVolumePyramid(row: VolumePyramidFieldRow): Promise<void> {
     dims: shift(row.dataBox.dims, k),
   });
 
-  const r8 = LEVELS.map((k) => encode(k, boxAt(k)));
+  const r8 = PYRAMID_LEVELS.map((k) => encode(k, boxAt(k)));
   const wholeL1 = encode(1, { originVox: [0, 0, 0], dims: shift(row.gridDims, 1) });
   const visible = visibleCount(wholeL1);
   const loss = (visible - visibleCount(r8[0]!)) / visible;
@@ -97,8 +96,8 @@ async function buildVolumePyramid(row: VolumePyramidFieldRow): Promise<void> {
     `[buildVolumePyramid] ${row.id}: ${(loss * 100).toFixed(3)}% of L1's visible voxels outside the box`,
   );
   // `!(<=)` also refuses a NaN loss: a field with no visible voxel is broken input.
-  if (!(loss <= MAX_LOSS))
-    throw new Error(`crop loss ${(loss * 100).toFixed(3)}% > ${MAX_LOSS * 100}%`);
+  if (!(loss <= MAX_CROP_LOSS))
+    throw new Error(`crop loss ${(loss * 100).toFixed(3)}% > ${MAX_CROP_LOSS * 100}%`);
 
   const rows: Record<string, string | number>[] = [];
   for (const { format, gpuFormat } of VOLUME_PYRAMID_FORMATS) {

@@ -1,10 +1,12 @@
+import type { VolumeLevelSlices } from '../../@types/data/volume/VolumeLevelSlices';
+
 /**
  * Streams one level's headerless bytes into whole-z-slice writes through `slab`, reused.
  * Throws when the stream ends short of, or runs past, sliceBytes · depth.
  */
 export async function streamLevelSlabs(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  level: { readonly sliceBytes: number; readonly depth: number },
+  level: VolumeLevelSlices,
   slab: Uint8Array,
   writeSlices: (bytes: Uint8Array, zOffset: number, sliceCount: number) => void,
   onBytes: (byteCount: number) => void,

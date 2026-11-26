@@ -7,6 +7,7 @@
  * `docs/superpowers/specs/2026-11-26-volume-halfres-compressed-cubes-design.md` §6.
  */
 
+import type { VolumePyramidRequest } from '../../../@types/data/volume/VolumePyramidRequest';
 import type { VolumePyramidSidecar } from '../../../@types/data/volume/VolumePyramidSidecar';
 import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../data/gpu/textureBytesPerTexel';
@@ -23,7 +24,7 @@ import { dataUrl, HttpError } from '../fetchWithProgress';
 
 export async function loadVolumePyramid(
   device: GPUDevice,
-  req: { readonly binBaseName: string; readonly baseLevel: 1 | 2 },
+  req: VolumePyramidRequest,
   signal: AbortSignal,
   onProgress: (loaded: number, total: number) => void,
 ): Promise<GpuVolume> {
