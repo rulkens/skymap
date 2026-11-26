@@ -1,10 +1,11 @@
 # Volume detail region: design spec
 
-> **Status.** Draft for the owner's review, 2026-11-26. Owner: Alexander Rulkens. PR 4 of the
-> volume effort (PR 1 #1170 prep, PR 2 #1175 progressive sampling, PR 3 #1178 half-res compressed
-> cubes). Shape approved at the ground check (dash ask vxC4, 2026-11-26); the rulings are quoted in
-> §2. §8 (fade) is **PENDING the owner's eye verdict on the spike**. Plan: not written yet.
-> **Written against** main at 45528d82f, and against the post-prep shape of §3 as if it existed.
+> **Status.** Approved by the owner, 2026-11-26. Owner: Alexander Rulkens. PR 4 of the volume
+> effort (PR 1 #1170 prep, PR 2 #1175 progressive sampling, PR 3 #1178 half-res compressed cubes).
+> Shape approved at the ground check (dash ask vxC4) and the whole spec at review, both 2026-11-26;
+> the rulings are quoted in §2. Plan: `docs/superpowers/plans/2026-11-26-volume-detail-region.md`.
+> **Written against** main at 45528d82f (the archive rows of §3 against 9b1bd2dad, which this branch
+> merged), and against the post-prep shape of §3 as if it existed.
 > **Inputs.** The box spike (worktree `volume-progressive-octree`: `spike/boxSpike.ts`, the
 > `fs_box` branch of `shaders/scalarVolume/fragment.wesl`, `tools/spike/flickerFade.ts`;
 > throwaway, never merged, not a code base) and its measured numbers, quoted where used. The
@@ -13,10 +14,11 @@
 
 ## 1. Goal and non-goals
 
-Near the camera, the MCPM and Polyphorm 2MRS density volumes draw at native resolution (MCPM
-0.78 Mpc, 2MRS 1.22 Mpc per voxel) instead of the half-res base. A camera-centred box of full-res
-data streams in by HTTP Range in 48³-voxel bricks and replaces the base inside it. Outside the box,
-and wherever a pixel is coarser than one native voxel, the base draws as today.
+Near the camera, inside a volume or close outside it, the MCPM and Polyphorm 2MRS density volumes
+draw at native resolution (MCPM 0.78 Mpc, 2MRS 1.22 Mpc per voxel) instead of the half-res base. A
+box of full-res data, centred on the camera clamped into the volume, streams in by HTTP Range in
+48³-voxel bricks and replaces the base inside it. Outside the box, and wherever a pixel is coarser
+than one native voxel, the base draws as today.
 
 | Tier   | Region (bricks per axis) | Edge, MCPM / 2MRS | GPU bytes added, both volumes (ASTC / BC4 / r8) |
 | ------ | ------------------------ | ----------------- | ----------------------------------------------- |
@@ -31,8 +33,7 @@ MCPM: 0.48–0.50 ms, against 0.59–0.65 ms for the old large tier (the bars in
 The PR opens with the timing checks #1178 deferred (BACKLOG.md:123), then explains a ~7% cost the
 spike left unexplained (§10.2), before the shader lands.
 
-Non-goals: a region seen from outside the stored box (§6.6); mips in the region; an app-side
-brick cache; target-centred or frozen regions; a debug panel; the dust volume; any change to the
+Non-goals: a region beyond the gate distance (§6.6); mips in the region; an app-side brick cache; target-centred or frozen regions; a debug panel; the dust volume; any change to the
 L1–L3 files, the sidecar or the base path; a finer 2MRS export.
 
 ## 2. Rulings
@@ -50,8 +51,22 @@ Owner, 2026-11-26 (ask vxC4), binding:
    stays on the backlog (BACKLOG.md:174).
 7. Everything rides one PR; the prep commits come first.
 
-Carried: the region is centred on the camera; the name is "detail region"; 2MRS works exactly like
-MCPM; the region is torn down on disable; nothing is deleted from the spike; the deferred #1178
+Owner, 2026-11-26, at the spec's review, binding:
+
+8. Fade: the spike's three boxes (§8), judged by eye on the spike and passed.
+9. The region is drawn from close outside a volume too: "when we're looking at it from relatively
+   close to the volume, the detail region should still be drawn, because it's right in front of
+   you" (§6.2, §6.6).
+10. Brick reads use the browser's HTTP cache. Acceptance measures it against `no-store` (§13 check
+    6); switching is the owner's call on those numbers.
+11. The region's state lives on each region object, written only by the planner. The planner
+    contract does not grow.
+12. Full-res brick builds run only on the owner's machine (ruling 6; §5).
+13. Prep (a) runs once the terrain-shadow PR has merged, since both touch the tile files. It merged
+    as #1179; this branch merged main after it, so prep (a) is an ordinary prep commit.
+
+Carried: the region is centred on the camera, clamped into the volume; the name is "detail
+region"; 2MRS works exactly like MCPM; the region is torn down on disable; nothing is deleted from the spike; the deferred #1178
 timing checks open this PR; the ~7% raster cost is understood before the shader lands. Standing:
 timing in ms per frame and fps first, percent after; measuring runs about 30 minutes, one pass;
 the Layer contract, `ReconcileEffects` and `SagaContext` do not grow (this design grows none of
@@ -68,7 +83,7 @@ module both Layers import.
 | Touchpoint (main 45528d82f) | Today | Verdict | After |
 | --- | --- | --- | --- |
 | Archive format, decode, find + types (`src/layers/body/surfaceTiles/archive/`) | body-private; `tools/` imports across into the Layer | a second Layer would import across too | shared homes, prep (a) |
-| Range read (`createArchiveTileSource.ts:67-86`) | inline in the tile source | no shared reader exists | `readArchiveRange`, prep (a) |
+| Range read (`createArchiveTileSource.ts:75-92` at 9b1bd2dad) | inline in the tile source | no shared reader exists | `readArchiveRange`, prep (a) |
 | `VolumeFieldRenderer.draw` (`VolumeFieldRenderer.d.ts:53-62`) | per field: `settingsOf`, `fadeOpacityOf`; `inputs` is per call | no per-field channel for a region | a third reader, `regionOf`, riding `VolumeFieldLiveness`, prep (b) |
 | `densityAccumulationKey` (`densityAccumulationKey.ts:11-35`) | settings, opacity, cube stamp, tier | a region change would not restart the mean | region value in the key, prep (c) |
 | Region texture into the renderer | no route: the draw value is numbers only and goes into a JSON key | needs one | `attachRegion`, prep (d) |
@@ -78,6 +93,10 @@ module both Layers import.
 | Builder input (`buildVolumePyramid.ts:31-41`) | reads `_d{2,4,8}.npy` whole | no native input; `readFileSync` caps at 2 GiB, the native files are 2.5 / 3.5 GB | a separate brick builder reading slabs (§5) |
 
 ### Prep (a): the archive to shared homes, and a shared Range reader
+
+An ordinary prep commit, cut on this branch after its merge of main, which carries the terrain-shadow
+PR #1179 (ruling 13): that PR added the tile source's `landed` map and `isMissing` reader and two
+importers under `tools/textures/surfaceHorizon/`, and move-files repoints them with the rest.
 
 Seven files move with `npm run move-files`, then `npm run refactor rename` drops the `SurfaceTile`
 prefix from each symbol. The key is already a plain number (`findSurfaceTileArchiveEntry.ts:9-12`),
@@ -94,10 +113,14 @@ so nothing else changes. The magic stays `'STAI'` (those bytes are on R2).
 | `tools/utils/textures/encodeSurfaceTileArchiveIndex.ts` | `tools/utils/archive/encodeArchiveIndex.ts` |
 
 `SURFACE_TILE_ARCHIVE_MAX_LEVEL` (`surfaceTileArchiveFormat.ts:8`) stays body-side with
-`surfaceTileMortonKey` and `surfaceTileArchivePath`: it is a 2D tile fact. Nine importers repoint
-(two body files, two tools files, five tests); move-files drags the test mirror.
+`surfaceTileMortonKey` and `surfaceTileArchivePath`: it is a 2D tile fact, extracted to its own
+body-side file before the move. Twelve importers repoint (at 9b1bd2dad): two body files
+(`createArchiveTileSource.ts`, `surfaceTileMortonKey.ts`), four tools files (`collectSurfaceTiles.ts`,
+`packSurfaceTileLevels.ts`, and #1179's `HeightArchiveLevel.d.ts` and `readHeightPyramid.ts`) and six
+tests; move-files drags `planSurfaceTileParts.test.ts`, and `surfaceTileArchiveIndex.test.ts` moves
+with the decoder it tests.
 
-The Range core of `createArchiveTileSource.ts:67-86` becomes one function:
+The Range core of `createArchiveTileSource.ts:75-92` becomes one function:
 
 ```ts
 // src/@types/archive/ArchiveRangeRead.d.ts
@@ -107,19 +130,20 @@ export type ArchiveRangeRead =
   | { readonly kind: 'no-range' }
   | { readonly kind: 'failed' };
 
-// src/utils/archive/readArchiveRange.ts — one single-span GET with a 10 s deadline. Only a 206 of
-// exactly `entry.length` bytes is 'bytes'. Throws on length 0: `bytes=o-(o-1)` is not a valid Range.
+// src/utils/archive/readArchiveRange.ts — one single-span GET with a 10 s deadline, through the
+// browser's HTTP cache. Only a 206 of exactly `entry.length` bytes is 'bytes'. Throws on length 0:
+// `bytes=o-(o-1)` is not a valid Range.
 export function readArchiveRange(
   url: string,
   entry: Pick<ArchiveEntry, 'offset' | 'length'>,
-  cache: RequestCache,
 ): Promise<ArchiveRangeRead>;
 
 // src/data/archive/archiveFetchDeadlineMs.ts
 export const ARCHIVE_FETCH_DEADLINE_MS = 10_000;
 ```
 
-The tile source passes `'default'` and keeps its warn-once and its `'missing'`/`'empty'` answers.
+No cache argument: both callers read through the HTTP cache (ruling 10), and check 6's `no-store`
+run is a scratch patch. The tile source keeps its warn-once and its `'missing'`/`'empty'` answers.
 Behaviour is unchanged.
 
 ### Prep (b): a per-field region reader on the draw path
@@ -362,7 +386,7 @@ export type DetailRegionFade = { readonly into: BrickBox; readonly out: BrickBox
 
 // …/@types/DetailRegionState.d.ts
 export type DetailRegionState = {
-  /** K bricks per axis around the eye's brick, inside the grid; null before the eye was first inside. */
+  /** K bricks per axis around the centre's brick, inside the grid; null before the first frame in reach. */
   readonly target: BrickBox | null;
   /** Every brick inside is in the texture; drawn at weight 1. */
   readonly settled: BrickBox | null;
@@ -372,9 +396,14 @@ export type DetailRegionState = {
 // …/@types/DetailRegionPlanInput.d.ts
 export type DetailRegionPlanInput = {
   readonly grid: Vec3;                          // bricks per axis
+  readonly dims: Vec3;                          // the dataBox, native voxels
   readonly bricksPerAxis: number;               // K, from the tier
-  /** The eye in native voxels from the dataBox origin; null = outside the stored box. */
-  readonly eyeVox: Vec3 | null;
+  /** The eye in native voxels from the dataBox origin, inside the box or not. The region centre
+   *  is this point clamped into [0, dims]: the eye itself inside, the nearest point outside. */
+  readonly eyeVox: Vec3;
+  /** The gate distance in native voxels: the largest target pxPerRad of the frame's views. A pixel
+   *  d voxels away spans d / pxPerRad voxels, so beyond pxPerRad none is finer than one voxel. */
+  readonly gateVox: number;
   readonly held: (brick: number) => boolean;    // the stream's isLoaded
   readonly failed: (brick: number) => boolean;  // the stream's isFailed
   /** This frame's fade advance: max(dt / 200 ms, eye travel / half a brick) (spike). */
@@ -384,7 +413,7 @@ export type DetailRegionPlanInput = {
 // …/@types/DetailRegionPlan.d.ts
 export type DetailRegionPlan = {
   readonly state: DetailRegionState;
-  /** Target bricks not held, nearest first: Chebyshev shell, then Euclidean, from the eye's brick. */
+  /** Target bricks not held, nearest first: Chebyshev shell, then Euclidean, from the centre's brick. */
   readonly wanted: readonly number[];
   /** Boxes drawn this frame (settled, or into and out while fading): their slots must not be reused. */
   readonly shown: readonly BrickBox[];
@@ -398,13 +427,18 @@ export function planDetailRegion(prev: DetailRegionState, input: DetailRegionPla
 
 ### 6.2 The plan, in order
 
-1. **Target.** While the eye is inside the stored box: K bricks per axis around its brick, clamped
-   inside the grid. Outside: the target stays where it was, nothing is wanted, and the draw value is
-   null (§6.6).
+1. **Target.** The region centre is the eye clamped into the dataBox: the eye itself inside, the
+   nearest point of the box outside. The target is K bricks per axis around the centre's brick,
+   clamped inside the grid, so from outside it sits against the nearest face, K bricks deep, and
+   slides along that face as the camera moves. **Reach:** a ray marches only inside the stored box,
+   and the target's part there contains the centre, the stored box's nearest point to the eye; so
+   when `|eyeVox − centre| ≥ gateVox` no sample of the region can pass the per-ray gate (§7).
+   Then the target stays where it was, nothing is wanted, the held bricks stay and the draw value
+   is null (§6.6).
 2. **Settled.** Last frame's settled box clipped to the new target (the spike's flicker fix:
    regrowing from the eye's brick collapsed the region to 36–50% for 3–6 frames after a shift). It
    then grows one whole brick layer per face, and only by a layer whose every brick is held and none
-   failed. Before anything is held it starts as the eye's brick.
+   failed. Before anything is held it starts as the centre's brick.
 3. **Fade.** A change of the settled box does not draw at once: §8 turns it into a fade, and the
    new box settles when the fade ends. One fade runs at a time.
 4. **Wanted.** Target bricks not held and not failed, nearest first.
@@ -455,7 +489,7 @@ It adds `write(slot, bytes)`: one `writeTexture` at origin `48 · slot`, layout 
 
 **The stream.** `createTileStreamSubsystem` and `PriorityQueue`, unchanged, with this store,
 `concurrency: 8`, `upload: (store, slot, bytes) => store.write(slot, bytes)` and a no-op `release`.
-The fetcher reads one brick: `readArchiveRange(pack url, entry, 'no-store')` (§10.1), then
+The fetcher reads one brick: `readArchiveRange(pack url, entry)`, through the HTTP cache (§10.1), then
 `DecompressionStream('gzip')` (precedent: `starBinCodec.ts`), then a length check against §4.3.
 Anything else is a failed brick.
 
@@ -484,6 +518,8 @@ export type DetailRegionHost = {
   frame(
     wanted: ReadonlyMap<CosmicWebDensityFieldId, number>,
     eye: Readonly<Vec3>,
+    /** The largest target pxPerRad of the frame's views: each region's `gateVox` (§6.1). */
+    gatePxPerRad: number,
     frameIndex: number,
     nowMs: number,
   ): DetailRegionFrame;
@@ -502,7 +538,9 @@ A new region fetches the sidecar (an HTTP-cache hit after the base load) and its
 region stays empty, with one warning. `CosmicWebDensityRuntime` (`CosmicWebDensityRuntime.d.ts:14-23`)
 gains `regions: DetailRegionHost`, built in `create.ts` and destroyed in `destroy.ts`. The region
 state lives in each region object and only the planner writes it; every other reader sees the
-published value.
+published value (ruling 11). The host maps the eye into each field's native voxels through the
+inverse of the base's model matrix (`buildCubeModelMatrix(placement)` gives the stored box's local
+[0,1]³; times `dataBox.dims`), so a rotated frame would need no second path.
 
 **The planner** (`detailRegion/plan/detailRegionPlanner.ts`):
 
@@ -520,6 +558,11 @@ export function detailRegionPlanner(
   whose `regionOf` would read its own unpublished value.
 - **Eye.** `views[0].drawCamPos`, the anchor view. A dome's faces share the eye, so one region
   serves every face.
+- **Gate.** `gatePxPerRad` is the largest `view.drawPxPerRad / COSMIC_WEB_DENSITY_TARGET_SCALE`
+  over `views`: the target pxPerRad the march is handed (`createScalarVolumePass.ts:36-38` scales
+  by the target's height, which differs from this by under one target row). The constant is the
+  density target's `scale: 3` (`layer.ts:36`), moved to `densityCubes/data/` so the row and the
+  planner read one number.
 - **Votes.** `awake: busy`, so the loop keeps ticking while bricks arrive or a fade runs.
   `loading: busy && views[0].stillFrames > 0`, as `planVolumeAccumulation` does: motion never
   holds `settled()`, and a shot at rest waits for the region.
@@ -560,10 +603,14 @@ always finds this frame's value.
   released, or a tier switch that changes K), or the Layer is destroyed: the host calls
   `attachRegion(id, null)`, then the stream's `destroy`, which destroys the store and its texture.
   Payloads that land later are released (`tileStreamSubsystem.ts:90-93`).
-- **Outside the stored box** the region draws null and fetches nothing; its bricks stay, so coming
-  back to the same spot is instant. Reason: the spike measured the region from outside costing
-  0.66 ms per draw against the base's 0.45 at MCPM 600 Mpc, and past roughly 270 Mpc (0.78 Mpc ×
-  ~340 px/rad on the 1/3-scale target of a 1080p canvas) no pixel passes the gate anyway.
+- **Outside the stored box** the region sits against the nearest face (§6.2) and is drawn while it
+  is in reach (ruling 9). Reach ends where the eye is `gateVox` native voxels from the box: at
+  ~340 px/rad (the 1/3-scale target of a 1080p canvas) about 265 Mpc for MCPM and 415 Mpc for
+  2MRS, twice that on a 2× display. Beyond it the region draws null and fetches nothing; its
+  bricks stay, so coming back is instant. The acceptance poses at 600 Mpc lie 250–300 Mpc from
+  their box, so 2MRS is in reach there and MCPM at the edge of it; at 2000 Mpc both are out. The
+  spike measured a region drawn from 600 Mpc at 0.66 ms per draw against the base's 0.45 (MCPM,
+  per-step box test); this design pays that band's cost by intent, and check 2 bars it.
 - **Tiers.**
 
 ```ts
@@ -572,7 +619,8 @@ export const DENSITY_REGION_BRICKS_BY_TIER = { small: 5, medium: 5, large: 8 } a
 ```
 
 Small ↔ medium keeps the region (same K; only the base level changes, and the region reads at gain
-1 with no tie to the base). Medium ↔ large rebuilds it at the new K and refetches.
+1 with no tie to the base). Medium ↔ large rebuilds it at the new K and reads its bricks again,
+from the HTTP cache where they were read before.
 
 ## 7. Shader and renderer
 
@@ -644,34 +692,36 @@ unmeasured, and step 2 of §11 times both.
 Per ray: variant 1 adds one ray–box intersection and one division; variant 2 three intersections.
 The jitter `textureLoad` per ray is unchanged.
 
+**Seen from outside.** A region against a face (§6.2) runs the same variants: its box is a box in
+the same local frame, the ray–box intersection already starts where the ray enters it, and `tGate`
+already caps it. The clamped centre adds no shader term: the steady pipeline stays one interval
+test and exactly one volume read per step, the fading pipeline as in the table.
+
 **Renderer.** `draw` writes the region block from `regionOf(id)` beside the base block, sets
 group 2 and picks the pipeline. A field whose region value is non-null but has no attached texture
 draws variant 0.
 
 ## 8. Fade
 
-> **PENDING the owner's eye verdict on the spike.** The spike's fade is built and measured, but the
-> owner has not judged it by eye. This section recommends one design; the choice is the owner's.
+The spike's three boxes, passed by the owner's eye on the spike (ruling 8):
 
-Both designs share one constraint: an entering slab takes the leaving slab's slots, so on one axis
-the leaving slab fades out, then the entering slab uploads, then it fades in. A true cross-fade would
-need a spare slab per axis (33–49% of the texture, rejected by the greenfield check). Both designs
-also share the steady variant exactly.
+- **Boxes.** `settled` at weight 1; `into` at `w`; `out` at `1 − w`. `into` and `out` both contain
+  the settled box and meet only in it, so one fade in and one fade out run at complementary
+  weights.
+- **Ramp.** One `w`, advanced each frame by max(dt / 200 ms, eye travel / half a brick).
+- **Slots.** An entering slab takes the leaving slab's slots, so on one axis the leaving slab fades
+  out, then the entering slab uploads, then it fades in: ~0.45 s per shift (out 0.2 s, upload, in
+  0.2 s; measured). A true cross-fade would need a spare slab per axis (33–49% of the texture).
+- **Cost.** 112 uniform bytes; per ray while fading three ray–box intersections; per step in the
+  fading shell two interval tests, two volume reads and one mix (§7). The steady variant is
+  untouched, and at rest a fade is pixel-identical to none.
+- **Measured** on the spike: 2MRS orbit at 200 Mpc, pops over 0.5 from 5 to 0 and the largest jump
+  2.80 → 0.47; the tour path 2.55 → 0.24; cost while fading MCPM +1–4%, 2MRS +7–13% per draw.
+- **From outside** (§6.2) the box slides along the face as the camera moves, and each brick-layer
+  shift fades exactly as inside.
 
-| | A. Spike: three boxes | B. Greenfield check: outer/core + six face weights |
-| --- | --- | --- |
-| Boxes | settled (w = 1), `into` (w), `out` (1 − w); `into` and `out` meet only in settled | `outer` (any weight > 0), `core` (weight 1) |
-| Weights | one `w`, ramped by max(dt / 200 ms, eye travel / half a brick) | one weight per face; a sample's weight is the product over the faces it lies beyond |
-| Uniform bytes | 112 | 112 (outerLo, outerHi, coreLo, coreHi, alphaLo, alphaHi, texScale with a fading flag) |
-| Per ray, fading | 3 ray–box intersections | 2 |
-| Per step, fading shell | 2 interval tests, 2 volume reads, 1 mix | 1 interval test, 3 face tests, a product of up to 3 weights, 2 volume reads, 1 mix |
-| Simultaneous fades | one in, one out, at complementary weights | each face on its own |
-| Measured | yes: 2MRS orbit at 200 Mpc, pops over 0.5 from 5 to 0 and largest jump 2.80 → 0.47; tour 2.55 → 0.24; cost while fading MCPM +1–4%, 2MRS +7–13% per draw; at rest pixel-identical to no fade | no |
-| Time per shift | ~0.45 s (out 0.2 s, upload, in 0.2 s; measured) | the same: slot reuse sets it |
-
-**Recommendation: A.** It is measured, the bytes and the steady cost are equal, and B's gain
-(independent faces) does not shorten the sequential path that sets the time per shift. B stays the
-fallback if the owner's eye finds A wrong on diagonal moves, where A runs one face pair at a time.
+Rejected: six face weights over an outer and a core box (the greenfield check); the three-box form
+is measured and passed by eye.
 
 **Accumulation during a fade.** Every fade frame changes `w`, so the key changes and the mean
 restarts each frame (prep (c)). While moving that changes nothing (motion restarts anyway). At rest
@@ -709,12 +759,13 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
    work on a cache entry, so concurrent Range reads into one pack part finish one after another:
    12 reads of one part took 375–460 ms by default against ~70 ms with `cache: 'no-store'`, on the
    live edge. A region fill is the case that backlog item waits for: nearest-first bricks are
-   neighbours, and neighbours share a part. **Handling:** brick reads pass `'no-store'`
-   (`readArchiveRange`'s `cache` argument); the tile source keeps `'default'`. **Cost:** a refill
-   after a toggle, a medium ↔ large switch or a return to an evicted spot downloads again (MCPM
-   K = 5 about 1.7 MB, K = 8 about 6.9 MB), since the region has no other cache. Smaller parts do
-   not help: neighbouring bricks stay in one part. Fill time against production is acceptance
-   check 6, with and without `no-store`; the faster wins, recorded in the PR.
+   neighbours, and neighbours share a part. **Handling:** brick reads go through the HTTP cache like
+   the tiles (ruling 10), so a refill after a toggle, a medium ↔ large switch or a return to an
+   evicted spot is served from disk instead of downloading again (MCPM K = 5 about 1.7 MB, K = 8
+   about 6.9 MB). **Cost:** a cold fill may queue as above. Smaller parts do not help: neighbouring
+   bricks stay in one part. Acceptance check 6 measures fill time against production with the
+   cache and with `no-store` (a scratch patch), plus the 12-concurrent-reads case, in ms; switching
+   is the owner's call on those numbers.
 2. **The unexplained ~7% raster cost.** With the region on, the spike's back-face raster path was
    about 7% slower than its deleted full-screen pass (MCPM inside 39.2 → 41.8 ms per 64 draws,
    2MRS 600 Mpc 34.9 → 37.3); with the region off, equal. Removing `discard` and the unused
@@ -727,7 +778,9 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
      lanes along the cube's triangle edges run the whole march;
    - a pose where the region fills the screen (no box edge in view) against one where its edge
      crosses the screen: divergence at the box boundary;
-   - the per-ray interval test of §7 against the spike's per-step 3D test;
+   - the per-ray interval test of §7 against the spike's per-step 3D test, inside and at the
+     600 Mpc pose, where the spike's region cost 0.66 ms against the base's 0.45 and where ruling 9
+     now draws it;
    - one Metal GPU capture of each pipeline for register count and occupancy.
    The finding and its fix (or "accepted, cost X ms") go to the owner before §7 is built.
 3. **Small tier: a region over a quarter-res base on the phone.** There the region voxel is 4×
@@ -737,12 +790,10 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
 4. **No mips in the region.** A region voxel read where a pixel spans more would alias. **Handling:**
    the gate distance sends every such sample to the base, so the region is never minified. The
    spike's mips on the box gave no speed-up for +14% memory.
-5. **Clash with the terrain-horizon-shadows branch.** `feat/terrain-horizon-shadows` edits
-   `createArchiveTileSource.ts` (a `landed` map and an `isMissing` reader that calls
-   `findSurfaceTileArchiveEntry`), and its plan names `decodeSurfaceTileArchiveIndex`
-   (`2026-11-25-terrain-horizon-shadows-feature.md:157`). Prep (a) moves and renames both.
-   **Handling:** prep (a) is cut after that branch merges, so move-files repoints its new import
-   too; if this PR lands first, that branch merges main and runs the same `refactor rename`.
+5. **Overlap with the terrain-shadow PR.** #1179 edited `createArchiveTileSource.ts` (a `landed`
+   map and an `isMissing` reader that calls `findSurfaceTileArchiveEntry`) and added two importers
+   of the decoder under `tools/textures/surfaceHorizon/`. **Handling:** it merged before prep (a)
+   (ruling 13) and this branch merged main, so move-files repoints all of it in one commit.
 6. **Production sync.** On 2026-11-26 `sync-r2-secure` aborted at the Mars tiles group (immutable
    `mars-tiles/v2/horizon` files re-baked) before the data manifest went up. This deploy needs a
    clean sync, so that must be resolved first.
@@ -756,12 +807,12 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
    milestone). Bars from the half-res spec's acceptance 7–9. These numbers are also the region's
    baseline.
 2. **The 7% investigation** (§10.2). Report, then the owner's word.
-3. **Prep commits** (a)–(d), each behaviour-neutral, each its own commit.
+3. **Prep commits** (b), (c), (d), then (a), each behaviour-neutral, each its own commit.
 4. **Builder and data:** extractor lines, `readNpyHeader`, `buildVolumeBricks`, the format row's
    zero block, the deploy rows; run both fields on the owner's machine.
 5. **Runtime:** store, fetcher, plan, host, planner, wiring; the region draws as variant 1 with the
    fade off (no visible change until step 6 binds it).
-6. **Shader and fade:** group 2, the three variants, the fade design the owner picks.
+6. **Shader and fade:** group 2, the three variants, the three-box fade (§8).
 7. **Acceptance** (§13), then `/feature-done`.
 
 ## 12. Tests
@@ -773,9 +824,10 @@ Only what can break (testing.md):
   at origin `48 · slot` with §4.3's layout.
 - **`planDetailRegion`.** The target clamps inside the grid at every face; settled grows only by a
   whole layer with every brick held; a failed brick blocks its layer; a shift clips settled to the
-  new target and keeps what it can (the flicker fix); the eye outside the stored box draws null and
-  wants nothing; a change of settled becomes a fade, and an entering brick's slot stays refused
-  until the leaving slab's fade ends.
+  new target and keeps what it can (the flicker fix); an eye outside the box but in reach gets a
+  target against the nearest face, and moving parallel to that face slides it; an eye out of reach
+  draws null, wants nothing and keeps the target; a change of settled becomes a fade, and an
+  entering brick's slot stays refused until the leaving slab's fade ends.
 - **Draw value.** Boxes in local [0,1]³ with the half-voxel inset; `texScale` for MCPM at K = 5.
 - **Brick fetcher.** A 206 with a gzip member yields the bytes; a 200 fails and warns once; a wrong
   inflated length fails; a zero-length entry is never fetched.
@@ -799,8 +851,9 @@ acceptance.
 Poses as the half-res spec's §12, with
 `layers=-survey,-structureRing,-cosmicWebFilaments,-zoneOfAvoidance,-starCatalog,-milkyWayDisk,-label`:
 MCPM inside `#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0` and knot `a,-132.82,18.99,67.28,0.5,0.3,20,0`;
-2MRS inside `a,21.27,21.07,36.88,0.5,0.3,30,0` and dense `a,43.3,38.2,44.2,0.5,0.3,60,0`; outside
-and far at 600 and 2000 Mpc. **Measuring rule:** tiers are forced with `?perf` and
+2MRS inside `a,21.27,21.07,36.88,0.5,0.3,30,0` and dense `a,43.3,38.2,44.2,0.5,0.3,60,0`; just
+outside at 350 Mpc (the inside pose's target, `…,0.5,0.3,350,0`: 40–60 Mpc outside the MCPM box,
+60–75 Mpc outside 2MRS's), outside and far at 600 and 2000 Mpc. **Measuring rule:** tiers are forced with `?perf` and
 `__skymapPerf.setTier()` (the `?tier=` switch does not stick), and each shot asserts the files it
 fetched (the base level file, and `.L0.p*.pack` reads when a region is expected). Timing uses
 #1175's wall-clock bench (scratch patch, never committed; no-op floor, K-doubling within 15%, ≥ 5
@@ -812,9 +865,10 @@ one pass. A breach halts and goes to the owner.
 2. **Per-draw cost, Mac.** Bars from the box spike's clean MCPM run (2026-11-25: ASTC 384³ box over
    the ASTC half-res base, inside and knot 0.48–0.50 ms per draw): MCPM large inside and
    knot ≤ 0.55 ms. 2MRS large inside ≤ 0.59 ms (the spike's moving-box row, 0.54 ms). Medium (K = 5)
-   ≤ the large bar at the same pose. Outside and far, the region is off: ≤ 1.02× step 1's base number
-   at that pose. While fading (if A is chosen): ≤ 1.04× steady for MCPM and ≤ 1.13× for 2MRS (the
-   spike's measured ranges). The frame rate stays at 120 fps (8.33 ms) at every tier and pose.
+   ≤ the large bar at the same pose. Just outside and at 600 Mpc, where the region is drawn while
+   in reach (§6.6; each run records whether it was): ≤ that field's large inside bar. Far, out of
+   reach, the region is off: ≤ 1.02× step 1's base number at that pose. While fading: ≤ 1.04×
+   steady for MCPM and ≤ 1.13× for 2MRS (the spike's measured ranges). The frame rate stays at 120 fps (8.33 ms) at every tier and pose.
    If step 2 re-bases the spike's rows, these bars move with the owner's OK.
 3. **Phone, small tier.** Moving at the MCPM inside pose on the OnePlus: ms per frame ≤ 1.10× step
    1's small number. The picked format is recorded.
@@ -825,14 +879,16 @@ one pass. A breach halts and goes to the owner.
    be this one, so the bar sits below it.)
 5. **Image: never dimmer.** In the same footprint, mean luminance ≥ main's − 0.5 of 255.
 6. **Fill time after a jump.** From arrival at the MCPM inside pose (cold HTTP cache, production
-   R2) to the planner's `busy` going false: K = 5 ≤ 2 s and K = 8 ≤ 4 s on the Mac, both with
-   `no-store` and with `default` (§10.1; the faster is kept). K = 5 on the phone over Wi-Fi ≤ 5 s.
-   These are first guesses; the numbers go to the owner either way.
+   R2) to the planner's `busy` going false: K = 5 ≤ 2 s and K = 8 ≤ 4 s on the Mac, with the
+   shipped HTTP-cache reads and again with `no-store` (a scratch patch), each in ms; plus 12
+   concurrent Range reads into one pack part both ways (BACKLOG.md:179's case). K = 5 on the phone
+   over Wi-Fi ≤ 5 s. These are first guesses; the numbers go to the owner, who rules on switching
+   (ruling 10).
 7. **No seam line at rest.** At the knot pose with the box edge in view, converged: in the image of
    region-on minus region-off, no pixel row along the projected box edge is brighter or darker than
    both its neighbours across the edge by more than 2 of 255. Then a dash check pair, region off
    left, on right, judged by the owner.
-8. **Pops** (only for the fade the owner picks). The spike's metric (`tools/spike/flickerFade.ts:139-155`
+8. **Pops.** The spike's metric (`tools/spike/flickerFade.ts:139-155`
    in its worktree): D_i is the RMS luminance difference of frame i against a region-off run of the
    same path; a jump is |D_i − D_(i−1)|, a pop |D_i − mean(D_(i−1), D_(i+1))|. Bars at the spike's
    measured values with a little room: 2MRS 90° orbit at 200 Mpc, no pop over 0.5 and largest jump
@@ -849,6 +905,10 @@ one pass. A breach halts and goes to the owner.
     and no upload follows. Destroying the Layer frees both regions and the placeholder.
 13. **Zero block.** A readback (scratch patch) of a slot written with the zero brick reads 0 in all
     three formats.
+14. **From just outside.** At each volume's just-outside pose, converged at large: the shot
+    asserts `.L0.p*.pack` reads (the region is drawn), check 5's never-dimmer bar holds in its
+    footprint, and a dash check pair per volume (main left, branch right, the box's outline in
+    view) is judged by the owner, seam included.
 
 ## 14. Deploy
 
@@ -885,9 +945,9 @@ answers Range. A kiosk on an older desktop build ignores them.
 - **Debug panel rows** (size, follows, takeover, budget): knobs nobody sets; the spike's panel stays
   in the spike. The Memory panel shows the region.
 - **Target-centred or frozen regions:** the owner ruled camera.
-- **A region seen from outside the stored box:** +0.21 ms per draw for no visible gain (§6.6).
-- **An app-side brick cache:** revisits re-download (§10.1); a Cache Storage layer is new code for a
-  measured few MB.
+- **A region beyond the gate distance:** no pixel there is finer than a native voxel (§6.6).
+- **An app-side brick cache:** the HTTP cache serves revisits (§10.1); a Cache Storage layer is new
+  code for a measured few MB.
 - **Aborting in-flight fetches:** the tile stream does not, and 8 in flight bounds the waste.
 - **Mirroring the native inputs to R2:** backlog (ruling 6).
 - **A finer 2MRS export** (a grid fitted to the galaxies, about 0.5 Mpc voxels): a data effort of
@@ -900,24 +960,18 @@ answers Range. A kiosk on an older desktop build ignores them.
 
 ## 17. Open questions
 
-1. **Fade design** (§8): A or B, after the owner's eye check of the spike.
-2. **Where the region state lives.** This design keeps it in each region object, written only by the
-   planner, as the surface-tile stream keeps its residency. The alternative is a pure fold: give
-   `once` planners the `prev` that `perView` planners already get (`FrameContentPlanner.d.ts:44-49`).
-   That grows the engine's planner contract (not the Layer contract) and needs the owner's yes.
-3. **Range fetch mode** (§10.1): `no-store` by default; check 6 decides.
-4. **Ray-interval test** (§7): unmeasured against the spike's per-step test; step 2 times both.
-5. **No region outside the stored box** (§6.6): my rule, from the spike's outside cost.
-6. **Fill-time bars** (check 6): first guesses.
-7. **Native inputs only on the owner's machine:** the L0 build cannot run elsewhere until the
-   mirror backlog item is done.
-8. **2MRS brick occupancy and pack sizes** on the new grid: estimates only until the builder runs.
+The owner's rulings of §2 settle the fade, the region state's home, the cache mode, the region
+from outside and the build machine. Left to measurement:
+
+1. **Ray-interval test** (§7): unmeasured against the spike's per-step test; step 2 times both.
+2. **Fill-time bars** (check 6): first guesses.
+3. **2MRS brick occupancy and pack sizes** on the new grid: estimates only until the builder runs.
 
 ## 18. Backlog
 
 - Deleted when the PR starts: "Density volume timing acceptance" (BACKLOG.md:123), picked up as
   step 1.
 - Edited: "Mirror the 2MRS volume inputs to R2" (BACKLOG.md:174) names MCPM's `d1` too.
-- Untouched, related: "Surface-tile Range reads queue in the HTTP cache" (BACKLOG.md:179); its
-  "revisit when" is met by the region, which takes `no-store` on its own reads. The surface tiles
-  keep the default until that item is measured again.
+- Untouched, related: "Surface-tile Range reads queue in the HTTP cache" (BACKLOG.md:179). Check
+  6's two runs are the measurement its "revisit when" waits for; it stays until the owner rules on
+  them (ruling 10).
