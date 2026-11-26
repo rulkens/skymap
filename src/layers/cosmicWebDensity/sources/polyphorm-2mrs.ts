@@ -8,7 +8,7 @@ export const POLYPHORM_2MRS_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'polyphorm-2mrs',
-  tiered: true, // small / medium / large `.scfd` variants
+  storage: 'pyramid',
   priority: 82, // default-off, so it rarely competes at boot
   // Same physical quantity as MCPM (log-normalized MCPM trace density), so its
   // presentation defaults mirror MCPM's — INCLUDING the palette. The two are

@@ -35,8 +35,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     label: 'scalar-field',
     dir: null,
-    fileName:
-      /^(?:(mcpm|polyphorm-2mrs|edenhofer-dust)-(small|medium|large)\.scfd|mcpm-workbench\.scfd)$/,
+    fileName: /^(?:edenhofer-dust-(small|medium|large)\.scfd|mcpm-workbench\.scfd)$/,
     transport: 'wrangler',
     gzipOnWire: true,
   },

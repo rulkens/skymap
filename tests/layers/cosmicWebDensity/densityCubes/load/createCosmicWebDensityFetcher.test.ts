@@ -1,5 +1,5 @@
 /**
- * createCosmicWebDensityFetcher — maps a request to the right `.scfd` filename and uploads the
+ * createCosmicWebDensityFetcher — an scfd request fetches `<binBaseName>.scfd` and uploads the
  * decoded cube into one 3D texture. fetchWithProgress is stubbed, so no network call is made.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -45,14 +45,14 @@ describe('createCosmicWebDensityFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(encodeScalarField(fakeCube));
   });
 
-  it('fetches a tiered request from <binBaseName>-<tier>.scfd into one r16float 3D texture', async () => {
+  it('fetches an scfd request from <binBaseName>.scfd into one r16float 3D texture', async () => {
     const device = mockDevice();
     const volume = await createCosmicWebDensityFetcher(device as unknown as GPUDevice)(
-      { binBaseName: 'mcpm', tier: 'small' },
+      { storage: 'scfd', binBaseName: 'mcpm-workbench' },
       new AbortController().signal,
       () => {},
     );
-    expect(fetchedUrl().endsWith('/mcpm-small.scfd')).toBe(true);
+    expect(fetchedUrl().endsWith('/mcpm-workbench.scfd')).toBe(true);
     expect(device.createTexture).toHaveBeenCalledOnce();
     expect(device.createTexture).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,14 +70,5 @@ describe('createCosmicWebDensityFetcher', () => {
     );
     expect(volume.placement.dims).toEqual([2, 3, 4]);
     expect(volume.placement.frameKind).toBe('equatorial-cartesian');
-  });
-
-  it('fetches an untiered request from <binBaseName>.scfd', async () => {
-    await createCosmicWebDensityFetcher(mockDevice() as unknown as GPUDevice)(
-      { binBaseName: 'mcpm-workbench' },
-      new AbortController().signal,
-      () => {},
-    );
-    expect(fetchedUrl().endsWith('/mcpm-workbench.scfd')).toBe(true);
   });
 });

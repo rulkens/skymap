@@ -8,7 +8,7 @@ export const MCPM_WORKBENCH_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'mcpm-workbench',
-  tiered: false, // one cube per workbench run; no per-tier variants
+  storage: 'scfd', // one cube per workbench run; no pyramid
   priority: 82,
   // Same physical quantity as MCPM/Polyphorm2MRS (log-normalized MCPM trace
   // density), so its presentation defaults mirror theirs — distinct palette

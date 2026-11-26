@@ -7,6 +7,8 @@ import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { CosmicWebDensityAssetKey } from '../../@types/CosmicWebDensityAssetKey';
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 
+import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
+import { DENSITY_BASE_LEVEL_BY_TIER } from '../data/densityBaseLevelByTier';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 
 export function cosmicWebDensityAssetRows(
@@ -16,12 +18,16 @@ export function cosmicWebDensityAssetRows(
     (entry): AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey> => ({
       key: entry.id,
       slot: runtime.slots[entry.id],
-      // An untiered row carries no `tier`, so a tier flip leaves its request
-      // unchanged and the demand loop never reloads it.
-      req: (tier) =>
-        entry.tiered
-          ? { binBaseName: entry.binBaseName, tier }
-          : { binBaseName: entry.binBaseName },
+      // The workbench request carries no `baseLevel`, so a tier flip leaves it unchanged and the
+      // demand loop never reloads it.
+      req: (tier): CosmicWebDensityReq =>
+        entry.storage === 'pyramid'
+          ? {
+              storage: 'pyramid',
+              binBaseName: entry.binBaseName,
+              baseLevel: DENSITY_BASE_LEVEL_BY_TIER[tier],
+            }
+          : { storage: 'scfd', binBaseName: entry.binBaseName },
       demand: { near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 } },
       priority: entry.priority,
       gates: { address: 'cosmicWebDensity', item: entry.id },

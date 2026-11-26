@@ -38,8 +38,6 @@ const TRACKED: [string, typeof GALAXY][] = [
   ['star-catalog/v2/stars.bin', STARS_V2_INDEX],
   ['star-catalog/v2/stars.a3f19c2e.bin', STARS_V2_INDEX],
   ['star-catalog/v2/stars/6-12345.a3f19c2e.bin', STARS_V2_CHUNKS],
-  ['mcpm-small.scfd', SCALAR],
-  ['polyphorm-2mrs-medium.a3f19c2e.scfd', SCALAR],
   ['scalar-field/v3/edenhofer-dust-large.scfd', SCALAR],
   ['mcpm-workbench.scfd', SCALAR],
   ['volume-pyramid/v1/mcpm.astc6.L1.1a2b3c4d.bin', PYRAMID],
@@ -81,6 +79,9 @@ const UNTRACKED = [
   'desi-wedge-large.bin',
   'desi-sgw-large.bin',
   'stars-huge.bin',
+  // The tiered volume files the pyramid replaced.
+  'mcpm-small.scfd',
+  'polyphorm-2mrs-medium.a3f19c2e.scfd',
   // A pyramid level outside its folder.
   'mcpm.astc6.L1.bin',
   // A download in flight, a chunk outside its dir, and a v2 name in the v1 epoch.

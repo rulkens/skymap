@@ -951,17 +951,17 @@ export const DENSITY_BASE_LEVEL_BY_TIER = { small: 2, medium: 1, large: 1 } as c
 
 Steps:
 
-- [ ] Asset-rows test, replacing today's case:
+- [x] Asset-rows test, replacing today's case:
   - `medium and large ask for the same pyramid level; small asks for level 2`: MCPM's `req` gives
     `{ storage: 'pyramid', binBaseName: 'mcpm', baseLevel: 1 }` at medium and large and
     `baseLevel: 2` at small.
   - `the workbench row asks for its .scfd at every tier`: `{ storage: 'scfd', binBaseName:
     'mcpm-workbench' }`, no other key.
-- [ ] Fetcher test: the scfd case stays (URL `…/mcpm-workbench.scfd`); delete the tiered case.
-- [ ] `dataFamilyOf.test.ts`: `mcpm-small.scfd` and `polyphorm-2mrs-medium.a3f19c2e.scfd` are no
+- [x] Fetcher test: the scfd case stays (URL `…/mcpm-workbench.scfd`); delete the tiered case.
+- [x] `dataFamilyOf.test.ts`: `mcpm-small.scfd` and `polyphorm-2mrs-medium.a3f19c2e.scfd` are no
       longer tracked; `mcpm-workbench.scfd` and an `edenhofer-dust-*` name still are.
-- [ ] Grep `tiered`, `binBaseName}-${`: no density path is left.
-- [ ] `npm run typecheck:fast`; `npm test -- cosmicWebDensity dataFamilyOf`.
+- [x] Grep `tiered`, `binBaseName}-${`: no density path is left.
+- [x] `npm run typecheck:fast`; `npm test -- cosmicWebDensity dataFamilyOf`.
 
 **Commit:** `MCPM and 2MRS load from the volume pyramid; the tiered density path goes`
 

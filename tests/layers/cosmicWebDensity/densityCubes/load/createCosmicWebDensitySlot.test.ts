@@ -34,7 +34,7 @@ describe('createCosmicWebDensitySlot', () => {
       fetch: async () => fakeVolume(),
     });
 
-    void slot.load({ binBaseName: entry.binBaseName });
+    void slot.load({ storage: 'scfd', binBaseName: entry.binBaseName });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     slot.release();
 
@@ -52,7 +52,7 @@ describe('createCosmicWebDensitySlot', () => {
       fetch: async () => fakeVolume(),
     });
 
-    void slot.load({ binBaseName: entry.binBaseName });
+    void slot.load({ storage: 'scfd', binBaseName: entry.binBaseName });
     await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
     expect(renderer.upload).not.toHaveBeenCalled();
 
@@ -73,8 +73,8 @@ describe('createCosmicWebDensitySlot', () => {
       fetch: () => new Promise<GpuVolume>((resolve) => resolvers.push(resolve)),
     });
 
-    void slot.load({ binBaseName: entry.binBaseName, tier: 'small' });
-    void slot.load({ binBaseName: entry.binBaseName, tier: 'large' });
+    void slot.load({ storage: 'pyramid', binBaseName: entry.binBaseName, baseLevel: 2 });
+    void slot.load({ storage: 'pyramid', binBaseName: entry.binBaseName, baseLevel: 1 });
     await vi.waitFor(() => expect(resolvers).toHaveLength(2));
     resolvers[1]!(b);
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
