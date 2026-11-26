@@ -7,14 +7,14 @@
  */
 import { useEffect, type RefObject } from 'react';
 
-import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
-import { viewportSet } from '../../../session/state/studioSlice';
-import { selectTimeline } from '../../state/selectTimeline';
-import { panWindow } from '../../utils/window/panWindow';
-import { viewWindow } from '../../utils/window/viewWindow';
-import { zoomedViewport } from '../../utils/window/zoomedViewport';
-import { LINE_PX, WHEEL_PX_PER_ZOOM_STEP } from '../../data/zoom';
-import { useAppStore } from '../../../../../../src/store/hooks';
+import { selectPlayheadSec, selectViewport } from '../../session/state/selectors';
+import { viewportSet } from '../../session/state/studioSlice';
+import { selectTimeline } from '../../timeline/state/selectTimeline';
+import { panWindow } from '../../timeline/utils/window/panWindow';
+import { viewWindow } from '../../timeline/utils/window/viewWindow';
+import { zoomedViewport } from '../../timeline/utils/window/zoomedViewport';
+import { LINE_PX, WHEEL_PX_PER_ZOOM_STEP } from '../../timeline/data/zoom';
+import { useAppStore } from '../../../../../src/store/hooks';
 
 export function useTimelineWheel(
   root: RefObject<HTMLElement | null>,

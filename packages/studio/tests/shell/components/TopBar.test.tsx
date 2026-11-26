@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { all, dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import { openStudio } from '../../../../../src/state/studio/studioActions';
-import TopBar from '../../../src/shell/components/TopBar/TopBar';
+import TopBarContainer from '../../../src/containers/shell/TopBarContainer';
 import { paramEdited, rowToggled } from '../../../src/session/state/studioSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
@@ -20,7 +20,7 @@ function mount(draft: ClipData = DRAFT) {
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
     <Provider store={store}>
-      <TopBar keysOpen={false} onToggleKeys={() => {}} />
+      <TopBarContainer keysOpen={false} onToggleKeys={() => {}} />
     </Provider>,
   );
   return { store, dispatch };

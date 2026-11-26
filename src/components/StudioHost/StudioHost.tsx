@@ -7,7 +7,7 @@ import type { ClipId } from '../../@types/animation/ClipId';
 const StudioDock = lazy(
   (): Promise<{ default: ComponentType<{ clipId: ClipId }> }> =>
     import('../../../packages/studio/src/studioEntry')
-      .then((m) => ({ default: m.StudioDock }))
+      .then((m) => ({ default: m.StudioDockContainer }))
       // A failed fetch (the saga ends the takeover too) must not throw into React and unmount the app.
       .catch(() => ({ default: () => null })),
 );

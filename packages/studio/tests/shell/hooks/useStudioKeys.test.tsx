@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import { useStudioKeys } from '../../../src/shell/hooks/useStudioKeys';
+import { useRunStudioKey } from '../../../src/containers/shell/useRunStudioKey';
 import { paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
 import {
   selectSelection,
@@ -17,7 +18,9 @@ import { openStudioStore } from '../../helpers/openStudioStore';
 afterEach(cleanup);
 
 function Dock() {
-  return <div tabIndex={-1} data-testid="dock" onKeyDown={useStudioKeys(() => {})} />;
+  return (
+    <div tabIndex={-1} data-testid="dock" onKeyDown={useStudioKeys(() => {}, useRunStudioKey())} />
+  );
 }
 
 const document$ = vi.fn();

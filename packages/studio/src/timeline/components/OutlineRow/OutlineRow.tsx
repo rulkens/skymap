@@ -2,12 +2,12 @@ import type { SelectionRelation } from '../../@types/SelectionRelation';
 import type { CSSProperties } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
-import { useObjectName } from '../../../session/hooks/useObjectName';
-import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
+import { objectName } from '../../../kinds/utils/object/objectName';
 import { labelValue } from '../../../kinds/utils/object/labelValue';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
 import { ROW_KINDS } from '../../../kinds/data/rowKinds';
 import { familyStyle } from '../../utils/familyStyle';
+import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import s from './OutlineRow.module.css';
 
@@ -20,14 +20,23 @@ type OutlineRowProps = {
   readonly relation: SelectionRelation;
   readonly onSelect: () => void;
   readonly onToggle: () => void;
+  readonly objects: ObjectIndex;
 };
 
-function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: OutlineRowProps) {
+function OutlineRow({
+  row,
+  ancestors,
+  selected,
+  relation,
+  onSelect,
+  onToggle,
+  objects,
+}: OutlineRowProps) {
   const group = ROW_KINDS[row.kind].mark === 'group';
   const invalid = row.errors.length > 0;
   const { op, qualifier } = row.label;
-  const value = labelValue(row.label, useObjectIndex());
-  const subjectName = useObjectName(row.label.subject);
+  const value = labelValue(row.label, objects);
+  const subjectName = objectName(row.label.subject, objects);
   // An open block's children are its rows below; only a folded one summarises them.
   const members = row.collapsed ? row.members : undefined;
   return (
