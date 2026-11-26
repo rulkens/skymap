@@ -97,9 +97,11 @@ describe('rendering rows and the constants behind them', () => {
   });
 
   it('steps of the two ray marches and rays of the lens table', () => {
-    expect(text('render-density-march')).toContain(
-      `${one('src/layers/cosmicWebDensity/densityCubes/data/densityMarchSteps.ts', 'DENSITY_MARCH_STEPS')} steps`,
+    const densitySteps = sourceNumbers(
+      'src/layers/cosmicWebDensity/densityCubes/data/densityMarchStepsByTier.ts',
+      'DENSITY_MARCH_STEPS_BY_TIER',
     );
+    expect(text('render-density-march')).toContain(`up to ${Math.max(...densitySteps)} steps`);
     const lens = text('render-lens');
     expect(lens).toContain(
       `For ${one('src/layers/blackHoles/lensing/render/blackHoleLensingRenderer.ts', 'LUT_SAMPLE_COUNT')} rays`,

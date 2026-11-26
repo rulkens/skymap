@@ -1,7 +1,7 @@
 /**
  * timelineFrame — the sphere the timeline camera fits at `simDays`: the craft with the planet ahead
  * (the Sun when the next stop has none), or with the planet just passed until
- * `TIMELINE_FLYBY_LEAD_DAYS` after its closest approach. The hand-off is a hard switch; the camera
+ * `TIMELINE_FLYBY_LEAD_DAYS` after its closest approach; past the last stop, with its planet. The hand-off is a hard switch; the camera
  * driver eases across it in wall time, so the clock speed cannot rush it.
  */
 
@@ -39,7 +39,7 @@ export function timelineFrame(
   const framed =
     last?.planetId && ms - passedMs < TIMELINE_FLYBY_LEAD_DAYS * DAY_MS
       ? last
-      : (stops[i + 1] ?? null);
+      : (stops[i + 1] ?? last ?? null);
   const stop = framed?.planetId ? framed : null;
 
   const craft = positionOf(craftId);

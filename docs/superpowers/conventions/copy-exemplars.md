@@ -97,6 +97,34 @@ Newest first. One entry per line the owner chose from, in this shape:
 
 A "none, because…" answer goes in the same shape with `Picked: none` and his reason under Why.
 
+- 2026-11-26 · exhibit · qq8 label
+  - Picked: "The flyby of 2026 QQ8" (register: plain; the judge's top)
+  - Passed over: "Asteroid 2026 QQ8", "2026 QQ8 passes Earth"
+  - Why: none given
+- 2026-11-26 · exhibit · qq8 lede
+  - Picked: "Asteroid 2026 QQ8 spent 225 days held by Earth's gravity. The line around Earth is its path, the circle the Moon's orbit." (register: on screen; the judge ranked it third, the only one that tells the two lines apart)
+  - Passed over: "The line around Earth is the path of 2026 QQ8. For most of 2026, Earth's gravity held it." (the judge's top), "Astronomers first saw 2026 QQ8 on 19 August 2026, near its closest pass. The line around Earth is the path worked out from their measurements."
+  - Why: none given
+- 2026-11-26 · exhibit · qq8 capture section
+  - Picked: "Captured for 225 days / From 26 April to 7 December 2026, the rock moved too slowly to escape Earth's gravity. Measured from the line between Earth and the Sun, it went three quarters of the way round us. Less than one full turn makes it a flyby." (register: plain; the judge's top)
+  - Passed over: "Traced back and forward / Bryce Bolin's team used 71 positions of the rock…" (how we know), "Close to Earth's year / The rock goes round the Sun every 359 days…" (plain)
+  - Why: none given
+- 2026-11-26 · exhibit · qq8 timeline events
+  - Picked: "Approach", "Captured", "Closest pass", "Capture ends" (register: plain; the judge's top for each)
+  - Passed over: "Heading for Earth", "Still free"; "Too slow to escape", "Held by Earth"; "Closest to Earth", "1.4 Moon distances"; "Free again", "Leaves Earth's hold"
+  - Why: none given
+- 2026-11-26 · exhibit · qq8 size section
+  - Picked: "Size from brightness / Telescopes see the rock only as a point of light. Bryce Bolin's team worked out its size from how bright it is. It is 1.4 to 2.5 metres across, depending on how much light its surface reflects." (register: how we know; the judge ranked it second)
+  - Passed over: "Two to five cars / 2026 QQ8 weighs 3 to 8 tonnes, as much as two to five family cars. It is 1.4 to 2.5 metres across." (human scale, the judge's top), "About 1.6 metres / 2026 QQ8 is 1.4 to 2.5 metres across. It weighs 3 to 8 tonnes…"
+  - Why: none given
+- 2026-11-26 · exhibit · qq8 origin section
+  - Picked: "Moon or asteroid belt? / 2026 QQ8 may be a piece of the Moon or a rock from the asteroid belt. The colours measured in November 2026 fit both." (register: plain; the judge ranked it third)
+  - Passed over: "Colours from three telescopes / Bryce Bolin's team measured the rock's colours with three large telescopes in November 2026…" (how we know, the judge's top), "From the Moon? / The circle around Earth is the Moon's orbit. The rock may be a piece of the Moon itself…"
+  - Why: none given
+- 2026-11-26 · palette · qq8 blurb
+  - Picked: "A small asteroid held by Earth's gravity from April to December 2026." (register: plain; the judge's top)
+  - Passed over: "The small rock that travelled with Earth for 225 days in 2026."
+  - Why: none given
 - 2026-11-13 · app meta · title (index.html title, og, twitter)
   - Picked: "Skymap: the mapped universe at true scale, in your browser" (register: plain, the site's own title)
   - Passed over: "Skymap: fly from Earth to the cosmic web at true scale", "Skymap: the mapped universe at true scale"

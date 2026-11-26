@@ -4,7 +4,8 @@
  * frame, something is animating. `settling`: content a sky capture draws is
  * still converging (thumbnails fading in), so cached captures of it are stale.
  * `loading`: content the view asked for has not all arrived yet, which the
- * cold-load gate (`isSceneSettled`) waits on. Two votes because a surface tile
+ * cold-load gate (`isSceneSettled`) waits on; a still view's progressive image
+ * that has not converged (cosmicWebDensity) counts too. Two votes because a surface tile
  * in flight is loading but stales no capture, and voting it `settling` re-baked
  * six sky faces every frame. The store's fold enforces settling ⇒ loading ⇒ awake.
  */

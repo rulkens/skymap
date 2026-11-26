@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { TimelineFrame } from '../../../../src/@types/camera/timeline/TimelineFrame';
+import type { TimelineEvent } from '../../../../src/@types/exhibits/timeline/TimelineEvent';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { bodyPositionMpcAt } from '../../../../src/utils/exhibits/mission/bodyPositionMpcAt';
@@ -47,6 +49,12 @@ describe.each(['voyager1', 'voyager2'])('timelineFrame — %s', (craft) => {
     expect(worst).toBeLessThan(1);
   });
 
+  it('frames the Sun past its last stop, which names no planet', () => {
+    const after = unixMsToJulianDays(stops.at(-1)!.ms) + 365;
+    const at = (id: string) => bodyPositionMpcAt(id, after);
+    expect(timelineFrame(stops, craft, after, at)!.stop).toBeNull();
+  });
+
   it('moves by a small fraction of its radius between adjacent samples on one stop', () => {
     let worst = 0;
     for (let i = 1; i < frames.length; i++) {
@@ -60,4 +68,30 @@ describe.each(['voyager1', 'voyager2'])('timelineFrame — %s', (craft) => {
     }
     expect(worst).toBeLessThan(0.15);
   });
+});
+
+describe('timelineFrame — events that name a body', () => {
+  // A rock held near Earth: no flyby before or after, yet Earth is named at every stop.
+  const event = (id: string, kind: TimelineEvent['kind'], iso: string): TimelineEvent => ({
+    id,
+    bodyId: 'rock',
+    kind,
+    iso,
+    label: id,
+    targetId: 'earth',
+  });
+  const stops = timelineStops([
+    event('approach', 'milestone', '2026-02-01T00:00:00Z'),
+    event('captured', 'boundary', '2026-04-26T00:00:00Z'),
+    event('ends', 'boundary', '2026-12-07T00:00:00Z'),
+  ]);
+  const at = (id: string): Vec3 => (id === 'sun' ? [0, 0, 0] : [1, 0, 0]);
+
+  it.each(['2026-02-01T00:00:00Z', '2026-03-01T00:00:00Z', '2027-01-10T00:00:00Z'])(
+    'frames the rock with Earth at %s',
+    (iso) => {
+      const frame = timelineFrame(stops, 'rock', unixMsToJulianDays(Date.parse(iso)), at)!;
+      expect(frame.stop?.planetId).toBe('earth');
+    },
+  );
 });

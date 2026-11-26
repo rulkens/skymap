@@ -1,6 +1,6 @@
 /**
  * timelineHoldSaga — a timeline exhibit's hold: the clock opens paused at the selected craft's
- * launch (or a linked `t=`) with the timeline camera on it (flown to, unless the entry is a cut,
+ * launch (today, inside an authored span; or a linked `t=`) with the timeline camera on it (flown to, unless the entry is a cut,
  * while the loop already listens). Run, resume, a flyby step and − / + or a scrub while playing
  * play the timeline profile; a step or craft tab re-aims the camera, easing to the new frame
  * (keeping the visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it
@@ -18,6 +18,7 @@ import { timelineStops } from '../../../utils/camera/timeline/timelineStops';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { timelineEndMs } from '../../../utils/exhibits/timeline/timelineEndMs';
+import { timelineOpeningMs } from '../../../utils/exhibits/timeline/timelineOpeningMs';
 import { aimCamera } from '../../camera/cameraIntentSlice';
 import {
   selectOrientation,
@@ -58,13 +59,13 @@ export function* timelineHoldSaga(
   // The exhibit's snapshot always sets the craft before this saga runs.
   let course = courseOf((yield* select(selectTimelineLane))!);
   const nowMs = performance.now();
-  // A linked `t=` is already on the clock; it wins over the launch, kept inside the timeline.
+  // A linked `t=` is already on the clock; it wins over the opening, kept inside the timeline.
   const entryDays = atLinkedTime
     ? Math.min(
         unixMsToJulianDays(timelineEndMs(timeline)),
         Math.max(launchDays(course), deriveSimDays(yield* select(selectTimeState), nowMs)),
       )
-    : launchDays(course);
+    : unixMsToJulianDays(timelineOpeningMs(timeline.endIso, course.stops[0]!.ms, Date.now()));
   yield* put(setSimDays({ simDays: entryDays, nowMs }));
   yield* put(pause({ nowMs }));
   yield* put(aimCamera({ ease: false }));

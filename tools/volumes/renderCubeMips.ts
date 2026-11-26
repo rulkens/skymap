@@ -107,7 +107,7 @@ function main(): void {
   // Distribution line.  Percentiles come from a stride sample of the nonzero
   // values (exact sort of ~50M floats is seconds of wall clock for no
   // diagnostic gain).  0.41 ≈ the MCPM registry's visibility deadband
-  // (contrast 1.7 / trim 0.3 → applyContrastWindow's smoothstep edge); voxels
+  // (contrast 1.7 → 1 − 1/1.7, applyContrastWindow's smoothstep edge); voxels
   // below it are invisible in the viewer no matter the gain sliders.
   let zeros = 0;
   let above = 0;

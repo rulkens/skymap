@@ -269,6 +269,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **mcpm-workbench: lift the 400 MB catalog file cap** `ready` — full DESI samples are larger; the worker already streams the file, but `deriveAgentWeights` still sorts a boxed array for its median.
 - [ ] **Pick-debug overlay is off `FRAME_ORDER`** `deferred` — the target shape is pick execution as a parallel frame-program instance, a new ladder rung at the umbrella reassessment; audit found one blocker (`zoneOfAvoidanceRenderer`'s shared pick uniform). → [details](backlog/2026-08-20-pick-debug-overlay-off-program.md)
 - [ ] **Sun bloom inflates the solar disc against a transiting Moon** `needs-design` — geometry is correct (eclipse ratio ≈ 1.006); the emissive-12 disc seeds a bloom halo the lit-albedo Moon never gets. → [details](backlog/2026-08-21-sun-bloom-inflates-eclipse-disc.md)
+- [ ] **Retained target reallocation must restart accumulation** `ready` — every reallocation path restarts today but nothing enforces the pairing; a path that reallocates without restarting would settle the density image too dark.
+- [ ] **Large tier switch fails in headless: "Maximum update depth exceeded"** `needs-debug` — on main since `61e001926`: dispatching `tier/requestTier` `large` errors the mcpm and polyphorm-2mrs loads until several `forceReload()` calls; repro `#pose=a,0,0,0,0.6,0.3,600,0&layers=cosmicWebDensity,cosmicWebDensity:mcpm,cosmicWebDensity:polyphorm-2mrs`.
 
 ## UI & UX
 

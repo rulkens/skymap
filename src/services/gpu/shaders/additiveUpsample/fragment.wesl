@@ -10,11 +10,10 @@
 // signal, because each texel now covers several screen pixels.
 //
 // The scalar-volume raymarch is the sharpest instance of that.  It
-// jitters its step phase per fragment via
-// 'hash21Hq(fragCoord + frame * irrationals)' to break the otherwise-
-// visible step grid — an unbiased-integral trick where the jitter
-// averages out across many rays but shows up on any single fragment as
-// grain.  Aggressive downsampling then magnifies the grain.  Other
+// jitters its step phase per fragment from a blue-noise mask to break
+// the otherwise-visible step grid — an unbiased-integral trick where the
+// jitter averages out across many rays but shows up on any single
+// fragment as grain.  Aggressive downsampling then magnifies it.  Other
 // sources arrive with their own error term (a sparse sum of glow
 // billboards is noisy wherever the sprite count per texel is low), so
 // the filter is not volume-specific bookkeeping; it is what makes

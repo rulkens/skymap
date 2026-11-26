@@ -134,7 +134,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'search-cards',
     about: 'app',
-    text: 'The seven tabs hold 75 cards between them. A card flies to an object, opens an exhibit or starts a tour; the two tours are on the Tours tab.',
+    text: 'The seven tabs hold 79 cards between them. A card flies to an object, opens an exhibit or starts a tour; the two tours are on the Tours tab.',
     source: `${REPO_BLOB}/src/data/palette/featuredTabs.ts`,
     sourceLabel: `the search’s cards, ${IN_REPO}`,
     checked: CHECKED,
@@ -526,7 +526,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'exhibit-views',
     about: 'app',
-    text: 'Solar System looks down on the planets’ orbits from 42 astronomical units. Cosmic Flows hides the galaxies and shows the flow ribbons round the Milky Way. Cosmic Web hides the galaxies and shows the glow of the cosmic web, with a second glow made from the 2MRS catalogue switched on. Zone of Avoidance looks along the plane of the Milky Way from 1.2 megaparsecs with the band switched on. Observable Universe pulls back until the whole sphere fits the window.',
+    text: 'Solar System looks down on the planets’ orbits from 42 astronomical units. Cosmic Flows hides the galaxies and shows the flow ribbons round the Milky Way. Cosmic Web hides the galaxies and shows the glow of the cosmic web, with a second glow made from the 2MRS catalogue switched on. Zone of Avoidance looks along the plane of the Milky Way from 1.2 megaparsecs with the band switched on. Observable Universe pulls back until the whole sphere fits the window. The Voyager missions follows both Voyagers from launch to today on a timeline. The flyby of 2026 QQ8 follows the asteroid round Earth on a timeline from February 2026 to March 2027.',
     source: `${REPO_BLOB}/src/compositions/appExhibits.ts`,
     sourceLabel: `the list of exhibits, ${IN_REPO}`,
     checked: CHECKED,

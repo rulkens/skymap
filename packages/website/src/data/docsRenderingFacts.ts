@@ -164,8 +164,8 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-density-march',
-    text: 'The cosmic web glow is ray-marched: 128 steps along the line of sight through the density cube for each pixel, accumulating colour from a ramp. The denser a cell, the further along the ramp and the more opaque; the thinnest cells are fully transparent.',
-    source: `${REPO_BLOB}/src/layers/cosmicWebDensity/densityCubes/data/densityMarchSteps.ts`,
+    text: 'The cosmic web glow is ray-marched: up to 128 steps along the line of sight through the density cube for each pixel, accumulating colour from a ramp. The denser a cell, the further along the ramp and the more opaque; the thinnest cells are fully transparent.',
+    source: `${REPO_BLOB}/src/layers/cosmicWebDensity/densityCubes/data/densityMarchStepsByTier.ts`,
     sourceLabel: `the density march, ${IN_REPO}`,
     checked: CHECKED,
   },

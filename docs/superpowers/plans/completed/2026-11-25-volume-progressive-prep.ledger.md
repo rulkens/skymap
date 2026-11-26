@@ -1,7 +1,7 @@
 # Ledger: volume progressive prep (2026-11-25)
 
 Plan: docs/superpowers/plans/completed/2026-11-25-volume-progressive-prep.md (7 tasks, one commit each)
-Spec: docs/superpowers/specs/2026-11-25-progressive-volume-sampling-design.md §4
+Spec: docs/superpowers/specs/completed/2026-11-25-progressive-volume-sampling-design.md §4
 Branch: `volume-progressive-prep` (remote), built in ONE isolation agent worktree off origin/main
 (the controller session is pinned to the spike worktree `volume-progressive-octree`, which must not
 reach the branch). Continue the same implementer agent across dispatches.

@@ -75,7 +75,8 @@ function storeOf(mission: Mission) {
 
 /** The row's slot holding the mission's offsets on the store's aim token, no view yet. */
 function ownOf(store: ReturnType<typeof storeOf>, mission: Mission): TimelineCameraMemory {
-  return { aim: store.getState().camera.intent.aim, offsets: mission.offsets, view: null };
+  const aim = store.getState().camera.intent.aim;
+  return { aim, offsets: mission.offsets, craft: null, view: null };
 }
 
 /** A ctx carrying the row's first-frame slot along, so a spread copy keeps it. */
@@ -254,14 +255,13 @@ describe('timelinePose', () => {
     daysAt: (wallMs: number) => number,
     start: CameraPose,
     each: (pose: CameraPose, simDays: number, wallMs: number) => void,
+    stepFromDays?: number,
   ) {
     const store = storeOf(mission);
     let mem: FollowMemory | null = null;
     let own = ownOf(store, mission);
     let shown = start;
-    for (let f = 0; f < frames; f++) {
-      const wallMs = f * FRAME_MS;
-      const simDays = daysAt(wallMs);
+    const frame = (simDays: number, wallMs: number) => {
       const ctx = makeDriverCtx({
         state: store.getState(),
         simDays,
@@ -276,6 +276,16 @@ describe('timelinePose', () => {
       mem = out.memory;
       own = out.own!;
       shown = out.pose.pose;
+    };
+    // A step: one frame shown on the old aim, then a re-aim and the clock's jump.
+    if (stepFromDays !== undefined) {
+      frame(stepFromDays, 0);
+      store.dispatch(aimCamera({ ease: true }));
+    }
+    for (let f = 0; f < frames; f++) {
+      const wallMs = f * FRAME_MS;
+      const simDays = daysAt(wallMs);
+      frame(simDays, wallMs);
       each(shown, simDays, wallMs);
     }
   }
@@ -299,6 +309,36 @@ describe('timelinePose', () => {
     );
     // Only the first frame may miss: the clock jumped and the shown pose is the old one.
     expect(out).toBeLessThanOrEqual(1);
+  });
+
+  /** The craft's distance from the pose target, in pose distances: its place on screen. */
+  function craftOffset(pose: CameraPose, simDays: number): number {
+    const craft = deriveBodyStates(simDays).get(asSceneBodyId('voyager2'))!.positionMpc;
+    const t = pose.target;
+    return Math.hypot(craft[0] - t[0], craft[1] - t[1], craft[2] - t[2]) / pose.distance;
+  }
+
+  // Clocks fast enough that the craft travels far past its view during one ease, as 2026 QQ8 does
+  // at 1× on Earth's orbit: the ease must ride along with it, not pull back to where it started.
+  it.each([
+    ['the post-flyby hand-off', tc + TIMELINE_FLYBY_LEAD_DAYS - 0.02, undefined, 1 / 100],
+    ['a step', tc - 1.5, tc - 30, 1 / 1000],
+  ] as const)('carries %s’s ease along with the craft', (_, t0, stepFrom, daysPerMs) => {
+    const frames = (TIMELINE_EASE_MS * 1.1) / FRAME_MS;
+    const daysAt = (w: number) => t0 + w * daysPerMs;
+    let worst = 0;
+    drive(
+      missionOf(),
+      frames,
+      daysAt,
+      worldPose(ctxAt(missionOf(), t0)),
+      (p, t) => {
+        worst = Math.max(worst, craftOffset(p, t));
+      },
+      stepFrom,
+    );
+    const end = daysAt(frames * FRAME_MS);
+    expect(worst).toBeLessThan(craftOffset(worldPose(ctxAt(missionOf(), end)), end) * 1.001);
   });
 
   it('keeps the craft in view, smoothly, through the post-flyby hand-off at 4×', () => {
