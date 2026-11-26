@@ -1,6 +1,6 @@
 # Progressive volume sampling (feature PR)
 
-**Goal.** Ship [the spec](../specs/2026-11-25-progressive-volume-sampling-design.md) §3, §5 and §6
+**Goal.** Ship [the spec](../../specs/completed/2026-11-25-progressive-volume-sampling-design.md) §3, §5 and §6
 on the ground prep #1170 laid (squash `61e001926`). While a view stands still, the cosmic-web
 density target averages jittered marches (weight `1/n`) up to a per-tier cap, then stops drawing.
 Any change restarts the mean. The march jitter comes from a blue-noise mask, and the Trim slider
@@ -539,7 +539,7 @@ Steps:
       existing frame-order tests cover the new plan line.
 - [x] `npm run typecheck:fast`,
       `npm test -- cosmicWebDensity checkFrameOrder frameOrderBoot executeFrame renderFrame`.
-- [ ] Controller, after the commit (`npm run shot`, with the dev server's own `--url`):
+- [x] Controller, after the commit (`npm run shot`, with the dev server's own `--url`):
   - inside pose mono, `#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0&layers=cosmicWebDensity,cosmicWebDensity:mcpm`,
     converged;
   - the same pose `?dome`, converged;
@@ -776,3 +776,40 @@ server>`. These checks are the owner's.
 the brick atlas, and any spike debug panel or URL knob. Also out of scope: reprojection and motion
 vectors, step counts that differ between rest and motion, the dust volume, and a `?tier=` deep-link
 param.
+
+## Results
+
+Measured 2026-11-26 on an Apple GPU, headless Chromium 1600×900 dpr 1, branch `980b79b86` against
+main `61e001926`. Task 10's checks all ran; the two items not measured are listed last.
+
+**Cost while moving** (volume cost per frame, both fields; slope of frame time over 16 and 32 extra
+draws, vsync on, 4 rounds, about ±0.05 ms). Frame rate is unchanged at 120 fps. Owner ruling
+2026-11-26: the added cost on medium and large is accepted.
+
+| Tier, pose | main (ms) | branch (ms) |
+| --- | --- | --- |
+| medium, inside | 0.82 | 0.87 |
+| medium, 600 Mpc | 1.07 | 1.17 |
+| large, inside | 0.86 | 0.94 |
+| large, 600 Mpc | 4.34 | 4.83 |
+| small, inside | 0.85 | 0.44 |
+| small, 600 Mpc | 0.74 | 0.37 |
+
+- **At rest:** 15 march draws after a stop (cap − 1), then 0; the idle heartbeat equals main's;
+  accumulation frames cost no more than moving frames.
+- **Settled image vs the mean of 16 single frames:** RMS 0.09–0.32 on 0–255. Brightness vs main
+  0.994–0.996. MCPM-only pixels with 2MRS on: ratio 1.001. Position vs main at 600 Mpc: within
+  0.013 px.
+- **Restarts:** the first frame after each change is one clean sample, then 1/2 … 1/16: camera
+  move, resize, field off/on, contrast, intensity, palette.
+- **Dome:** five faces, no seam; density target memory 1.28 MB (1600×900) → 6.40 MB in dome (five
+  faces at 1200×1200).
+- **Shots:** `settled()` waits for the settled image when still (124 ms, 14 draws), returns at once
+  under auto-rotate.
+- **Trim:** 0 vs 0.5 differ by RMS 3.88 (noise floor 0.014); default look matches main.
+- **Mask download failure:** 3 attempts, one warning, the volume draws unjittered; a 404 is not
+  retried.
+- **Console:** no GPU validation errors.
+- **Not measured:** phone timings (no phone attached; the phone uses the small tier); zoom
+  registration at 2000 Mpc (the volume does not draw at that distance on either side).
+- **Review:** whole-branch review done; fixes in `d5c9369ee`, `b3cd56a36`, `980b79b86`.
