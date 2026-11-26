@@ -1,0 +1,100 @@
+/* The tip lives in the top layer (popover), so it inherits nothing from the dock: every
+   font and colour is set here. Near-opaque glass: the caret overlaps the body, and a
+   translucent fill would paint the overlap twice. */
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.tip {
+  --tip-bg: color-mix(in srgb, var(--surface-card-strong), var(--color-bg) 70%);
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  display: none;
+  grid-template-columns: auto;
+  row-gap: var(--space-1);
+  width: max-content;
+  min-width: calc(var(--space-12) * 4);
+  max-width: calc(var(--space-12) * 10);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  overflow: visible;
+  background: var(--tip-bg);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  color: var(--color-fg-tertiary);
+  text-align: left;
+  white-space: normal;
+  opacity: 1;
+  transition:
+    opacity var(--duration-fast) ease-out,
+    display var(--duration-fast) allow-discrete,
+    overlay var(--duration-fast) allow-discrete;
+}
+.tip:popover-open {
+  display: grid;
+}
+@starting-style {
+  .tip:popover-open {
+    opacity: 0;
+  }
+}
+
+/* caret: a rotated square half under the body, bordered on its two outer sides */
+.tip::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--caret-x) - var(--space-2));
+  width: var(--space-4);
+  height: var(--space-4);
+  background: var(--tip-bg);
+  border: 1px solid var(--border-hover);
+  transform: rotate(45deg);
+  z-index: -1;
+}
+.above::before {
+  bottom: calc(var(--space-2) * -1 - 1px);
+  border-top: 0;
+  border-left: 0;
+}
+.below::before {
+  top: calc(var(--space-2) * -1 - 1px);
+  border-bottom: 0;
+  border-right: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+.name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+.keys {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+.state {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-divider);
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition: none;
+  }
+}

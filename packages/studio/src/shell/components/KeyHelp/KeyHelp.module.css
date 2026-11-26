@@ -1,0 +1,52 @@
+/* Non-modal, under the top bar's right end. Opaque so the lanes behind never show through. */
+.root {
+  position: absolute;
+  top: calc(var(--row-h) + var(--space-6));
+  right: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+  z-index: 20;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.title {
+  color: var(--color-fg);
+}
+.groups {
+  display: flex;
+  gap: var(--space-12);
+}
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.groupTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-fg-label);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-fg-base);
+  white-space: nowrap;
+}
+.chips {
+  display: inline-flex;
+  gap: var(--space-1);
+  min-width: calc(var(--space-12) * 2);
+}

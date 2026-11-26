@@ -50,6 +50,7 @@ import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';
 import type { CompositeTrack } from './CompositeTrack';
 import type { SceneCue } from './SceneCue';
+import type { EffectSpan } from '../EffectSpan';
 
 /**
  * CompiledClip — the fully flattened, evaluator-ready form of a `ClipData`.
@@ -92,4 +93,8 @@ export type CompiledClip = {
    *  evaluator lets one supersede the base layer for the channels it declares;
    *  `validateCompositeExclusivity` forbids a base writer overlapping one there. */
   readonly compositeTracks: CompositeTrack[];
+
+  /** One walk window per effect, pre-order (parent before children): the
+   *  compiler's own timing, so an editor never re-derives it. */
+  readonly spans: readonly EffectSpan[];
 };

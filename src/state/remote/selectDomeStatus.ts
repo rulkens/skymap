@@ -18,8 +18,11 @@ import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import type { ToggleRow } from '../../@types/settings/ToggleRow';
 import type { RootState } from '../../store/types';
 
-/** The exhibit's `entry` stays home; the clip source already has the remote's shape, so a new kind fails to compile here.
- *  Sky mode is no show: the remote lists none, so it sees none running. */
+/**
+ * The exhibit's `entry` stays home; the clip source already has the remote's shape, so a new kind
+ * fails to compile here. The studio is an editor at the screen, not a show a remote steers, and
+ * sky mode is no show either: the remote lists neither, so it sees none running.
+ */
 function remoteTakeover(source: TakeoverSource, state: RootState): RemoteTakeover | null {
   if (source.kind === 'tour') {
     return {
@@ -30,7 +33,7 @@ function remoteTakeover(source: TakeoverSource, state: RootState): RemoteTakeove
       paused: selectTourPaused(state),
     };
   }
-  if (source.kind === 'sky') return null;
+  if (source.kind === 'studio' || source.kind === 'sky') return null;
   return source.kind === 'exhibit' ? { kind: 'exhibit', id: source.id } : source;
 }
 

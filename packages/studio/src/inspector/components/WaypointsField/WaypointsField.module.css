@@ -1,0 +1,50 @@
+.root {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block: var(--space-2);
+  white-space: normal;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--space-10);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--color-fg-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.chip:last-child {
+  border-color: var(--border-hover);
+  color: var(--color-fg);
+}
+.chip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.chip:active {
+  background: var(--surface-control-active);
+}
+.n {
+  color: var(--color-fg-dim);
+}
+.name {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) {
+  .chip:hover {
+    background: var(--surface-control-hover);
+    color: var(--color-fg);
+  }
+}

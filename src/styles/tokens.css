@@ -122,6 +122,13 @@
     transparent 100%
   );
 
+  /* ── Channel families: the clip studio's tints, in legend order (dataviz-checked on its dock) ── */
+  --color-channel-distance: #3987e5;
+  --color-channel-look-at: #199e70;
+  --color-channel-turn: #c98500;
+  --color-channel-layers: #d55181;
+  --color-channel-settings: #d95926;
+
   /* ── Typography ─────────────────────────────────────────────────────── */
   /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono. */
   --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;

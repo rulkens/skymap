@@ -34,6 +34,7 @@ import { selectSelectedRef } from '../selection/selectors';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
+import { selectStudioActive } from '../takeover/selectors';
 import { selectSkyView } from '../sky/selectors/selectSkyView';
 import { selectSkyEntry } from '../sky/selectors/selectSkyEntry';
 import { enterSkyHere } from '../sky/actions/enterSkyHere';
@@ -45,6 +46,12 @@ import { goLiveNowAction } from '../time/goLiveNowAction';
 import type { RootState } from '../../store/types';
 import { toggleControlScheme } from '../settings/core/cameraControlsSlice';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+
+// The studio's dock owns Escape and holds the clock at its frozen instant, so these rows stand down.
+const unlessStudio =
+  (run: KeyboardShortcut['run']): KeyboardShortcut['run'] =>
+  (s) =>
+    selectStudioActive(s) ? null : run(s);
 
 const stepSpeed = (s: RootState, step: -1 | 1) =>
   setRate({ rateIndex: stepRate(s, step), nowMs: performance.now() });
@@ -62,11 +69,11 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   // Standing never clears focus: the sky arm releases the moment focus leaves its body.
   {
     keys: 'escape',
-    run: (s) => {
+    run: unlessStudio((s) => {
       if (selectSelectedRef(s) !== null) return updateSelectionSelect(null);
       if (selectSkyView(s) !== null) return exitTakeover({ restore: true });
       return [clearSelection(), exitTakeover({ restore: true })];
-    },
+    }),
   },
   { keys: 's', run: (s) => (selectSkyEntry(s) === null ? null : enterSkyHere()) },
   { keys: 'f', run: () => focusSelected() },
@@ -75,16 +82,17 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'l', run: () => logCameraState() },
   { keys: 'd', run: () => toggleDebugPanelOpen() },
   // A running exhibit's section kinds may claim a key first (`watchKeyboardEventsSaga`).
-  { keys: '[', run: (s) => stepSpeed(s, -1) },
-  { keys: ']', run: (s) => stepSpeed(s, +1) },
+  { keys: '[', run: unlessStudio((s) => stepSpeed(s, -1)) },
+  { keys: ']', run: unlessStudio((s) => stepSpeed(s, +1)) },
   {
     keys: '\\',
-    run: (s) =>
+    run: unlessStudio((s) =>
       selectTimeState(s).paused
         ? resume({ nowMs: performance.now() })
         : pause({ nowMs: performance.now() }),
+    ),
   },
-  { keys: 'shift+n', run: () => goLiveNowAction() },
+  { keys: 'shift+n', run: unlessStudio(() => goLiveNowAction()) },
   { keys: 'shift+c', run: () => toggleControlScheme() },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to

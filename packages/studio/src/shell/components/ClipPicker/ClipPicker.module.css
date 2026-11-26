@@ -1,0 +1,44 @@
+/* Reads as the title it replaces: the name and caret are drawn, and a transparent native select over
+   them takes the click and the keyboard, so the box always fits the name in the display font. */
+.root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.root:hover {
+  border-color: var(--border-control);
+}
+.root:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.name {
+  overflow: hidden;
+  color: var(--color-fg);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-input);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.caret {
+  flex: none;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-sm);
+}
+.select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.select option {
+  background: var(--surface-card-strong);
+  color: var(--color-fg);
+}

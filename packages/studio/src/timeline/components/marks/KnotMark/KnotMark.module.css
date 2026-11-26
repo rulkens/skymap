@@ -1,0 +1,20 @@
+.leg {
+  position: absolute;
+  top: 50%;
+  border-top: 2px solid var(--c, var(--color-fg-dim));
+}
+.knot {
+  position: absolute;
+  top: 50%;
+  width: var(--space-4);
+  height: var(--space-4);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--c, var(--color-fg-dim));
+  box-shadow: 0 0 0 2px var(--dock-bg);
+  z-index: 2;
+}
+.selected {
+  outline: 2px solid var(--color-fg);
+  outline-offset: 2px;
+}

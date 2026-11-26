@@ -38,6 +38,7 @@ export type SliderProps = {
   /** Only when `format` shows another quantity than `value` (degrees for stops): the typed box then works in it. */
   readonly displayed?: SliderDisplayed;
   readonly disabled?: boolean;
+  readonly size?: 'default' | 'compact';
 };
 
 function Slider({
@@ -50,6 +51,7 @@ function Slider({
   format,
   displayed,
   disabled = false,
+  size = 'default',
 }: SliderProps): ReactNode {
   const rootRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<DOMRect | null>(null);
@@ -170,6 +172,7 @@ function Slider({
       ref={rootRef}
       className={cx(
         styles.root,
+        size === 'compact' && styles.compact,
         dragging && styles.dragging,
         edit.editing && styles.editing,
         disabled && styles.disabled,

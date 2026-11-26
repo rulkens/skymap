@@ -35,6 +35,7 @@ const files = [
   ...sourceFilesUnder('packages/desktop/src'),
   ...sourceFilesUnder('packages/desktop/scripts'),
   ...sourceFilesUnder('packages/move-files/src'),
+  ...sourceFilesUnder('packages/studio/src'),
 ];
 expect(files.length).toBeGreaterThan(0);
 

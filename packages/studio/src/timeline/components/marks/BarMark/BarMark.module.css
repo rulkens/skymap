@@ -1,0 +1,30 @@
+.root {
+  position: absolute;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--c, var(--color-fg-dim));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--c, var(--color-fg-dim)) 30%, transparent);
+  z-index: 1;
+}
+.selected {
+  border: 2px solid var(--color-fg);
+  background: color-mix(in srgb, var(--c, var(--color-fg-dim)) 50%, transparent);
+}
+.invalid {
+  border: 2px dashed var(--color-fg);
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--c, var(--color-fg-dim)) 40%, transparent) 0 var(--space-2),
+    transparent var(--space-2) var(--space-4)
+  );
+}
+.text {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg);
+  white-space: nowrap;
+}

@@ -83,4 +83,9 @@ describe('resolveFrameBasis', () => {
     const basis = resolveFrameBasis('galactic', null, 0);
     expectMat3Close(basis, ORIENTATION_FRAMES.galactic);
   });
+
+  it('a 0 ms tween (a frameTo snap) lands on its frame at elapsed 0, never NaN', () => {
+    const snap = { ...equatorialToGalactic, durationMs: 0 };
+    expectMat3Close(resolveFrameBasis('galactic', snap, 0), ORIENTATION_FRAMES.galactic);
+  });
 });

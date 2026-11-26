@@ -1,6 +1,6 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (`startTour`, `openExhibit`, `startClip`, `enterSky`). A superseding request cancels the running
+ * source (`startTour`, `openExhibit`, `startClip`, `openStudio`, `enterSky`). A superseding request cancels the running
  * takeover and waits for the whole cancelled bracket to settle before the
  * successor starts, so the successor snapshots the user's pre-takeover scene
  * and not a mid-takeover one. A sky entry over a running sky takeover inherits
@@ -18,6 +18,8 @@ import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { clipBodySaga } from '../camera/clipBodySaga';
 import { startClip } from '../camera/clipActions';
+import { studioBodySaga } from '../studio/studioBodySaga';
+import { openStudio } from '../studio/studioActions';
 import { skyBodySaga } from '../sky/sagas/skyBodySaga';
 import { enterSky } from '../sky/actions/enterSky';
 import { selectTakeoverSource } from './selectors';
@@ -27,7 +29,7 @@ import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour, openExhibit, startClip, enterSky];
+const startRequests = [startTour, openExhibit, startClip, openStudio, enterSky];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -68,6 +70,10 @@ export function* watchTakeoverSaga() {
       const id = action.payload;
       source = { kind: 'clip', id };
       body = () => clipBodySaga(id);
+    } else if (openStudio.match(action)) {
+      const id = action.payload;
+      source = { kind: 'studio', id };
+      body = () => studioBodySaga(id);
     } else if (enterSky.match(action)) {
       const { spot, pointLocalM } = action.payload;
       const restore =

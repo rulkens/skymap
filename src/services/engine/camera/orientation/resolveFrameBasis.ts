@@ -45,7 +45,9 @@ export function resolveFrameBasis(
     return [...ORIENTATION_FRAMES[orientation]];
   }
 
-  const t = EASE[frameTween.easing](frameTweenElapsedMs / frameTween.durationMs);
+  const { durationMs } = frameTween;
+  // A 0 ms tween is a `frameTo` snap: at elapsed 0 the fraction would be 0/0.
+  const t = EASE[frameTween.easing](durationMs > 0 ? frameTweenElapsedMs / durationMs : 1);
   const q = quat.slerp(frameTween.fromQuat, ORIENTATION_FRAME_QUATERNIONS[frameTween.to], t);
   return toRegistryMat3(mat3.fromQuat(q));
 }

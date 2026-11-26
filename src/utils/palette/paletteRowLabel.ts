@@ -1,7 +1,8 @@
 /**
  * paletteRowLabel — a `ScoredRow` as plain text. `ROW_VIEW` takes its primary
  * text from `name`, and the dome remote lists the same name, so the two lists
- * never name a row differently. `kind` is for the remote, which has no chips.
+ * never name a row differently. `kind` is for lists without chips (the remote, the clip studio):
+ * a Layer row reads its own chip where it has one.
  */
 
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
@@ -26,7 +27,7 @@ export function paletteRowLabel(row: ScoredRow): PaletteRowLabel {
     case 'place':
       return { name: row.entry.names[0] ?? UNNAMED, kind: 'Place' };
     case 'layer':
-      return { name: row.entry.names[0] ?? UNNAMED, kind: 'Object' };
+      return { name: row.entry.names[0] ?? UNNAMED, kind: row.entry.chip ?? 'Object' };
     case 'sky': {
       const { spot, place } = row;
       const where = spot === 'here' ? 'here' : (place?.names[0] ?? spotLatLonLabel(spot));

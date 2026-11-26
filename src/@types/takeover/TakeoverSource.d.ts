@@ -17,4 +17,5 @@ export type TakeoverSource =
   | { kind: 'tour'; id: TourId }
   | { kind: 'exhibit'; id: ExhibitId; entry: Transition }
   | { kind: 'clip'; id: ClipId }
+  | { kind: 'studio'; id: ClipId }
   | { kind: 'sky'; spot: SkySpot; restore: SkyRestore };

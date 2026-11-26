@@ -11,9 +11,13 @@ import { exportedDeclarations } from '../helpers/conventions/exportedDeclaration
 import { TYPE_FILES_MULTI_EXPORT } from '../helpers/conventions/typeFilesMultiExport';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
-const TYPES_DIRS = ['src', 'tools', 'packages/website/src', 'packages/desktop/src'].flatMap(
-  (root) => dirsNamed(root, '@types'),
-);
+const TYPES_DIRS = [
+  'src',
+  'tools',
+  'packages/website/src',
+  'packages/desktop/src',
+  'packages/studio/src',
+].flatMap((root) => dirsNamed(root, '@types'));
 const files = TYPES_DIRS.flatMap((dir) => walkFiles(dir, ['.ts']));
 expect(files.length).toBeGreaterThan(0);
 

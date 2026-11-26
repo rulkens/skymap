@@ -1,0 +1,19 @@
+.root {
+  position: absolute;
+  top: var(--space-2);
+  height: calc(100% - var(--space-4));
+  overflow: visible;
+}
+.root polyline {
+  fill: none;
+  stroke: var(--c, var(--color-fg-dim));
+  stroke-width: 1.5;
+}
+.selected polyline {
+  stroke: var(--color-fg);
+  stroke-width: 2.5;
+}
+.invalid polyline {
+  stroke: var(--color-fg);
+  stroke-dasharray: 4 3;
+}

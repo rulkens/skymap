@@ -1,0 +1,13 @@
+.root {
+  display: grid;
+  grid-template-columns: 10ch minmax(0, 1fr) var(--space-12);
+  /* Content-sized (rows hold their own min-height): a fixed track minimum lets a scrolling panel squeeze rows onto each other. */
+  grid-auto-rows: auto;
+  column-gap: var(--space-4);
+  align-content: start;
+  align-items: center;
+  min-height: 0;
+  padding: var(--space-5) var(--space-8) var(--space-4);
+  overflow-y: auto;
+  font-size: var(--font-size-md);
+}

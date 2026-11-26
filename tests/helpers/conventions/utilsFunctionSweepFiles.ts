@@ -1,5 +1,5 @@
 /**
- * The utils files (the app's, the website's and the desktop's) under the "at most one exported function, named after the
+ * The utils files (the app's, the website's, the desktop's and the studio's) under the "at most one exported function, named after the
  * file" pair of sweeps (oneSymbolPerFile + filenameMatchesExport), with the
  * genuinely multi-function ones dropped. Shared so the two sweeps cannot drift
  * apart — and so importing one test file from the other (which re-registers its
@@ -28,4 +28,5 @@ export const utilsFunctionSweepFiles: readonly string[] = [
   // The desktop groups by process and concern module, so its utils/ sit at several depths.
   ...dirsNamed('packages/desktop/src', 'utils').flatMap((dir) => walkFiles(dir, ['.ts'])),
   ...walkFiles('packages/desktop/scripts/utils', ['.ts']),
+  ...dirsNamed('packages/studio/src', 'utils').flatMap((dir) => walkFiles(dir, ['.ts'])),
 ].filter((f) => !UTILS_MULTI_FUNCTION_FILES.has(f));

@@ -22,6 +22,7 @@ export default defineConfig({
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
       'packages/move-files/tests/**/*.test.ts',
+      'packages/studio/tests/**/*.test.{ts,tsx}',
     ],
     setupFiles: ['tests/setup/webgpuGlobals.ts', 'tests/setup/reactTestEnv.ts'],
   },

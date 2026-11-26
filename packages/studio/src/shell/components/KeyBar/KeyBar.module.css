@@ -1,0 +1,45 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-2) var(--space-8);
+  border-top: 1px solid var(--border-divider);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.group {
+  display: inline-flex;
+  gap: var(--space-6);
+}
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.tint {
+  display: inline-flex;
+  color: var(--c);
+}
+.swatch {
+  width: var(--space-4);
+  height: var(--space-4);
+  background: var(--color-fg-tertiary);
+}
+.bar {
+  width: var(--space-6);
+  border-radius: var(--radius-xs);
+}
+.diamond {
+  transform: rotate(45deg);
+}
+.hollow {
+  transform: rotate(45deg);
+  background: transparent;
+  border: 1.5px solid var(--color-fg-tertiary);
+}
+.tail {
+  width: var(--space-6);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}

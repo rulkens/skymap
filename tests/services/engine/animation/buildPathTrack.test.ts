@@ -774,4 +774,39 @@ describe('buildPathTrack', () => {
       expect(d).toBeCloseTo(8.0, 3);
     });
   });
+
+  describe('knotSecs', () => {
+    const build = (opts: { linger?: number; lingerSec?: number; ease?: 'linear' }) =>
+      buildPathTrack({
+        start: dwellStart,
+        startSec: 2,
+        over: 8,
+        ease: opts.ease ?? 'easeInOutCubic',
+        waypoints: dwellWaypoints,
+        linger: opts.linger,
+        lingerSec: opts.lingerSec,
+      });
+
+    it('one per waypoint, strictly increasing, the last equal to endSec', () => {
+      const track = build({ linger: 0.7, lingerSec: 1.4 });
+      const knots = track.knotSecs!;
+      expect(knots).toHaveLength(dwellWaypoints.length);
+      knots.slice(1).forEach((k, i) => expect(k).toBeGreaterThan(knots[i]!));
+      expect(knots.at(-1)).toBe(track.endSec);
+      // Arrival, not just order: the eye sits on each interior waypoint at its knot.
+      for (const i of [0, 1]) {
+        const eye = eyeOf(sampleAll(track, knots[i]! - track.startSec));
+        expect(eye[0]).toBeCloseTo(dwellWaypoints[i]!.at[0], 4);
+      }
+    });
+
+    it('a dwell moves later knots by the dwell time', () => {
+      const plain = build({ ease: 'linear' });
+      const dwelled = build({ ease: 'linear', linger: 0.7, lingerSec: 1.4 });
+      const shifts = dwelled.knotSecs!.map((k, i) => k - plain.knotSecs![i]!);
+      expect(shifts[0]).toBeGreaterThan(0);
+      shifts.slice(1).forEach((d, i) => expect(d).toBeGreaterThan(shifts[i]!));
+      expect(shifts.at(-1)).toBeCloseTo(dwelled.endSec - plain.endSec, 9);
+    });
+  });
 });

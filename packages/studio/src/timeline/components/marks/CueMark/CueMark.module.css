@@ -1,0 +1,43 @@
+.cue {
+  position: absolute;
+  top: 50%;
+  width: var(--space-5);
+  height: var(--space-5);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: 0 0 0 2px var(--dock-bg);
+  z-index: 2;
+}
+.diamond {
+  background: var(--c, var(--color-fg-dim));
+}
+.hollow {
+  background: var(--dock-bg);
+  border: 2px solid var(--c, var(--color-fg-dim));
+}
+.square {
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-xs);
+  background: var(--c, var(--color-fg-dim));
+}
+.ring {
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--c, var(--color-fg-dim));
+  background: var(--dock-bg);
+}
+.selected,
+.invalid {
+  outline: 2px solid var(--color-fg);
+  outline-offset: 2px;
+}
+.invalid {
+  outline-style: dashed;
+}
+.tail {
+  position: absolute;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  border-top: 1px dashed var(--c, var(--color-fg-dim));
+  border-bottom: 1px dashed var(--c, var(--color-fg-dim));
+  background: color-mix(in srgb, var(--c, var(--color-fg-dim)) 16%, transparent);
+}

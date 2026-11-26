@@ -62,10 +62,13 @@ Report: docs/superpowers/conventions/ui-ux.md self-check, two screenshots per st
    Test: after any one click or key there is a one-step way back. [NN-confirm, NN-10]
 5. **No modal unless data would be lost.** A dialog that demands an answer is for unexpected,
    irreversible loss. Never two at once. Panels do not dim or block the page. [NN-confirm, NN-modal, HIG-modality]
-6. **Keys and actions are shown where they are used.** A shortcut is printed on its control or in the
-   tool's bar, dim, always there; never only in a tooltip or a doc. An icon has a visible label unless
-   its meaning is universal. Why: "I will forget the shortcuts, need to be reminded in a subtle way."
-   [owner, NN-recall, NN-icons]
+6. **Keys and actions are found where they are used, without crowding.** A shortcut appears in its
+   control's tooltip (name, key chips, and the control's state where it has one) and in the tool's
+   `?` key overlay, never only in a doc. Keys are not printed on the bar. An icon-only button is fine
+   when its icon is unambiguous and its tooltip names it; otherwise it keeps a text label. Why: "I will
+   forget the shortcuts, need to be reminded in a subtle way", and later, of a busy bar: "keyboard
+   shortcuts can be hidden by default and if icons are communicative enough, not all buttons need to
+   have text" (2026-11-10). [owner, NN-recall, NN-icons]
 7. **One way to do a thing: one tool, one key, one bar.** A second overlay, mode or toolbar for a
    neighbouring job is folded into the first. Why: "they should be folded together. this is confusing
    now." [owner, NN-10]
