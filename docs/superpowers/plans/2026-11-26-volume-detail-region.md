@@ -11,8 +11,9 @@ half-res base.
 (`.claude/worktrees/agent-a1047db95976abf81`, still at `8f7da371f`: fast-forward it first). Every
 path and line cited below is checked against `fd7f34369`.
 
-**Pre-task questions (sdd-execution.md).** Nothing to ask. The perf gate runs (spec §11 steps 1–2,
-§13 check 2). Parallelism: this PR alone on its branch.
+**Pre-task questions (sdd-execution.md).** Nothing to ask. The perf gate is §13 check 2, region on
+against off (spec §11 step 1 closed, step 2 dropped, 2026-11-27). Parallelism: this PR alone on its
+branch.
 
 **Ledger.** `.superpowers/sdd/2026-11-26-volume-detail-region/progress.md` in the controller's
 worktree; archived beside this plan at landing.
@@ -27,7 +28,10 @@ its R2 mirror backlogged; one PR, prep first. Spec review (2026-11-26): the spik
 (passed by eye); the region is drawn from close outside a volume too; brick reads use the HTTP
 cache, `no-store` measured in acceptance and switched only on the owner's word; region state lives
 on the region object, the planner contract does not grow; full-res builds only on the owner's
-machine; the archive move only after the terrain-shadow PR merged (it did, as #1179).
+machine; the archive move only after the terrain-shadow PR merged (it did, as #1179). Rulings of
+2026-11-27: #1178's timing is accepted (Task 1, closed); the ~7% raster study is dropped, and in its
+place acceptance times the built region on against off in two cases, halting if on costs more than
+10% over off (Task 2, replaced; check 2); there is no absolute per-draw bar.
 
 ## Standing constraints (every task, every dispatch)
 
@@ -48,6 +52,8 @@ machine; the archive move only after the terrain-shadow PR merged (it did, as #1
   ledger; a worktree's tools always get `--url` of that worktree's own server. Tiers are forced with
   `?perf`, `await __skymapPerf.setTier('<tier>')`, `await __skymap.settled()`, and each run asserts
   the files it fetched; the `?tier=` switch is dead. Checks run once where they decide something.
+- **Measuring covers only the cases that decide something** (owner, 2026-11-27): a pose, tier or
+  field that cannot change a ruling or a bar's verdict is not measured.
 - **Owner steps are the owner's**: data builds of the native inputs and the R2 sync. Agents never
   sync R2 and propose only `npm run sync-r2-secure`.
 
@@ -106,8 +112,8 @@ test and exactly one volume read per step. Task 6.4 counts these in the final WG
 | # | Task | Spec | Dispatch |
 | --- | --- | --- | --- |
 | 0 | Backlog: date the old volume prune; pick up the timing item | §18 | controller |
-| 1 | Timing acceptance carried from #1178 | §11.1 | controller |
-| 2 | The ~7% raster cost explained (halting gate) | §10.2 | controller |
+| 1 | Timing acceptance carried from #1178 (closed 2026-11-27) | §11.1 | controller |
+| 2 | Replaced 2026-11-27 by check 2 of Task 7.3 (region on vs off) | §13 | — |
 | 3.1 | Prep (b): `regionOf` rides `VolumeFieldLiveness` | §3 | D1 |
 | 3.2 | Prep (c): the region value in `densityAccumulationKey` | §3 | D1 |
 | 3.3 | Prep (d): `VolumeFieldRenderer.attachRegion` | §3 | D1 |
@@ -148,7 +154,7 @@ constraints above):
 | D6 | 6.1–6.3 | opus | shader and TS↔WGSL layout (`review: yes` on 6.1–6.3) |
 | D7 | 7.1 | sonnet | docs |
 
-**Order.** Strictly sequential on the one branch: 0 → 1 → 2 → **gate** → D1 → D2 → D3 → D4 → D5 →
+**Order.** Strictly sequential on the one branch: 0 → 1 (both done) → D1 → D2 → D3 → D4 → D5 →
 D6 → 6.4 → D7 → 7.2 → 7.3 → 7.4 → 7.5. One overlap: **Task 4.6 runs while D4 works**; it writes
 only gitignored files (main's `data/raw/` and `public/data/volume-pyramid/v1/`), which D4 never
 touches. Implementers never share a git index (this project lost a commit that way). Mid-branch
@@ -179,81 +185,17 @@ Tasks 0–3.3 never touch the archive files; Tasks 4.4 and 5.4 import the moved 
 
 ## Task 1 (controller): timing acceptance carried from #1178
 
-No commit except the ledger. Every scratch patch is local, applied to both sides alike, carries
-`// delete when Task 1 is done`, and is never committed. These numbers are the "step 1" baseline
-spec §13 checks 2 and 3 refer to.
-
-**Servers.**
-
-| Server | What | Notes |
-| --- | --- | --- |
-| Before | scratch worktree `git worktree add --detach .claude/worktrees/scratch-pre-1178 e41e5d89a` (main before #1178), `node_modules` symlinked to main's, its own port | Main's `manifest.json` no longer names the tiered MCPM and 2MRS `.scfd` (checked 2026-11-26), so this server gets its own `public/data/`: one symlink per top-level entry of main's `public/data/` except `manifest.json`, plus a copy of main's `manifest.json` with the rows `scalar-field/v3/{mcpm,polyphorm-2mrs}-{small,medium,large}.scfd` → their hashed files added back. Check all six hashed files exist in main's `public/data/scalar-field/v3/`; a missing one stops the task and goes to the owner. |
-| After | the feature worktree, `public/data` linked (`/link-data`), its own `npm run dev` port | its volume code is main's |
-
-**Timing rig (#1175's wall-clock bench).** A scratch patch draws each field `K` times inside the
-renderer's field loop; boot `?perf`, `setStrategy('merged')`, `setPose`, 240 rAF deltas per run.
-Controls before any number is quoted: the no-op floor (`layers=-cosmicWebDensity`), K-doubling
-(`T(16) − T(off) ≈ 2·(T(8) − T(off))` within 15%), ≥ 5 rounds with median and spread. Per-draw cost
-is `(T(K) − T(off)) / K`. Paired A/B, alternating.
-
-**Poses**, with `layers=-survey,-structureRing,-cosmicWebFilaments,-zoneOfAvoidance,-starCatalog,-milkyWayDisk,-label`:
-MCPM inside `#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0`, outside `…,600,0`, far `…,2000,0`, knot
-`a,-132.82,18.99,67.28,0.5,0.3,20,0`; 2MRS inside `a,21.27,21.07,36.88,0.5,0.3,30,0`, outside
-`…,600,0`, far `…,2000,0`.
-
-| # | Check (half-res spec §12) | How | Bar |
-| --- | --- | --- | --- |
-| 7 | Per-draw cost, large | After at large: every pose above, ASTC (native on the Mac) and BC4 (a scratch filter in `loadVolumePyramid` dropping the ASTC features before `pickVolumePyramidFormat`). Before's large in the same rounds as the control: within 15% of the spike session's "today" (inside 0.59–0.65 ms), or the comparison goes to the owner instead of pass/fail | ≤ 1.10 × the spike rows (inside / outside / far / knot): MCPM ASTC 0.400 / 0.575 / 0.125 / 0.375 ms; BC4 0.400 / 1.25 / 0.15 / 0.425; 2MRS ASTC 0.375 / 0.363 / 0.163 (no knot) |
-| 8a | Medium vs before | the rig while moving (auto-rotate), medium, MCPM inside, after vs before | ≤ 1.10 × |
-| 8b | Phone, small | OnePlus through `npm run phone`, each server started `SKYMAP_HTTPS=1 npm run dev` and passed by its `Network:` URL as `--url` (tools/phone/README.md); small, moving, MCPM inside, after vs before; `npm run phone -- net '<link>' --url <server>` records which format's files the phone fetched | ≤ 1.10 ×. Phone not attached: owed, in the ledger and the PR body |
-| 9 | Load time | in each worktree: `npm run loadtime -- --rebuild --profile slow-4g --profile fast-4g --link '?layers=…#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0'` (the tool builds and serves its own bundle from its worktree); volume arrival from a scratch `console.info('[volume-arrival]', id, performance.now())` at the density slot's commit, read from the same run's console; medium's L1–L3 gzip-6 wire bytes against the two old `-medium.scfd` | no bar; shown to the owner |
-
-**Gate.** A breach of a ≤ 1.10 × bar halts and goes to the owner (the half-res spec's rule).
-
-**Results** go into the ledger and the PR body: ms per draw and fps first.
-
-**Done when:** each row has its numbers, or "owed" for the phone.
+- [x] **Closed (owner, 2026-11-27): #1178's timing is accepted.** Every case held 120 fps. Per draw,
+      MCPM inside: large 0.56 → 0.49 ms, medium 0.42 → 0.48 ms. The phone (small) and load-time runs
+      were not made. No commit; there is no "step 1" baseline beyond these rows.
 
 ---
 
-## Task 2 (controller): the ~7% raster cost explained
+## Task 2: replaced (owner, 2026-11-27)
 
-Measurement and reading only. No commit except the ledger. Spec §10.2.
-
-**Where.** The spike's code. Its worktree `.claude/worktrees/volume-progressive-octree` is read-only:
-never edit, restart, stage or delete there. Make a scratch copy: `git worktree add --detach
-.claude/worktrees/scratch-box-7pct <the spike worktree's HEAD sha>`, then copy (`cp`, never `mv`)
-every file `git -C .claude/worktrees/volume-progressive-octree status --porcelain` lists as changed or
-untracked (among them `src/services/gpu/renderers/volumeField/spike/boxSpike.ts`, the `fs_box`
-branch in `src/services/gpu/shaders/scalarVolume/fragment.wesl`, `tools/spike/`); `node_modules` and
-`public/data` symlinked; its own port. Scratch patches carry `// delete when Task 2 is done`; the
-scratch worktree goes when the task ends.
-
-Steps, one pass, about 30 minutes of measuring in all, on a quiet GPU (no live app):
-
-1. **Reproduce.** Region on and off at MCPM inside and knot, the raster path against a scratch
-   full-screen triangle, 5 rounds, K-doubling within 15%. The spike saw 39.2 → 41.8 ms per 64
-   draws. If the gap stays inside the round-to-round spread it was contention: record it and stop
-   (outcome A).
-2. **Invocations.** Fragment invocations per covered pixel in both paths (a scratch atomic counter
-   in a storage buffer, read back once): helper lanes along the cube's triangle edges run the whole
-   march.
-3. **Divergence.** A pose where the region fills the screen (no box edge in view) against one where
-   its edge crosses the screen.
-4. **Test form.** The per-ray interval test (spec §7) against the spike's per-step 3D test, at MCPM
-   inside and at `a,-239.45,-16.5,201.3,0.5,0.3,600,0`, where the spike's region cost 0.66 ms per
-   draw against the base's 0.45 and where ruling 9 now draws it. The faster form is Task 6.2's.
-5. **Capture.** One Metal GPU capture per pipeline: register count and occupancy.
-
-**Report** to the owner in one dash ask, ms per draw and fps first, with the outcome:
-
-- **A, not reproduced**: continue.
-- **B, explained and fixed**: a change measured to remove the cost (a test form, a full-screen path)
-  joins Task 6.2's contract with the owner's OK; continue.
-- **Neutral or negative**: the cost reproduces and no cause is found, or a cause is found with no
-  measured fix, or the better test form still costs more than 0.55 ms per draw at the 600 Mpc pose.
-  **The plan halts here.** No further task runs until the owner rules ("accepted, cost X ms", or a
-  redesign); the ruling goes into the ledger.
+The ~7% raster study does not run. Its question, what the built region costs, is answered by Task
+7.3's check 2: region on against off at two poses, halting if on costs more than 10% over off.
+The per-ray interval test (spec §7) is Task 6.2's form without a comparison run.
 
 ---
 
@@ -1282,7 +1224,7 @@ and no WGSL compile error is logged for any of the three pipelines.
 **Per ray** (`REGION != 0u`, after `intersectUnitAabb` `:196`): one ray–box intersection with
 `[settledLo, settledHi]`, its far end capped at `tGate = pxPerRad · voxelMpc / |M · dir|`, the
 length `fragment.wesl:227-228` already computes for the LOD. Beyond `tGate` a pixel spans more than
-one native voxel, so the base serves it. Task 2's faster test form replaces this if it won.
+one native voxel, so the base serves it.
 
 **Per step:** one interval test on `rayDistance`; inside, `textureSampleLevel(regionTex,
 regionSampler, samplePos * region.texScale, 0.0).r` at gain 1, no clamp; outside, today's base read
@@ -1292,9 +1234,9 @@ Steps:
 
 - [ ] Implement. No new test: the image checks are the controller's (no GPU in CI).
 - [ ] `npm test -- volumeUniformsLayout volumeField`.
-- [ ] Controller, after the commit: MCPM inside and 2MRS inside at large, converged, visibly sharper
-      than main inside the box and identical outside it (one look, no bar yet); at the just-outside
-      pose `a,-239.45,-16.5,201.3,0.5,0.3,350,0` the box shows against the near face; no WGSL error.
+- [ ] Controller, after the commit: MCPM inside at large, converged, visibly sharper than main
+      inside the box and identical outside it (one look, no bar yet); at the just-outside pose
+      `a,-239.45,-16.5,201.3,0.5,0.3,350,0` the box shows against the near face; no WGSL error.
 
 **Commit:** `Volume march reads the detail region at native resolution inside its box`
 
@@ -1408,26 +1350,32 @@ committed.
 `layers=-survey,-structureRing,-cosmicWebFilaments,-zoneOfAvoidance,-starCatalog,-milkyWayDisk,-label`:
 MCPM inside `#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0`, knot `a,-132.82,18.99,67.28,0.5,0.3,20,0`;
 2MRS inside `a,21.27,21.07,36.88,0.5,0.3,30,0`, dense `a,43.3,38.2,44.2,0.5,0.3,60,0`; just outside
-the inside poses' targets at `…,350,0` (40–60 Mpc outside the MCPM box, 60–75 Mpc outside 2MRS's);
-outside `…,600,0` (2MRS in reach, MCPM at its edge); far `…,2000,0`. Each shot asserts its fetched
-files: the base level file, and `.L0.p*.pack` reads where a region is expected. Timing uses Task 1's
-rig; Task 1's numbers are "step 1".
+the inside poses' targets at `…,350,0` (40–60 Mpc outside the MCPM box, 60–75 Mpc outside 2MRS's).
+Each shot asserts its fetched files: the base level file, and `.L0.p*.pack` reads where a region is
+expected.
+
+**Timing rig (#1175's wall-clock bench).** A scratch patch draws each field `K` times inside the
+renderer's field loop; boot `?perf`, `setStrategy('merged')`, `setPose`, 240 rAF deltas per run.
+Controls before any number is quoted: the no-op floor (`layers=-cosmicWebDensity`), K-doubling
+(`T(16) − T(off) ≈ 2·(T(8) − T(off))` within 15%), ≥ 5 rounds with median and spread. Per-draw cost
+is `(T(K) − T(off)) / K`. Region off is a scratch `regionOf` returning null; on and off run paired,
+alternating.
 
 | # | Check | Bar |
 | --- | --- | --- |
 | 1 | Memory: the ledger rows per region texture at each tier, per format seen | spec §9 to the byte: per field K = 5 ASTC 6,144,000 / BC4 6,912,000 / r8 13,824,000; K = 8 25,165,824 / 28,311,552 / 56,623,104; the placeholder 1 B |
-| 2 | Per-draw cost, Mac | MCPM large inside and knot ≤ 0.55 ms; 2MRS large inside ≤ 0.59 ms; medium ≤ the large bar at the same pose; just outside and 600 Mpc (each run records whether the region drew) ≤ that field's inside bar; far ≤ 1.02 × step 1; fading ≤ 1.04 × steady (MCPM), ≤ 1.13 × (2MRS); 120 fps (8.33 ms) held everywhere. Re-based only with the owner's OK if Task 2 moved the spike rows |
-| 3 | Phone, small | moving at MCPM inside on the OnePlus ≤ 1.10 × step 1's small; the picked format recorded |
-| 4 | Sharper | converged, region vs main at the same tier, MCPM inside and knot, 2MRS inside and dense: mean Sobel gradient of luminance in the region's footprint ≥ 1.25 × main's |
+| 2 | Region on vs off, Mac | MCPM large (K = 8, the largest region), two cases: camera inside the region (MCPM inside) and just outside the volume (`…,350,0`, the run records that the region drew); the rig above, ms per draw and fps first | on ≤ 1.10 × off at each; more halts and goes to the owner |
+| 3 | Phone, small | moving at MCPM inside on the OnePlus, region on against off (Task 1's phone run was not made, so there is no older baseline); the picked format recorded | on ≤ 1.10 × off |
+| 4 | Sharper | converged, region vs main at the same tier, MCPM inside and 2MRS dense: mean Sobel gradient of luminance in the region's footprint ≥ 1.25 × main's |
 | 5 | Never dimmer | same footprint: mean luminance ≥ main's − 0.5 of 255 |
-| 6 | Fill time | Production data server, cold HTTP cache, arrival at MCPM inside to `busy` false: K = 5 ≤ 2 s, K = 8 ≤ 4 s on the Mac, through the HTTP cache (shipped) and with `no-store` (a scratch patch on `readArchiveRange`), each in ms; plus 12 concurrent Range reads into one part both ways (BACKLOG.md:179's case); K = 5 on the phone over Wi-Fi ≤ 5 s. First guesses: the numbers go to the owner, who rules on switching (ruling 10) |
+| 6 | Fill time | Production data server, cold HTTP cache, arrival at MCPM inside to `busy` false: K = 8 ≤ 4 s on the Mac, through the HTTP cache (shipped) and with `no-store` (a scratch patch on `readArchiveRange`), each in ms; plus 12 concurrent Range reads into one part both ways (BACKLOG.md:179's case). First guesses: the numbers go to the owner, who rules on switching (ruling 10) |
 | 7 | No seam at rest | knot pose, box edge in view, converged: in region-on minus region-off no pixel row along the projected edge is brighter or darker than both neighbours across it by more than 2 of 255 |
 | 8 | Pops | the spike's metric (`tools/spike/flickerFade.ts:139-155` in the spike worktree, read only): 2MRS 90° orbit at 200 Mpc, no pop over 0.5, largest jump ≤ 0.5; the tour path, largest jump ≤ 0.3 |
 | 9 | Failure paths | scratch `page.route`s, no file touched: index 404, one part 404, a part answering 200, a corrupt gzip member. Each: one warning, the base draws, the other field unaffected, no validation error, no lost frame, memory back to the base after teardown |
 | 10 | Dome | `?dome`: the region in all five faces, no seam at the joins; the key equal across views every frame |
 | 11 | Tier switching | small → medium → large → small: small ↔ medium fetches no brick and shows no flash; medium → large rebuilds at K = 8 and the old texture leaves the ledger; the ledger matches check 1 after each step |
 | 12 | Teardown | a field switched off: after its fade-out tail its region row leaves the ledger and no upload follows; the Layer destroyed frees both regions and the placeholder |
-| 13 | Zero block | a scratch readback of a slot written with the zero brick reads 0 in all three formats (ASTC, BC4 by the feature filter of Task 1, r8) |
+| 13 | Zero block | a scratch readback of a slot written with the zero brick reads 0 in all three formats (ASTC; BC4 by a scratch filter in `loadVolumePyramid` dropping the ASTC features before `pickVolumePyramidFormat`; r8) |
 | 14 | From just outside | each volume's just-outside pose at large, converged: pack reads asserted, check 5's bar in the footprint |
 
 A breach halts and goes to the owner. **Owner set** (one dash ask, one check per item, main LEFT and
@@ -1456,8 +1404,7 @@ no re-review. If the fix touches the builder's output, Task 7.2 runs again.
   plan, spec and ledger move to `completed/` in the PR (feature-done before merge).
 - CI green (`gh pr checks`), watched in the background after every push.
 - The merge ask, only once Task 7.2's sync is done and verified. Squash-merge on the owner's word.
-- Scratch worktrees (`scratch-pre-1178`, `scratch-box-7pct`, acceptance's main) and their dev servers
-  are removed in the same step. The spike worktree stays.
+- Acceptance's scratch main worktree and its dev server are removed in the same step. The spike worktree stays.
 
 ---
 
@@ -1465,8 +1412,8 @@ no re-review. If the fix touches the builder's output, Task 7.2 runs again.
 
 - **The region now draws from outside, where the spike's cost was highest.** At the 600 Mpc pose the
   spike measured 0.66 ms per draw against the base's 0.45 with the region on; ruling 9 draws it there
-  for 2MRS (and MCPM at its reach edge, both further on a 2× display). Task 2 times the better test
-  form at that pose, and its gate halts the plan if it stays over 0.55 ms.
+  for 2MRS (and MCPM at its reach edge, both further on a 2× display). Check 2 times on against off
+  just outside the volume and halts above 10%.
 - **Small tier on the phone.** A region over a quarter-res base: cost, edge step and format unmeasured
   until check 3. A breach goes to the owner (options: K = 4 on small, or no region on small).
 - **Cold fills queue in the HTTP cache** (ruling 10's cost): check 6 measures it against `no-store`.
@@ -1510,7 +1457,7 @@ no re-review. If the fix touches the builder's output, Task 7.2 runs again.
 - Wiring: the `cosmic-web-density-region` row in PRELUDE; the planner in `layer.ts`.
 - Docs (spec §15) and backlog: the dated prune line, the timing item deleted, the mirror item naming
   MCPM's d1.
-- Task 1, Task 2 and Task 7.3 results in the ledger, the plan's Results section and the PR body.
+- Task 1's outcome and Task 7.3's results in the ledger, the plan's Results section and the PR body.
 
 **Smoke pass** (the owner's, through the dash; shots by `npm run shot -- '<link>' --url <feature server>`)
 - MCPM inside and knot, 2MRS inside and dense, at large: sharper than main inside the box, the same

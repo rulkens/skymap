@@ -28,10 +28,10 @@ than one native voxel, the base draws as today.
 
 Download per full region fill, ASTC, estimated (§4): MCPM 1.7 MB at K = 5, 6.9 MB at K = 8; 2MRS
 0.9 / 3.5 MB. Spike cost per draw with a 384³ region over the ASTC half-res base, camera inside
-MCPM: 0.48–0.50 ms, against 0.59–0.65 ms for the old large tier (the bars in §13 rest on it).
+MCPM: 0.48–0.50 ms, against 0.59–0.65 ms for the old large tier.
 
-The PR opens with the timing checks #1178 deferred (BACKLOG.md:123), then explains a ~7% cost the
-spike left unexplained (§10.2), before the shader lands.
+The timing checks #1178 deferred (BACKLOG.md:123) were accepted on 2026-11-27; the region's own cost
+is timed on against off in acceptance (§13 check 2).
 
 Non-goals: a region beyond the gate distance (§6.6); mips in the region; an app-side brick cache; target-centred or frozen regions; a debug panel; the dust volume; any change to the
 L1–L3 files, the sidecar or the base path; a finer 2MRS export.
@@ -67,7 +67,7 @@ Owner, 2026-11-26, at the spec's review, binding:
 
 Carried: the region is centred on the camera, clamped into the volume; the name is "detail
 region"; 2MRS works exactly like MCPM; the region is torn down on disable; nothing is deleted from the spike; the deferred #1178
-timing checks open this PR; the ~7% raster cost is understood before the shader lands. Standing:
+timing checks open this PR (accepted 2026-11-27). Standing:
 timing in ms per frame and fps first, percent after; measuring runs about 30 minutes, one pass;
 the Layer contract, `ReconcileEffects` and `SagaContext` do not grow (this design grows none of
 them).
@@ -677,8 +677,8 @@ already computed for the LOD (`fragment.wesl:227-228`). Variant 2 adds the same 
 **Per step, steady.** One interval test on `rayDistance`, then exactly one volume read: inside, the
 region at level 0, `textureSampleLevel(regionTex, regionSampler, samplePos · texScale, 0)`, at gain
 1 and with no clamp to 1; outside, today's base read (`fragment.wesl:239-240`). The spike tested the
-box per step in voxel space. The ray-interval form reads the same texels with less arithmetic; it is
-unmeasured, and step 2 of §11 times both.
+box per step in voxel space. The ray-interval form reads the same texels with less arithmetic; its
+cost is covered by §13 check 2.
 
 | Variant | Where in the ray | Volume reads | Palette reads | Volume texel taps | Extra ALU per step |
 | --- | --- | --- | --- | --- | --- |
@@ -768,21 +768,8 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
    is the owner's call on those numbers.
 2. **The unexplained ~7% raster cost.** With the region on, the spike's back-face raster path was
    about 7% slower than its deleted full-screen pass (MCPM inside 39.2 → 41.8 ms per 64 draws,
-   2MRS 600 Mpc 34.9 → 37.3); with the region off, equal. Removing `discard` and the unused
-   `localPos` did not help. Its inside timings also disagreed between runs (0.68–0.99 against
-   0.48–0.50 ms). **Handling:** step 2 of §11, before the shader lands, time-boxed to 30 minutes,
-   on a quiet GPU (no live app, `caffeinate`), with #1175's K-draw bench:
-   - re-time region-on inside and knot, raster against a scratch full-screen triangle, 5 rounds,
-     K-doubling within 15%; if the 7% does not reproduce, it was contention and the step ends;
-   - count fragment invocations per covered pixel in both paths (scratch atomic counter): helper
-     lanes along the cube's triangle edges run the whole march;
-   - a pose where the region fills the screen (no box edge in view) against one where its edge
-     crosses the screen: divergence at the box boundary;
-   - the per-ray interval test of §7 against the spike's per-step 3D test, inside and at the
-     600 Mpc pose, where the spike's region cost 0.66 ms against the base's 0.45 and where ruling 9
-     now draws it;
-   - one Metal GPU capture of each pipeline for register count and occupancy.
-   The finding and its fix (or "accepted, cost X ms") go to the owner before §7 is built.
+   2MRS 600 Mpc 34.9 → 37.3); with the region off, equal. **Handling** (owner, 2026-11-27): no
+   separate study; §13 check 2 times the built region on against off and halts above 10%.
 3. **Small tier: a region over a quarter-res base on the phone.** There the region voxel is 4×
    finer than the base's; the cost, the visual step at the box edge and the format the phone picks
    are all unmeasured. **Handling:** acceptance check 3 on the OnePlus; a breach halts and goes to
@@ -804,9 +791,10 @@ budget is about 2.1 s at 60 fps when the network keeps up, more otherwise) and t
    at inside, outside 600, far 2000 and knot, branch against main before #1178; the small tier on
    the OnePlus (`npm run phone`), moving, and the format it picks; volume arrival on throttled 4G
    (cold boot to the slot's commit, read from a scratch hook: the loadtime tool has no volume
-   milestone). Bars from the half-res spec's acceptance 7–9. These numbers are also the region's
-   baseline.
-2. **The 7% investigation** (§10.2). Report, then the owner's word.
+   milestone). Bars from the half-res spec's acceptance 7–9. Accepted 2026-11-27: 120 fps in every
+   case; per draw at MCPM inside, large 0.56 → 0.49 ms, medium 0.42 → 0.48 ms; the phone and load
+   time were not run.
+2. **The 7% investigation**: dropped (owner, 2026-11-27); §13 check 2 replaces it.
 3. **Prep commits** (b), (c), (d), then (a), each behaviour-neutral, each its own commit.
 4. **Builder and data:** extractor lines, `readNpyHeader`, `buildVolumeBricks`, the format row's
    zero block, the deploy rows; run both fields on the owner's machine.
@@ -862,16 +850,11 @@ one pass. A breach halts and goes to the owner.
 
 1. **Memory.** The ledger shows exactly §9's bytes per region texture, per format seen, at each
    tier.
-2. **Per-draw cost, Mac.** Bars from the box spike's clean MCPM run (2026-11-25: ASTC 384³ box over
-   the ASTC half-res base, inside and knot 0.48–0.50 ms per draw): MCPM large inside and
-   knot ≤ 0.55 ms. 2MRS large inside ≤ 0.59 ms (the spike's moving-box row, 0.54 ms). Medium (K = 5)
-   ≤ the large bar at the same pose. Just outside and at 600 Mpc, where the region is drawn while
-   in reach (§6.6; each run records whether it was): ≤ that field's large inside bar. Far, out of
-   reach, the region is off: ≤ 1.02× step 1's base number at that pose. While fading: ≤ 1.04×
-   steady for MCPM and ≤ 1.13× for 2MRS (the spike's measured ranges). The frame rate stays at 120 fps (8.33 ms) at every tier and pose.
-   If step 2 re-bases the spike's rows, these bars move with the owner's OK.
-3. **Phone, small tier.** Moving at the MCPM inside pose on the OnePlus: ms per frame ≤ 1.10× step
-   1's small number. The picked format is recorded.
+2. **Region on against off, Mac** (owner, 2026-11-27). MCPM large, two cases: camera inside the
+   region and camera just outside the volume (350 Mpc; the run records that the region drew). Bar:
+   on ≤ 1.10× off at each; above it, halt and ask the owner.
+3. **Phone, small tier.** Moving at the MCPM inside pose on the OnePlus: ms per frame with the
+   region on ≤ 1.10× off (step 1's phone run was not made). The picked format is recorded.
 4. **Image: sharper.** Converged at rest (the tier's cap), the region against today's main at the
    same tier, at MCPM inside and knot and 2MRS inside and dense. Measure: the mean Sobel gradient
    magnitude of luminance (8-bit output) inside the region's screen footprint. Bar: ≥ 1.25× main's.
@@ -963,7 +946,7 @@ answers Range. A kiosk on an older desktop build ignores them.
 The owner's rulings of §2 settle the fade, the region state's home, the cache mode, the region
 from outside and the build machine. Left to measurement:
 
-1. **Ray-interval test** (§7): unmeasured against the spike's per-step test; step 2 times both.
+1. **Ray-interval test** (§7): not compared against the spike's per-step test; check 2 prices it.
 2. **Fill-time bars** (check 6): first guesses.
 3. **2MRS brick occupancy and pack sizes** on the new grid: estimates only until the builder runs.
 
