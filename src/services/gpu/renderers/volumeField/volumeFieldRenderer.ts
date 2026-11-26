@@ -3,10 +3,11 @@
  * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). Each field owns its 3D
  * texture, palette LUT, bind groups, uniform buffer, matrices and per-cube statics; the user knobs
  * are read per frame through `settingsOf`, never mirrored, so the caller's settings stay the one
- * truth. The jitter index, step count and blend weight arrive per draw as `inputs`: this renderer
- * holds no frame counter. One shared pipeline means one bind-group layout, so field bind groups
- * are interchangeable. A palette change rewrites the field's LUT in place (views stay valid: one
- * queue write, zero rebinds).
+ * truth. The jitter index, step count and blend weight `w` arrive per draw as `inputs`: this
+ * renderer holds no frame counter. Below w = 1 one decay triangle scales the target by (1 − w),
+ * then every field adds at w, so the target holds a running mean. One shared march pipeline means
+ * one bind-group layout, so field bind groups are interchangeable. A palette change rewrites the
+ * field's LUT in place (views stay valid: one queue write, zero rebinds).
  */
 
 import { mat4 } from 'wgpu-matrix';
@@ -19,6 +20,8 @@ import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/Volum
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
+import decayVsCode from '../../shaders/scalarVolume/vertexDecay.wesl?static';
+import decayFsCode from '../../shaders/scalarVolume/decayFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
@@ -35,6 +38,14 @@ const JITTER_INDEX_WRAP = 1_000_000;
 const WEIGHTED_ADDITIVE_BLEND: GPUBlendState = {
   color: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
   alpha: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
+};
+
+// The decay draw scales the whole target by (1 − w) once per draw, ahead of every field: a decay
+// per field would fade the fields drawn before it. Single site, like the blend above.
+const DECAY_COMPONENT: GPUBlendComponent = {
+  srcFactor: 'zero',
+  dstFactor: 'one-minus-constant',
+  operation: 'add',
 };
 
 const CUBE_CORNERS = new Float32Array([
@@ -153,6 +164,24 @@ export function createVolumeFieldRenderer<Id extends string>({
     primitive: {
       topology: 'triangle-list',
       cullMode: 'front', // ← back faces only; see fragment.wesl module header
+    },
+  });
+  const decayPipeline = device.createRenderPipeline({
+    label: 'scalarVolume-decay-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'scalarVolume-decay-pipeline-layout',
+      bindGroupLayouts: [],
+    }),
+    vertex: {
+      module: createShaderModuleWithDevLog(device, decayVsCode, 'scalarVolume.vertexDecay'),
+      entryPoint: 'vs',
+    },
+    fragment: {
+      module: createShaderModuleWithDevLog(device, decayFsCode, 'scalarVolume.decayFragment'),
+      entryPoint: 'fs',
+      targets: [
+        { format: targetFormat, blend: { color: DECAY_COMPONENT, alpha: DECAY_COMPONENT } },
+      ],
     },
   });
   // The bind-group layout for @group(0). Derived from `group0Bgl` (the
@@ -315,12 +344,17 @@ export function createVolumeFieldRenderer<Id extends string>({
       return false;
     },
     draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf, inputs) {
-      pass.setPipeline(pipeline);
-      pass.setVertexBuffer(0, cornerBuffer);
-      pass.setIndexBuffer(indexBuffer, 'uint16');
       // WebGPU's default blend constant is 0, which would erase every field.
       const w = inputs.weight;
       pass.setBlendConstant({ r: w, g: w, b: w, a: w });
+      // At w = 1 (a restart) the executor has just cleared the target, so the decay is skipped.
+      if (w < 1) {
+        pass.setPipeline(decayPipeline);
+        pass.draw(3);
+      }
+      pass.setPipeline(pipeline);
+      pass.setVertexBuffer(0, cornerBuffer);
+      pass.setIndexBuffer(indexBuffer, 'uint16');
       // Per-field uniform buffer layout (272 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)

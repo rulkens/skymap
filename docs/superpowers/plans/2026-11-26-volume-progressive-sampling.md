@@ -308,17 +308,17 @@ target was just cleared by the executor, so the decay is skipped.
 
 Steps:
 
-- [ ] Test `below weight 1, one decay draw precedes every field`:
+- [x] Test `below weight 1, one decay draw precedes every field`:
   - Two active fields, weight 0.25.
   - The fake pass's call log is: `setBlendConstant` with 0.25, then `setPipeline` (the decay
     pipeline), then **exactly one** `draw(3)`, then two `drawIndexed`.
   - The decay pipeline is the `createRenderPipeline` descriptor whose target blend is
     `DECAY_COMPONENT` on colour and alpha. This regression test cites the spike bug in which every
     field decayed the fields before it (MCPM −65% with 2MRS on).
-- [ ] Test `at weight 1 no decay draw is issued`: `draw` is never called.
-- [ ] Implement. Update the module header (≤ 10 lines). In `blendStates.ts`'s "What deliberately
+- [x] Test `at weight 1 no decay draw is issued`: `draw` is never called.
+- [x] Implement. Update the module header (≤ 10 lines). In `blendStates.ts`'s "What deliberately
       does NOT fold in here", add the decay blend beside the weighted additive.
-- [ ] `npm run typecheck:fast`, `npm test -- volumeFieldRenderer`.
+- [x] `npm run typecheck:fast`, `npm test -- volumeFieldRenderer`.
 
 **Done when:** a `draw` at weight `w < 1` scales the target once and adds every field at `w`; at
 weight 1 it issues exactly today's draws.

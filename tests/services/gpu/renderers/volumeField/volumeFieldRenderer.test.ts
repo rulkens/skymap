@@ -77,6 +77,7 @@ function makeFakePass() {
     setVertexBuffer: vi.fn(),
     setIndexBuffer: vi.fn(),
     setBindGroup: vi.fn(),
+    draw: vi.fn(),
     drawIndexed: vi.fn(),
     setBlendConstant: vi.fn(),
   } as unknown as GPURenderPassEncoder;
@@ -260,8 +261,65 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(uniformScratch(device)?.[63]).toBe(5);
   });
 
-  // WebGPU's default blend constant is 0: a missing call erases the volume.
-  it('draw sets the blend constant to inputs.weight', () => {
+  // The spike decayed the target once per field, so every field faded the ones before it (MCPM
+  // −65% with 2MRS on). One decay, then every field adds at w: dst·(1−w) + w·Σ fields. The blend
+  // constant must be set too: WebGPU's default of 0 erases the volume.
+  it('below weight 1, one decay draw precedes every field', () => {
+    const pipelines: GPURenderPipelineDescriptor[] = [];
+    const device = mockDevice(pipelines);
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.upload('polyphorm-2mrs', fixture(), MCPM_ENTRY);
+    const log: unknown[][] = [];
+    const record =
+      (name: string) =>
+      (...args: unknown[]) =>
+        log.push([name, ...args]);
+    const pass = {
+      setPipeline: record('setPipeline'),
+      setVertexBuffer: () => undefined,
+      setIndexBuffer: () => undefined,
+      setBindGroup: () => undefined,
+      setBlendConstant: record('setBlendConstant'),
+      draw: record('draw'),
+      drawIndexed: record('drawIndexed'),
+    } as unknown as GPURenderPassEncoder;
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      1000,
+      [0, 0, 5],
+      () => fullSettings(),
+      () => 1,
+      { ...INPUTS, weight: 0.25 },
+    );
+
+    const decayComponent = { srcFactor: 'zero', dstFactor: 'one-minus-constant', operation: 'add' };
+    const decayAt = pipelines.findIndex((p) => {
+      const blend = [...(p.fragment?.targets ?? [])][0]?.blend;
+      return (
+        JSON.stringify(blend?.color) === JSON.stringify(decayComponent) &&
+        JSON.stringify(blend?.alpha) === JSON.stringify(decayComponent)
+      );
+    });
+    const decayPipeline = vi.mocked(device.createRenderPipeline).mock.results[decayAt]?.value;
+    expect(decayPipeline).toBeDefined();
+    expect(log.map(([name]) => name)).toEqual([
+      'setBlendConstant',
+      'setPipeline',
+      'draw',
+      'setPipeline',
+      'drawIndexed',
+      'drawIndexed',
+    ]);
+    expect(log[0]).toEqual(['setBlendConstant', { r: 0.25, g: 0.25, b: 0.25, a: 0.25 }]);
+    expect(log[1]).toEqual(['setPipeline', decayPipeline]);
+    expect(log[2]).toEqual(['draw', 3]);
+  });
+
+  // At weight 1 the executor has just cleared the target, so a decay would scale zero.
+  it('at weight 1 no decay draw is issued', () => {
     const r = createVolumeFieldRenderer(deps(mockDevice()));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
@@ -273,9 +331,10 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
-      { ...INPUTS, weight: 0.25 },
+      INPUTS,
     );
-    expect(pass.setBlendConstant).toHaveBeenCalledWith({ r: 0.25, g: 0.25, b: 0.25, a: 0.25 });
+    expect(pass.draw).not.toHaveBeenCalled();
+    expect(pass.drawIndexed).toHaveBeenCalledOnce();
   });
 });
 
