@@ -9,10 +9,10 @@
 import { useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import Button from '../../../../../../src/components/common/Button/Button';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
-import CubeIcon from '../../icons/CubeIcon/CubeIcon';
-import FilamentIcon from '../../icons/FilamentIcon/FilamentIcon';
-import FloppyIcon from '../../icons/FloppyIcon/FloppyIcon';
-import FolderOpenIcon from '../../icons/FolderOpenIcon/FolderOpenIcon';
+import CubeIcon from '../../../../../../src/components/icons/CubeIcon/CubeIcon';
+import FilamentIcon from '../../../../../../src/components/icons/FilamentIcon/FilamentIcon';
+import FloppyIcon from '../../../../../../src/components/icons/FloppyIcon/FloppyIcon';
+import FolderOpenIcon from '../../../../../../src/components/icons/FolderOpenIcon/FolderOpenIcon';
 import styles from './FileActions.module.css';
 
 const ICON_SIZE = 12;

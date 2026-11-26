@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 import type { FrameRateZone } from '../../../../@types/sim/FrameRateZone';
-import LoopPlayIcon from '../../icons/LoopPlayIcon/LoopPlayIcon';
+import LoopPlayIcon from '../../../../../../src/components/icons/LoopPlayIcon/LoopPlayIcon';
 import styles from './SimulationStatusIcon.module.css';
 
 export type SimulationStatusIconProps = {

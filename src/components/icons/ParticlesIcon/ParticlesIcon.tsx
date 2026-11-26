@@ -1,7 +1,7 @@
 /** ParticlesIcon: three dots trailing their headings, moving agents. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function ParticlesIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

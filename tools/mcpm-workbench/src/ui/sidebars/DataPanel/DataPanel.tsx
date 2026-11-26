@@ -24,10 +24,10 @@ import HistogramReadoutContainer from '../../containers/sim/HistogramReadoutCont
 import StatsReadoutContainer from '../../containers/sim/StatsReadoutContainer';
 import StatsSummaryContainer from '../../containers/sim/StatsSummaryContainer';
 import TierRow from '../../catalog/TierRow/TierRow';
-import DatabaseIcon from '../../icons/DatabaseIcon/DatabaseIcon';
-import GaugeIcon from '../../icons/GaugeIcon/GaugeIcon';
-import HistogramIcon from '../../icons/HistogramIcon/HistogramIcon';
-import MarqueeIcon from '../../icons/MarqueeIcon/MarqueeIcon';
+import DatabaseIcon from '../../../../../../src/components/icons/DatabaseIcon/DatabaseIcon';
+import GaugeIcon from '../../../../../../src/components/icons/GaugeIcon/GaugeIcon';
+import HistogramIcon from '../../../../../../src/components/icons/HistogramIcon/HistogramIcon';
+import MarqueeIcon from '../../../../../../src/components/icons/MarqueeIcon/MarqueeIcon';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import PanelSection from '../../panel/PanelSection/PanelSection';

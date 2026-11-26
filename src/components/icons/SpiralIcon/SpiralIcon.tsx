@@ -1,7 +1,7 @@
 /** SpiralIcon: a core with a winding arm, a spiral galaxy. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function SpiralIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

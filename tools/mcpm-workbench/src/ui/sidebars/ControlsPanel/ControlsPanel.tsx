@@ -19,7 +19,7 @@ import type { ViewSlice } from '../../../../@types/view/ViewSlice';
 import { MCPM_PARAM_KEYS } from '../../../params/exportParams';
 import SimulationStatusIconContainer from '../../containers/sim/SimulationStatusIconContainer';
 import SimulationTipContainer from '../../containers/sim/SimulationTipContainer';
-import SpiralIcon from '../../icons/SpiralIcon/SpiralIcon';
+import SpiralIcon from '../../../../../../src/components/icons/SpiralIcon/SpiralIcon';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import PanelSection from '../../panel/PanelSection/PanelSection';

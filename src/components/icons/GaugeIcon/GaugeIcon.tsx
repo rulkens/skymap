@@ -1,7 +1,7 @@
 /** GaugeIcon: a dial with its needle, a reading at a glance. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function GaugeIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

@@ -1,7 +1,7 @@
 /** ImportIcon: an arrow into a tray, the bring-this-file-in glyph. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function ImportIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

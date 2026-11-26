@@ -1,7 +1,7 @@
 /** RayStepsIcon: evenly spaced samples along a ray, the march. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function RayStepsIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

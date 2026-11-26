@@ -1,7 +1,7 @@
 /** FolderOpenIcon: an open folder, the load glyph. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function FolderOpenIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

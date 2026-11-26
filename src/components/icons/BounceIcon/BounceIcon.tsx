@@ -1,7 +1,7 @@
 /** BounceIcon: a ray reflecting off a surface, a traced light path. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function BounceIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

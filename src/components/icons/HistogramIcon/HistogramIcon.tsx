@@ -1,7 +1,7 @@
 /** HistogramIcon: bars of unequal height on a baseline. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../../../../../src/components/Icon/Icon';
+import Icon, { type IconProps } from '../../Icon/Icon';
 
 function HistogramIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (
