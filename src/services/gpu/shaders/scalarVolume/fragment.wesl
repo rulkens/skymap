@@ -79,14 +79,9 @@ struct VolumeUniforms {
   // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
   // useful range for "fiery cosmic-web" looks.
   exposure: f32,
-  // User-tunable low-end cutoff in normalised LUT-coordinate space
-  // [0, 1].  Voxels with deviation-from-center less than 'trim' get
-  // hard-suppressed (visibility = 0).  Equivalent to Polyphorm's
-  // 'trim_density' knob but in normalised space rather than raw
-  // trace units.  Default 0 = no trim (every voxel contributes to
-  // the deadband as set by 'contrast').  Combined with the contrast-
-  // derived deadband by taking the max — user can crank trim past
-  // contrast's implicit deadband to suppress more, never less.
+  // Extra cut above the contrast deadband, in [0, 0.95]: the fraction
+  // of what survives that deadband which is also hard-suppressed.
+  // 0 = contrast's deadband alone.
   trim: f32,
   // Index into the jitter sequence: the engine frame index, so every
   // view of one frame (all five dome faces) shares a phase.  The CPU
@@ -168,11 +163,11 @@ struct FsIn {
 fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
-  // Deadband from contrast's implicit floor, OR'd with the explicit
-  // trim cutoff (max takes whichever is stricter).
+  // Trim cuts a fraction of what survives contrast's deadband, so it
+  // bites from just above 0 (a max() hid it behind the deadband).
   let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
   let trimDeadband = clamp(trim, 0.0, 0.95);
-  let deadband = max(contrastDeadband, trimDeadband);
+  let deadband = contrastDeadband + trimDeadband * (1.0 - contrastDeadband);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,

@@ -46,10 +46,9 @@ export type VolumeFieldSettings = DataItemSettings & {
    */
   paletteId: ScalarFieldPaletteId;
   /**
-   * User-tunable low-end cutoff in normalised LUT-coord space [0, 1].
-   * Hard-suppresses voxels with deviation-from-center < trim — the
-   * "Polyphorm trim_density" knob exposed in the SettingsPanel as a
-   * Trim slider.
+   * Extra low-end cut in [0, 0.95], applied above the contrast deadband:
+   * the fraction of the surviving deviation range that is hard-suppressed.
+   * 0 leaves the contrast deadband alone. The Trim slider.
    */
   trim: number;
   /**

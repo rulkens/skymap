@@ -578,9 +578,9 @@ let deadband = contrastDeadband + trimDeadband * (1.0 - contrastDeadband); // af
 
 Steps:
 
-- [ ] Shader line, three source defaults, three docs. Own commit.
-- [ ] No test: a shader expression plus defaults. The owner check is in Task 10.
-- [ ] `npm run typecheck:fast`, `npm test -- cosmicWebDensity`.
+- [x] Shader line, three source defaults, three docs. Own commit.
+- [x] No test: a shader expression plus defaults. The owner check is in Task 10.
+- [x] `npm run typecheck:fast`, `npm test -- cosmicWebDensity`.
 
 **Done when:** Trim visibly cuts from just above 0, and at trim 0 the image matches Task 7's.
 
