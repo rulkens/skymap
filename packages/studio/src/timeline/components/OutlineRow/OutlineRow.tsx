@@ -11,7 +11,7 @@ import { familyStyle } from '../../utils/familyStyle';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import s from './OutlineRow.module.css';
 
-type Props = {
+type OutlineRowProps = {
   readonly row: TimelineRow;
   /** Outermost first: one rail each, drawn in the row's left margin. */
   readonly ancestors: readonly TimelineRow[];
@@ -22,7 +22,7 @@ type Props = {
   readonly onToggle: () => void;
 };
 
-function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: Props) {
+function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: OutlineRowProps) {
   const group = ROW_KINDS[row.kind].mark === 'group';
   const invalid = row.errors.length > 0;
   const { op, qualifier } = row.label;

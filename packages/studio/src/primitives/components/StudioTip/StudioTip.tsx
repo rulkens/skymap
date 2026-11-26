@@ -8,7 +8,7 @@ import s from './StudioTip.module.css';
 
 // A manual popover (top layer): the dock's backdrop-filter would re-base a positioned
 // child (the CompactInfoTip landmine), so placement is computed against the viewport here.
-type Props = {
+type StudioTipProps = {
   readonly name: string;
   readonly keys?: readonly string[];
   readonly state?: ReactNode;
@@ -16,7 +16,7 @@ type Props = {
 };
 
 /** Opens above its anchor, below when the viewport has no room above. */
-function StudioTip({ name, keys, state, children }: Props) {
+function StudioTip({ name, keys, state, children }: StudioTipProps) {
   const anchor = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
   const timer = useRef(0);

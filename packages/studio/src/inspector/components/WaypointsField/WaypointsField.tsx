@@ -4,13 +4,13 @@ import { objectText } from '../../../kinds/utils/object/objectText';
 import type { PathWaypoint } from '../../../../../../src/@types/animation/PathWaypoint';
 import s from './WaypointsField.module.css';
 
-type Props = {
+type WaypointsFieldProps = {
   readonly waypoints: readonly PathWaypoint[];
   readonly onSelect: (index: number) => void;
 };
 
 /** A Fly's waypoints in order, as chips that select their waypoint; the last one is where it settles. */
-function WaypointsField({ waypoints, onSelect }: Props) {
+function WaypointsField({ waypoints, onSelect }: WaypointsFieldProps) {
   const objects = useObjectIndex();
   return (
     <span className={s.root}>

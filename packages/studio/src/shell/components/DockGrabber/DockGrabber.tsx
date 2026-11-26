@@ -2,13 +2,13 @@ import type { KeyboardEvent, PointerEvent } from 'react';
 import { DOCK_STEP, MAX_DOCK_FRACTION, MIN_DOCK_FRACTION } from '../../data/dockLimits';
 import s from './DockGrabber.module.css';
 
-type Props = {
+type DockGrabberProps = {
   readonly fraction: number;
   readonly onChange: (fraction: number) => void;
 };
 
 /** The dock's top edge: drag it, or use the arrow keys (up grows the dock). The hook clamps. */
-function DockGrabber({ fraction, onChange }: Props) {
+function DockGrabber({ fraction, onChange }: DockGrabberProps) {
   const onKeyDown = (event: KeyboardEvent) => {
     const grow = event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0;
     if (grow === 0) return;

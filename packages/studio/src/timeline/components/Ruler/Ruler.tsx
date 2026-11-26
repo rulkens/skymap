@@ -16,14 +16,14 @@ import type { ChannelFamily } from '../../../@types/rows/ChannelFamily';
 import type { Timeline } from '../../../@types/rows/Timeline';
 import s from './Ruler.module.css';
 
-type Props = {
+type RulerProps = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
   readonly playheadSec: number;
 };
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window, playheadSec }: Props) {
+function Ruler({ timeline, window, playheadSec }: RulerProps) {
   const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;

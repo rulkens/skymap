@@ -7,7 +7,7 @@ import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import s from './TrackLane.module.css';
 
-type Props = {
+type TrackLaneProps = {
   readonly row: TimelineRow;
   /** Outermost first. */
   readonly ancestors: readonly TimelineRow[];
@@ -19,7 +19,7 @@ type Props = {
   readonly onSelect: () => void;
 };
 
-function TrackLane({ row, ancestors, window, selectedId, contains, onSelect }: Props) {
+function TrackLane({ row, ancestors, window, selectedId, contains, onSelect }: TrackLaneProps) {
   const Mark = TRACK_MARKS[ROW_KINDS[row.kind].mark];
   return (
     <div className={s.root} style={familyStyle(row.family)} aria-hidden onClick={onSelect}>

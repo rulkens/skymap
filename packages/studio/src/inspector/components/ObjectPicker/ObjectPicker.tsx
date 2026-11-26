@@ -6,7 +6,7 @@ import { wrapIndex } from '../../../../../../src/components/CommandPalette/utils
 import type { ObjectMatch } from '../../../@types/kinds/ObjectMatch';
 import s from './ObjectPicker.module.css';
 
-type Props = {
+type ObjectPickerProps = {
   readonly label: string;
   /** What the field reads while not typing: the object's name, or the position it stored. */
   readonly value: string;
@@ -21,7 +21,7 @@ type Props = {
  * Picks an object by name with the app's own search: type to filter, ↑/↓, Enter picks, Escape puts
  * the value back (a second Escape leaves the field). The list opens in place, like LayerPickField.
  */
-function ObjectPicker({ label, value, pending, onPick, onClear }: Props) {
+function ObjectPicker({ label, value, pending, onPick, onClear }: ObjectPickerProps) {
   const index = useObjectIndex();
   const listId = useId();
   const [query, setQuery] = useState<string | null>(null);

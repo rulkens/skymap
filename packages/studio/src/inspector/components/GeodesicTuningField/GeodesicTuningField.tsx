@@ -6,7 +6,7 @@ import { DEFAULT_GEODESIC_TUNING } from '../../../../../../src/data/camera/focus
 import type { Ease } from '../../../../../../src/@types/animation/Ease';
 import type { GeodesicTuning } from '../../../../../../src/@types/camera/focusMotion/GeodesicTuning';
 
-type Props = {
+type GeodesicTuningFieldProps = {
   readonly value: GeodesicTuning;
   /** The step's own duration: set, the arc length no longer times the move. */
   readonly over: number | undefined;
@@ -18,7 +18,7 @@ type Props = {
  * A zoom-pan's tuning as rows, ranges from the Focus moves debug panel. Zoom price shapes the path;
  * speed and the bounds only time it, so they show while the step's Duration is auto.
  */
-function GeodesicTuningField({ value, over, spaced, onChange }: Props) {
+function GeodesicTuningField({ value, over, spaced, onChange }: GeodesicTuningFieldProps) {
   const set = (patch: Partial<GeodesicTuning>, label: string, gesture: string | null) =>
     onChange({ ...value, ...patch }, label, gesture);
   const defaultEase = value.ease === DEFAULT_GEODESIC_TUNING.ease;

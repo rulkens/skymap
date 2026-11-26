@@ -5,10 +5,10 @@ import { START_MODE_OPTIONS } from './StartModeField.constants';
 import { useAppDispatch } from '../../../../../../src/store/hooks';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 
-type Props = { readonly start: ClipData['start'] };
+type StartModeFieldProps = { readonly start: ClipData['start'] };
 
 /** Saved starts every play from the pose below; Live starts wherever the camera is when the clip plays. */
-function StartModeField({ start }: Props) {
+function StartModeField({ start }: StartModeFieldProps) {
   const dispatch = useAppDispatch();
   return (
     <InspectorRow label="View">
