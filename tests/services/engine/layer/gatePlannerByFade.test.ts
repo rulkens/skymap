@@ -67,17 +67,19 @@ describe('gatePlannerByFade', () => {
     expect(value.sdss).toBe(1);
   });
 
-  it('a perView planner gets its view band', () => {
+  it('the per-view gate hands prev through ahead of the view band', () => {
     const plan = vi.fn((..._args: unknown[]) => RESULT);
     const planner = {
       name: 'p',
       scope: 'perView',
       fade: 'probe',
       plan,
-    } as unknown as FrameContentPlanner<null>;
+    } as unknown as FrameContentPlanner<{ readonly sentinel: string }>;
     const gated = gatePlannerByFade(planner, makeState());
     if (gated.scope !== 'perView') throw new Error('scope lost');
-    gated.plan(viewAt(2), S);
-    expect(plan.mock.calls[0]![2]).toBe(0);
+    const view = viewAt(2);
+    const prev = { sentinel: 'last frame' };
+    gated.plan(view, S, prev);
+    expect(plan).toHaveBeenCalledWith(view, S, prev, 0);
   });
 });

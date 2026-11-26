@@ -178,22 +178,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's views, once (mono is `[canvas]`). `deriveView` reads no stamp, so it can
   // run ahead of focus/plans, and must run ahead of every planner row so each can walk
   // every view's frustum.
-  const canvas = deriveView(
-    snapshot,
-    cam,
-    mainViewSpec(
-      { width: deps.canvas.width, height: deps.canvas.height },
-      state.cameraRuntime.outputs.frustum,
-      canvasDpr(deps.canvas),
-    ),
+  const canvasSpec = mainViewSpec(
+    { width: deps.canvas.width, height: deps.canvas.height },
+    state.cameraRuntime.outputs.frustum,
+    canvasDpr(deps.canvas),
   );
+  const canvas = deriveView(snapshot, cam, canvasSpec, state.previousViews.get(canvasSpec.id));
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
   // makes the shared-snapshot invariant structural.
   const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
   const views =
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
-      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
+      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec, state.previousViews.get(spec.id)));
+  // `vp` is minted fresh per derivation (`computeViewProj`), so holding it needs no copy.
+  state.previousViews = new Map(
+    [canvas, ...views].map((view) => [
+      view.id,
+      { vp: view.vp, canvasSize: view.canvasSize, stillFrames: view.stillFrames },
+    ]),
+  );
+  // View ids exist only now, after `reconcile`: retained rows keep a texture per view id.
+  snapshot.renderTargets.reconcileViews(
+    state,
+    views.map((view) => view.id),
+  );
   // Next pass's size gates measure against this frame's views.
   state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 

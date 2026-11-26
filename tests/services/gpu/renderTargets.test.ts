@@ -661,3 +661,114 @@ describe('createRenderTargets', () => {
     expect(submit).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('createRenderTargets: a retained row', () => {
+  const RETAINED: RenderTargetSpec = {
+    id: 'accum',
+    format: 'rgba16float',
+    depth: null,
+    scale: 2,
+    clearValue: { r: 0, g: 0, b: 0, a: 0.5 },
+    retained: true,
+  };
+  const ROWS = [...CORE_AND_LENS_ROWS, RETAINED];
+  const SIZE = { width: 800, height: 600 };
+  type MockTexture = { destroy: ReturnType<typeof vi.fn> };
+  type MockEncoder = { beginRenderPass: ReturnType<typeof vi.fn> };
+
+  function setup() {
+    const device = mockDevice();
+    const state = stateWithDivisor(MW_DIVISOR);
+    const targets = createRenderTargets(device, ROWS, SIZE, state);
+    const created = vi.mocked(device.createTexture).mock;
+    const texturesLabelled = (label: string): MockTexture[] =>
+      created.calls.flatMap((call, i) =>
+        call[0].label === label ? [created.results[i]!.value as MockTexture] : [],
+      );
+    const lastEncoder = (): MockEncoder =>
+      vi.mocked(device.createCommandEncoder).mock.results.at(-1)!.value as MockEncoder;
+    return { device, state, targets, created, texturesLabelled, lastEncoder };
+  }
+
+  it('a retained row keeps one texture per view id across frames', () => {
+    const { state, targets, created, texturesLabelled } = setup();
+    targets.reconcile(state, SIZE);
+    const others = created.calls.length;
+    targets.reconcileViews(state, ['canvas']);
+    const first = targets.viewOf('accum', 'canvas');
+    targets.reconcileViews(state, ['canvas']);
+    expect(texturesLabelled('render-target-accum@canvas')).toHaveLength(1);
+    expect(texturesLabelled('render-target-accum')).toHaveLength(0);
+    expect(targets.viewOf('accum', 'canvas')).toBe(first);
+    expect(created.calls.length - others).toBe(1);
+  });
+
+  it('a view id absent from a frame frees its retained texture', () => {
+    const { state, targets, texturesLabelled } = setup();
+    targets.reconcileViews(state, ['a', 'b']);
+    const viewA = targets.viewOf('accum', 'a');
+    targets.reconcileViews(state, ['a']);
+    expect(texturesLabelled('render-target-accum@b')[0]!.destroy).toHaveBeenCalled();
+    expect(() => targets.viewOf('accum', 'b')).toThrow();
+    expect(texturesLabelled('render-target-accum@a')).toHaveLength(1);
+    expect(texturesLabelled('render-target-accum@a')[0]!.destroy).not.toHaveBeenCalled();
+    expect(targets.viewOf('accum', 'a')).toBe(viewA);
+  });
+
+  it("a fresh retained texture is cleared to the row's clear value", () => {
+    const { device, state, targets, lastEncoder } = setup();
+    const submits = vi.mocked(device.queue.submit).mock.calls.length;
+    targets.reconcileViews(state, ['canvas']);
+    expect(lastEncoder().beginRenderPass).toHaveBeenCalledWith({
+      colorAttachments: [
+        {
+          view: targets.viewOf('accum', 'canvas'),
+          clearValue: RETAINED.clearValue,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+    });
+    expect(vi.mocked(device.queue.submit).mock.calls.length).toBe(submits + 1);
+  });
+
+  it("a resize reallocates every view's retained texture at the new size, cleared", () => {
+    const { state, targets, created, texturesLabelled, lastEncoder } = setup();
+    targets.reconcileViews(state, ['a', 'b']);
+    const [oldA] = texturesLabelled('render-target-accum@a');
+    const [oldB] = texturesLabelled('render-target-accum@b');
+    targets.reconcile(state, { width: 1000, height: 500 });
+    expect(oldA!.destroy).toHaveBeenCalled();
+    expect(oldB!.destroy).toHaveBeenCalled();
+    for (const viewId of ['a', 'b']) {
+      const call = created.calls
+        .filter((c) => c[0].label === `render-target-accum@${viewId}`)
+        .at(-1)!;
+      expect(call[0].size).toEqual({ width: 500, height: 250, depthOrArrayLayers: 1 });
+    }
+    const clearedViews = lastEncoder().beginRenderPass.mock.calls.map(
+      (c) => c[0].colorAttachments[0].view,
+    );
+    expect(clearedViews).toEqual([targets.viewOf('accum', 'a'), targets.viewOf('accum', 'b')]);
+  });
+
+  it('construction rejects a retained row with a state-driven size or allocation', () => {
+    const state = stateWithDivisor(MW_DIVISOR);
+    for (const extra of [
+      { scale: () => 2 },
+      { fixedSizePx: { size: () => 64 } },
+      { allocateWhen: () => true },
+    ]) {
+      const row = { ...RETAINED, ...extra };
+      expect(() =>
+        createRenderTargets(mockDevice(), [...CORE_AND_LENS_ROWS, row], SIZE, state),
+      ).toThrow(/retained target 'accum'/);
+    }
+  });
+
+  it('viewOf on a retained row throws without a view id', () => {
+    const { state, targets } = setup();
+    targets.reconcileViews(state, ['canvas']);
+    expect(() => targets.viewOf('accum')).toThrow();
+  });
+});

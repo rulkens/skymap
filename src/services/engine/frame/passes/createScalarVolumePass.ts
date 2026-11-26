@@ -40,6 +40,7 @@ export function createScalarVolumePass<Id extends string, K extends ShowKey = Sh
         view.camPos,
         liveness.settingsOf,
         liveness.fadeOpacityOf,
+        erased.inputs(state, ctx),
       );
     },
   } as ContentPass as ContentPass<K>;

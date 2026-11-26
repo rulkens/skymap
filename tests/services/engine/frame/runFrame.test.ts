@@ -195,8 +195,9 @@ function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
     slabRows: [],
     visibilityEntries: [],
     cubemapCaptures: makeCubemapCaptureRuntimes(),
+    previousViews: new Map(),
     gpu: {
-      renderTargets: { reconcile: vi.fn() },
+      renderTargets: { reconcile: vi.fn(), reconcileViews: vi.fn() },
       compositor: {},
       label3DRenderer: { setLabels: vi.fn() },
     },
@@ -659,6 +660,24 @@ describe('runFrame — render-target reconcile', () => {
 
     expect(reconcile).toHaveBeenCalledTimes(1);
     expect(reconcile).toHaveBeenCalledWith(state, { width: 800, height: 600 });
+  });
+});
+
+describe('runFrame — stillFrames', () => {
+  it("a view's stillFrames counts unchanged frames and resets on a resize", () => {
+    const state = makeReadyState();
+    const deps = makeCamDeps(state);
+    const stillFrames = (): number =>
+      vi.mocked(renderFrame).mock.lastCall![0].views[0]!.stillFrames;
+    const seen: number[] = [];
+    for (const nowMs of [0, 0, 0]) {
+      runFrame(state, deps, nowMs);
+      seen.push(stillFrames());
+    }
+    (deps.canvas as { width: number }).width = 120;
+    runFrame(state, deps, 0);
+    seen.push(stillFrames());
+    expect(seen).toEqual([0, 1, 2, 0]);
   });
 });
 

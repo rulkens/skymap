@@ -1,12 +1,14 @@
 /**
  * ScalarVolumePassRow — per-subsystem input to `createScalarVolumePass`: the
  * fields today's scalar-volume raymarch varies on (name, which offscreen it
- * draws into, its renderer instance, the shared liveness gate). Twin of
+ * draws into, its renderer instance, the shared liveness gate, its per-view
+ * march inputs). Twin of
  * `UpsamplePassRow`, one stage earlier in the producer/consumer pair.
  */
 
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { VolumeFieldLiveness } from '../../rendering/VolumeFieldLiveness';
+import type { VolumeFieldDrawInputs } from '../../rendering/VolumeFieldDrawInputs';
 import type { FadeParam } from '../../animation/FadeParam';
 import type { ShowKey } from '../../animation/ShowKey';
 import type { PassState } from './PassState';
@@ -25,4 +27,6 @@ export type ScalarVolumePassRow<Id extends string, K extends ShowKey = ShowKey> 
     ctx: FrameView,
     ...fade: FadeParam<K, ShowKey>
   ): VolumeFieldLiveness<Id> | null;
+  /** This view's march inputs, read once per draw. */
+  inputs(state: PassState, ctx: FrameView): VolumeFieldDrawInputs;
 } & ([ShowKey] extends [K] ? { readonly fade?: K } : { readonly fade: K });

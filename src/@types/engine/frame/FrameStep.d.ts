@@ -40,6 +40,8 @@ export type FrameStep =
        * keeps the FIRST line's. Absent ⇒ bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
+      /** See `RenderStepSpec`'s `restartPlanner`. */
+      readonly restartPlanner?: string;
     } & (
       | /** A render-target row by id. */ { target: string; capture?: undefined }
       /**

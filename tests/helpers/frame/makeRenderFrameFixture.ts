@@ -227,6 +227,7 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
   const state = {
     viewRig: 'mono',
     frameIndex: 0,
+    perViewPlanMemory: new Map(),
     // Every core handle null (its pass reports `enabled: false`), then the two a
     // frame cannot run without.
     gpu: {

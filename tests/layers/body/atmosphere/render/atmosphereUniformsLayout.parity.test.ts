@@ -1,9 +1,9 @@
 /**
  * AtmosphereUniforms WESL↔packer parity: `packAtmosphereUniforms.test.ts` only re-asserts the
  * packer's own offsets, so a field reorder in the WGSL struct would drift silently and corrupt every
- * atmosphere draw. This parses `struct AtmosphereUniforms` out of `sphere.wesl`, derives its std140
- * float offsets, drives the REAL packer with a distinct sentinel per field, and asserts each lands
- * where the struct, not the packer, says it should.
+ * atmosphere draw. This lays out `struct AtmosphereUniforms` from `sphere.wesl`, drives the REAL
+ * packer with a distinct sentinel per field, and asserts each lands where the struct, not the
+ * packer, says it should.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -14,63 +14,16 @@ import {
   ATMOSPHERE_UNIFORM_FLOATS,
 } from '../../../../../src/layers/body/atmosphere/render/packAtmosphereUniforms';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../..');
 const sphereWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/sphere.wesl');
 
-/** std140 alignment + size for the subset AtmosphereUniforms uses. `lanes: 0`
- *  marks a type the packer never writes scalar-by-scalar (mat4x4) — its block
- *  offset still comes from this table, but is checked whole, not per-float. */
-const WESL_TYPES: Record<string, { align: number; size: number; lanes: number }> = {
-  f32: { align: 4, size: 4, lanes: 1 },
-  'vec3<f32>': { align: 16, size: 12, lanes: 3 },
-  'mat4x4<f32>': { align: 16, size: 64, lanes: 0 },
-};
-
-function roundUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-function structFields(source: string, name: string): Array<{ name: string; type: string }> {
-  const body = source.match(new RegExp(`struct\\s+${name}\\s*\\{([^}]*)\\}`))?.[1];
-  if (!body) throw new Error(`struct ${name} not found in sphere.wesl`);
-  return body
-    .split(',')
-    .map((line) => line.replace(/\/\/.*$/gm, '').trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [fieldName, type] = line.split(':').map((part) => part.trim());
-      if (!fieldName || !type) throw new Error(`unparsable AtmosphereUniforms field: '${line}'`);
-      return { name: fieldName, type };
-    });
-}
-
-type FieldLayout = { name: string; floatOffset: number; lanes: number };
-
-/** Std140 layout, in declaration order, converted to float indices (every
- *  member here is 4-byte aligned, so bytes/4 is exact). */
-function structLayout(fields: Array<{ name: string; type: string }>): {
-  layout: FieldLayout[];
-  totalFloats: number;
-} {
-  const layout: FieldLayout[] = [];
-  let cursor = 0;
-  let maxAlign = 4;
-  for (const { name, type } of fields) {
-    const spec = WESL_TYPES[type];
-    if (!spec) throw new Error(`unhandled WESL type '${type}' on field ${name}`);
-    const offset = roundUp(cursor, spec.align);
-    layout.push({ name, floatOffset: offset / 4, lanes: spec.lanes });
-    cursor = offset + spec.size;
-    maxAlign = Math.max(maxAlign, spec.align);
-  }
-  return { layout, totalFloats: roundUp(cursor, maxAlign) / 4 };
-}
-
 describe('AtmosphereUniforms WESL/packer parity', () => {
   const sphereWesl = readFileSync(sphereWeslPath, 'utf8');
-  const { layout, totalFloats } = structLayout(structFields(sphereWesl, 'AtmosphereUniforms'));
+  const struct = weslStructLayout(sphereWesl, 'AtmosphereUniforms', 'uniform');
+  const totalFloats = struct.size / 4;
 
   it('struct float count matches ATMOSPHERE_UNIFORM_FLOATS', () => {
     expect(totalFloats).toBe(ATMOSPHERE_UNIFORM_FLOATS);
@@ -116,13 +69,14 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
     };
     const zeroPadFields = new Set<string>();
 
-    for (const field of layout) {
-      if (field.lanes === 0) {
+    for (const { name, type, offset } of struct.fields) {
+      const field = { name, floatOffset: offset / 4 };
+      if (type === 'mat4x4<f32>') {
         const matrix = matrixByField[field.name];
         if (!matrix) throw new Error(`no sentinel matrix for field '${field.name}'`);
         for (let lane = 0; lane < 16; lane++)
           expect(rec[field.floatOffset + lane]).toBe(matrix[lane]);
-      } else if (field.lanes === 3) {
+      } else if (type === 'vec3<f32>') {
         const vec = vectorByField[field.name];
         if (!vec) throw new Error(`no sentinel vector for field '${field.name}'`);
         for (let lane = 0; lane < 3; lane++) expect(rec[field.floatOffset + lane]).toBe(vec[lane]);

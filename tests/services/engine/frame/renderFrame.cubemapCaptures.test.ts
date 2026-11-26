@@ -144,6 +144,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
     viewRig: 'mono',
     frameIndex: 0,
+    perViewPlanMemory: new Map(),
     slabRows: [],
     // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
     gpu: { focusUniform: null, meshBodyRenderer: null },

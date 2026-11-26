@@ -17,4 +17,5 @@ export type PassState = Pick<
   | 'sampledTrailGroups'
   | 'gpu'
   | 'subsystems'
+  | 'frameIndex'
 >;

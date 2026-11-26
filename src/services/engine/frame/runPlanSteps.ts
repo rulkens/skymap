@@ -43,7 +43,12 @@ export function runPlanSteps(
         continue;
       }
     } else if (planner.scope === 'perView') {
-      target.view.snapshot.plans.put(planner, target.view, planner.plan(target.view, state));
+      const prev = target.previous.get(planner.name)?.get(target.view.id);
+      const result = planner.plan(target.view, state, prev);
+      // Filed beside the `put`, so next frame's `prev` is exactly what this frame stored.
+      target.view.snapshot.plans.put(planner, target.view, result);
+      const values = target.next.get(planner.name) ?? new Map<string, unknown>();
+      target.next.set(planner.name, values.set(target.view.id, result.value));
       if (cpuSpans.on) cpuSpans.add(`plan:${step.name}`, startMs);
       continue;
     }

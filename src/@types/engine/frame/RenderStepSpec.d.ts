@@ -23,4 +23,7 @@ export type RenderStepSpec = {
    * an ordinal — inserting a line renumbers nothing.
    */
   readonly slot?: string;
+  /** A per-view planner planned earlier in this section whose value's `restart` decides a retained
+   *  target's first-touch clear. Required on a step whose target row is `retained`. */
+  readonly restartPlanner?: string;
 };
