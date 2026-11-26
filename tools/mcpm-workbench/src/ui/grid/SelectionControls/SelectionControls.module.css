@@ -8,7 +8,7 @@
 
 /* The padding field, in the chrome every sidebar dropdown shares. */
 .field {
-  composes: control from '../../panel/formControl.module.css';
+  composes: control from '../../../../../../src/components/common/formControl.module.css';
   inline-size: 8ch;
   cursor: text;
 }

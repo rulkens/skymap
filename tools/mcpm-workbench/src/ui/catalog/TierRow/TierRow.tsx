@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import type { Tier } from '../../../../../../src/@types/data/Tier';
 import { TIER_LADDER } from '../../../../../../src/data/tierLadder';
 import PanelRow from '../../panel/PanelRow/PanelRow';
-import Select from '../../panel/Select/Select';
+import Select from '../../../../../../src/components/common/Select/Select';
 
 export type TierRowProps = {
   readonly tier: Tier;

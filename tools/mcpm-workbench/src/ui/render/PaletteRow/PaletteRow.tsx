@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { PALETTE_IDS } from '../../../../../../src/data/volume/scalarFieldPalettes';
 import PanelRow from '../../panel/PanelRow/PanelRow';
-import Select from '../../panel/Select/Select';
+import Select from '../../../../../../src/components/common/Select/Select';
 import { PALETTE_ICONS } from './data/paletteIcons.constant';
 
 export type PaletteRowProps = {

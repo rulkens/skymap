@@ -1,7 +1,7 @@
 /**
- * Select — the workbench's one dropdown: a native `<select>` over a fixed list of
- * options, a customizable select (`appearance: base-select`) where the browser has
- * it, a plain one without icons elsewhere. Named by PanelRow's `<label>` or `aria-label`.
+ * Select — the shared dropdown: a native `<select>` over a fixed list of options, a
+ * customizable select (`appearance: base-select`) where the browser has it, a plain
+ * one without icons elsewhere. Named by its row's `<label>` or `aria-label`.
  * React 19.2 rejects elements inside `<select>` other than `<option>`, and inside
  * `<option>` other than text (a dev console error, which fails the GPU probe), so the
  * select's `<button>` and each option's icon slot are made here and filled through

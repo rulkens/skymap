@@ -23,7 +23,7 @@ import SpiralIcon from '../../../../../../src/components/icons/SpiralIcon/Spiral
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import PanelSection from '../../panel/PanelSection/PanelSection';
-import Select from '../../panel/Select/Select';
+import Select from '../../../../../../src/components/common/Select/Select';
 import SliderRows from '../../panel/SliderRows/SliderRows';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
