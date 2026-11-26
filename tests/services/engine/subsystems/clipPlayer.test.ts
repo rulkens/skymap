@@ -5,10 +5,14 @@
  * epoch back into the next tick, as `runFrame` does.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { configureStore, type Action } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
+import { createAppStore } from '../../../../src/store/createAppStore';
+import { clockTo } from '../../../../src/state/tour/clockTo';
+import { pause, setSimDays } from '../../../../src/state/time/timeSlice';
+import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import {
   clipStarted,
   clipEnded,
@@ -32,6 +36,7 @@ import {
   frameTo,
   hide,
   hold,
+  scene,
   seq,
   show,
   wait,
@@ -399,5 +404,45 @@ describe('clipPlayer lifecycle', () => {
     expect(settled).toBe(true);
     expect(player.clipOpacityOf('survey')).toBe(1);
     expect(view()).toBe(store.getState());
+  });
+});
+
+// Through the app store, so the clock moves the way the tour's does: `watchClockToSaga` runs the
+// profile. Fake timers fake the `performance.now` both the saga and the derivation read.
+describe('clipPlayer clock', () => {
+  const JD = 2_460_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('a crossed clockTo step moves the sim clock once, whatever the clip keeps', async () => {
+    const { store } = createAppStore();
+    store.dispatch(setSimDays({ simDays: JD, nowMs: performance.now() }));
+    store.dispatch(pause({ nowMs: performance.now() }));
+    const simDays = () => deriveSimDays(store.getState().time, performance.now());
+    const { tick } = makePlayer(store);
+    installClip(
+      store,
+      { timeline: [seq([wait(1), scene(clockTo({ simDays: JD + 0.5, overSec: 10 })), hold(12)])] },
+      'keep',
+    );
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    tick(performance.now());
+    await vi.advanceTimersByTimeAsync(1000);
+    tick(performance.now());
+    await vi.advanceTimersByTimeAsync(5000);
+    tick(performance.now());
+    expect(simDays()).toBeCloseTo(JD + 0.25, 6);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    tick(performance.now());
+    expect(simDays()).toBeCloseTo(JD + 0.5, 9);
+    expect(store.getState().time.paused).toBe(true);
+    expect(typesOf(dispatch.mock.calls).filter((type) => type === clockTo.type)).toHaveLength(1);
   });
 });
