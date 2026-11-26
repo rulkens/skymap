@@ -10,15 +10,17 @@ npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]
 - **Order:** height bake, then horizon, then pack. The tool packs the horizon archives itself, so
   there is no separate `--pack-only` step. A height re-bake means re-baking horizon over the changed
   area grown by the march radius (about 12° of arc), because the prefix pins the height build.
-- **Levels:** a band's horizon runs two levels above its heights (`[min − 2, max − 2]`). Tile z is
-  baked as its 16 sub-tiles at z + 2, each a 33-post march, and assembled; where a sub-tile has no
-  heights of its own (around a regional band) its reads fall back to coarser levels. The manifest
-  gets one `horizon` row per height band at those levels; the height rows carry no `horizon`.
-- **`--band`** indexes `manifest.json`'s bands with heights. Without it every band bakes. `--workers` defaults
-  to cores − 1; each worker holds up to about 100 MB of decoded height tiles.
+- **Levels:** a band's horizon runs two levels above its heights (`[min − 2, max − 2]`), never
+  coarser than z2, the small globe image's source. Tile z is baked as its 16 sub-tiles at z + 2,
+  each a 33-post march, and assembled; a sub-tile under 1° everywhere stores byte 0, and where one
+  has no heights of its own (around a regional band) its reads fall back to coarser levels. The
+  manifest gets one `horizon` row per height band at those levels; the height rows carry none.
+- **`--band`** indexes `manifest.json`'s bands with heights. Without it every band bakes.
+  `--workers` defaults to cores − 1; each worker holds up to about 100 MB of decoded height tiles.
 - **Resume:** a tile whose `horizon/<z>/<x>/<y>.webp` exists is skipped; writes are atomic. The
   skip cannot tell an older tile format apart, so clear `<prefix>/horizon/` before a re-bake that
-  changes it; `index.txt` horizon lines whose file is gone are dropped.
+  changes it (the globe repack throws on a wrong-sized tile); `index.txt` horizon lines whose file
+  is gone are dropped.
 - **Output:** `<prefix>/horizon/<z>/<x>/<y>.webp` (258 × 258 lossless RGBA, `exact` so a lit sector's
   alpha 0 keeps its colour channels), a zero-byte file for a flat tile. Then `index.txt`, the
   `horizon` archives and `builtFrom.horizon` (`sourceId: 'derived:height'`) are written, manifest last.

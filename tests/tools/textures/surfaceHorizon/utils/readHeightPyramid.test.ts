@@ -34,9 +34,9 @@ beforeAll(async () => {
 });
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-// bakeHorizonTileResolved keeps a march whose reads left missCount unchanged, so a read that
-// skips the count, or a lookup cache that outlives a decode or a trim, bakes a wrong angle or
-// never converges.
+// bakeHorizonSubTileResolved keeps a march whose reads left missCount unchanged, so a read
+// that skips the count, or a lookup cache that outlives a decode or a trim, bakes a wrong angle
+// or never converges.
 it('counts every read of an undecoded tile, before decode and again after trim', async () => {
   const pyramid = readHeightPyramid(dir, PREFIX, 1_737_400);
   expect(pyramid.heightAt(1, LON, 0)).toBe(0);

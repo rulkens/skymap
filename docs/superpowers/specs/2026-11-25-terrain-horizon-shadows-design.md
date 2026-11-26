@@ -70,7 +70,8 @@ three products.
 - **Grid.** 129×129 posts per tile, on height's own 129-post lattice at the tile's level, each
   post marched from the heights two levels finer. Post (0,0) is the tile's north-west corner,
   matching height.
-- **Levels.** A band's horizon runs two levels above its heights, `[min − 2, max − 2]`: tile z
+- **Levels.** A band's horizon runs two levels above its heights, `[min − 2, max − 2]`, and no
+  coarser than z2, the small globe image's source (the planner requests from z3 down): tile z
   holds the posts of its 16 descendants at z + 2, which the bake marches as 33-post units (§4).
   So a leaf at or above its band's horizon max reads its own tile at z + 2 density, and a deeper
   leaf reads a sub-rect of the max level, at the heights' own density, never finer.
@@ -83,12 +84,13 @@ three products.
 - **Flat tile.** When the tile's maximum horizon over all posts and sectors is under 1°, the
   archive index gets a **zero-length entry** and no bytes. Why 1° is safe: such a tile has no slope
   over ≈1°, so N·L ≤ sin 1° wherever the sun is that low, and extinction already darkens Earth and
-  Mars there.
+  Mars there. The same rule per 33-post sub-tile: one under 1° everywhere stores byte 0 in its
+  posts, so an ocean reads the lit sentinel and compresses to almost nothing.
 - **Height coupling.** The prefix pins the height build: prefixes bump only when existing bytes
   change (`tools/textures/surfaceBodies/earthSurfaceBake.ts:36-44`). Rule: any height re-bake
   re-bakes horizon over the changed area, grown by the bake's search radius (§4).
 - **Manifest.** `builtFrom.horizon` on a row of its own per height band, at the band's bounds and
-  its horizon levels (`[min − 2, max − 2]`), with the `sourceId` `derived:height`. The planner
+  its horizon levels (above), with the `sourceId` `derived:height`. The planner
   requests horizon by those rows, so it asks only for tiles that exist.
 
 ## 4. The bake
@@ -112,8 +114,9 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
     deliberate.
 - **March unit:** a 33-post sub-tile at z + 2, on height's lattice decimated by 4. A tile at z is
   its 4 × 4 sub-tiles assembled into 129 posts; neighbouring sub-tiles share an edge post, which
-  the east or south one supplies. A sub-tile whose own heights are missing (around a regional
-  band) is still marched: its reads fall back to coarser levels, so every post has a value.
+  the east or south one supplies; a flat sub-tile supplies byte 0 (§3). A sub-tile whose own
+  heights are missing (around a regional band) is still marched: its reads fall back to coarser
+  levels, so every post has a value.
 - **Tiles:** for each height tile of a band, its ancestor two levels up and that ancestor's
   siblings, where `surfaceTileInBand` holds over the band's horizon levels: the same predicate
   the runtime requests by.
@@ -207,9 +210,9 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
   one it is (0, 0, 1, 1). The 1×1 placeholder is only something to bind.
 - Flat tiles repack as byte 0.
 - The globe shaders call the same `horizonLookup` functions, with the rect set to the whole globe.
-- The globe and the tiles read the same values at the hand-off, so nothing pops. The first cut
-  leaves (z3 on small, z4 on medium, z5 on large) read their own tiles, at twice the posts per
-  degree of the globe image, so shadows sharpen at the hand-off and never coarsen.
+- At the hand-off a first cut leaf (z3 on small, z4 on medium, z5 on large) reads its own tile,
+  which holds every post of the globe image with one (three on large) more between each pair, so
+  the shadows there sharpen and never shift or coarsen.
 - **Phones read the sun only.** On a coarse pointer (`matchMedia('(pointer: coarse)')`, read once
   when the body Layer builds its pipelines) every pipeline linking `horizonLookup` sets its
   `HORIZON_SKY` override false: each post loads only the texels of the two sunward sectors, 8
@@ -222,8 +225,9 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 
 - **R2:** about 340 MB (Earth 111, Moon 129, Mars 100) plus the globe images: the Moon's small and
   medium measure 1.4 and 6.0 MB. The Moon's posts are exactly the 33-post rollout's; Mars and
-  Earth bake 1.3× and 1.6× the posts, for the sub-tiles around their regional bands. Large is capped at medium (a large request reads the medium
-  image), because surface tiles take over up close.
+  Earth bake 1.3× and 1.6× the posts, for the sub-tiles around their regional bands (levels
+  min − 2 and min − 1 are 7% and 14% of those). Large is capped at medium (a large request reads
+  the medium image), because surface tiles take over up close.
 - **Upload:** `collectSurfaceTiles.ts:26` reads products from `builtFrom`, and the offline
   inventory and cache rules (`tools/deploy/syncR2.ts:136-152`) need no edit. Sync with
   `npm run sync-r2-secure`.
@@ -266,7 +270,8 @@ Per `testing.md`, only what can fail on a real bug:
 - **Bake:** a synthetic heightfield (a single ridge on a sphere) has its shadow on the anti-sun
   side, at the analytic horizon angle within one byte. A flat tile writes zero bytes.
 - **Assembly:** a 129-post tile's post (i, j) is byte for byte its sub-tile (i >> 5, j >> 5)'s
-  post (i & 31, j & 31), the last row and column sub-tile 3's post 32.
+  post (i & 31, j & 31), the last row and column sub-tile 3's post 32, and 0 where that sub-tile
+  is flat.
 - **Density:** through the real tier, planner and resolver code, a first-level cut leaf reads
   at least the globe image's post density on every tier, and a leaf reads z + 2 density up to
   its band's horizon max, the heights' own density past it. The bake's tiles are exactly the

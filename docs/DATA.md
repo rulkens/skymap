@@ -244,7 +244,7 @@ A region adjacent to a baked one also leaves stale z8–z12 parents and z13 halo
 
 ### Surface horizon (terrain shadows)
 
-A derived product, **horizon**, sits beside height in each body's tile tree: `<prefix>/horizon/<z>/<x>/<y>.webp`, 258 x 258 lossless RGBA holding 16 horizon-angle sectors per post on height's own 129 x 129 lattice, a zero-byte file for a flat tile. Each post is marched from the heights two levels finer, so a band's horizon runs two levels above its heights (`[min - 2, max - 2]`, a manifest row of its own) and a leaf reads z + 2 density up to there. It is baked from the height archives only (`builtFrom.horizon`, `sourceId: 'derived:height'`), so it follows height's prefix. Tool, flags and output details: [`tools/textures/surfaceHorizon/README.md`](../tools/textures/surfaceHorizon/README.md).
+A derived product, **horizon**, sits beside height in each body's tile tree: `<prefix>/horizon/<z>/<x>/<y>.webp`, 258 x 258 lossless RGBA holding 16 horizon-angle sectors per post on height's own 129 x 129 lattice, a zero-byte file for a flat tile. Each post is marched from the heights two levels finer, so a band's horizon runs two levels above its heights (`[min - 2, max - 2]`, no coarser than z2, a manifest row of its own) and a leaf reads z + 2 density up to there. It is baked from the height archives only (`builtFrom.horizon`, `sourceId: 'derived:height'`), so it follows height's prefix. Tool, flags and output details: [`tools/textures/surfaceHorizon/README.md`](../tools/textures/surfaceHorizon/README.md).
 
 ```
 npm run build-surface-tiles -- --body <b>   # height

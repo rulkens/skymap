@@ -12,11 +12,11 @@ import { marchHorizonSector } from './utils/marchHorizonSector';
 const DEG = Math.PI / 180;
 const DECIMATION = (HEIGHT_POSTS_PER_TILE - 1) / (HORIZON_SUB_TILE_POSTS - 1);
 
-/** bakeHorizonTile — the bake's march unit: the horizon angles of level-z tile (x, y) at 33 × 33
- *  posts, every sector, packed into the 2×2-texel-per-post raster; posts sit on height's lattice,
- *  so (0,0) is the NW corner. `assembleHorizonTile` stitches 16 of these into one shipped tile.
- *  `march` is called in the same (post, sector) order on every call. */
-export function bakeHorizonTile(
+/** bakeHorizonSubTile — the bake's march unit: the horizon angles of level-z tile (x, y) at
+ *  33 × 33 posts, every sector, packed into the 2×2-texel-per-post raster; posts sit on height's
+ *  lattice, so (0,0) is the NW corner. `assembleHorizonTile` stitches 16 of these into one shipped
+ *  tile. `march` is called in the same (post, sector) order on every call. */
+export function bakeHorizonSubTile(
   pyramid: HeightPyramid,
   z: number,
   x: number,
@@ -27,7 +27,7 @@ export function bakeHorizonTile(
   const stepRad = heightLatticeStepDeg(z) * DEG;
   const ceilingM = marchCeilingM(pyramid, z, x, y);
   if (!Number.isFinite(ceilingM)) {
-    throw new Error(`bakeHorizonTile: march ceiling ${ceilingM} for tile ${z}/${x}/${y}`);
+    throw new Error(`bakeHorizonSubTile: march ceiling ${ceilingM} for tile ${z}/${x}/${y}`);
   }
   const rgba = new Uint8Array(side * side * 4);
   let maxDeg = Number.NEGATIVE_INFINITY;

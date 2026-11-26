@@ -353,8 +353,9 @@ a height re-bake re-bakes horizon over the area grown by the search radius), `do
 shadows were blobs), and the first cut leaves read half the posts of the globe image they replace.
 
 **Files:** `horizonAngleMap.ts` (`HORIZON_POSTS_PER_TILE` 129), `surfaceTileParams.ts` (258 px
-slots, 8 × 8 atlas); the bake: `bakeHorizonTile.ts` (the 33-post march unit, now returns
-`HorizonSubTile`), `utils/assembleHorizonTile.ts` (16 sub-tiles at z + 2 → one tile, flat rule),
+slots, 8 × 8 atlas); the bake: `bakeHorizonSubTile.ts` (the 33-post march unit, renamed from `bakeHorizonTile`, returns
+`HorizonSubTile`), `utils/assembleHorizonTile.ts` (16 sub-tiles at z + 2 → one tile; a flat
+sub-tile writes byte 0, a tile with all 16 flat is flat),
 `horizonBakeWorker.ts`, `utils/horizonTilesOfBand.ts` (tiles two levels above the heights, sibling
 closed), `utils/horizonManifest.ts` (a horizon row per height band at `[min − 2, max − 2]`),
 `data/horizonSubTiles.ts`, `data/horizonGlobeLevels.ts` (z2, z3); spec §2–§5, §7, §8, §10; README,
@@ -365,6 +366,10 @@ DATA.md, RENDERER.md.
       equal the runtime's request predicate (`horizonTilesOfBand.test.ts`).
 - [x] Implement; the march is unchanged: a sample of real Moon and Mars tiles matched the old
       33-post tiles at z + 2 byte for byte. Commit.
+- [x] Review fixes: a flat sub-tile stores byte 0 (Earth's globe images stay identical); horizon
+      levels stop at z2, the small globe's source (`utils/horizonLevelsOfBand.ts`); a wrong-sized
+      tile on disk throws in `readHorizonTileFile`; `bakeHorizonSubTile` /
+      `bakeHorizonSubTileResolved` renamed. Commit.
 - [ ] Re-bake all three bodies (Task 8), clearing each `<prefix>/horizon/` first.
 
 ---

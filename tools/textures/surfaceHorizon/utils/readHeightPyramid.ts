@@ -34,7 +34,8 @@ const keyOf = (z: number, x: number, y: number): number => (z * 2 ** 20 + y) * 2
  *
  * Reads are synchronous (the march calls them in its inner loop) while WebP decode is not, so
  * a read of an undecoded tile returns 0 and records a miss; `loadMisses` decodes them and the
- * caller re-marches (`bakeHorizonTileResolved`). Headers (`subtreeMaxM`) read synchronously.
+ * caller re-marches (`bakeHorizonSubTileResolved`). Headers (`subtreeMaxM`) read
+ * synchronously.
  */
 export function readHeightPyramid(
   imagesDir: string,

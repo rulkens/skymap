@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { horizonAngleOfByte } from '../../../../src/layers/body/surfaceTiles/horizon/utils/horizonAngleOfByte';
 import type { HeightPyramid } from '../../../../tools/textures/surfaceHorizon/@types/HeightPyramid';
-import { bakeHorizonTile } from '../../../../tools/textures/surfaceHorizon/bakeHorizonTile';
+import { bakeHorizonSubTile } from '../../../../tools/textures/surfaceHorizon/bakeHorizonSubTile';
+import { HORIZON_SUB_TILE_POSTS } from '../../../../tools/textures/surfaceHorizon/data/horizonSubTiles';
 
 const MOON_RADIUS_M = 1_737_400;
 const DEG = Math.PI / 180;
@@ -25,7 +26,7 @@ const SOUTH = [0, 1] as const;
 const WEST = [1, 1] as const;
 
 function redAt(rgba: Uint8Array, i: number, j: number, [dx, dy]: readonly [number, number]) {
-  return rgba[((2 * j + dy) * 66 + 2 * i + dx) * 4]!;
+  return rgba[((2 * j + dy) * 2 * HORIZON_SUB_TILE_POSTS + 2 * i + dx) * 4]!;
 }
 
 function inBand(rad: number, fromRad: number): boolean {
@@ -40,14 +41,14 @@ function pyramid(
 }
 
 function bakedImage(source: HeightPyramid, x: number, y: number): Uint8Array {
-  return bakeHorizonTile(source, Z, x, y).rgba;
+  return bakeHorizonSubTile(source, Z, x, y).rgba;
 }
 
 function analyticDeg(heightM: number, distanceM: number): number {
   return Math.atan2(heightM - distanceM ** 2 / (2 * MOON_RADIUS_M), distanceM) / DEG;
 }
 
-describe('bakeHorizonTile', () => {
+describe('bakeHorizonSubTile', () => {
   it('a ridge on a sphere shades its anti-sun side at the analytic angle', () => {
     // Post (0,0) sits at lon 0 on the equator; a north–south ridge's near face is 10 posts east
     // of it, half a post before the sample the march lands on.
@@ -80,7 +81,7 @@ describe('bakeHorizonTile', () => {
       () => -1200,
       () => -1200,
     );
-    expect(bakeHorizonTile(flat, Z, 512, 256).maxDeg).toBeLessThan(1);
+    expect(bakeHorizonSubTile(flat, Z, 512, 256).maxDeg).toBeLessThan(1);
   });
 
   it('the march reads past the tile edge', () => {

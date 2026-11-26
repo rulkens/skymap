@@ -1,7 +1,7 @@
 /**
  * The bake must write exactly the horizon tiles the runtime requests (`surfaceTileInBand` over the
- * band two levels up): one it skips is fetched and fails for the session, one past the grid's last
- * row is a file nothing reads.
+ * band two levels up): one it skips is fetched and fails for the session, one coarser than the
+ * globe images' lowest source level is a file nothing reads.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -46,13 +46,13 @@ describe('horizonTilesOfBand', () => {
     expect(bakedFrom(band)).toEqual(claimed(band, 4, 6));
   });
 
-  it("stays on the grid where the global band's horizon reaches z1, a single row", () => {
+  it("starts the global band's horizon at the small globe image's level, z2", () => {
     const band = {
       bounds: { west: -180, east: 180, south: -90, north: 90 },
       min: 3,
-      max: 3,
+      max: 4,
       builtFrom: { height: SOURCE },
     };
-    expect(bakedFrom(band)).toEqual(['1/0/0', '1/1/0']);
+    expect(bakedFrom(band)).toEqual(claimed(band, 2, 2));
   });
 });

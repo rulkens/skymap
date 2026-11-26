@@ -6,9 +6,9 @@
  *
  * Tiles go to `<prefix>/horizon/<z>/<x>/<y>.webp` (zero bytes when flat), two levels above the
  * heights they march, one worker-thread task each; a tile already on disk is skipped, so an
- * interrupted bake resumes. The archives,
- * `index.txt`, the globe images and `builtFrom.horizon` are written last, only after every
- * tile of the selected bands exists, like `bakeAll`: a killed run leaves the manifest as it was.
+ * interrupted bake resumes. The archives, `index.txt`, the globe images and `builtFrom.horizon`
+ * are written last, only after every tile of the selected bands exists, like `bakeAll`: a killed
+ * run leaves the manifest as it was.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

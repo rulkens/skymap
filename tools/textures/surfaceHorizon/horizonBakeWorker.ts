@@ -4,7 +4,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import type { HorizonBakeTask } from './@types/HorizonBakeTask';
 import type { HorizonBakeWorkerData } from './@types/HorizonBakeWorkerData';
 import { assembleHorizonTile } from './utils/assembleHorizonTile';
-import { bakeHorizonTileResolved } from './utils/bakeHorizonTileResolved';
+import { bakeHorizonSubTileResolved } from './utils/bakeHorizonSubTileResolved';
 import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { readHeightPyramid } from './utils/readHeightPyramid';
 import { writeHorizonTile } from './utils/writeHorizonTile';
@@ -20,7 +20,7 @@ async function bakeTask({ z, x, y }: HorizonBakeTask): Promise<void> {
   try {
     pyramid.trim(MAX_CACHED_TILES);
     const tile = await assembleHorizonTile(
-      (subZ, subX, subY) => bakeHorizonTileResolved(pyramid, subZ, subX, subY),
+      (subZ, subX, subY) => bakeHorizonSubTileResolved(pyramid, subZ, subX, subY),
       z,
       x,
       y,

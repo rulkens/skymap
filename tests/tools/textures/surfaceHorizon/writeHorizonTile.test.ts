@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { HORIZON_TILE_PX } from '../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
@@ -32,5 +33,14 @@ describe('writeHorizonTile', () => {
     const back = await readHorizonTileFile(path);
     expect(back?.kind).toBe('image');
     expect(back?.kind === 'image' && Buffer.compare(back.rgba, rgba)).toBe(0);
+  });
+
+  it('a tile of another size, an older bake left on disk, throws', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'horizon-'));
+    const path = join(dir, 'old.webp');
+    await sharp(new Uint8Array(66 * 66 * 4), { raw: { width: 66, height: 66, channels: 4 } })
+      .webp({ lossless: true })
+      .toFile(path);
+    await expect(readHorizonTileFile(path)).rejects.toThrow(/66 × 66/);
   });
 });
