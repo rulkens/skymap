@@ -44,7 +44,17 @@ export function readHeightPyramid(
   const levels = new Map<number, HeightArchiveLevel | null>();
   const heights = new Map<number, Float32Array>();
   const bounds = new Map<number, number>();
+  const inArchive = new Map<number, boolean>();
   const misses = new Set<number>();
+  let missReads = 0;
+  // A march's samples stay in one tile per level for long runs, so each level keeps its last
+  // lookup: null = not in the archive, undefined = not decoded yet. Stale once `heights` changes.
+  const lastKey: number[] = [];
+  const lastTile: (Float32Array | null | undefined)[] = [];
+  const forgetLastTiles = (): void => {
+    lastKey.length = 0;
+    lastTile.length = 0;
+  };
 
   const levelOf = (z: number): HeightArchiveLevel | null => {
     if (!levels.has(z)) {
@@ -75,11 +85,19 @@ export function readHeightPyramid(
     return bytes;
   };
 
-  const hasTile = (z: number, x: number, y: number): boolean => {
-    const level = levelOf(z);
-    if (level === null) return false;
-    const entry = findSurfaceTileArchiveEntry(level.index, surfaceTileMortonKey(x, y));
-    return entry !== null && entry.length > 0;
+  // The index never changes, so a tile's membership is searched for once.
+  const hasTile = (z: number, x: number, y: number, key: number): boolean => {
+    let has = inArchive.get(key);
+    if (has === undefined) {
+      const level = levelOf(z);
+      const entry =
+        level === null
+          ? null
+          : findSurfaceTileArchiveEntry(level.index, surfaceTileMortonKey(x, y));
+      has = entry !== null && entry.length > 0;
+      inArchive.set(key, has);
+    }
+    return has;
   };
 
   const chunkOf = (bytes: Buffer, z: number, x: number, y: number): Uint8Array => {
@@ -102,10 +120,16 @@ export function readHeightPyramid(
         const gj = Math.min(Math.max((90 - latDeg) / step, 0), 2 ** (level - 1) * CELLS - 1e-6);
         const x = Math.floor(gi / CELLS);
         const y = Math.floor(gj / CELLS);
-        if (!hasTile(level, x, y)) continue;
-        const tile = heights.get(keyOf(level, x, y));
+        const key = keyOf(level, x, y);
+        if (lastKey[level] !== key) {
+          lastKey[level] = key;
+          lastTile[level] = hasTile(level, x, y, key) ? heights.get(key) : null;
+        }
+        const tile = lastTile[level];
+        if (tile === null) continue;
         if (tile === undefined) {
-          misses.add(keyOf(level, x, y));
+          misses.add(key);
+          missReads++;
           return 0;
         }
         const i0 = Math.floor(gi - x * CELLS);
@@ -150,11 +174,17 @@ export function readHeightPyramid(
         );
         heights.set(key, decoded.heightM);
       }
+      forgetLastTiles();
       return pending.length;
     },
 
+    missCount: () => missReads,
+
     trim(maxTiles) {
-      if (heights.size > maxTiles) heights.clear();
+      if (heights.size > maxTiles) {
+        heights.clear();
+        forgetLastTiles();
+      }
     },
   };
 }

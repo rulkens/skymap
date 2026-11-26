@@ -18,12 +18,14 @@ const DEG = Math.PI / 180;
 const DECIMATION = (HEIGHT_POSTS_PER_TILE - 1) / (HORIZON_POSTS_PER_TILE - 1);
 
 /** bakeHorizonTile — the horizon angles of tile (z, x, y), every post and sector, packed into
- *  the 2×2-texel-per-post raster; posts sit on height's lattice, so (0,0) is the NW corner. */
+ *  the 2×2-texel-per-post raster; posts sit on height's lattice, so (0,0) is the NW corner.
+ *  `march` is called in the same (post, sector) order on every call. */
 export function bakeHorizonTile(
   pyramid: HeightPyramid,
   z: number,
   x: number,
   y: number,
+  march: typeof marchHorizonSector = marchHorizonSector,
 ): HorizonTile {
   const side = 2 * HORIZON_POSTS_PER_TILE;
   const stepRad = heightLatticeStepDeg(z) * DEG;
@@ -39,7 +41,7 @@ export function bakeHorizonTile(
       const lonRad = -Math.PI + (x * (HEIGHT_POSTS_PER_TILE - 1) + i * DECIMATION) * stepRad;
       for (let sector = 0; sector < HORIZON_SECTORS; sector++) {
         const azimuthRad = (sector * 2 * Math.PI) / HORIZON_SECTORS;
-        const deg = marchHorizonSector(pyramid, z, lonRad, latRad, azimuthRad, ceilingM);
+        const deg = march(pyramid, z, lonRad, latRad, azimuthRad, ceilingM);
         maxDeg = Math.max(maxDeg, deg);
         const { dx, dy, channel } = horizonTexelOf(sector);
         rgba[((2 * j + dy) * side + 2 * i + dx) * 4 + channel] = horizonByteOfAngle(deg);

@@ -22,4 +22,5 @@ npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]
   writes `public/data/images/textures/<body>-horizon-<px>.webp`. The name carries the tier's nominal
   px (2048/4096/8192) but the image is half that wide (1024/2048/4096): posts, not texels, are the
   tier's resolution. The scheme is kept, not renamed.
-- **Cost:** about 1 s per tile per thread, plus re-marches while far-field height tiles decode.
+- **Cost:** about 0.2–0.3 s per tile per thread on the Moon (z3–z7, measured 2026-11-26), far-field
+  decodes and the re-marches they cause included; only a march that read an undecoded tile re-runs.
