@@ -2,6 +2,8 @@
 export type BlueNoiseMask = {
   /** Exists from construction (bind groups may reference it); zero until `ready` resolves. */
   readonly texture: GPUTexture;
-  /** Resolves once the bytes are written; rejects on a failed fetch. */
+  /** Resolves once the bytes are written (or dropped after `destroy`); rejects on a failed fetch. */
   readonly ready: Promise<void>;
+  /** Frees the texture; bytes landing afterwards are dropped, not written. */
+  destroy(): void;
 };

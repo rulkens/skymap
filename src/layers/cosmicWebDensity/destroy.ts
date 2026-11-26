@@ -6,5 +6,5 @@ export function destroy(runtime: CosmicWebDensityRuntime): void {
   runtime.renderer.destroy();
   runtime.upsample.destroy();
   // After the renderer: its bind groups reference the mask.
-  runtime.jitterMask.texture.destroy();
+  runtime.jitterMask.destroy();
 }
