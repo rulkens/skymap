@@ -62,6 +62,21 @@ it('key absent from the index reads missing', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
+it('names a key missing only once its level index has landed without it', async () => {
+  // Bug caught: an absent tile re-requested every time LRU reclaims its failed slot, or an
+  // unlisted (zero-length, flat) key or a not-yet-read level called missing.
+  fetchMock.mockImplementation(async (url: string) =>
+    url.endsWith('z3.idx') ? ok(idx(entry(1, 40, 0))) : new Response(null, { status: 404 }),
+  );
+  const source = createArchiveTileSource('p');
+  expect(source.isMissing(tile(2))).toBe(false);
+  await source.readTile(tile(1));
+  expect(source.isMissing(tile(2))).toBe(true);
+  expect(source.isMissing(tile(1))).toBe(false);
+  await source.readTile({ ...tile(1), z: 4 });
+  expect(source.isMissing({ ...tile(7), z: 4 })).toBe(true);
+});
+
 it('a level whose index 404s reads missing and is not refetched', async () => {
   fetchMock.mockImplementation(async () => new Response(null, { status: 404 }));
   const source = createArchiveTileSource('p');
