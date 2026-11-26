@@ -3,9 +3,9 @@
  * a `.constant.ts` suffix (`MAX_CATALOG_FILE_BYTES` → `maxCatalogFileBytes.constant.ts`), and a
  * `*.constant.ts` file exports exactly that. The match ignores case, so a name the constant writes as
  * one word (`PATHTRACER_…`) may be split in the file name (`pathTracer…`). Owner rule of 2026-11-26.
- * One SCOPES row per tree; `allowed` is today's debt and only shrinks: a listed file must still
- * fail. Adding a tree (the app's `src/`, another tool) is one more row: its roots and the files
- * failing today.
+ * An interim rule for the workbench only: the repo-wide goal is `<thing>.constants.ts` (BACKLOG,
+ * "Constants files"), so do not add the app as a scope. One SCOPES row per tree; `allowed` is
+ * today's debt and only shrinks: a listed file must still fail.
  */
 import { basename } from 'node:path';
 import { Node, VariableDeclarationKind } from 'ts-morph';

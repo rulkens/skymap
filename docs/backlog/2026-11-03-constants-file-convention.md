@@ -13,6 +13,8 @@ batch moves.
   a module-wide bag of unrelated constants is not allowed.
 - The `data/` role folder stays (ADR 0014); the suffix is added to it, not instead of it.
 - Scope: `src/` and `tools/`. The website keeps its own rule (`componentFilePurity.test.ts`).
+- Meanwhile the MCPM workbench names one-constant files `<camelCase>.constant.ts` (owner, 2026-11-26,
+  `tests/conventions/constantFileName.test.ts`); they fold into the same change.
 
 ## Ratchet
 
