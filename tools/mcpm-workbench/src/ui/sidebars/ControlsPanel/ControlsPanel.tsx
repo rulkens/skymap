@@ -10,27 +10,22 @@
  */
 import { useState, type ReactNode } from 'react';
 import Button from '../../../../../../src/components/common/Button/Button';
-import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
-import ButtonTip from '../../panel/ButtonTip/ButtonTip';
-import { clearTraceRequested, resetRequested } from '../../../state/commands';
-import { setWeightMode } from '../../../state/catalog/catalogSlice';
-import { MCPM_PARAM_KEYS } from '../../../params/exportParams';
-import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../../state/sim/simSlice';
-import {
-  setGalaxyIntensity,
-  setGalaxyPointSize,
-  setRenderer,
-  setShowGalaxies,
-} from '../../../state/view/viewSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import EyeIcon from '../../../../../../src/components/icons/EyeIcon/EyeIcon';
-import SimulationStatusIcon from '../../sim/SimulationStatusIcon/SimulationStatusIcon';
-import SimulationTip from '../../sim/SimulationTip/SimulationTip';
+import type { CatalogSlice } from '../../../../@types/catalog/CatalogSlice';
+import type { AgentInitMode } from '../../../../@types/sim/AgentInitMode';
+import type { McpmParams } from '../../../../@types/sim/McpmParams';
+import type { RendererId } from '../../../../@types/view/RendererId';
+import type { ViewSlice } from '../../../../@types/view/ViewSlice';
+import { MCPM_PARAM_KEYS } from '../../../params/exportParams';
+import SimulationStatusIconContainer from '../../containers/sim/SimulationStatusIconContainer';
+import SimulationTipContainer from '../../containers/sim/SimulationTipContainer';
 import SpiralIcon from '../../icons/SpiralIcon/SpiralIcon';
-import PanelSection from '../../panel/PanelSection/PanelSection';
+import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
+import PanelSection from '../../panel/PanelSection/PanelSection';
 import Select from '../../panel/Select/Select';
 import SliderRows from '../../panel/SliderRows/SliderRows';
+import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import { AGENT_COUNT_SLIDER_FIELDS } from './data/agentCountSliderFields.constant';
 import { GALAXIES_SLIDER_FIELDS } from './data/galaxiesSliderFields.constant';
@@ -44,44 +39,79 @@ import styles from './ControlsPanel.module.css';
 export type ControlsPanelProps = {
   readonly id: string;
   readonly collapsed: boolean;
+  readonly running: boolean;
+  readonly initMode: AgentInitMode;
+  readonly weightMode: CatalogSlice['weightMode'];
+  readonly params: McpmParams;
+  readonly agentCount: number;
+  readonly renderer: RendererId;
+  readonly showGalaxies: boolean;
+  readonly galaxies: ViewSlice['galaxies'];
+  readonly onRunningChange: (on: boolean) => void;
+  readonly onInitModeChange: (mode: AgentInitMode) => void;
+  readonly onWeightModeChange: (mode: CatalogSlice['weightMode']) => void;
+  readonly onReset: () => void;
+  readonly onClearTrace: () => void;
+  readonly onParamChange: (key: keyof McpmParams, value: number) => void;
+  readonly onAgentCountChange: (agentCount: number) => void;
+  readonly onRendererChange: (renderer: RendererId) => void;
+  readonly onShowGalaxiesChange: (on: boolean) => void;
+  readonly onGalaxiesChange: (key: keyof ViewSlice['galaxies'], value: number) => void;
 };
 
-function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
-  const dispatch = useAppDispatch();
-  const sim = useAppSelector((s) => s.sim);
-  const catalog = useAppSelector((s) => s.catalog);
-  const view = useAppSelector((s) => s.view);
+function ControlsPanel({
+  id,
+  collapsed,
+  running,
+  initMode,
+  weightMode,
+  params,
+  agentCount,
+  renderer,
+  showGalaxies,
+  galaxies,
+  onRunningChange,
+  onInitModeChange,
+  onWeightModeChange,
+  onReset,
+  onClearTrace,
+  onParamChange,
+  onAgentCountChange,
+  onRendererChange,
+  onShowGalaxiesChange,
+  onGalaxiesChange,
+}: ControlsPanelProps): ReactNode {
   // No open/close slice for the workbench's panel sections yet — PanelSection
   // is controlled, so local flags are enough until a section's state must persist.
   const [simOpen, setSimOpen] = useState(true);
   const [renderingOpen, setRenderingOpen] = useState(false);
   const [galaxiesOpen, setGalaxiesOpen] = useState(false);
-  const RendererRows = RENDERER_ROWS[view.renderer];
+  const RendererRows = RENDERER_ROWS[renderer];
 
   return (
     <aside id={id} className={styles.root} aria-label="Simulation and rendering" inert={collapsed}>
       <div className={styles.scroll}>
         <PanelSection
           title="Simulation"
-          icon={<SimulationStatusIcon size={12} />}
-          iconTip={<SimulationTip />}
+          icon={<SimulationStatusIconContainer size={12} />}
+          iconTip={<SimulationTipContainer />}
           open={simOpen}
           onToggle={() => setSimOpen((v) => !v)}
-          on={sim.running}
-          onChange={(on) => dispatch(setRunning(on))}
+          on={running}
+          onChange={onRunningChange}
           toggleLabel="running"
         >
           <ToggleRow
             label="seed around data"
-            on={sim.initMode === 'aroundData'}
+            on={initMode === 'aroundData'}
             info="Seeds agents near catalog points instead of uniformly across the grid, so the fit converges onto the survey volume faster."
-            onChange={(on) => dispatch(setInitMode(on ? 'aroundData' : 'uniform'))}
+            onChange={(on) => onInitModeChange(on ? 'aroundData' : 'uniform')}
           />
           <ToggleRow
             label="weight by mass"
-            on={catalog.weightMode === 'stellarMass'}
+            on={weightMode === 'stellarMass'}
             info="Data-point deposits scale with each galaxy's stellar mass; off, every data point deposits equally. Free agents always deposit at a flat weight either way."
-            onChange={(on) => dispatch(setWeightMode(on ? 'stellarMass' : 'uniform'))}
+            onChange={(on) => onWeightModeChange(on ? 'stellarMass' : 'uniform')}
           />
           {/* reset / clear trace: momentary commands, not state — `state/commands.ts`
               actions a saga (Task 7) takes. Divided from the toggle rows above with
@@ -98,7 +128,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
                   <Button
                     className={styles.simActionButton}
                     aria-describedby={describedBy}
-                    onClick={() => dispatch(resetRequested())}
+                    onClick={onReset}
                   >
                     reset
                   </Button>
@@ -109,7 +139,7 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
                   <Button
                     className={styles.simActionButton}
                     aria-describedby={describedBy}
-                    onClick={() => dispatch(clearTraceRequested())}
+                    onClick={onClearTrace}
                   >
                     clear trace
                   </Button>
@@ -120,15 +150,15 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           <SubsectionGroup title="Agents">
             <SliderRows
               fields={MCPM_PARAM_KEYS.map((key) => PARAM_SLIDER_FIELDS[key])}
-              values={sim.params}
+              values={params}
               path="sim.params"
-              onChange={(key, value) => dispatch(setSimParam({ key, value }))}
+              onChange={onParamChange}
             />
             <SliderRows
               fields={AGENT_COUNT_SLIDER_FIELDS}
-              values={sim}
+              values={{ agentCount }}
               path="sim"
-              onChange={(_, value) => dispatch(setAgentCount(value))}
+              onChange={(_, value) => onAgentCountChange(value)}
             />
           </SubsectionGroup>
         </PanelSection>
@@ -138,14 +168,14 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           icon={<EyeIcon size={12} />}
           open={renderingOpen}
           onToggle={() => setRenderingOpen((v) => !v)}
-          contentKey={view.renderer}
+          contentKey={renderer}
           control={
             <Select
-              value={view.renderer}
+              value={renderer}
               options={RENDERERS}
               labels={RENDERER_LABELS}
               icons={RENDERER_ICONS}
-              onChange={(renderer) => dispatch(setRenderer(renderer))}
+              onChange={onRendererChange}
               aria-label="Renderer"
             />
           }
@@ -159,16 +189,14 @@ function ControlsPanel({ id, collapsed }: ControlsPanelProps): ReactNode {
           icon={<SpiralIcon size={12} />}
           open={galaxiesOpen}
           onToggle={() => setGalaxiesOpen((v) => !v)}
-          on={view.showGalaxies}
-          onChange={(on) => dispatch(setShowGalaxies(on))}
+          on={showGalaxies}
+          onChange={onShowGalaxiesChange}
         >
           <SliderRows
             fields={GALAXIES_SLIDER_FIELDS}
-            values={view.galaxies}
+            values={galaxies}
             path="view.galaxies"
-            onChange={(key, value) =>
-              dispatch(key === 'intensity' ? setGalaxyIntensity(value) : setGalaxyPointSize(value))
-            }
+            onChange={onGalaxiesChange}
           />
         </PanelSection>
       </div>

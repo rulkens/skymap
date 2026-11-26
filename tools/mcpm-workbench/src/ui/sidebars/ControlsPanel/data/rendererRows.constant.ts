@@ -1,12 +1,12 @@
 import type { ComponentType } from 'react';
 import type { RendererId } from '../../../../../@types/view/RendererId';
-import AgentsRows from '../../../render/AgentsRows/AgentsRows';
-import PathTracerRows from '../../../render/PathTracerRows/PathTracerRows';
-import RaymarchRows from '../../../render/RaymarchRows/RaymarchRows';
+import AgentsRowsContainer from '../../../containers/render/AgentsRowsContainer';
+import PathTracerRowsContainer from '../../../containers/render/PathTracerRowsContainer';
+import RaymarchRowsContainer from '../../../containers/render/RaymarchRowsContainer';
 
-/** The Rendering section's body for each renderer. */
+/** The Rendering section's body for each renderer, each subscribed to its own slice of view. */
 export const RENDERER_ROWS: Readonly<Record<RendererId, ComponentType>> = {
-  raymarch: RaymarchRows,
-  agents: AgentsRows,
-  pathTracer: PathTracerRows,
+  raymarch: RaymarchRowsContainer,
+  agents: AgentsRowsContainer,
+  pathTracer: PathTracerRowsContainer,
 };

@@ -1,20 +1,21 @@
 // @vitest-environment jsdom
 /**
- * SelectionControls's padding field can be cleared while typing without the store
- * ever holding an empty or negative padding.
+ * The Selection padding field can be cleared while typing without the store ever
+ * holding an empty or negative padding: the field's own text and the store's
+ * refusal only hold together through the container's wiring.
  */
 import { configureStore } from '@reduxjs/toolkit';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 import { rootReducer } from '../../../../../../tools/mcpm-workbench/src/store/rootReducer';
-import SelectionControls from '../../../../../../tools/mcpm-workbench/src/ui/grid/SelectionControls/SelectionControls';
+import SelectionControlsContainer from '../../../../../../tools/mcpm-workbench/src/ui/containers/grid/SelectionControlsContainer';
 
 function renderPanel() {
   const store = configureStore({ reducer: rootReducer });
   render(
     <Provider store={store}>
-      <SelectionControls />
+      <SelectionControlsContainer />
     </Provider>,
   );
   return { store, field: screen.getByRole('spinbutton') as HTMLInputElement };

@@ -12,18 +12,12 @@
  */
 import { useState, type ReactNode } from 'react';
 import Button from '../../../../../../src/components/common/Button/Button';
+import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { CatalogSlice } from '../../../../@types/catalog/CatalogSlice';
+import type { GridSlice } from '../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../grid/deriveGridBox';
 import { keptCountFor } from '../../../grid/autoFit/keptCountFor';
 import { voxelSizeFloorMpc } from '../../../grid/voxelSize/voxelSizeFloorMpc';
-import {
-  fitBoxToCatalog,
-  setAutoFitPercent,
-  setManualCenterMpc,
-  setManualSizeMpc,
-  setPaddingMpc,
-  setVoxelSizeMpc,
-} from '../../../state/grid/gridSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
@@ -35,7 +29,6 @@ import { AUTO_FIT_SLIDER_FIELDS } from './data/autoFitSliderFields.constant';
 import { centerSliderFor } from './utils/centerSliderFor';
 import { formatAxisSize } from './utils/formatAxisSize';
 import { formatVoxelSizeMpc } from '../../../utils/format/formatVoxelSizeMpc';
-import { resolveAutoFitBounds } from '../../../grid/autoFit/resolveAutoFitBounds';
 import { sizeAfterSliderEdit } from './utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from './utils/sizeSliderFor';
 import { VOXEL_SIZE_INFO } from './data/voxelSizeInfo.constant';
@@ -44,13 +37,30 @@ import { voxelSizeSliderFor } from './utils/voxelSizeSliderFor';
 import { withAxis } from './utils/withAxis';
 import styles from './SelectionControls.module.css';
 
-function SelectionControls(): ReactNode {
-  const dispatch = useAppDispatch();
-  const grid = useAppSelector((s) => s.grid);
-  const catalogBoundsMpc = useAppSelector((s) => s.catalog.catalogBoundsMpc);
-  const catalogPoints = useAppSelector((s) => s.catalog.points);
-  const catalogPointCount = useAppSelector((s) => s.catalog.pointCount);
-  const agentCount = useAppSelector((s) => s.sim.agentCount);
+export type SelectionControlsProps = {
+  readonly grid: GridSlice;
+  readonly catalogBoundsMpc: CatalogSlice['catalogBoundsMpc'];
+  readonly catalogPointCount: number;
+  readonly onVoxelSizeChange: (voxelSizeMpc: number) => void;
+  readonly onSizeChange: (sizeMpc: Vec3) => void;
+  readonly onCenterChange: (centerMpc: Vec3) => void;
+  readonly onAutoFitPercentChange: (percent: number) => void;
+  readonly onPaddingChange: (paddingMpc: number) => void;
+  /** Only called while `catalogBoundsMpc` is set. */
+  readonly onAutoFit: () => void;
+};
+
+function SelectionControls({
+  grid,
+  catalogBoundsMpc,
+  catalogPointCount,
+  onVoxelSizeChange,
+  onSizeChange,
+  onCenterChange,
+  onAutoFitPercentChange,
+  onPaddingChange,
+  onAutoFit,
+}: SelectionControlsProps): ReactNode {
   const [paddingText, setPaddingText] = useState<string | null>(null);
   // Display-only: how many catalog points the current slider position would evict on
   // the next Auto fit click. Derived here, not stored — `autoFitPercent` is a one-shot
@@ -75,7 +85,7 @@ function SelectionControls(): ReactNode {
         format={(v) => formatVoxelSizeMpc(10 ** v)}
         displayed={LOG10_DISPLAYED}
         info={voxelSizeInfo}
-        onChange={(v) => dispatch(setVoxelSizeMpc(10 ** v))}
+        onChange={(v) => onVoxelSizeChange(10 ** v)}
         path="grid.manualVoxelSizeMpc"
       />
       {AXES.map(({ axis, label }) => (
@@ -85,7 +95,7 @@ function SelectionControls(): ReactNode {
           {...sizeSliderFor(box, axis)}
           format={(v) => formatAxisSize(v, box.dims[axis])}
           info="Extent of the box along this axis: voxels × voxel size, in whole 8-voxel blocks."
-          onChange={(v) => dispatch(setManualSizeMpc(sizeAfterSliderEdit(grid, axis, v)))}
+          onChange={(v) => onSizeChange(sizeAfterSliderEdit(grid, axis, v))}
           path={`grid.manualSizeMpc.${axis}`}
         />
       ))}
@@ -96,7 +106,7 @@ function SelectionControls(): ReactNode {
           {...centerSliderFor(grid, catalogBoundsMpc, axis)}
           format={(v) => `${v.toFixed(0)} Mpc`}
           info="Centre of the simulated box along this axis."
-          onChange={(v) => dispatch(setManualCenterMpc(withAxis(grid.manualCenterMpc, axis, v)))}
+          onChange={(v) => onCenterChange(withAxis(grid.manualCenterMpc, axis, v))}
           path={`grid.manualCenterMpc.${axis}`}
         />
       ))}
@@ -105,7 +115,7 @@ function SelectionControls(): ReactNode {
           fields={AUTO_FIT_SLIDER_FIELDS}
           values={grid}
           path="grid"
-          onChange={(_, value) => dispatch(setAutoFitPercent(value))}
+          onChange={(_, value) => onAutoFitPercentChange(value)}
         />
         {/* Always rendered, so dragging fit % never moves the rows under the pointer. */}
         <PanelRow
@@ -128,7 +138,7 @@ function SelectionControls(): ReactNode {
             }
             onChange={(e) => {
               setPaddingText(e.target.value);
-              dispatch(setPaddingMpc(e.target.valueAsNumber));
+              onPaddingChange(e.target.valueAsNumber);
             }}
             onBlur={() => setPaddingText(null)}
           />
@@ -140,19 +150,7 @@ function SelectionControls(): ReactNode {
                 className={styles.autoFitButton}
                 aria-describedby={describedBy}
                 disabled={!catalogBoundsMpc}
-                onClick={() => {
-                  if (!catalogBoundsMpc) return;
-                  dispatch(
-                    fitBoxToCatalog({
-                      bounds: resolveAutoFitBounds(
-                        catalogPoints,
-                        catalogBoundsMpc,
-                        grid.autoFitPercent,
-                      ),
-                      lanes: { agentCount, pointCount: catalogPointCount },
-                    }),
-                  );
-                }}
+                onClick={onAutoFit}
               >
                 auto fit
               </Button>
