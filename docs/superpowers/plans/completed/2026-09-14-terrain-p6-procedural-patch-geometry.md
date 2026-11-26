@@ -8,7 +8,7 @@
 
 **Tech Stack:** unchanged. TS + WebGPU + WESL (`wesl-plugin` `?static` linking), Vitest, `npm run perf` (headless Chromium GPU-timing harness).
 
-**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../../specs/2026-09-13-per-planet-terrain-design.md) — §3.1 (deleted/added lists), §3.4d, §3.5 P6, §7 intro + `PatchInstance`, §7.1 (position derivation + the CPU/GPU fround contract), §7.4, §10 (GPU line), §11 (the position-derivation test and the perf gate). §12 puts P6 in **its own PR**.
+**Spec:** [`docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md`](../../specs/completed/2026-09-13-per-planet-terrain-design.md) — §3.1 (deleted/added lists), §3.4d, §3.5 P6, §7 intro + `PatchInstance`, §7.1 (position derivation + the CPU/GPU fround contract), §7.4, §10 (GPU line), §11 (the position-derivation test and the perf gate). §12 puts P6 in **its own PR**.
 
 **Ground preparation:** spec §3, produced by `refactor-ground` and signed off 2026-09-13. P6 **is** a prep refactor. It must not depend on P1 (`BodySurface`), which is a separate PR: read the body radius the way the code reads it today (`EarthSurfaceTileDrawArgs.radiusM`, fed from `earthPass`), and do not introduce `datumRadiusM` as a plumbed field.
 
@@ -331,7 +331,7 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 
 ### Task 10: documentation
 
-**Files:** `docs/RENDERER.md`, `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`
+**Files:** `docs/RENDERER.md`, `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md`
 
 - [x] `RENDERER.md`'s "Earth surface virtual texture" bullet (`:14`) and the matching "Things that have bitten us" entry (`:27`) both describe `earthSurfaceTileRenderer` as drawing "instanced, camera-relative **curved meshes**". Replace with what it does now: one shared template addressed off `vertex_index`, per-patch records off `instance_index`, one `drawIndexed` for the cut, positions derived in the vertex shader from the patch anchor, no vertex data and no per-frame vertex upload. Keep the `'nearer-or-equal'` tie sentence — it is still true and still load-bearing.
 - [x] Spec §3.1's deleted list becomes fact for four of its five entries. Mark P6 landed in §3.5 and §12. §7 already prints this record as the first 64 B of F2's 80 B — do **not** rewrite it.

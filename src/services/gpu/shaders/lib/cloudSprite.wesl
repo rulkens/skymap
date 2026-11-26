@@ -29,8 +29,8 @@ struct FluxLod {
 // are brightened by 1/(fraction that faded in), capped at 3x, so the TOTAL
 // light of the field holds roughly constant as you zoom.
 //
-// The band's lower edge is 'h * 0.6', NOT the constant-width 'h - 0.4': a
-// constant width goes negative for h < 0.4, which kept ~40% of the field at
+// The band's lower edge is 'hashedThreshold * 0.6', NOT the constant-width 'hashedThreshold - 0.4': a
+// constant width goes negative for hashedThreshold < 0.4, which kept ~40% of the field at
 // a positive fade no matter how far away the galaxy was — hundreds of
 // thousands of sub-pixel sprites rasterizing into a handful of screen
 // tiles. A proportional edge stays strictly positive, so every sprite's
@@ -43,24 +43,24 @@ struct FluxLod {
 // so a sprite's threshold is stable across camera and model motion — no
 // frame-to-frame shimmer. thr <= 0 disables the LOD entirely.
 fn fluxConservingLod(seedPos: vec3<f32>, apparent: f32, thr: f32) -> FluxLod {
-  var r: FluxLod;
-  r.cull = false;
-  r.boost = 1.0;
-  if (thr <= 0.0) { return r; }
-  let a = apparent / thr;
-  let h = max(fract(sin(dot(seedPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453), 1e-4);
-  let fade = smoothstep(h * 0.6, h, a);
-  if (fade <= 0.0) { r.cull = true; } else { r.boost = min(fade / min(1.0, a + 0.2), 3.0); }
-  return r;
+  var lod: FluxLod;
+  lod.cull = false;
+  lod.boost = 1.0;
+  if (thr <= 0.0) { return lod; }
+  let relativeSize = apparent / thr;
+  let hashedThreshold = max(fract(sin(dot(seedPos, vec3<f32>(12.9898, 78.233, 37.719))) * 43758.5453), 1e-4);
+  let fade = smoothstep(hashedThreshold * 0.6, hashedThreshold, relativeSize);
+  if (fade <= 0.0) { lod.cull = true; } else { lod.boost = min(fade / min(1.0, relativeSize + 0.2), 3.0); }
+  return lod;
 }
 
 // Star radial falloff: a tight bright core plus a wider soft glow, with the
-// value AT the sprite edge (r2 = 1) subtracted so alpha reaches 0 smoothly —
+// value AT the sprite edge (radiusSq = 1) subtracted so alpha reaches 0 smoothly —
 // no hard rim. Returns the un-exposed alpha; callers multiply their own
-// exposure/intensity knob. Callers discard at r2 > 1 before calling.
-fn starGlowAlpha(r2: f32) -> f32 {
-  let core = exp(-r2 * 5.0);
-  let glow = exp(-r2 * 1.6) * 0.35;
+// exposure/intensity knob. Callers discard at radiusSq > 1 before calling.
+fn starGlowAlpha(radiusSq: f32) -> f32 {
+  let core = exp(-radiusSq * 5.0);
+  let glow = exp(-radiusSq * 1.6) * 0.35;
   return max(0.0, (core + glow) - 0.0774);
 }
 
@@ -69,8 +69,8 @@ fn starGlowAlpha(r2: f32) -> f32 {
 // blend at the pipeline), so dust darkens + reddens rather than painting a
 // brown colour. No light behind => dust is invisible (correct: you only see
 // dust silhouetted against the glow it is blocking). Callers discard at
-// r2 > 1 before calling.
-fn dustTransmittance(r2: f32, opacity: f32) -> vec3<f32> {
-  let a = smoothstep(1.0, 0.0, sqrt(r2)) * opacity;
-  return clamp(vec3<f32>(1.0) - a * vec3<f32>(0.55, 0.78, 1.0), vec3<f32>(0.0), vec3<f32>(1.0));
+// radiusSq > 1 before calling.
+fn dustTransmittance(radiusSq: f32, opacity: f32) -> vec3<f32> {
+  let absorption = smoothstep(1.0, 0.0, sqrt(radiusSq)) * opacity;
+  return clamp(vec3<f32>(1.0) - absorption * vec3<f32>(0.55, 0.78, 1.0), vec3<f32>(0.0), vec3<f32>(1.0));
 }

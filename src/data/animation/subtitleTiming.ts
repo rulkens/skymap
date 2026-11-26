@@ -1,7 +1,7 @@
 /**
  * subtitleTiming — the numbers that govern tour subtitle pacing.
  * `lineSchedule` weights each line by its length (floored at SUBTITLE_MIN_CHARS);
- * the fit test (`tests/data/animation/tours/subtitleFit.test.ts`) holds every
+ * the fit test (`tests/compositions/tours/subtitleFit.test.ts`) holds every
  * authored line to SUBTITLE_MIN_READ_SEC. Tuned by eye; raise a beat's dwell or
  * re-break its lines before ever lowering the read floor.
  */

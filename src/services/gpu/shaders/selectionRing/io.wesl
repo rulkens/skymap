@@ -1,7 +1,7 @@
 // selectionRing/io.wesl — shared struct definitions for the selection-ring
 // renderer.  Imported by vertex.wesl + fragment.wesl; bindings themselves
 // are re-declared in the consuming files (WESL has no global state — same
-// pattern as markerLines/io.wesl).
+// pattern as debugLines/io.wesl).
 //
 // ## Uniform layout (two UBOs, two bindings)
 //
@@ -21,9 +21,9 @@
 //
 // ## Why no per-instance attributes
 //
-// One instance per frame at most.  The vertex stage reads 'u.sel.worldPos'
+// One instance per frame at most.  The vertex stage reads 'sel.worldPos'
 // from the uniform and uses '@builtin(vertex_index)' to pick its corner
-// via 'quadCorner(vi)'.  No vertex buffer needed beyond the implicit
+// via 'quadCorner(vertexIndex)'.  No vertex buffer needed beyond the implicit
 // 6-vertex non-indexed draw.
 
 import package::lib::camera::CameraUniforms;

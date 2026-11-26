@@ -18,7 +18,7 @@ import package::galaxyCatalog::points::vertexBody::galaxyPointVertex;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::focusUniforms::FocusUniforms;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 // '@group(1)' FadeUniforms is fragment-only; the vertex module never references it.
 
@@ -31,9 +31,9 @@ import package::lib::focusUniforms::FocusUniforms;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
-  p: PerVertex,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
+  galaxy: PerVertex,
 ) -> VSOut {
-  return galaxyPointVertex(vi, ii, p, u, source, focus);
+  return galaxyPointVertex(vertexIndex, instanceIndex, galaxy, uniforms, source, focus);
 }

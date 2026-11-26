@@ -171,7 +171,7 @@ export type SagaContext = {
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
    * `frame` is the orientation frame the CALLER is under right now — pinned
-   * onto `camera.clip` so a later orientation switch re-expresses the clip's
+   * onto `camera.intent.clip` so a later orientation switch re-expresses the clip's
    * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.

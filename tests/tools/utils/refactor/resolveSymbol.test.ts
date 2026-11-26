@@ -3,7 +3,7 @@ import { Project } from 'ts-morph';
 import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
 // In-memory Projects let us seed a tiny module graph and assert on resolution
-// without touching disk — the house pattern (see applyMoves.test.ts).
+// without touching disk — the house pattern (see planInline.test.ts).
 // `skipLoadingLibFiles` drops the lib.d.ts parse (~150 ms per Project, the bulk
 // of this file's cost); nothing here resolves a global type.
 function projectWith(files: Record<string, string>): Project {

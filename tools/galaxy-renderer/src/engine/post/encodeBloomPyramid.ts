@@ -21,6 +21,7 @@
 import type { BloomPyramid } from '../../../../../src/@types/rendering/BloomPyramid';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import { BLOOM_LEVELS } from '../../../../../src/data/bloomConstants';
+import { DEFAULT_BLOOM_CAP } from '../../../../../src/data/defaults';
 
 export function encodeBloomPyramid(
   enc: GPUCommandEncoder,
@@ -68,7 +69,11 @@ export function encodeBloomPyramid(
     : undefined;
 
   const brightPass = open(0, 'clear', beginWrites);
-  pyramid.bright(brightPass, hdrView, threshold);
+  pyramid.bright(brightPass, hdrView, {
+    threshold,
+    cap: DEFAULT_BLOOM_CAP,
+    capFloor: DEFAULT_BLOOM_CAP,
+  });
   brightPass.end();
 
   for (let level = 1; level < BLOOM_LEVELS; level++) {
@@ -94,6 +99,6 @@ export function encodeBloomPyramid(
     colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }],
     ...(endWrites ? { timestampWrites: endWrites } : {}),
   });
-  pyramid.fold(foldPass, mips[0]!.createView(), strength);
+  pyramid.fold(foldPass, mips[0]!.createView(), 'bloom', strength);
   foldPass.end();
 }

@@ -22,8 +22,12 @@
  */
 
 import { BODY_REGIONS } from '../bodies/bodyRegions';
+import { FOREGROUND_FALLBACK_DISTANCE_MPC } from './foregroundFallbackDistanceMpc';
 
 const MARGIN = 100;
 
+const DERIVED_MPC = Math.max(...BODY_REGIONS.map((region) => region.extentMpc)) * MARGIN;
+
+// No bodies composed zeroes every extent; the fallback keeps SURVEY_DEEP_ZOOM upright.
 export const FOREGROUND_MAX_DISTANCE_MPC =
-  Math.max(...BODY_REGIONS.map((region) => region.extentMpc)) * MARGIN;
+  DERIVED_MPC > 0 ? DERIVED_MPC : FOREGROUND_FALLBACK_DISTANCE_MPC;

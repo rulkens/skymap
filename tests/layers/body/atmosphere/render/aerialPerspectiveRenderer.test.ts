@@ -22,12 +22,13 @@ type Harness = {
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
 };
 
-function mockDevice(): Harness {
+function mockDevice(features: readonly string[] = []): Harness {
   const textures: GPUTextureDescriptor[] = [];
   const bindGroups: GPUBindGroupDescriptor[] = [];
   const descOf = new Map<unknown, GPURenderPipelineDescriptor>();
   const writeBuffer = vi.fn();
   const device = {
+    features: new Set(features),
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
@@ -65,8 +66,8 @@ function bundle() {
   };
 }
 
-function build(bodyIds: readonly string[] = ['earth']) {
-  const h = mockDevice();
+function build(bodyIds: readonly string[] = ['earth'], features: readonly string[] = []) {
+  const h = mockDevice(features);
   const bodies = new Map(bodyIds.map((id) => [id, bundle()]));
   const renderer = createAerialPerspectiveRenderer(
     h.device,
@@ -123,14 +124,15 @@ describe('createAerialPerspectiveRenderer — the froxel volumes', () => {
 });
 
 describe('createAerialPerspectiveRenderer — bake and apply share one uniform write', () => {
-  it('bake writes the body shell uniform record once and dispatches FROXEL_DIMS / 8 workgroups', () => {
+  it('writeUniforms writes the shell uniform record once; bake dispatches FROXEL_DIMS / 8 workgroups and writes nothing', () => {
     // z is `bake.wesl`'s own slice loop, so the grid covers (x, y) only —
     // dispatching the depth too would re-march every column 64 times.
     const { renderer, writeBuffer, bodies } = build();
     const pass = mockComputePass();
     const uniforms = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
 
-    renderer.bake(pass, 'earth', uniforms);
+    renderer.writeUniforms('earth', uniforms);
+    renderer.bake(pass, 'earth');
 
     expect(writeBuffer).toHaveBeenCalledTimes(1);
     expect(writeBuffer).toHaveBeenCalledWith(bodies.get('earth')!.shellUniformBuffer, 0, uniforms);
@@ -160,6 +162,17 @@ describe('createAerialPerspectiveRenderer — bake and apply share one uniform w
     renderer.draw(pass, 'earth', {} as GPUTextureView);
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
+  });
+
+  it('draws once where the device blends two sources', () => {
+    // The pair staying in the draw list would fog the frame twice.
+    const { renderer, descOf } = build(['earth'], ['dual-source-blending']);
+    const order: string[] = [];
+    const pass = mockRenderPass(order, descOf);
+
+    renderer.draw(pass, 'earth', {} as GPUTextureView);
+
+    expect(order).toEqual(['other(one/src1)', 'draw']);
   });
 
   it('rebuilds the apply bind group only when the depth view changes identity', () => {

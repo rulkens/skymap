@@ -121,10 +121,6 @@ vi.mock('../../../../src/services/gpu/renderers/labels/labelPickRenderer', () =>
   createLabelPickRenderer: vi.fn(() => makeStub('labelPickRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
-  createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
@@ -199,8 +195,6 @@ function makeState(): EngineState {
       compositor: null,
       labelRendererCosmo: null,
       labelRendererNear: null,
-      markerLineRendererNear: null,
-      markerLineRendererCosmo: null,
       selectionRingRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
@@ -212,16 +206,6 @@ function makeState(): EngineState {
     // `composeRenderTargetRows`; no Layer targets in this fixture.
     layerTargets: [],
     subsystems: {
-      cosmoLabelDirector: {
-        attachRenderers: vi.fn(),
-        registerProducer: vi.fn(),
-        runFrame: vi.fn(),
-      },
-      foregroundLabelDirector: {
-        attachRenderers: vi.fn(),
-        registerProducer: vi.fn(),
-        runFrame: vi.fn(),
-      },
       scheduler: {
         requestRender: vi.fn(),
       },
@@ -240,7 +224,7 @@ function makeDeps(): BootstrapDeps {
     selection: {
       resolvePick: () => null,
       extractRow: () => null,
-      resolveFocusId: () => null,
+      resolveFocusId: () => ({ kind: 'absent' }),
       claimedKind: () => null,
       focusIdOf: () => null,
     },

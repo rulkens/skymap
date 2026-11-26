@@ -18,6 +18,7 @@
 
 import type { PickWindow } from './PickWindow';
 import type { SampledDepth } from './SampledDepth';
+import type { SampledMask } from './SampledMask';
 import type { Slab } from './Slab';
 import type { Vec2 } from '../../math/Vec2';
 import type { Vec3 } from '../../math/Vec3';
@@ -35,4 +36,6 @@ export type SlabView = {
   readonly window: PickWindow;
   /** Present only on a `{ sample }` step. */
   readonly sampledDepth?: SampledDepth;
+  /** Present only on a `mask: { sample }` step. */
+  readonly sampledMask?: SampledMask;
 };

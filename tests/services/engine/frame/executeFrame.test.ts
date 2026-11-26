@@ -33,6 +33,8 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
+import type { RenderTargetSpec } from '../../../../src/@types/engine/frame/RenderTargetSpec';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
@@ -148,7 +150,20 @@ const SKY_CUBEMAP_FACE_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4, 5].map
   (face) => ({ __id: `sky-cubemap-face${face}-view` }) as unknown as GPUTextureView,
 );
 
+// A layered target row: each view attaches the layer it owns (`FrameView.layer`).
+const LAYERED_VIEWS: readonly GPUTextureView[] = [0, 1, 2, 3, 4].map(
+  (layer) => ({ __id: `layered-layer${layer}-view` }) as unknown as GPUTextureView,
+);
+
 const EXEC_SPECS = [
+  {
+    id: 'layered',
+    format: 'rgba16float' as const,
+    depth: null,
+    scale: 1,
+    layers: 5,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  },
   {
     id: 'hdr',
     format: 'rgba16float' as const,
@@ -213,7 +228,12 @@ function makeCtx(): FrameView {
       throw new Error(`mock renderTargets: no view for '${id}'`);
     },
     layerViewOf: (id: string, face: number) => {
-      const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+      const view =
+        id === 'sky-cubemap'
+          ? SKY_CUBEMAP_FACE_VIEWS[face]
+          : id === 'layered'
+            ? LAYERED_VIEWS[face]
+            : undefined;
       if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
       return view;
     },
@@ -494,6 +514,16 @@ describe('executeFrame', () => {
     expect(attachment.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
   });
 
+  it('a render step into a layered target attaches the layer the view owns', () => {
+    const contentPass = makeContentPass({ name: 'mask' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'layered', slab: NEAR0, passes: [contentPass] },
+    ];
+    const { args, env } = makeArgs({ program, ctx: { ...makeCtx(), layer: 3 } });
+    executeFrame(args);
+    expect(attachmentOfDraw(env, contentPass).view).toBe(LAYERED_VIEWS[3]);
+  });
+
   it('copy step without a view output throws', () => {
     const hdr = makeContentPass({ name: 'hdr' });
     const program: FrameStep[] = [
@@ -694,6 +724,29 @@ describe('executeFrame', () => {
     const { args } = makeArgs({ program, env, ctx: makeBodyCtx(['mars', 'venus']) });
     executeFrame(args);
     expect(depthOpOf(env, after)).toBe('clear');
+  });
+
+  it('hands a mask-sampling step the mask only once a step has written it this frame', () => {
+    const writer = makeContentPass({ name: 'writer' });
+    const reader = makeContentPass({ name: 'reader' });
+    const read = (slab: number): FrameStep => ({
+      kind: 'render',
+      target: 'swap',
+      slab,
+      mask: { sample: 'cosmic-web-density' },
+      passes: [reader],
+    });
+    const program: FrameStep[] = [
+      read(COSMO),
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: [writer] },
+      read(NEAR0),
+    ];
+    const { args } = makeArgs({ program });
+    executeFrame(args);
+    const maskOf = (call: number) => (reader.draw.mock.calls[call]![1] as SlabView).sampledMask;
+    // Before the write the row holds last frame's content: no view, so no stale read.
+    expect(maskOf(0)).toEqual({ view: null });
+    expect(maskOf(1)).toEqual({ view: DENSITY_VIEW });
   });
 
   it('hands a sampling step the far placeholder and row null when nothing cleared its source', () => {
@@ -1067,5 +1120,72 @@ describe('executeFrame', () => {
       );
       expect(attachmentOfDraw(env, mesh).loadOp).toBe('load');
     });
+  });
+});
+
+describe('executeFrame: a retained target', () => {
+  const ACCUM: RenderTargetSpec = {
+    id: 'accum',
+    format: 'rgba16float',
+    depth: null,
+    scale: 1,
+    clearValue: { r: 0, g: 0, b: 0, a: 0.25 },
+    retained: true,
+  };
+  const ACCUM_CANVAS_VIEW = { __id: 'accum@canvas-view' } as unknown as GPUTextureView;
+  const PLANNER = { name: 'accum-plan', scope: 'perView' } as FrameContentPlanner<unknown>;
+
+  /** A frame whose `accum` row is retained and whose planner stored `planned` for this view. */
+  function run(planned: unknown, restartPlanner: string | null = PLANNER.name) {
+    const base = makeCtx();
+    const targets = base.snapshot.renderTargets;
+    const ctx: FrameView = {
+      ...base,
+      snapshot: {
+        ...base.snapshot,
+        renderTargets: {
+          ...targets,
+          specOf: (id: string) => (id === ACCUM.id ? ACCUM : targets.specOf(id)),
+          viewOf: (id: string, viewId?: string) =>
+            id === ACCUM.id && viewId === 'canvas' ? ACCUM_CANVAS_VIEW : targets.viewOf(id),
+        },
+        plans: {
+          get: (planner: FrameContentPlanner<unknown>, view?: FrameView) => {
+            if (planner !== PLANNER || view !== ctx) throw new Error('never planned');
+            return planned;
+          },
+        },
+      } as unknown as FrameView['snapshot'],
+    };
+    const pass = makeContentPass({ name: 'accumulate' });
+    const program: FrameStep[] = [
+      {
+        kind: 'render',
+        target: ACCUM.id,
+        slab: COSMO,
+        passes: [pass],
+        ...(restartPlanner === null ? {} : { restartPlanner }),
+      },
+    ];
+    const state = { ...makeState(), planners: [PLANNER] } as EngineState;
+    const { args, env } = makeArgs({ program, ctx, state });
+    executeFrame(args);
+    return attachmentOfDraw(env, pass);
+  }
+
+  it('a retained target loads on first touch when its planner value does not restart', () => {
+    const attachment = run({ restart: false });
+    expect(attachment.loadOp).toBe('load');
+    expect(attachment.view).toBe(ACCUM_CANVAS_VIEW);
+  });
+
+  it('a retained target clears on first touch when its planner value says restart', () => {
+    const attachment = run({ restart: true });
+    expect(attachment.loadOp).toBe('clear');
+    expect(attachment.clearValue).toEqual(ACCUM.clearValue);
+  });
+
+  it("a retained target's step without restartPlanner throws", () => {
+    expect(() => run({ restart: false }, null)).toThrow(/restartPlanner/);
   });
 });

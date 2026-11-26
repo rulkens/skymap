@@ -55,6 +55,7 @@ function makeCtx(
     snapshot: { focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
+    dpr: 2,
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     vp: mat4.identity(),
   } as unknown as FrameView;

@@ -88,7 +88,8 @@ describe('Settings page', () => {
   const NOT_IN_PANEL = [
     /^debug\./,
     /^(surfaceTileDebug|terrainPickMarker)\./,
-    /^missions\.(craft|speed)$/,
+    /^timeline\.(lane|speed)$/,
+    /^missionTrails\.nearPlanets$/,
     /^(constellations|lightTime|zoneOfAvoidance|stellarStreams)\.labelEnabled$/,
     /^stellarStreams\.(streak|haze)\.\w+$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
@@ -97,6 +98,8 @@ describe('Settings page', () => {
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,
     /^blackHoleLensingTuning\./,
+    /^satelliteTuning\./,
+    /^asteroidTuning\./,
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
     /^earth\.(atmosphereExposure|ambientLight|oceanRoughness)$/,
@@ -109,6 +112,7 @@ describe('Settings page', () => {
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
     /^probeSpheres\./,
+    /^film\.(letterbox|letterboxAspect|grade\.\w+|glow\.\w+)$/,
   ];
 
   it('starts every setting where the app does', () => {

@@ -27,8 +27,8 @@ import { starSpheresPass } from '../../../../../src/layers/starCatalog/resolvedS
 import { seedIndexOfBody } from '../../../../../src/utils/picking/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { SCENE_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneStars';
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';

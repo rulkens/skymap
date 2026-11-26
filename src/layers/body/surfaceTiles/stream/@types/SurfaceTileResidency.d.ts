@@ -23,6 +23,8 @@ export type SurfaceTileResidency = {
   /** Holds a slot whose fetch is still out. */
   isInFlight(tile: SurfaceTileId): boolean;
   hasFailed(tile: SurfaceTileId): boolean;
+  /** Read as a zero-length archive entry: answered, with nothing to upload. */
+  isEmpty(tile: SurfaceTileId): boolean;
   inFlightCount(): number;
   /** The body whose atlases are allocated, or null while none are. */
   engagedBodyId(): (SceneBodyId & SurfaceTileBodyId) | null;

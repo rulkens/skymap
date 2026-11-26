@@ -14,18 +14,18 @@ struct IsmMapOrientationSigma {
 }
 
 // Azimuth wraps; the radial (ring) axis clamps at rMin/rMax.
-fn wrapIndex(i: i32, n: u32) -> u32 {
-  return u32(((i % i32(n)) + i32(n)) % i32(n));
+fn wrapIndex(index: i32, count: u32) -> u32 {
+  return u32(((index % i32(count)) + i32(count)) % i32(count));
 }
 
-fn clampIndex(i: i32, n: u32) -> u32 {
-  return u32(clamp(i, 0, i32(n) - 1));
+fn clampIndex(index: i32, count: u32) -> u32 {
+  return u32(clamp(index, 0, i32(count) - 1));
 }
 
 // Unnormalised; callers sum their own taps and divide by that sum.
-fn gaussianTap(k: i32, sigma: f32) -> f32 {
-  let kf = f32(k);
-  return exp(-(kf * kf) / (2.0 * sigma * sigma));
+fn gaussianTap(tapOffset: i32, sigma: f32) -> f32 {
+  let tapOffsetF = f32(tapOffset);
+  return exp(-(tapOffsetF * tapOffsetF) / (2.0 * sigma * sigma));
 }
 
 fn kernelRadius(sigma: f32) -> i32 {

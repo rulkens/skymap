@@ -9,6 +9,7 @@ import type { BodyTextureId } from '../../../../../@types/data/BodyTextureId';
 import type { SurfaceTileSpec } from '../@types/SurfaceTileSpec';
 import { EARTH_SURFACE_PARAMS } from './earthSurfaceParams';
 import { MARS_SURFACE_SHADING } from './marsSurfaceParams';
+import { MOON_SURFACE_SHADING } from './moonSurfaceParams';
 
 export const SURFACE_TILE_REGISTRY = {
   earth: {
@@ -24,4 +25,5 @@ export const SURFACE_TILE_REGISTRY = {
     },
   },
   mars: { manifestKey: 'mars-tiles', effects: [], shading: MARS_SURFACE_SHADING },
+  moon: { manifestKey: 'moon-tiles', effects: [], shading: MOON_SURFACE_SHADING },
 } as const satisfies Partial<Record<BodyTextureId, SurfaceTileSpec>>;

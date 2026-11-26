@@ -18,12 +18,15 @@ import { fetchHeightTile } from '../load/fetchHeightTile';
 
 const fetchImageryPayload: SurfaceTileLaneSpec['fetch'] = async (tile, source) => {
   const bitmap = await fetchSurfaceTileBitmap(tile, source);
-  return bitmap === null ? null : { bitmap, subtreeRangeM: null, gridCodes: null };
+  if (bitmap === null || bitmap === 'empty') return bitmap;
+  return { bitmap, subtreeRangeM: null, gridCodes: null };
 };
 
-export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>> = {
+export const SURFACE_TILE_LANE_SPECS = {
   albedo: {
     label: 'surface-tiles-albedo',
+    role: 'gates-cut',
+    binding: 5,
     atlasSide: SURFACE_TILE_ATLAS_SIDE,
     slotSide: SURFACE_TILE_PX,
     format: 'rgba8unorm-srgb',
@@ -31,6 +34,8 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
   },
   height: {
     label: 'surface-tiles-height',
+    role: 'gates-cut',
+    binding: 2,
     atlasSide: HEIGHT_TILE_ATLAS_SIDE,
     slotSide: HEIGHT_POSTS_PER_TILE,
     // Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`),
@@ -38,7 +43,7 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
     format: 'rgba8unorm',
     fetch: async (tile, source) => {
       const image = await fetchHeightTile(tile, source);
-      if (image === null) return null;
+      if (image === null || image === 'empty') return image;
       return {
         bitmap: image.bitmap,
         subtreeRangeM: [image.subtreeMinM, image.subtreeMaxM],
@@ -48,9 +53,11 @@ export const SURFACE_TILE_LANE_SPECS: Readonly<Record<SurfaceTileProduct, Surfac
   },
   night: {
     label: 'surface-tiles-night',
+    role: 'standalone',
+    binding: 10,
     atlasSide: NIGHT_TILE_ATLAS_SIDE,
     slotSide: SURFACE_TILE_PX,
     format: 'rgba8unorm-srgb',
     fetch: fetchImageryPayload,
   },
-};
+} satisfies Readonly<Record<SurfaceTileProduct, SurfaceTileLaneSpec>>;

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { FLIGHT_PATH } from '../../../packages/website/src/data/flightPath';
 import { fact } from '../../../packages/website/src/data/fact';
 import { flightDistanceKm } from '../../../packages/website/src/utils/flightDistanceKm';
-import { earthUniverseLoop } from '../../../src/data/animation/clips/earthUniverseLoop';
+import { earthUniverseLoop } from '../../../src/compositions/clips/earthUniverseLoop';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 const clip = earthUniverseLoop(0).data;

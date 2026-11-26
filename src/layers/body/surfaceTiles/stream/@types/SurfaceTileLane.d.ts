@@ -9,8 +9,11 @@ import type { SurfaceTilePayload } from './SurfaceTilePayload';
  * only means something beside the stream it came from.
  */
 export type SurfaceTileLane = {
-  readonly stream: TileStreamSubsystem<SurfaceTilePayload, TextureAtlas>;
+  readonly stream: TileStreamSubsystem<SurfaceTilePayload | 'empty', TextureAtlas>;
   readonly resident: Map<string, ResidentSurfaceTile>;
+  /** Keys read as stored-empty. Kept across eviction: emptiness is the archive's
+   *  fact, and forgetting it would re-request the key once LRU reclaims its slot. */
+  readonly empty: Set<string>;
   /** key -> z, for the debug stats' per-level pending counts; cleared where the
    *  fetch resolves or its slot is evicted. */
   readonly pendingLevelOf: Map<string, number>;

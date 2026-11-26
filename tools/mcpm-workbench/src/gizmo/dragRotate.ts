@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Ray } from '../../@types/Ray';
+import type { Ray } from '../../@types/gizmo/Ray';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { rayPlaneIntersect } from './rayPlaneIntersect';
 

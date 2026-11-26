@@ -30,12 +30,11 @@ Branch: `grand-tour`, draft PR #400. Full suite must stay green.
 
 | What                                                       | Where                                             |
 | ---------------------------------------------------------- | ------------------------------------------------- |
-| Storyboard (beat order, captions, dwellClips)              | `src/data/animation/tours/grandTour.ts`           |
-| One choreography per beat                                  | `src/data/animation/tours/grandTour/<beat>.ts`    |
-| Debugger clip wrappers (ids `tour*`)                       | `src/data/animation/clips/grandTourBeats.ts`      |
-| Clip id union (append-only)                                | `src/@types/animation/ClipId.ts`                  |
-| Clip registry                                              | `src/data/animation/clips/clipRegistry.ts`        |
-| Registry key-freeze test                                   | `tests/data/animation/clips/clipRegistry.test.ts` |
+| Storyboard (beat order, captions, dwellClips)              | `src/compositions/tours/grandTour.ts`           |
+| One choreography per beat                                  | `src/compositions/tours/grandTour/<beat>.ts`    |
+| Debugger clip wrappers (ids `tour*`)                       | `src/compositions/clips/grandTourBeats.ts`        |
+| Clip registry (`ClipId` is its keys; ids append-only)      | `src/compositions/appClips.ts`                    |
+| Registry id/key test                                       | `tests/compositions/appClips.test.ts`             |
 | Authoring vocabulary (all helpers)                         | `src/services/engine/animation/effectHelpers.ts`  |
 | Default dwell (`dwellDrift(sec, { rampSec, cruiseRate })`) | `src/state/tour/dwellDrift.ts`                    |
 | Scene cues union (`SettingsAction`)                        | grep `SettingsAction` in `src/compositions/@types/` |
@@ -85,13 +84,13 @@ override (A/B live-tuning before it's baked as a default).
 ## Add-a-beat checklist
 
 1. Read the stage doc + the last few implementation-notes entries.
-2. **RED**: add the new `tour*` key to the expected-keys list in
-   `clipRegistry.test.ts`, run that test, watch it fail.
-3. Author the choreography in a new `src/data/animation/tours/grandTour/<beat>.ts`
+2. **RED**: write the beat's wrapper in `grandTourBeats.ts` with its `id:`;
+   `npm run typecheck` fails until the `appClips.ts` row exists (`ClipId`).
+3. Author the choreography in a new `src/compositions/tours/grandTour/<beat>.ts`
    (didactic module header explaining the beat's grammar and scene shifts).
-4. Wire four places: storyboard beat in `grandTour.ts` (caption from the
-   stage doc's narration, dwellClip), `ClipId` union, wrapper in
-   `grandTourBeats.ts` (label `Grand tour NN — <name>`), registry entry.
+4. Wire three places: storyboard beat in `grandTour.ts` (caption from the
+   stage doc's narration, dwellClip), wrapper in `grandTourBeats.ts`
+   (label `Grand tour NN — <name>`), row in `appClips.ts`.
 5. `npm run typecheck` + full `npm test` (GREEN).
 6. Add an implementation-notes Log entry if the beat taught something new.
 7. Prettier-check the touched files only, commit on `grand-tour`

@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { siteShot } from '../../packages/website/src/data/siteShot';
 import { SITE_LOOPS } from '../../packages/website/src/data/siteLoops';
 import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
-import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraSlice';
+import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraIntentSlice';
 import { setSimDays } from '../../src/state/time/timeSlice';
 import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
@@ -67,7 +67,7 @@ try {
         await openSiteShot(page, base!, shot);
         const start = await page.evaluate(() => {
           const state = (window as unknown as SkymapWindow).__skymap!.getState();
-          return { camera: state.camera.base, simDays: state.time.anchor.simDays };
+          return { camera: state.camera.intent.base, simDays: state.time.anchor.simDays };
         });
         // Frame 0 is the still; the frame after the last would be frame 0 again, which is the seam.
         // A live film is recorded a seam longer and blended afterwards, as nothing brings its scene back.

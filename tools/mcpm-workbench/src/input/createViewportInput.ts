@@ -9,15 +9,15 @@ import { createInputAggregator } from '../../../utils/input/createInputAggregato
 import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
 import type { InputGestureEvent } from '../../../@types/input/InputGestureEvent';
 import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
-import type { GizmoDragState } from '../../@types/GizmoDragState';
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
+import type { GizmoDragState } from '../../@types/gizmo/GizmoDragState';
+import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { ViewSlice } from '../../@types/ViewSlice';
+import type { ViewSlice } from '../../@types/view/ViewSlice';
 import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
 import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
-import { boxAxesFor } from '../field/boxAxesFor';
-import { deriveGridBox } from '../field/deriveGridBox';
+import { boxAxesFor } from '../grid/box/boxAxesFor';
+import { deriveGridBox } from '../grid/deriveGridBox';
 import { applyResizeDrag } from '../gizmo/applyResizeDrag';
 import { applyTranslateDrag } from '../gizmo/applyTranslateDrag';
 import { closestPointOnRayToLine } from '../gizmo/closestPointOnRayToLine';
@@ -25,12 +25,14 @@ import { dragRotate } from '../gizmo/dragRotate';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { setManualCenterMpc, setManualSizeMpc, setRotation } from '../state/grid/gridSlice';
-import { commitCameraPose, PITCH_LIMIT, CAMERA_DISTANCE_FLOOR } from '../state/view/viewSlice';
-import type { RootState, WorkbenchStore } from '../store/types';
+import { commitCameraPose } from '../state/view/viewSlice';
+import type { WorkbenchStore } from '../store/types';
 import { arrowLengthMpcFor } from './arrowLengthMpcFor';
 import { isAxisDrag } from './isAxisDrag';
 import { rayFromPointer } from './rayFromPointer';
 import { ringReferenceDirFor } from './ringReferenceDirFor';
+import { PITCH_LIMIT } from '../state/view/pitchLimit.constant';
+import { CAMERA_DISTANCE_FLOOR } from '../state/view/cameraDistanceFloor.constant';
 
 const DRAG_SPEED = 0.005;
 // Right/middle-drag pans the orbit target along the camera's right/up axes at a
@@ -43,11 +45,11 @@ const PAN_SPEED = 0.0016;
 export type ViewportInputDeps = {
   readonly canvas: HTMLCanvasElement;
   readonly store: WorkbenchStore;
-  /** The post-edit-flash reason of boxWireframeVisible's three (F1.7/F1.8) — Viewport's
+  /** The post-edit flash, one of the wireframe's three reasons — Viewport's
    *  own `boxPreviewUntil` timer. Deliberately ignores pointer position: the user's mouse
    *  is on a panel control outside the canvas when the flash is the whole point. The other
-   *  two reasons (`showGridBox`, an in-flight gizmo drag) are this module's own state,
-   *  folded in by `isWireframeVisible` below. */
+   *  two reasons (the pointer over the canvas, an in-flight gizmo drag) are this module's
+   *  own state, folded in by `isWireframeVisible` below. */
   readonly isFlashVisible: (now: number) => boolean;
   /** Marks the render-on-demand loop dirty for closure-state-only changes (hover
    *  highlight, gizmo-drag start/end) that neither a store write nor a drained input
@@ -63,15 +65,15 @@ export type ViewportInput = {
   /** The live camera: the register mid-gesture, the committed store value otherwise
    *  (the store→register adoption below keeps them equal at rest). */
   getCameraPose(): ViewSlice['camera'];
-  /** F1.7's hover glyph highlight — recomputed every non-dragging pointermove. */
+  /** The hovered handle's glyph highlight — recomputed every non-dragging pointermove. */
   getHoverHandle(): GizmoHandleId | null;
   /** The handle currently being dragged, or null — drawBoxPreview's `activeHandle`. */
   getDragHandleId(): GizmoHandleId | null;
-  /** boxWireframeVisible's full OR (F1.7/F1.8): the gizmo hit-test/hover-pick below must
-   *  agree with frame()'s draw call exactly, or picking an invisible/hidden handle would
-   *  hijack an orbit click. `showGridBox` alone is gated on the pointer being over the
-   *  canvas; the flash and an in-flight drag are not (F1.8's binding exceptions). */
-  isWireframeVisible(s: RootState, now: number): boolean;
+  /** The wireframe's full OR: the gizmo hit-test/hover-pick below must agree with
+   *  frame()'s draw call exactly, or picking an invisible handle would hijack an orbit
+   *  click. The box shows while the pointer is over the canvas; the flash and an
+   *  in-flight drag show it anywhere. */
+  isWireframeVisible(now: number): boolean;
   destroy(): void;
 };
 
@@ -97,13 +99,13 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
     targetMpc: cloneTarget(lastSeenCamera.targetMpc),
   };
 
-  // Closure-local, per spec §5's "State flow" — not store fields. `gizmoDragging`'s anchor
+  // Closure-local, not store fields. `gizmoDragging`'s anchor
   // is captured once at the routing decision (dragAnchor); `hoverHandle` is recomputed on
   // every non-dragging canvas pointermove, purely for drawBoxPreview's glyph highlight.
   let gizmoDragging: GizmoDragState | null = null;
   let hoverHandle: GizmoHandleId | null = null;
   // False on mount (no synthetic enter before the user's first real pointermove) — the
-  // showGridBox term of isWireframeVisible stays hidden until a pointerenter proves the
+  // pointer term of isWireframeVisible stays hidden until a pointerenter proves the
   // mouse is actually over the canvas.
   let pointerInside = false;
   // Which gesture a `dragAnchor` resolved into — decided once per gesture, at the first
@@ -115,8 +117,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   // until `dragAnchor` decides the gesture is a camera one.
   let pendingGestureStart = false;
 
-  function isWireframeVisible(s: RootState, now: number): boolean {
-    return isFlashVisible(now) || gizmoDragging !== null || (s.grid.showGridBox && pointerInside);
+  function isWireframeVisible(now: number): boolean {
+    return isFlashVisible(now) || gizmoDragging !== null || pointerInside;
   }
 
   function getCameraPose(): ViewSlice['camera'] {
@@ -135,8 +137,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   // ── Gizmo hit-test (dragAnchor routing) ─────────────────────────────────────
 
   function tryStartGizmoDrag(xPx: number, yPx: number): boolean {
+    if (!isWireframeVisible(performance.now())) return false;
     const s = store.getState();
-    if (!isWireframeVisible(s, performance.now())) return false;
 
     const pendingBox = deriveGridBox(s.grid);
     const pointer = { clientX: xPx, clientY: yPx };
@@ -190,10 +192,9 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
       return;
     }
 
-    // Fixed-anchor recompute (spec §5): every move recomputes rotation' from the SAME
-    // anchorRotation captured at the routing decision — see the original F2.5 comment
-    // this logic was ported from (createViewportInput's pre-recognizer version) for why
-    // that must not incrementally accumulate onto the live box rotation.
+    // Fixed-anchor recompute: every move recomputes rotation' from the SAME
+    // anchorRotation captured at the routing decision, never accumulating onto the
+    // live box rotation, so float error cannot build up over a long drag.
     const drag = gizmoDragging;
     const axisDir = boxAxesFor(drag.anchorRotation)[drag.handle.axis];
     const referenceDir = ringReferenceDirFor(axisDir);
@@ -338,9 +339,8 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
 
   const onHoverMove = (e: PointerEvent): void => {
     if (route !== null) return; // matches the old `if (!dragging)` gate
-    const s = store.getState();
-    if (isWireframeVisible(s, performance.now())) {
-      const box = deriveGridBox(s.grid);
+    if (isWireframeVisible(performance.now())) {
+      const box = deriveGridBox(store.getState().grid);
       const ray = rayFromPointer(canvas, e, getCameraPose());
       const arrowLengthMpc = arrowLengthMpcFor(canvas, getCameraPose(), box.centerMpc);
       hoverHandle = pickGizmoHandle(
@@ -354,11 +354,11 @@ export function createViewportInput(deps: ViewportInputDeps): ViewportInput {
   };
   const onPointerEnter = (): void => {
     pointerInside = true;
-    markDirty(); // wakes render-on-demand so showGridBox's wireframe reappears this frame
+    markDirty(); // wakes render-on-demand so the wireframe reappears this frame
   };
   const onPointerLeave = (): void => {
-    // Mid-drag the gesture is window-tracked with no pointer capture (F1.8's first
-    // exception), so this fires legitimately while a gizmo/camera drag is in flight —
+    // Mid-drag the gesture is window-tracked with no pointer capture, so this
+    // fires legitimately while a gizmo/camera drag is in flight —
     // `gizmoDragging !== null` in isWireframeVisible covers that, not a check here.
     pointerInside = false;
     hoverHandle = null;

@@ -20,7 +20,7 @@ import {
   WHAT_YOURE_SEEING,
 } from './solarSystem.copy';
 
-export const solarSystem: Exhibit = {
+export const solarSystem: Exhibit<'solarSystem'> = {
   id: 'solarSystem',
   label: LABEL,
   // Trails forced on (`withSceneSnapshotSaga` restores the viewer's choice on exit). `starCatalog`
@@ -28,7 +28,9 @@ export const solarSystem: Exhibit = {
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
-    picking: { off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite'] },
+    picking: {
+      off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite', 'asteroid'],
+    },
   },
   pose: POSE,
   lede: LEDE,

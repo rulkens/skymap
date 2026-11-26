@@ -1,11 +1,11 @@
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
-import type { TraceReadback } from '../../@types/TraceReadback';
-import { BYTES_PER_ELEMENT } from './createGridBuffers';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
+import type { TraceReadback } from '../../@types/sim/TraceReadback';
+import { BYTES_PER_ELEMENT } from './bytesPerElement.constant';
 
 /**
  * readbackTrace — copies the harness's trace grid to a MAP_READ staging
- * buffer and returns a CPU-side snapshot for the T16/T17 export legs.
+ * buffer and returns a CPU-side snapshot for the .npy and .scfd exports.
  *
  * The staging buffer is COPY_DST | MAP_READ only — never bound in a shader —
  * so `maxStorageBufferBindingSize` (the limit that also gates the trace

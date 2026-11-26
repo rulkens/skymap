@@ -3,13 +3,12 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import { lightTimeLayerSettings } from './state/slices';
 import { lightTimeVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { lightTimeSpheresPass } from './spheres/passes/lightTimeSpheresPass';
-import { produceLightTimeCaptions } from './spheres/present/produceLightTimeCaptions';
+import { lightTimeLabelSource } from './spheres/present/lightTimeLabelSource';
 
 export const lightTimeLayer = defineLayer({
   name: 'lightTime',
@@ -18,15 +17,6 @@ export const lightTimeLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [lightTimeSpheresPass(runtime)],
-  guides: () => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'lightTimeCaptions',
-        label: 'lightTime',
-        produceLabels: produceLightTimeCaptions,
-      },
-    ],
-  }),
+  guides: () => ({ screenLabels: [lightTimeLabelSource()] }),
   ui: [{ slot: 'labelsAndGuides', content: { toggle: 'lightTime', label: 'Light-time spheres' } }],
 });

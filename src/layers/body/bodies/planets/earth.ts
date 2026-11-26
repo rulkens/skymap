@@ -44,6 +44,9 @@ export const EARTH: LayerBody = {
       meanAnomalyRateRadPerCty: degToRad(35999.37244981 - 0.32327364),
       color: EARTH_BLUE,
     },
+    // The row is fitted to the Horizons Earth–Moon barycentre (target 3), so Earth itself sits
+    // k·(Moon offset) the other way. k = 1 / (1 + M⊕/M☾), M⊕/M☾ = 81.30057 (DE440).
+    pair: { secondaryId: asSceneBodyId('moon'), secondaryMassFraction: 1 / 82.30057 },
   },
   // LANDMINE — Archinal's own Earth W (190.147 + 360.9856235·d) is in TDB days, and the
   // sim clock is UTC: fed UTC it put Greenwich 0.2–0.3° (23–35 km) west. W is instead the

@@ -20,6 +20,28 @@ describe('structureSelectionRow focus claims', () => {
   });
 });
 
+describe('structureSelectionRow focus decode', () => {
+  const virgo = { id: 'galaxy-cluster-virgo', category: 'galaxy-cluster' } as StructureInfo;
+  const store = { byId: (id: string) => (id === virgo.id ? virgo : null), byCategory: () => [] };
+  const decodeWith = (committed: boolean) =>
+    structureSelectionRow({
+      ...structureRowRuntime(store),
+      slot: { committed: () => (committed ? ({} as never) : null) },
+    }).focusId!.decode;
+
+  it('a stored id hits; an unknown id answers by format until the bulk commits, then absent', () => {
+    expect(decodeWith(true)(virgo.id)).toEqual({
+      kind: 'hit',
+      ref: { type: 'structure', id: virgo.id },
+    });
+    expect(decodeWith(false)('galaxy-cluster-nope')).toEqual({
+      kind: 'hit',
+      ref: { type: 'structure', id: 'galaxy-cluster-nope' },
+    });
+    expect(decodeWith(true)('galaxy-cluster-nope')).toEqual({ kind: 'absent' });
+  });
+});
+
 describe('structureSelectionRow pick codes', () => {
   // One record per category, codes from 40 up: a row that packs a catalog value fails.
   const records = STRUCTURE_IDS.map(

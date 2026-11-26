@@ -31,9 +31,9 @@
  * Under the house one-symbol-per-file rule, a wrapper file exists only to carry
  * the wrapper. Once the wrapper is inlined, the file's remaining statements are at
  * most the import it used to forward through — an empty husk — so the file is
- * dropped, and its `tests/` mirror with it, through the shared
- * `removeFileWithMirror` / `hasMeaningfulStatements` helpers `planDelete` uses, so
- * the husk-and-mirror convention has one definition, not two.
+ * dropped, and its `tests/` mirror with it, through
+ * `removeFileWithMirror` / `hasMeaningfulStatements`. `planDelete` runs on the engine
+ * and carries its own copy of the husk check.
  *
  * ## Mutate-only, validate-first
  *
@@ -51,22 +51,25 @@ import type {
   SourceFile,
   VariableDeclaration,
 } from 'ts-morph';
-import { collectRefs } from './collectRefs';
-import type { RefReport } from './collectRefs';
+import type { RefReport } from '../../@types/refactor/RefReport';
 import { detectPassthrough } from './detectPassthrough';
 import type { PassthroughTarget } from './detectPassthrough';
 import { hasMeaningfulStatements } from './hasMeaningfulStatements';
 import { removeFileWithMirror } from './removeFileWithMirror';
 import { renderRefReport } from './renderRefReport';
 import { retargetNamedImport } from './retargetNamedImport';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
-export function planInline(project: Project, resolved: ResolvedSymbol): void {
+export function planInline(
+  project: Project,
+  resolved: ResolvedSymbol,
+  report: RefReport<string>,
+): void {
   const target = detectPassthrough(resolved);
   if (target === null) {
     // Not a mechanical passthrough: refuse and hand back the blast radius so the
     // operator knows which call sites to fold by hand.
-    throw new Error(refusalMessage(collectRefs(project, resolved)));
+    throw new Error(refusalMessage(report));
   }
 
   const wrapperFile = resolved.sourceFile;
@@ -123,7 +126,7 @@ export function planInline(project: Project, resolved: ResolvedSymbol): void {
 // The refusal header + classified reference list. renderRefReport(_, false) is the
 // human table the `refs` subcommand prints; its rows name every referencing
 // file:line:col, which is what makes the refusal actionable.
-function refusalMessage(report: RefReport): string {
+function refusalMessage(report: RefReport<string>): string {
   return [
     `Cannot inline '${report.target}': it is not a passthrough wrapper (an alias, a ` +
       `same-signature single-call wrapper, or an aliased re-export). Folding a symbol ` +

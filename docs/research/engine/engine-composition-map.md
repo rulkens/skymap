@@ -386,7 +386,7 @@ pick plumbing (`ClickResolver.d.ts`, `FocusableTarget.d.ts`,
 animation/fade manifest (`FadeId.d.ts`, `VisibilityLayerKey.d.ts`,
 `fadeRegistry.ts`, `wiring/fadeLayers.ts`, `makeReconcileEffects.ts`,
 `makeRunTierTransition.ts`, `watchFadesSaga.ts`), and tour/UI surfacing
-(`CommandPalette/*`, `data/animation/tours/**` — MW is a named beat or
+(`CommandPalette/*`, `compositions/tours/**` — MW is a named beat or
 focus target in `grandTour/{cosmicFlows,homeAgain,openingTitle,
 youAreHere}.ts`, `demoTour.ts`, `webShowcase.ts`, `clips/cosmicFlows.ts`,
 `state/tour/{captureSettings,clipFociReady,waitUntil}.ts`).

@@ -10,6 +10,7 @@
  * Label + value are the `Slider` pill's own; drawing them here too doubles them.
  */
 import type { ReactNode } from 'react';
+import type { SliderDisplayed } from '../../../@types/components/SliderDisplayed';
 import Slider from '../Slider/Slider';
 import CompactInfoTip from '../CompactInfoTip/CompactInfoTip';
 import styles from './ParamSlider.module.css';
@@ -21,6 +22,7 @@ export type ParamSliderProps = {
   readonly max: number;
   readonly step: number;
   readonly format?: (value: number) => string;
+  readonly displayed?: SliderDisplayed;
   readonly onChange: (value: number) => void;
   readonly onReseed?: () => void;
   /** Hover/focus explainer, revealed from a ⓘ affordance ahead of the pill. */
@@ -42,6 +44,7 @@ function ParamSlider({
   max,
   step,
   format,
+  displayed,
   onChange,
   onReseed,
   info,
@@ -70,6 +73,7 @@ function ParamSlider({
           max={max}
           step={step}
           format={format}
+          displayed={displayed}
           onChange={onChange}
         />
       </div>

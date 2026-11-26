@@ -7,7 +7,7 @@
  * scale with the lens (P1).
  */
 
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { packPickWord } from '../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
@@ -18,6 +18,7 @@ import { BLACK_HOLE_FOCUS_PREFIX } from '../markers/present/blackHoleFocusPrefix
 import { encodeBlackHoleFocusId } from '../markers/present/encodeBlackHoleFocusId';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { BlackHoleRef } from './@types/BlackHoleRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackHoleRef> {
   return {
@@ -29,7 +30,7 @@ export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackH
     },
     encodePick: (ref) => {
       const index = BLACK_HOLES.findIndex((hole) => hole.id === ref.id);
-      return index < 0 ? null : packSelection(pickCode, index + PICK_SENTINEL_OFFSET);
+      return index < 0 ? null : packPickWord(pickCode, index);
     },
     extractRow: (ref, simDays) => {
       const row = BLACK_HOLES.find((hole) => hole.id === ref.id);
@@ -61,7 +62,7 @@ export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackH
       claims: (id) => id.startsWith(BLACK_HOLE_FOCUS_PREFIX),
       decode: (id) => {
         const row = BLACK_HOLES.find((hole) => encodeBlackHoleFocusId(hole.id) === id);
-        return row ? { type: 'blackHole', id: row.id } : null;
+        return hitOrAbsent(row ? { type: 'blackHole', id: row.id } : null);
       },
       encode: (ref) => encodeBlackHoleFocusId(ref.id),
     },

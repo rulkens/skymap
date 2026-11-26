@@ -15,5 +15,5 @@ export const MCPM_ENTRY = {
   densityScale: 18.0,
   envelope: { inner: 0.85, outer: 1.05 },
   exposure: 18.0,
-  trim: 0.3,
+  trim: 0,
 } as const satisfies CosmicWebDensitySourceEntry;

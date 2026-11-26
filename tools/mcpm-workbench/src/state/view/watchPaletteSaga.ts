@@ -10,13 +10,9 @@
  */
 import { takeEvery, put, getContext } from 'typed-redux-saga';
 
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import { setCatalogStatusMessage } from '../catalog/catalogSlice';
-import {
-  setPathTracerPaletteId,
-  setPreviewPacked,
-  setRaymarchPaletteId,
-} from './viewSlice';
+import { setPathTracerPaletteId, setPreviewPacked, setRaymarchPaletteId } from './viewSlice';
 
 export function* watchPaletteSaga() {
   yield* takeEvery(setRaymarchPaletteId, function* (action) {

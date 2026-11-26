@@ -87,7 +87,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { APP_TOUR_REGISTRY } from '../../src/compositions/appTours';
-import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../src/compositions/appClips';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
 import type { TourId } from '../../src/@types/animation/tour/TourId';
@@ -155,6 +155,8 @@ type RecordOptions = {
   rebuild: boolean;
   /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
   dome: boolean;
+  /** --film: the take plays with the film look on (`#film=1`, the Display switch's hash row). */
+  film: boolean;
   /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
   frames: number | undefined;
 };
@@ -202,6 +204,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     serve: false,
     rebuild: false,
     dome: false,
+    film: false,
     frames: undefined,
   };
   // Tracked separately from options.url: the default url must not trip the
@@ -227,6 +230,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     }
     if (arg === '--dome') {
       options.dome = true;
+      continue;
+    }
+    if (arg === '--film') {
+      options.film = true;
       continue;
     }
     if (
@@ -291,7 +298,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       throw new Error(
         `unknown flag '${arg}' ` +
           '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
-          '--serve, --rebuild, --dome, --frames; positional: tour id)',
+          '--serve, --rebuild, --dome, --film, --frames; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -836,7 +843,12 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
+    const captureUrl = buildCaptureUrl({
+      base: options.url,
+      simTime,
+      dome: options.dome,
+      film: options.film,
+    });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;
@@ -847,10 +859,10 @@ async function main(): Promise<void> {
     // instead of polling the never-resolving clip-end status.
     let loopNote: string | undefined;
     if (options.clipId !== undefined) {
-      const clip = (clipRegistry as Record<string, Clip>)[options.clipId];
+      const clip = (APP_CLIP_REGISTRY as Record<string, Clip>)[options.clipId];
       if (clip === undefined) {
         throw new Error(
-          `unknown clip '${options.clipId}' — known: ${Object.keys(clipRegistry).join(', ')}`,
+          `unknown clip '${options.clipId}' — known: ${Object.keys(APP_CLIP_REGISTRY).join(', ')}`,
         );
       }
       // The J2000 snapshot is the right source for the cap: only a clip's START

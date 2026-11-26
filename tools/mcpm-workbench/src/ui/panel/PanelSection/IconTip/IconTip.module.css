@@ -1,0 +1,11 @@
+.root {
+  display: contents;
+}
+
+/* The tip sits inside the caps header; it reads as a tip, not a title. */
+.tipText {
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  text-transform: none;
+}

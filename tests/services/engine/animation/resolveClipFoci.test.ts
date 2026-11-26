@@ -48,6 +48,7 @@ import {
   atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
+import { refOfResolution } from '../../../../src/utils/selection/refOfResolution';
 import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';
 import { selectionKindOf } from '../../../../src/services/engine/selection/selectionKindOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
@@ -59,7 +60,7 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { clipRegistry } from '../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../../src/compositions/appClips';
 import type { Effect } from '../../../../src/@types/animation/Effect';
 import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
@@ -345,10 +346,10 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which finds no such compiled-in famous id and returns null —
-    // the only id format for which resolveFocusId itself returns null against
-    // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
-    // phantom ref without any existence check, so they would not trigger the throw.
+    // resolveFamous, which finds no such compiled-in famous id —
+    // the only id format for which resolveFocusId itself misses against
+    // this fixture. Structure-prefixed ids (cluster-*, etc.) return a
+    // phantom hit without any existence check, so they would not trigger the throw.
     const id = focusId('no-such-object');
     const clip: ClipData = { timeline: [focus(id)] };
     expect(() => resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS)).toThrow(/no-such-object/);
@@ -622,7 +623,7 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
 
   it('lands the same world bearing under two different bases — the basis drops out', () => {
     // Uses the real production constant (not an arbitrary literal) so this
-    // test also exercises the exact value both `openingTitle` and
+    // test also exercises the exact value both `youAreHere` and
     // `homeAgain` depend on — precision itself is pinned separately in
     // cameraFraming.test.ts (the derivation-guard test).
     const clip: ClipData = { timeline: [aimAlong(GALACTIC_DISC_FORWARD, 3)] };
@@ -665,11 +666,11 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
 // resolved clip (clip-studio plan, Task 0.4).
 describe('resolveClipFoci path preservation', () => {
   // Any id resolves to Virgo's row, so every registry clip resolves without a catalog.
-  const virgoRef = RESOLVER.resolveFocusId('galaxy-cluster-virgo')!;
+  const virgo = RESOLVER.resolveFocusId('galaxy-cluster-virgo');
   const ANY_ID: SelectionResolver = {
     ...RESOLVER,
-    resolveFocusId: () => virgoRef,
-    extractRow: (_ref, simDays) => RESOLVER.extractRow(virgoRef, simDays),
+    resolveFocusId: () => virgo,
+    extractRow: (_ref, simDays) => RESOLVER.extractRow(refOfResolution(virgo), simDays),
   };
 
   const childrenOf = (e: Effect): Effect[] =>
@@ -702,7 +703,7 @@ describe('resolveClipFoci path preservation', () => {
   }
 
   it('resolveClipFoci keeps every draft path, structural kind and waypoint count', () => {
-    const clips = Object.values(clipRegistry);
+    const clips = Object.values(APP_CLIP_REGISTRY);
     expect(clips.length).toBeGreaterThan(0);
     for (const clip of clips) {
       const resolved = resolveClipFoci(clip.data, ANY_ID, FOV_Y, POSE, SIM_DAYS);

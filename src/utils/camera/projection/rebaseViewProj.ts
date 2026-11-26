@@ -42,16 +42,9 @@
  *
  * ### Why the return stays f64
  *
- * The rebased matrix has TWO consumers with different precision needs. The GPU
- * upload wants f32 — callers narrow via `narrowMat4` at the upload boundary,
- * the same convention every other f64 matrix seam follows. But the CPU-side
- * caption placement (`labelLeaderLine` via `liftedLabelPlacement`) INVERTS the
- * matrix, and at deep zoom the NEAR0 frustum is brutally ill-conditioned
- * (near down at `MIN_NEAR_MPC` with anchors up to ~1e-6 Mpc beyond the far
- * floor): inverting the f32-narrowed matrix loses the depth structure and the
- * un-projected leader-line geometry distorts by tens of pixels. Returning f64
- * keeps the inversion path exact; narrowing INSIDE this function would poison
- * it before the caller could choose.
+ * The GPU upload wants f32, and callers narrow via `narrowMat4` (or `near0OverlayVpF32`, which
+ * rescales the clip in f64 first so it rounds once) at the upload boundary. Narrowing inside
+ * this function would round before that rescale. No CPU consumer inverts this matrix.
  *
  * @param vpF64         The slab's f64 proj·view (`view.slab.vp` — never the
  *                      f32-narrowed `view.vp`, whose bits are already lost).
@@ -60,7 +53,7 @@
  *                      view translation and is the strongest choice).
  * @returns  A length-16 column-major `Float64Array` that pairs with
  *           `pos - rebaseOrigin` position inputs. Narrow via `narrowMat4` at
- *           the GPU-upload boundary; keep it f64 for any CPU-side inversion.
+ *           the GPU-upload boundary; never narrow it earlier.
  */
 
 import { mat4d } from 'wgpu-matrix';

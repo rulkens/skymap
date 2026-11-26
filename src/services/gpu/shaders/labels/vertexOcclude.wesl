@@ -1,21 +1,50 @@
-// labels/vertexOcclude.wesl — the scene-attenuated MSDF labels vertex
-// stage. It lives in its own module because a pipeline whose layout has no
-// group(1) rejects a vertex module that statically uses 'lib::sceneDepth'
-// bindings. The verdict is judged once at 'label.subjectPos', the
-// pre-lift point, since the lifted anchor can stand over other terrain.
+// labels/vertexOcclude.wesl — 'vertex.wesl' plus the sampled-depth verdict, in its
+// own module: lib::sceneDepth statically pulls in group(1) bindings, which would
+// break the plain pipeline's group(1)-less layout. A label is
+// judged once at its subject, a leader at its bottom end. The cutoff is the
+// subject's near surface, position minus radius; a grounded record (a sub-pixel
+// subject on a body's ground, flagged by core) never reads depth.
 
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
-// 'u' and 'labels' are imported, not redeclared: a second '@group(0)
-// @binding(0)' here would conflict with vertex.wesl's existing declaration.
-import package::labels::vertex::u;
-import package::labels::vertex::labels;
-import package::labels::vertex::expandLabelQuad;
-import package::lib::sceneDepth::subjectDepthVerdict;
+import package::labels::io::LeaderVsOut;
+import package::labels::io::LabelRecord;
+import package::labels::io::RECORD_GROUNDED;
+import package::labels::vertex::recordUniforms;
+import package::labels::vertex::records;
+import package::labels::vertex::styleOf;
+import package::labels::vertex::PlacedRecord;
+import package::labels::vertex::placeRecord;
+import package::labels::vertex::leaderSpanPx;
+import package::labels::vertex::leaderDirection;
+import package::labels::vertex::expandRecordGlyph;
+import package::labels::vertex::expandRecordLeader;
+import package::lib::sceneDepth::subjectDepthVerdictAtUv;
+
+// Must equal 'SCALE_UNITS.MPC_TO_M × M_TO_KM' (src/data/scaleUnits.ts; labelRecord.parity).
+const MPC_TO_KM: f32 = 3.0856775814913673e19;
+
+fn depthVerdictAt(atPx: vec2<f32>, record: LabelRecord, placed: PlacedRecord) -> f32 {
+  if (!placed.subject.visible || (record.style & RECORD_GROUNDED) != 0u) {
+    return 0.0;
+  }
+  let nearKm = (placed.distanceMpc - record.radiusMpc) * MPC_TO_KM;
+  return subjectDepthVerdictAtUv(atPx / recordUniforms.out.sizePx, nearKm);
+}
 
 @vertex
 fn vsOcclude(input: VsIn) -> VsOut {
-  let label = labels[input.labelIndex];
-  let verdict = subjectDepthVerdict(u.cam, label.subjectPos.xyz, label.occludeNearKm);
-  return expandLabelQuad(input, label, max(label.occludeWeight, verdict));
+  let record = records[input.labelIndex];
+  let style = styleOf(record);
+  let placed = placeRecord(record, style);
+  return expandRecordGlyph(input, record, style, placed, depthVerdictAt(placed.subject.px, record, placed));
+}
+
+@vertex
+fn vsLeaderOcclude(@location(0) corner: vec2<f32>, @builtin(instance_index) recordIndex: u32) -> LeaderVsOut {
+  let record = records[recordIndex];
+  let style = styleOf(record);
+  let placed = placeRecord(record, style);
+  let bottomPx = placed.subject.px + leaderDirection(placed) * leaderSpanPx(style, placed).x;
+  return expandRecordLeader(corner, record, style, placed, depthVerdictAt(bottomPx, record, placed));
 }

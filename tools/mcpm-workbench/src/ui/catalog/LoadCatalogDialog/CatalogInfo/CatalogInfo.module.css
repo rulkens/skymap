@@ -1,0 +1,52 @@
+.root {
+  composes: block from '../infoBlock.module.css';
+  grid-column: file;
+  padding-inline-end: var(--space-4);
+}
+
+.list {
+  composes: list from '../infoBlock.module.css';
+}
+
+.label {
+  composes: label from '../infoBlock.module.css';
+}
+
+.value {
+  composes: value from '../infoBlock.module.css';
+}
+
+/* Min and max right-aligned in columns wide enough for −12345.6, so the points
+   line up; fixed widths, unit included, so neither a wider file nor the dashes
+   while reading move the grid block beside this one. */
+.range {
+  composes: value;
+  display: grid;
+  grid-template-columns: 8ch 8ch 3ch;
+  column-gap: var(--space-4);
+}
+
+.range > :not(.unit) {
+  justify-self: end;
+}
+
+.unit {
+  color: var(--color-fg-tertiary);
+}
+
+/* Narrow: the blocks stack, with less space around the divider between them. */
+@container (inline-size < 30rem) {
+  .root {
+    padding-block-end: var(--space-3);
+    padding-inline-end: 0;
+  }
+}
+
+.announce {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

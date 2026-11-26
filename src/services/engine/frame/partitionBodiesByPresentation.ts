@@ -10,8 +10,7 @@
 import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';
 import type { SceneBodyPresentation } from '../../../@types/engine/frame/SceneBodyPresentation';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
+import { isBodyResolved } from '../../../utils/scene/isBodyResolved';
 
 export function partitionBodiesByPresentation(input: {
   bodies: readonly PositionedSceneBody[];
@@ -22,13 +21,7 @@ export function partitionBodiesByPresentation(input: {
   const unresolved: PositionedSceneBody[] = [];
   const resolved: PositionedSceneBody[] = [];
   for (const positioned of bodies) {
-    const diameterPx = bodyApparentDiameterPx({
-      positionMpc: positioned.positionMpc,
-      radiusM: bodyFootprintRadiusM(positioned.body),
-      camPosMpc,
-      pxPerRad,
-    });
-    (diameterPx >= positioned.body.resolvePx ? resolved : unresolved).push(positioned);
+    (isBodyResolved(positioned, camPosMpc, pxPerRad) ? resolved : unresolved).push(positioned);
   }
   return { unresolved, resolved };
 }

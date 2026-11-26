@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 /**
- * fetchVoyagerWindows — the extra Horizons data `buildSpacecraftTracks` needs beside the daily
- * `voyager1`/`voyager2` rows of `fetchHorizons`. The Sun-chain craft vectors (`-31` against
- * 500@10) follow the craft file's own planet chain, which is hundreds to thousands of km from the
- * DE441 planets the app draws, so each encounter also gets the craft against its system
- * barycentre and that barycentre against the Sun. Everything is 1 min within ±2 d, plus 1 h
+ * fetchVoyagerWindows — the extra Horizons data `buildSampledTracks` and `buildMissionEvents`
+ * need beside the daily `voyager1`/`voyager2` rows of `fetchHorizons`. The Sun-chain craft
+ * vectors (`-31` against 500@10) follow the craft file's own planet chain, which is hundreds to
+ * thousands of km from the DE441 planets the app draws, so each encounter also gets the craft
+ * against its system barycentre and that barycentre against the Sun. Everything is 1 min within ±2 d, plus 1 h
  * out to ±60 d (Sun chain) or ±120 d (the DE441 pair). Files, all under data/raw/horizons/:
- *   500@10/<craft>.dense.csv        Sun-chain state, windows + the first sample after launch
- *   500@<bary>/<craft>.csv          craft vs system barycentre, state
+ *   500@10/<craft id>.dense.csv     Sun-chain state, windows + the first sample after launch
+ *   500@<bary>/<craft id>.csv       craft vs system barycentre, state
  *   500@10/<bary>.<date>.csv        barycentre vs Sun (DE441), state
- *   500@<body>/<craft>.csv          craft vs flown-by body centre, position, 1 min ±2 d
+ *   500@<body>/<craft id>.csv       craft vs flown-by body centre, position, 1 min ±2 d
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 import { fetchHorizonsRows } from '../utils/data/fetchHorizonsRows';
 import { formatHorizonsCsv } from '../utils/data/formatHorizonsCsv';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
+import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { HORIZONS_BODIES } from '../bodies/horizonsBodies';
 import { VOYAGER_ENCOUNTERS } from '../bodies/voyagerEncounters';
@@ -54,11 +55,12 @@ async function encounterRows(
   return mergeHorizonsChunks([rows.sort((a, b) => a.jd - b.jd)]);
 }
 
-function write(centre: string, name: string, rows: HorizonsVectorRow[], state: boolean): void {
-  const dir = join(rawDataPath('horizons'), centre);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, name), formatHorizonsCsv(rows, state));
-  console.log(`fetchVoyagerWindows: ${centre}/${name} ${rows.length} rows`);
+function write(path: string, rows: HorizonsVectorRow[], state: boolean): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, formatHorizonsCsv(rows, state));
+  console.log(
+    `fetchVoyagerWindows: ${relative(rawDataPath('horizons'), path)} ${rows.length} rows`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -73,16 +75,16 @@ async function main(): Promise<void> {
       span: [firstSample, dayOffset(firstSample.slice(0, 10), 1)],
     });
     const sun = await encounterRows(craft, dates, 60);
-    write('500@10', `${craft.target}.dense.csv`, mergeHorizonsChunks([launch, sun]), true);
+    write(horizonsCsvPath(craft, '.dense'), mergeHorizonsChunks([launch, sun]), true);
 
     for (const e of mine.filter((e, i) => mine.findIndex((o) => o.date === e.date) === i)) {
       const rel = { ...craft, centre: `500@${e.baryTarget}` };
-      write(rel.centre, `${craft.target}.csv`, await encounterRows(rel, [e.date], 120), true);
+      write(horizonsCsvPath(rel), await encounterRows(rel, [e.date], 120), true);
     }
     for (const e of mine) {
       const body: HorizonsBody = { ...craft, centre: `500@${e.bodyTarget}`, vectors: 'position' };
       const rows = await fetchHorizonsRows(window(body, e.date, 2, 1));
-      write(body.centre, `${craft.target}.csv`, rows, false);
+      write(horizonsCsvPath(body), rows, false);
     }
   }
 
@@ -97,7 +99,8 @@ async function main(): Promise<void> {
       stepMinutes: 60,
       vectors: 'state',
     };
-    write('500@10', `${target}.${date}.csv`, await encounterRows(body, [date], 120), true);
+    const path = join(rawDataPath('horizons'), body.centre, `${target}.${date}.csv`);
+    write(path, await encounterRows(body, [date], 120), true);
   }
 }
 

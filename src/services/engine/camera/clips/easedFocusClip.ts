@@ -12,6 +12,7 @@
 import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
 import type { ClipData } from '../../../../@types/animation/ClipData';
+import type { Effect } from '../../../../@types/animation/Effect';
 import { tween, moveTarget, all } from '../../animation/effectHelpers';
 
 export function easedFocusClip(
@@ -19,17 +20,14 @@ export function easedFocusClip(
 ): ClipData {
   const over = d.motion.durationMs / 1000;
   const ease = d.motion.ease;
-  return {
-    start: d.from,
-    timeline: [
-      all([
-        tween('distance', { to: d.to.distance, over, ease, space: 'lin' }),
-        tween('yaw', { to: d.to.yaw, over, ease }),
-        tween('pitch', { to: d.to.pitch, over, ease }),
-        // A heading-carrying `to` (flyToLonLat) must land with its roll.
-        tween('roll', { to: d.to.roll ?? 0, over, ease }),
-        moveTarget(d.to.target, over, ease),
-      ]),
-    ],
-  };
+  const legs: Effect[] = [
+    tween('distance', { to: d.to.distance, over, ease, space: 'lin' }),
+    tween('yaw', { to: d.to.yaw, over, ease }),
+    tween('pitch', { to: d.to.pitch, over, ease }),
+    // A heading-carrying `to` (flyToLonLat) must land with its roll.
+    tween('roll', { to: d.to.roll ?? 0, over, ease }),
+    moveTarget(d.to.target, over, ease),
+  ];
+  if (d.to.fov !== undefined) legs.push(tween('fov', { to: d.to.fov, over, ease }));
+  return { start: d.from, timeline: [all(legs)] };
 }

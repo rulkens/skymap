@@ -39,10 +39,10 @@ fn localRayFromWorld(invModel: mat4x4<f32>, cameraPosWorld: vec3<f32>, worldPos:
 // entirely, returns tMax < tMin and the caller discards.
 fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
   let invDir = 1.0 / rayDir;
-  let t0 = -rayOrigin * invDir;
-  let t1 = (vec3<f32>(1.0) - rayOrigin) * invDir;
-  let tMinV = min(t0, t1);
-  let tMaxV = max(t0, t1);
+  let tLowSlab = -rayOrigin * invDir;
+  let tHighSlab = (vec3<f32>(1.0) - rayOrigin) * invDir;
+  let tMinV = min(tLowSlab, tHighSlab);
+  let tMaxV = max(tLowSlab, tHighSlab);
   let tMin = max(max(tMinV.x, tMinV.y), tMinV.z);
   let tMax = min(min(tMaxV.x, tMaxV.y), tMaxV.z);
   return vec2<f32>(max(tMin, 0.0), tMax);

@@ -1,14 +1,14 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { SimSlice } from '../../../@types/SimSlice';
-import type { AgentInitMode } from '../../../@types/AgentInitMode';
-import type { McpmParams } from '../../../@types/McpmParams';
-import { AGENT_COUNT_STEP } from '../../sim/seedAgents';
+import type { SimSlice } from '../../../@types/sim/SimSlice';
+import type { AgentInitMode } from '../../../@types/sim/AgentInitMode';
+import type { McpmParams } from '../../../@types/sim/McpmParams';
+import { AGENT_COUNT_STEP } from '../../sim/agentCountStep.constant';
 
 /** 1M–10M, in the same 100k unit `seedAgents`/`encodeStep`'s dispatch truncation enforces. */
 export const AGENT_COUNT_MIN = 10 * AGENT_COUNT_STEP;
 export const AGENT_COUNT_MAX = 100 * AGENT_COUNT_STEP;
 
-/** The SDSS-VAC preset (spec §10) — the starting point for every slider. */
+/** The SDSS-VAC preset — the starting point for every slider. */
 const DEFAULT_MCPM_PARAMS: McpmParams = {
   senseSpreadDeg: 20,
   senseDistanceMpc: 4.6,
@@ -55,7 +55,7 @@ export const simSlice = createSlice({
     setSeed: (state, action: PayloadAction<number>) => {
       state.seed = action.payload;
     },
-    /** Viewport calls this once it has actually reseeded, zeroing the HUD's step counter. */
+    /** Viewport calls this once it has actually reseeded, zeroing Stats' step counter. */
     resetStepCount: (state) => {
       state.stepCount = 0;
     },

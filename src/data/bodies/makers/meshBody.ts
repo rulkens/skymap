@@ -2,8 +2,8 @@
  * meshBody — row maker for a `MeshBody`: joins an authored seed (id/label/
  * meshKey) against `MESH_ASSETS`, the tool-generated table
  * (`npm run build-meshes`). `boundingRadiusM`/`albedo` come ONLY from the generated
- * row — never re-authored at the seed site — so the baked asset stays the
- * single source of truth for both. Throws at the call site on a miss, same
+ * row (so does `tierCeiling`) — never re-authored at the seed site — so the baked
+ * asset stays the single source of truth for them. Throws at the call site on a miss, same
  * posture as `findByIdOrThrow`: a typo'd `meshKey`, or a seed added before
  * its asset landed, must fail loudly there rather than seed a body with
  * `undefined` geometry that only misbehaves at render time. A `generated`
@@ -38,18 +38,24 @@ export type MeshBodySeed = {
   };
 };
 
-function bakedFacts(meshKey: string): Pick<MeshBody, 'boundingRadiusM' | 'albedo'> {
+function bakedFacts(meshKey: string): Pick<MeshBody, 'boundingRadiusM' | 'albedo' | 'tierCeiling'> {
   const asset = MESH_ASSETS[meshKey];
   if (!asset) throw new Error(`meshBody: no MESH_ASSETS entry for meshKey '${meshKey}'`);
-  return { boundingRadiusM: asset.boundingRadiusM, albedo: asset.meanAlbedo };
+  return {
+    boundingRadiusM: asset.boundingRadiusM,
+    albedo: asset.meanAlbedo,
+    tierCeiling: asset.tierCeiling,
+  };
 }
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
-  const { boundingRadiusM, albedo } = seed.generated ?? bakedFacts(seed.meshKey);
+  const facts: ReturnType<typeof bakedFacts> = seed.generated ?? bakedFacts(seed.meshKey);
+  const { boundingRadiusM, albedo, tierCeiling } = facts;
   return {
     id: asSceneBodyId(seed.id),
     label: seed.label,
     meshKey: seed.meshKey,
+    tierCeiling,
     buildMesh: seed.generated?.buildMesh,
     boundingRadiusM,
     albedo,

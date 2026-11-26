@@ -58,6 +58,7 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
     target: '-31',
     centre: '500@10',
     span: ['1977-09-06', '2099-12-31'],
+    dense: true,
     stepMinutes: 1440,
     vectors: 'state',
   },
@@ -66,6 +67,17 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
     target: '-32',
     centre: '500@10',
     span: ['1977-08-21', '2099-12-31'],
+    dense: true,
+    stepMinutes: 1440,
+    vectors: 'state',
+  },
+  // 2026 QQ8 (SPK 54668182), named by designation because it has no number yet. The span is
+  // the body's whole stay in the scene: outside its track it is absent by design.
+  {
+    id: '2026-qq8',
+    target: 'DES=2026 QQ8;',
+    centre: '500@10',
+    span: ['2026-02-01', '2027-03-31'],
     stepMinutes: 1440,
     vectors: 'state',
   },

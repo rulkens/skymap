@@ -77,7 +77,7 @@ export function createPickDebugOverlay(
       targets: [
         {
           format: swapChainFormat,
-          // Premultiplied OVER — same convention as markerLines,
+          // Premultiplied OVER — same convention as debugLines,
           // labels, structureMarker.  Fragment shader emits
           // 'vec4<f32>(col * alpha, alpha)' so this blend produces
           // the standard "src on top of dst" composite.  Background

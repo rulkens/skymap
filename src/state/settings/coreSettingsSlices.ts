@@ -3,11 +3,13 @@
 import { bloomSlice } from './core/bloomSlice';
 import { cameraControlsSlice } from './core/cameraControlsSlice';
 import { debugSlice } from './core/debugSlice';
+import { filmSlice } from './core/filmSlice';
 import { focusMovesSlice } from './core/focusMovesSlice';
 import { hdrSlice } from './core/hdrSlice';
 import { labelsSlice } from './core/labelsSlice';
 import { orientationSlice } from './core/orientationSlice';
 import { pickingSlice } from './core/pickingSlice';
+import { timelineSlice } from './core/timelineSlice';
 import { tonemapSlice } from './core/tonemapSlice';
 
 export const CORE_SETTINGS_SLICES = [
@@ -17,7 +19,9 @@ export const CORE_SETTINGS_SLICES = [
   tonemapSlice,
   hdrSlice,
   bloomSlice,
+  filmSlice,
   labelsSlice,
   pickingSlice,
   debugSlice,
+  timelineSlice,
 ] as const;

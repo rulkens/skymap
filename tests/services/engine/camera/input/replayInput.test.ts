@@ -9,7 +9,6 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../../src/services/engine/camera/input/replayInput';
-import { skyCameraArm } from '../../../../../src/services/engine/camera/arms/sky/skyCameraArm';
 import { LENS_MAX_DEG } from '../../../../../src/data/camera/lensMaxDeg';
 import { degToRad } from '../../../../../src/utils/math/degToRad';
 import { zoomLimitPushed } from '../../../../../src/state/camera/zoomLimitPushed';
@@ -24,7 +23,7 @@ import {
   commitCameraPose,
   setAutoRotate,
   setFovYRad,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../../../src/state/selectionRows/selectionRowsSlice';
 import { pivotFraming } from '../../../../../src/services/engine/camera/framing/pivotRadiusMpc';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
@@ -37,10 +36,16 @@ import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../../fixtures/earthArm';
+import { bodyFixedEyeM } from '../../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { surfaceFloorM } from '../../../../../src/services/engine/camera/arms/body/utils/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
+import type { RawInputStep } from '../../../../../src/@types/camera/input/RawInputStep';
+import type { ZoomLimitPress } from '../../../../../src/@types/camera/input/ZoomLimitPress';
+import { ZOOM_LIMIT_PUSH_LN } from '../../../../../src/data/input/zoomLimitPushLn';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -75,12 +80,16 @@ function ctxOf(
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
-      focusBodyId: isKind<BodySelectionRow>(focus, 'body') ? focus.id : null,
+      focus: isKind<BodySelectionRow>(focus, 'body')
+        ? { kind: 'body' as const, id: focus.id }
+        : focus !== null
+          ? { kind: 'bodiless' as const }
+          : { kind: 'none' as const },
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
-      tuning: store.getState().camera.tuning,
+      tuning: store.getState().camera.intent.tuning,
     },
     nowMs: overrides.nowMs ?? 0,
     rootState: store.getState(),
@@ -91,13 +100,19 @@ function ctxOf(
   };
 }
 
-const atRestZoom = (factor: number, fresh = false): InputStep => ({
+const atRestZoom = (factor: number, fresh = false): RawInputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: [500, 500],
   fresh,
 });
+
+/** The edges of the zoom limits a drain pushed, in order. */
+const pushesOf = (actions: readonly unknown[]) =>
+  actions
+    .filter((a) => zoomLimitPushed.match(a as never))
+    .map((a) => (a as ReturnType<typeof zoomLimitPushed>).payload.edge);
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
 function rangeM(framed: FramedCameraPose): number {
@@ -124,7 +139,7 @@ describe('replayInput', () => {
     // so such a write throws right here. The world at-rest notch, a followed
     // pan and the gesture edges cover every accumulator field.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const prev = deepFreeze({
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
@@ -136,8 +151,9 @@ describe('replayInput', () => {
         panOffset: [1, 2, 3] as Vec3,
         saturated: false,
       },
+      zoomLimitPress: null,
     });
-    const steps = deepFreeze<readonly InputStep[]>([
+    const steps = deepFreeze<readonly RawInputStep[]>([
       atRestZoom(1.5),
       { kind: 'gestureStart' },
       { kind: 'drag', mode: 'pan', startPx: [100, 100], endPx: [150, 100] },
@@ -164,10 +180,11 @@ describe('replayInput', () => {
       commitCameraPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 })),
     );
     const prev = {
-      register: store.getState().camera.base,
+      register: store.getState().camera.intent.base,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
+      zoomLimitPress: null,
     };
 
     const next = replayInput(
@@ -184,7 +201,7 @@ describe('replayInput', () => {
     const commits = next.actions.map((a) => worldArmOf(a.payload as FramedCameraPose).distance);
     expect(commits).toEqual([150, 225]);
     // The store never saw either commit — the fold is local.
-    expect(worldArmOf(store.getState().camera.base).distance).toBe(100);
+    expect(worldArmOf(store.getState().camera.intent.base).distance).toBe(100);
     const register = worldArmOf(next.register);
     expect(register.distance).toBe(225);
     expect(register.yaw).toBeCloseTo(-50 * 0.005, 6);
@@ -202,6 +219,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         atRestZoom(Math.exp(-0.1)),
@@ -212,8 +230,8 @@ describe('replayInput', () => {
       ctxOf(store),
     );
     expect(body.actions.map((a) => a.type)).toEqual([
-      'camera/commitCameraPose',
-      'camera/commitCameraPose',
+      'camera/intent/commitCameraPose',
+      'camera/intent/commitCameraPose',
     ]);
     expect(body.actions[0]!.payload).not.toBe(arm);
     expect(body.actions[1]!.payload).toBe(body.register);
@@ -231,7 +249,7 @@ describe('replayInput', () => {
       roll: 1.4,
     });
     followStore.dispatch(commitCameraPose(nearEarth));
-    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    followStore.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const follow = {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
@@ -245,11 +263,12 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(followStore, { winnerLastFrame: 'followHold' }),
     );
-    expect(ride.actions.map((a) => a.type)).toEqual(['camera/commitCameraPose']);
+    expect(ride.actions.map((a) => a.type)).toEqual(['camera/intent/commitCameraPose']);
     const committed = worldArmOf(ride.actions[0]!.payload as FramedCameraPose);
     expect(committed.distance).toBe(2.5 * EARTH_RADIUS_MPC);
     // Stepped toward the pole, never past the 0.1 cap.
@@ -282,6 +301,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(-0.1))],
       ctxOf(store),
@@ -302,10 +322,11 @@ describe('replayInput', () => {
     store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
     const next = replayInput(
       {
-        register: store.getState().camera.base,
+        register: store.getState().camera.intent.base,
         gesture: null,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(1.1, true)],
       ctxOf(store),
@@ -328,7 +349,7 @@ describe('replayInput', () => {
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
     store.dispatch(commitCameraPose(sky));
-    const lens = store.getState().camera.fovYRad;
+    const lens = store.getState().camera.intent.fovYRad;
 
     const next = replayInput(
       {
@@ -336,6 +357,7 @@ describe('replayInput', () => {
         gesture: null,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(1.25), atRestZoom(1.25)],
       ctxOf(store),
@@ -379,6 +401,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         {
@@ -427,6 +450,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -450,6 +474,7 @@ describe('replayInput', () => {
       clipStarted({
         data: { start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, timeline: [] },
         frame: 'ecliptic',
+        by: 'player',
       }),
     );
 
@@ -459,6 +484,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -480,7 +506,7 @@ describe('replayInput', () => {
     // by a spin nobody renders.
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.01 }));
-    const base = store.getState().camera.base;
+    const base = store.getState().camera.intent.base;
     const yawBefore = worldArmOf(base).yaw;
 
     const next = replayInput(
@@ -489,6 +515,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       {
@@ -506,12 +533,13 @@ describe('replayInput', () => {
     // translation of the drag, no body motion mixed in — and an orbit step's
     // angular delta never touches it.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const prev = {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
+      zoomLimitPress: null,
     };
 
     const orbited = replayInput(
@@ -550,6 +578,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         atRestZoom(Math.exp(0.24)),
@@ -584,6 +613,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store),
@@ -601,7 +631,7 @@ describe('replayInput', () => {
     // the focus-edge drop): the notch takes the plain base-commit path rather
     // than resolving against a target the driver never captured.
     const store = makeStore();
-    const base = store.getState().camera.base;
+    const base = store.getState().camera.intent.base;
 
     const next = replayInput(
       {
@@ -609,6 +639,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -633,7 +664,7 @@ describe('replayInput', () => {
       distance: 4 * EARTH_RADIUS_MPC,
     });
     store.dispatch(commitCameraPose(nearEarth));
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     const follow = {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
@@ -649,6 +680,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(-10))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -677,13 +709,13 @@ describe('replayInput', () => {
         distance: distMpc,
         roll,
       });
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
     // Half an engage-edge down, so the in-band roll is fully authored (w = 1)
     // before the recession starts, wherever ruling 19's band is tuned to.
     const startHR = DEFAULT_CAMERA_TUNING.engageHR * 0.5;
     const startDist = EARTH_RADIUS_MPC * (1 + startHR);
     store.dispatch(commitCameraPose(poseAt(startDist, -0.26)));
-    const rollOfBase = (): number => worldArmOf(store.getState().camera.base).roll ?? 0;
+    const rollOfBase = (): number => worldArmOf(store.getState().camera.intent.base).roll ?? 0;
 
     let target = startDist;
     let register = poseAt(startDist, -0.26);
@@ -700,6 +732,7 @@ describe('replayInput', () => {
             panOffset: [0, 0, 0],
             saturated: false,
           },
+          zoomLimitPress: null,
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
@@ -753,6 +786,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -773,7 +807,7 @@ describe('replayInput', () => {
   it('floors an in-gesture zoom at the focused body’s surface', () => {
     // A pinch spread far enough to blow through the surface in one step.
     const store = makeStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, focusId: null }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW, id: null }));
 
     const next = replayInput(
       {
@@ -786,6 +820,7 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -803,5 +838,126 @@ describe('replayInput', () => {
     const radii = worldArmOf(next.register).distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
     expect(radii).toBeLessThan(1.05);
+  });
+
+  describe('sky entry and lift-off through the drain', () => {
+    /** Earth's body arm with its eye on the descent floor, where a fresh zoom-in pushes. */
+    function atFloor(): FramedCameraPose {
+      const arm = earthArm(2);
+      if (!isBodyArm(arm)) throw new Error('fixture: not a body arm');
+      const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
+      const eye = bodyFixedEyeM(arm.pose);
+      const s = surfaceFloorM(radiusM, SURFACE_STANDOFF_RADII) / Math.hypot(...eye);
+      const a = arm.pose.anchorLocalM;
+      return {
+        frame: arm.frame,
+        pose: {
+          ...arm.pose,
+          eyeRelAnchorM: [eye[0] * s - a[0], eye[1] * s - a[1], eye[2] * s - a[2]],
+        },
+      };
+    }
+
+    it('a stale floor notch does not push; a fresh one does', () => {
+      const store = makeStore();
+      const floor = atFloor();
+      store.dispatch(commitCameraPose(floor));
+      const drain = (fresh: boolean) =>
+        replayInput(
+          {
+            register: floor,
+            gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+            tilt: EMPTY_TILT_MEMORY,
+            follow: null,
+            zoomLimitPress: null,
+          },
+          [atRestZoom(0.8, fresh)],
+          ctxOf(store),
+        ).actions;
+      expect(pushesOf(drain(false))).toEqual([]);
+      expect(pushesOf(drain(true))).toEqual(['in']);
+    });
+
+    it('a liftOff step while standing reports the same push as a widest-lens wheel-out', () => {
+      const store = makeStore();
+      const sky: FramedCameraPose = {
+        frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+        pose: { azimuthRad: 1, altitudeRad: 0.3 },
+      };
+      store.dispatch(commitCameraPose(sky));
+      const next = replayInput(
+        {
+          register: sky,
+          gesture: null,
+          tilt: EMPTY_TILT_MEMORY,
+          follow: null,
+          zoomLimitPress: null,
+        },
+        [{ kind: 'liftOff' }],
+        ctxOf(store),
+      );
+      expect(pushesOf(next.actions)).toEqual(['out']);
+      expect(next.register.pose).toBe(sky.pose);
+    });
+
+    describe('the push counter: a streaming scroll pushes once the eaten zoom fills it', () => {
+      /** One notch a drain, carrying the press: each drain's pushes. */
+      function stream(
+        edge: 'in' | 'out',
+        notches: readonly (readonly [factor: number, fresh: boolean])[],
+      ): string[] {
+        const store = makeStore();
+        const sky: FramedCameraPose = {
+          frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+          pose: { azimuthRad: 1, altitudeRad: 0.3 },
+        };
+        const register = edge === 'in' ? atFloor() : sky;
+        store.dispatch(commitCameraPose(register));
+        if (edge === 'out') store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
+        const gesture = edge === 'in' ? EMPTY_SURFACE_GESTURE_MEMORY : null;
+        let zoomLimitPress: ZoomLimitPress | null = null;
+        return notches.map(([factor, fresh], i) => {
+          const next = replayInput(
+            { register, gesture, tilt: EMPTY_TILT_MEMORY, follow: null, zoomLimitPress },
+            [atRestZoom(factor, fresh)],
+            ctxOf(store, { nowMs: i * 16 }),
+          );
+          zoomLimitPress = next.zoomLimitPress;
+          return pushesOf(next.actions).join();
+        });
+      }
+      /** A scroll already streaming when it reaches the limit (every notch stale), each notch
+       * 1/3.5 of the push, so the fourth fills it. */
+      const run = (factor: number, n: number) =>
+        Array.from({ length: n }, () => [factor, false] as const);
+      const IN = Math.exp(-ZOOM_LIMIT_PUSH_LN / 3.5);
+      const OUT = 1 / IN;
+
+      it('continuous notches into the floor enter once their sum reaches the push', () => {
+        expect(stream('in', run(IN, 5))).toEqual(['', '', '', 'in', '']);
+      });
+
+      it('continuous wheel-out at the widest lens lifts', () => {
+        expect(stream('out', run(OUT, 4))).toEqual(['', '', '', 'out']);
+      });
+
+      it('a decaying trackpad tail whose sum stays below the push does not push', () => {
+        const tail = Array.from(
+          { length: 30 },
+          (_, i) => [Math.exp(-(ZOOM_LIMIT_PUSH_LN / 4) * 0.6 ** i), false] as const,
+        );
+        expect(stream('in', tail).every((p) => p === '')).toBe(true);
+      });
+
+      it('a notch the other way starts the count over', () => {
+        const zigzag = [...run(IN, 3), [OUT, false] as const, ...run(IN, 3)];
+        expect(stream('in', zigzag).every((p) => p === '')).toBe(true);
+      });
+
+      it('a fresh notch at the limit still pushes at once', () => {
+        const paused = [...run(IN, 2), [IN, true] as const];
+        expect(stream('in', paused)).toEqual(['', '', 'in']);
+      });
+    });
   });
 });

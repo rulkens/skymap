@@ -1,4 +1,4 @@
-import type { GridElement } from '../../@types/GridElement';
+import type { GridElement } from '../../@types/grid/GridElement';
 
 // Textual rewrite of the linked WGSL, applied right before createShaderModule
 // (rejected: `?link` runtime conditional compilation — see wesl.toml). `enable`

@@ -1,0 +1,52 @@
+/* Centred on the viewport, the corner inset above its bottom edge. The UA
+   hides a closed popover with `display: none`, so the flex layout is set on
+   the open state only. */
+.root {
+  inset: auto 0 var(--corner-offset);
+  margin-block: 0;
+  margin-inline: auto;
+  max-inline-size: calc(100% - 2 * var(--corner-offset));
+  padding-block: var(--space-3);
+  padding-inline: var(--space-6) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--tool-status-bad) 60%, transparent);
+  border-radius: var(--radius-xl);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  color: var(--color-fg);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+  transition:
+    translate var(--duration-base) ease-out,
+    opacity var(--duration-base) ease-out;
+}
+
+.root:popover-open {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+@starting-style {
+  .root:popover-open {
+    translate: 0 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}
+
+/* One column over the page: rise above its footer, whose height is its
+   content's, so it is read off the footer itself. */
+@container workbench (width < 900px) {
+  .root {
+    position-anchor: --workbench-footer;
+    inset-block-end: calc(anchor(start, 0) + var(--corner-offset));
+  }
+}

@@ -33,7 +33,7 @@ import {
   clipStarted,
   commitCameraPose,
   startCameraTween,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../src/state/time/timeSlice';
@@ -59,7 +59,7 @@ import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
 import type { EngineHomeConfig } from '../../../src/@types/engine/EngineHomeConfig';
-import { EARTH_HOME } from '../../../src/data/selection/earthHome';
+import { APP_HOME } from '../../../src/compositions/appHome';
 import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 
@@ -77,6 +77,7 @@ const PLAYS = [
 const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   data: { timeline: [] },
   frame: 'equatorial',
+  by: 'player',
 };
 
 function build(home: EngineHomeConfig = { focus: null, seedSelection: false }) {
@@ -151,7 +152,7 @@ describe('navigateSaga', () => {
 
     expect(h.commits()).toBe(1);
     expect(h.tweens()).toBe(0);
-    expect(h.store.getState().camera.base).toEqual(POSE);
+    expect(h.store.getState().camera.intent.base).toEqual(POSE);
     expect(selectFocusRef(h.store.getState())).toEqual({ type: 'milkyWay' });
   });
 
@@ -170,7 +171,7 @@ describe('navigateSaga', () => {
     await h.navigate({ view: { kind: 'focus', id: 'body-moon' } }, 'cut');
     await flush();
 
-    const pose = worldArmOf(h.store.getState().camera.base);
+    const pose = worldArmOf(h.store.getState().camera.intent.base);
     // The runtime's carried-over view is yaw 0.5, pitch -0.2.
     expect([pose.yaw, pose.pitch]).not.toEqual([0.5, -0.2]);
   });
@@ -213,7 +214,7 @@ describe('navigateSaga', () => {
     expect(h.playClip).not.toHaveBeenCalled();
     expect(h.commits()).toBe(1);
     const { fitRadiusMpc } = APP_EXHIBIT_REGISTRY.observableUniverse;
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+    expect(worldArmOf(h.store.getState().camera.intent.base).distance).toBe(
       sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
     );
     expect(selectTakeoverSource(h.store.getState())).toEqual({
@@ -266,7 +267,7 @@ describe('navigateSaga', () => {
   });
 
   it('the cut branch of #studio= leaves no selection under the dock', async () => {
-    const h = build(EARTH_HOME);
+    const h = build(APP_HOME);
     await h.navigate({ view: { kind: 'studio', id: 'cosmicFlows' } }, 'cut');
     await flush();
 

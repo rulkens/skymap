@@ -1,21 +1,7 @@
 import type { Vec4 } from '../../../../@types/math/Vec4';
 
-/**
- * Marker + label style fields for one structure category. Structures always
- * set a halo tint (famous galaxies — which opted out of the halo with a null
- * tint — live in `famousLabelStyle.ts`), so `haloColor` is a plain `Vec4`.
- */
+/** Ring and halo style for one structure category; its label's style is its `LABEL_STYLES` row. */
 export type StructureMarkerStyle = {
-  /** Label glyph fill. */
-  readonly labelColor: Vec4;
-  /** Floor clamp on projected em height in screen pixels. */
-  readonly minPixelSize: number;
-  /** Ceiling clamp on projected em height in screen pixels. */
-  readonly maxPixelSize: number;
-  /** Label world-space em height in Mpc. */
-  readonly worldEmMpc: number;
-  /** Anchor-line / label stroke width in pixels. */
-  readonly pixelWidth: number;
   /**
    * RGBA halo tint for the marker pass. Alpha is the AT-REST opacity —
    * per-frame fade multiplies into it.
@@ -27,12 +13,8 @@ export type StructureMarkerStyle = {
   readonly markerMaxApparentRadiusPx: number;
   /** Smoothstep band width for the close-approach fade-out. */
   readonly markerMaxApparentFadeBandPx: number;
-  /** Apparent on-screen radius (px) below which the marker fades OUT. */
+  /** Apparent on-screen radius (CSS px, × dpr) below which the marker fades OUT. */
   readonly markerMinApparentRadiusPx: number;
-  /** Smoothstep band width for the far-distance fade-out. */
+  /** Smoothstep band width (CSS px, × dpr) for the far-distance fade-out. */
   readonly markerMinApparentFadeBandPx: number;
-  /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
-  readonly outlineColor: Vec4;
-  /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
-  readonly outlineEmFrac: number;
 };

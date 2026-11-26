@@ -1,7 +1,7 @@
 /**
  * The camera band's shipped defaults and slider ranges — pure data, the only
  * file that names a number. Every consumer takes a `CameraTuning` VALUE (the
- * store's `camera.tuning`, seeded from here); nothing reads this record live.
+ * store's `camera.intent.tuning`, seeded from here); nothing reads this record live.
  */
 
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';

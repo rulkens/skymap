@@ -15,7 +15,7 @@
 // ## Why this returns a FACTOR, not the whole shade term
 //
 // The textured-body fragment already multiplies by the Lambert term 'mu0'
-// (via 'litShade' in 'lib/bodyLighting.wesl'). Minnaert factors cleanly over
+// (via 'bodyDirectShade' in 'lib/bodyLighting.wesl'). Minnaert factors cleanly over
 // that existing cosine:
 //
 //   mu0^k * mu^(k-1) = mu0 * (mu0 * mu)^(k-1)
@@ -53,7 +53,7 @@
 
 const BASE_EPS: f32 = 1e-6;
 
-fn limbDarkening(mu0: f32, mu: f32, strength: f32, exponent: f32) -> f32 {
-  let darken = pow(max(mu0 * mu, BASE_EPS), exponent - 1.0);
+fn limbDarkening(incidenceCos: f32, emissionCos: f32, strength: f32, exponent: f32) -> f32 {
+  let darken = pow(max(incidenceCos * emissionCos, BASE_EPS), exponent - 1.0);
   return mix(1.0, darken, strength);
 }

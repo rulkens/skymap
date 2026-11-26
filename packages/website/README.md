@@ -50,7 +50,8 @@ Every picture of the app is a row in `src/data/siteShots.ts`, looked up by id wi
 `src/data/siteLoops.ts`. Both are taken from a running app and committed to `src/assets/`:
 
 - `npm run site:shots -- --url <app server> [--only id,id]` writes AVIF and WebP at the widths the pages use.
-  It also rewrites `src/assets/og-card.jpg`; restore that file if you did not mean to change it.
+  It also rewrites the link-preview cards (`src/assets/og-card.jpg`, `src/assets/cards/`, the app's `public/og-image.jpg`);
+  restore them if you did not mean to change them. Which landing page gets which card is `src/data/shareCards.ts`.
 - `npm run site:loops -- --url <app server> [--only id,id]` records the films.
 - Settings, mattes, budgets and the hero flight are in `tools/site/README.md`.
 

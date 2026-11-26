@@ -5,7 +5,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import { constellationsLayerSettings } from './state/slices';
 import { constellationsVisibility } from './visibility';
 import { CONSTELLATIONS_SOURCE_ROWS } from './sources/constellationsSourceRows';
@@ -13,7 +12,7 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { constellationsAssetRows } from './figures/load/constellationsAssetRows';
 import { constellationsPass } from './figures/passes/constellationsPass';
-import { produceConstellationCaptions } from './figures/present/produceConstellationCaptions';
+import { constellationLabelSource } from './figures/present/constellationLabelSource';
 
 export const constellationsLayer = defineLayer({
   name: 'constellations',
@@ -25,17 +24,7 @@ export const constellationsLayer = defineLayer({
   passes: (runtime) => [constellationsPass(runtime)],
   assets: constellationsAssetRows,
   guides: (runtime) => ({
-    screenLabels: [
-      // NEAR0, not COSMO: the figure anchors sit at parsec distances, inside
-      // COSMO's fixed 0.01 Mpc near plane, so a COSMO-projected label could
-      // never draw (full story in `constellationCaptions.ts`'s header).
-      {
-        slab: NEAR0,
-        id: 'constellationCaptions',
-        label: 'constellations',
-        produceLabels: produceConstellationCaptions(runtime),
-      },
-    ],
+    screenLabels: [constellationLabelSource(runtime)],
   }),
   ui: [{ slot: 'labelsAndGuides', content: { toggle: 'constellations', label: 'Constellations' } }],
 });

@@ -7,9 +7,9 @@
  */
 
 import type { Tour } from '../@types/animation/tour/Tour';
-import { demoTour } from '../data/animation/tours/demoTour';
-import { webShowcase } from '../data/animation/tours/webShowcase';
-import { grandTour } from '../data/animation/tours/grandTour';
+import { demoTour } from './tours/demoTour';
+import { webShowcase } from './tours/webShowcase';
+import { grandTour } from './tours/grandTour';
 
 export const APP_TOUR_REGISTRY = {
   demo: demoTour,

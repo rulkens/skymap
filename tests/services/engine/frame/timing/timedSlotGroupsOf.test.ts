@@ -13,7 +13,7 @@ import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep
 import type { FrameStepSpec } from '../../../../../src/@types/engine/frame/FrameStepSpec';
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 /** A minimal `ContentPass` fixture — the derivations read only `name`. */
 function fakePass(name: string): ContentPass {

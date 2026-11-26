@@ -12,19 +12,25 @@ import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
+import { createOcclusionMaskRenderer } from '../../gpu/renderers/occlusionMask/occlusionMaskRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
+import { createSampledTrailRenderer } from '../../gpu/renderers/bodies/sampledTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
 import { createLabel3DRenderer } from '../../gpu/renderers/labels3d/label3DRenderer';
-import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
+import { createLetterboxRenderer } from '../../gpu/renderers/letterbox/letterboxRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
-import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
+import {
+  HDR_TARGET_FORMAT,
+  FOREGROUND_DEPTH_FORMAT,
+  OCCLUSION_MASK_FORMAT,
+} from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
@@ -59,7 +65,7 @@ export const GPU_HANDLE_ROWS = [
         state,
       ),
   },
-  // The 8 swap-chain-format rows, in buildSwapRenderers.ts order.
+  // The swap-chain-format rows, in buildSwapRenderers.ts order.
   {
     key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
@@ -67,15 +73,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        occludeAgainstScene: true,
-      }),
-  },
-  {
-    key: 'markerLineRendererCosmo',
-    rebuildOnSwapFormat: true,
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
-        occludeAgainstScene: true,
       }),
   },
   {
@@ -83,6 +80,12 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createDebugLineRenderer(deps.ctx, deps.ctx.format, 8192),
+  },
+  {
+    key: 'letterboxRenderer',
+    rebuildOnSwapFormat: true,
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createLetterboxRenderer({ device: deps.ctx.device, targetFormat: deps.ctx.format }),
   },
   {
     key: 'selectionRingRenderer',
@@ -105,15 +108,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        occludeAgainstScene: true,
-      }),
-  },
-  {
-    key: 'markerLineRendererNear',
-    rebuildOnSwapFormat: true,
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
-        occludeAgainstScene: true,
       }),
   },
 
@@ -150,7 +144,16 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'domeResampleRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+      createDomeResampleRenderer({
+        device: deps.ctx.device,
+        targetFormat: HDR_TARGET_FORMAT,
+        occlusionFormat: OCCLUSION_MASK_FORMAT,
+      }),
+  },
+  {
+    key: 'occlusionMaskRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createOcclusionMaskRenderer({ device: deps.ctx.device, targetFormat: OCCLUSION_MASK_FORMAT }),
   },
   {
     key: 'bodyPickRenderer',
@@ -161,6 +164,11 @@ export const GPU_HANDLE_ROWS = [
     key: 'orbitTrailRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    key: 'sampledTrailRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createSampledTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Mesh bodies ride a host's body slab: pipeline formats are the `foreground:0`

@@ -1,4 +1,4 @@
-import type { SeededStarCatalogId } from '../../../../@types/data/starCatalog/SeededStarCatalogId';
+import type { SeededStarCatalogId } from '../../@types/SeededStarCatalogId';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 
 /** Where a seeded star sits in its own seed table: how a star pass finds its bodies among

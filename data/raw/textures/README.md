@@ -92,8 +92,9 @@ URL and attribution string reads it from there.
 ### The other eleven months (cloud bake ice mask)
 
 `npm run fetch-cloud-inputs -- --confirm` also pulls the other eleven 21600×10800 equirects
-(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). The
-cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
+(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). It pulls
+them and the clouds TIFF below from Skymap's R2 mirror (`data/raw/textures/<file>`, see
+`docs/DEPLOY.md`), not NASA, and refuses any file `textures.sha256` does not pin. The cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
 uses only the vintage month above. One table (`tools/utils/io/BMNG_MONTHS.ts`) describes the
 twelve; same NASA media guidelines and credit.
 
@@ -225,12 +226,12 @@ https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev
 
 ## Earth clouds map — NASA Visible Earth Blue Marble cloud composite
 
-Earth's `clouds` map (cloud shell, sRGB colour + luminance-derived alpha → PNG)
-is NASA's **Blue Marble** cloud composite — a white-cloud-on-black equirect with
-**no alpha channel**. `build-textures` derives opacity from luminance (white
-cloud → opaque, black sky → clear) and keeps the RGB as the cloud colour (see
-`writeCloudTier.ts`); it ships segmented as `earth-clouds-<px>.png` at the
-`large` (8k) tier (spec §9.1). sharp reads TIFF natively (the USGS moon sources
+Earth's `clouds` map (cloud shell, one grey channel → lossy WebP) is NASA's
+**Blue Marble** cloud composite — a white-cloud-on-black equirect with **no
+alpha channel**. Its grey is the coverage: `build-textures` writes it as one
+grey channel at quality 80, the daily cloud bake's format (see
+`writeCloudTier.ts`), and ships it as `earth-clouds-grey-<px>.webp` up to the
+`large` (8k) tier. sharp reads TIFF natively (the USGS moon sources
 are already `.tif`). Full-pull only — no dev variant.
 
 The 2048px JPG variant is too small for the 8k ceiling, and the two 21600px

@@ -5,16 +5,15 @@
  * pixel would otherwise abort a long bake at `bakeHeightLevel`'s finiteness assert.
  */
 
+import { WHOLE_GLOBE_BOUNDS } from '../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import type { HeightSource } from './@types/HeightSource';
-
-const WHOLE_GLOBE = [{ west: -180, east: 180, south: -90, north: 90 }] as const;
 
 export function constantHeightSource(valueM: number): HeightSource {
   return {
     id: `constant-${valueM}m`,
     attribution: 'synthetic constant elevation (void fill only, not a real source)',
     maxLevel: Number.POSITIVE_INFINITY,
-    coverage: WHOLE_GLOBE,
+    coverage: [WHOLE_GLOBE_BOUNDS],
     provenance: {
       sourceId: `constant-${valueM}m`,
       attribution: 'synthetic constant elevation (void fill only, not a real source)',

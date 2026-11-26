@@ -45,7 +45,7 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../../src/state/camera/cameraIntentSlice';
 import { setRate, resume } from '../../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { RATE_LADDER } from '../../../../src/data/time/rateLadder';

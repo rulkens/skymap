@@ -42,6 +42,7 @@ function requestsFor(camPosLocalM: Readonly<Vec3>, camera: TileCamera) {
     tilePx: SURFACE_TILE_PX,
     lodBias: 0,
     residentSlot: () => null,
+    isEmpty: () => false,
   }).requests;
 }
 

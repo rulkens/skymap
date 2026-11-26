@@ -8,7 +8,7 @@
 //
 // ## Why no @group/@binding declarations here
 //
-// WESL has no global state — '@group(N) @binding(M) var<uniform> u'
+// WESL has no global state — '@group(N) @binding(M) var<uniform> camera'
 // is module-local and cannot be exported across modules.  The
 // consuming files (halo.wesl, ring.wesl) each redeclare the bindings
 // using the structs imported from this file.  WGSL accepts the same
@@ -29,7 +29,7 @@
 // quadCorner from lib/billboard.wesl maps @builtin(vertex_index) 0..5
 // directly to the four corners (with two diagonal repeats).  We don't
 // need a per-vertex attribute at all — the vertex stage calls
-// quadCorner(vi) inline.  The VsIn struct below carries per-instance
+// quadCorner(vertexIndex) inline.  The VsIn struct below carries per-instance
 // data only; the vertex stage sources its corner offset from the
 // built-in vertex index, not from a vertex buffer attribute.
 
@@ -53,7 +53,7 @@ const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 //   [48..51] pickable            f32        (1 = takes a click, 0 = excluded by the focus)
 //
 // Packing the radius into the trailing slot of the world-position
-// vec4 saves a vertex-attribute slot — same trick as markerLines'
+// vec4 saves a vertex-attribute slot — same trick as debugLines'
 // fromAndWidth.  haloAlpha / ringAlpha ride in the trailing slot of
 // their respective colour vec4s for the same reason.
 //

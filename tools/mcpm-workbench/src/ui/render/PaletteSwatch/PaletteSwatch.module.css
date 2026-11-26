@@ -1,0 +1,7 @@
+/* The outline sits over the ramp, so a near-black end still has an edge on the panel. */
+.root {
+  flex: none;
+  border-radius: var(--radius-sm);
+  outline: 1px solid var(--border-control);
+  outline-offset: -1px;
+}

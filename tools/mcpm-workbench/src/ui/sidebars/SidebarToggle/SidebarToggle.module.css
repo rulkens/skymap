@@ -1,0 +1,64 @@
+/* A tab on the sidebar's edge, in the panel's own surface; where and when it
+   shows is sidebar layout (sidebar.module.css), so this file sets no display. */
+.root {
+  inline-size: var(--space-12);
+  block-size: calc(var(--space-10) * 2);
+  align-content: center;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+}
+
+.root svg {
+  display: block;
+  margin-inline: auto;
+}
+
+@media (hover: hover) {
+  .root:hover {
+    color: var(--color-fg);
+  }
+}
+
+.root:active {
+  background: var(--surface-control-active);
+}
+
+/* Inset: a hidden sidebar leaves the tab on the screen edge, where an outset
+   ring clips. */
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* The side touching the sidebar is open; the far corners round. */
+.tabStart {
+  composes: root;
+  border-inline-start: 0;
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
+}
+
+.tabEnd {
+  composes: root;
+  border-inline-end: 0;
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
+}
+
+/* Where the tab sits and how it rides the slide: on its wrapper, so the tip
+   travels with it. */
+.start {
+  composes: toggleStart from '../sidebar.module.css';
+}
+
+.end {
+  composes: toggleEnd from '../sidebar.module.css';
+}
+
+.column {
+  composes: toggleColumn from '../sidebar.module.css';
+}

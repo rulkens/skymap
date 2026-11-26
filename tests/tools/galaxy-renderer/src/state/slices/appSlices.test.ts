@@ -1,0 +1,76 @@
+/**
+ * compare/extras/ui slices — one-shot view requests, the fit-run lifecycle,
+ * and the app-chrome toggles.
+ */
+import { describe, expect, it } from 'vitest';
+
+import compareReducer, {
+  fitStarted,
+  referenceSelected,
+  viewRequested,
+} from '../../../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
+import uiReducer, {
+  sectionToggled,
+} from '../../../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
+import { DEFAULT_COMPARE_STATE } from '../../../../../../tools/galaxy-renderer/src/data/defaultCompareState';
+import { DEFAULT_UI_STATE } from '../../../../../../tools/galaxy-renderer/src/data/defaultUiState';
+import type { MatchReport } from '../../../../../../tools/galaxy-renderer/@types/matcher/MatchReport';
+
+const SEEDED_REPORT: MatchReport = {
+  armsRef: 4,
+  armsRen: 4,
+  qRef: 0.6,
+  qRen: 0.58,
+  dustRef: 0.3,
+  dustRen: 0.28,
+};
+
+describe('compareSlice', () => {
+  it('referenceSelected sets activeId and clears a seeded report', () => {
+    const seeded = { ...DEFAULT_COMPARE_STATE, report: SEEDED_REPORT };
+    const next = compareReducer(seeded, referenceSelected('m81'));
+
+    expect(next.activeId).toBe('m81');
+    expect(next.report).toBeNull();
+  });
+
+  it('viewRequested bumps the nonce across two dispatches', () => {
+    const pose = { az: 0.6, el: 0.3, dist: 4 };
+
+    const first = compareReducer(DEFAULT_COMPARE_STATE, viewRequested(pose));
+    expect(first.viewIntent).toEqual({ pose, nonce: 1 });
+
+    const second = compareReducer(first, viewRequested(pose));
+    expect(second.viewIntent).toEqual({ pose, nonce: 2 });
+  });
+
+  it('fitStarted resets exactly the documented fit fields', () => {
+    const dirty = {
+      ...DEFAULT_COMPARE_STATE,
+      fitProgress: 0.5,
+      fitScore: 77,
+      fitNote: 'stale',
+      report: SEEDED_REPORT,
+      stopRequested: true,
+    };
+    const next = compareReducer(dirty, fitStarted());
+
+    expect(next.fitting).toBe(true);
+    expect(next.fitProgress).toBe(0.02);
+    expect(next.fitScore).toBeNull();
+    expect(next.fitNote).toBe('reading photo…');
+    expect(next.report).toBeNull();
+    expect(next.stopRequested).toBe(false);
+  });
+});
+
+describe('uiSlice', () => {
+  it('sectionToggled flips exactly one section', () => {
+    const next = uiReducer(DEFAULT_UI_STATE, sectionToggled('dust'));
+
+    // Relative to the defaults, not literal booleans: which sections BOOT
+    // open is a product decision this test has no stake in.
+    expect(next.openSections.dust).toBe(!DEFAULT_UI_STATE.openSections.dust);
+    expect(next.openSections.arms).toBe(DEFAULT_UI_STATE.openSections.arms);
+  });
+});

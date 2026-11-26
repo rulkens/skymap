@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { encodeStarFocusId } from '../../../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
-import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
+import { SCENE_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../../../../src/layers/starCatalog/bodies/sceneSStars';
 
 describe('encodeStarFocusId', () => {
   it('names a seeded star by its seed id, from any seeded table', () => {

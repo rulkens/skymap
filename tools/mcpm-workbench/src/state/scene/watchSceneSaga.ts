@@ -19,15 +19,14 @@ import {
   cancelled,
 } from 'typed-redux-saga';
 
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
 import { initGpu } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import { deriveAgentWeights } from '../../field/deriveAgentWeights';
-import { deriveGridBox } from '../../field/deriveGridBox';
-import { disposeScene, type RenderResources } from '../../render/renderResources';
+import { deriveAgentWeights } from '../../catalog/weights/deriveAgentWeights';
+import { deriveGridBox } from '../../grid/deriveGridBox';
+import { disposeScene } from '../../render/disposeScene';
+import { bufferLimitBytes } from '../../sim/memory/bufferLimitBytes';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
-import { planGridBudget } from '../../sim/planGridBudget';
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
 import {
   catalogLoaded,
@@ -47,9 +46,10 @@ import {
 } from '../grid/gridSlice';
 import { resetHistogram } from '../histogram/histogramSlice';
 import { setAgentCount, setInitMode, setSeed, resetStepCount } from '../sim/simSlice';
-import { deviceLost, setPreviewPacked } from '../view/viewSlice';
+import { setPreviewPacked } from '../view/viewSlice';
 import { acceptBuiltHarness } from './acceptBuiltHarness';
-import { REBUILD_DEBOUNCE_MS } from './REBUILD_DEBOUNCE_MS';
+import { REBUILD_DEBOUNCE_MS } from './rebuildDebounceMs.constant';
+import { watchDeviceLoss } from './watchDeviceLoss';
 
 // Same shape as Viewport's old acquireGpu — the propagate kernel's compute
 // limits, requested here since this is now the one call site.
@@ -73,10 +73,9 @@ const GPU_REQUEST_OPTIONS = {
  * `manualSizeMpc` only at the next `fitBoxToCatalog` click), and clearing
  * `importedBox` is a no-op from any state that already has it null — the one
  * narrow miss (padding edited while a preset IS loaded) is accepted, not
- * covered by the other setters riding this list. `setSeed` IS included (it's
- * outside the brief's own worked example, but `createMcpmHarness` seeds agents
- * from it at construction). `resetRequested` is excluded — Task 7's
- * `harness.reset` reseeds in place, not a rebuild.
+ * covered by the other setters riding this list. `setSeed` IS included:
+ * `createMcpmHarness` seeds agents from it at construction. `resetRequested` is
+ * excluded — `harness.reset` reseeds in place, not a rebuild.
  */
 export const SCENE_REBUILD_TRIGGERS = [
   catalogLoaded,
@@ -91,23 +90,6 @@ export const SCENE_REBUILD_TRIGGERS = [
   setInitMode,
   setSeed,
 ];
-
-/**
- * Watches the device this specific build acquired. Detached (`spawn`, not
- * `fork`): a `fork`ed child is cancelled along with its parent, but this must
- * outlive the worker that started it — the device it watches often keeps
- * rendering for many rebuilds after this call returns. The `resources.gpu`
- * staleness check is the same guard Viewport's old `currentDevice` variable
- * gave: a device abandoned by a later rebuild (never explicitly destroyed,
- * same as before) can still independently be lost, and that must not clobber
- * the CURRENT device's status.
- */
-function* watchDeviceLoss(resources: RenderResources, gpu: GpuContext) {
-  const info = yield* call(() => gpu.device.lost);
-  if (resources.gpu?.device !== gpu.device || info.reason === 'destroyed') return;
-  yield* put(setCatalogStatusMessage(`GPU device lost (${info.reason}) — reload the page`));
-  yield* put(deviceLost());
-}
 
 /** `?probe`-gated boot signal (probeGpuErrors.ts) — was Viewport's own `buildFromPoints`
  * write; moved here since Viewport no longer builds a harness. Set ONLY on a completed
@@ -162,7 +144,7 @@ function* buildScene() {
       return;
     }
 
-    const weights = deriveAgentWeights(points.log10StellarMass, s.catalog.weightMode);
+    const weights = deriveAgentWeights(points.weight, s.catalog.weightMode);
     const box = deriveGridBox(s.grid);
     // The staleness check runs INSIDE this promise's own `.then()` (acceptBuiltHarness),
     // not after the `yield*` below — see the module header for why code placed after
@@ -180,19 +162,16 @@ function* buildScene() {
     );
     if (!harness) return; // stale — superseded while awaiting; already disposed
     resources.harness = harness;
-    resources.weights = weights;
+    resources.built = {
+      points,
+      weights,
+      userFile: s.catalog.pointsUserFile,
+      tier: s.catalog.tier,
+      agentCount: s.sim.agentCount,
+    };
 
-    // h.agents.nDataPoints, not points.count: createMcpmHarness culls out-of-box
-    // catalog points, so the harness's own buffers are already smaller whenever
-    // the box crops the catalog.
-    const budget = planGridBudget(
-      box,
-      harness.agents.nDataPoints + s.sim.agentCount,
-      harness.element,
-      harness.gpu.device.limits,
-    );
-    yield* put(setResolvedGrid({ resolvedElement: harness.element, byteBudget: budget }));
-    yield* put(setMaxBufferBytes(harness.gpu.device.limits.maxStorageBufferBindingSize));
+    yield* put(setResolvedGrid({ resolvedElement: harness.element }));
+    yield* put(setMaxBufferBytes(bufferLimitBytes(harness.gpu.device.limits)));
     yield* put(resetStepCount());
     yield* put(resetHistogram());
 

@@ -36,7 +36,7 @@ channel. They compose by lerp-toward-1, never multiply.**
   (second identical channel = the consolidation trigger). Closed-form ramps
   from the frame clock (`ctx.nowMs` / last-tick default) — deterministic under
   the stepped recorder clock.
-- Producers (`produceStructureMarkers`, `produceStructureLabels`) compose the
+- Producers (`produceStructureMarkers`, and `structureLabelSource`'s `describe`) compose the
   lift over the DIMMING factors only, never the visibility gate:
 
   ```
@@ -96,8 +96,8 @@ timeline, not the channel.
   the wiring precedent; reset sites in `resetState`/`stop`/`destroy`.
 - `src/@types/animation/SceneEffect.ts` — the cue union; `effectHelpers.ts`
   `focus()` for the `FocusId` addressing + resolution pattern.
-- `src/layers/structure/present/produceStructureMarkers.ts` (~line 140)
-  and `produceStructureLabels.ts` (~line 165) — the recession composition the
+- `src/layers/structure/markers/present/produceStructureMarkers.ts`
+  and `structureLabelSource.ts` — the recession composition the
   lerp slots into.
 - First consumer: staggered group highlights in
-  `src/data/animation/tours/grandTour/neighbourhoodReveal.ts` (beat 04).
+  `src/compositions/tours/grandTour/neighbourhoodReveal.ts` (beat 04).

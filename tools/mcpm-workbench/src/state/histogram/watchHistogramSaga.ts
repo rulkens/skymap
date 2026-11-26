@@ -1,5 +1,5 @@
 /**
- * watchHistogramSaga — moves T20's throttled histogram readback off the
+ * watchHistogramSaga — moves the throttled histogram readback off the
  * frame driver. `takeLeading` on `incrementStep` replaces the old
  * `histogramInFlight` flag; the no-harness + modulo bail runs before any
  * GPU work. Unlike `acceptBuiltHarness` (watchSceneSaga), which disposes an
@@ -9,9 +9,9 @@
  */
 import { takeLeading, call, put, select, getContext } from 'typed-redux-saga';
 
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
-import { HISTOGRAM_INTERVAL_STEPS } from './HISTOGRAM_INTERVAL_STEPS';
+import { HISTOGRAM_INTERVAL_STEPS } from './histogramIntervalSteps.constant';
 import { incrementStep } from '../sim/simSlice';
 import { recordHistogramSample } from './histogramSlice';
 

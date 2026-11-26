@@ -92,7 +92,9 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       slab,
       passes: resolvePassNames(spec.passes, passes),
       ...(spec.depth === undefined ? {} : { depth: spec.depth }),
+      ...(spec.mask === undefined ? {} : { mask: spec.mask }),
       ...(spec.slot === undefined ? {} : { slot: spec.slot }),
+      ...(spec.restartPlanner === undefined ? {} : { restartPlanner: spec.restartPlanner }),
     })),
   foreground: (spec, passes, frame) =>
     frame.foregroundChain.flatMap((slab): readonly FrameStep[] =>
@@ -126,7 +128,9 @@ function draws(step: FrameStep): boolean {
  * two independently-authored steps) because folding two depth-CLEARING
  * foreground rows would drop a clear, and folding a `{ sample }` step into a
  * clearing/loading one — or into a `{ sample }` of a DIFFERENT source — would
- * attach a depth the step must not have, or read the wrong row.
+ * attach a depth the step must not have, or read the wrong row. `mask` is in
+ * it for the same reason: the folded roster would read the first step's mask, and
+ * `restartPlanner` because it decides a retained target's load-op.
  */
 function sameGroup(a: FrameStep, b: FrameStep): boolean {
   return (
@@ -136,7 +140,9 @@ function sameGroup(a: FrameStep, b: FrameStep): boolean {
     a.slab === b.slab &&
     a.capture?.key === b.capture?.key &&
     a.capture?.face === b.capture?.face &&
-    depthKeyOf(a.depth) === depthKeyOf(b.depth)
+    depthKeyOf(a.depth) === depthKeyOf(b.depth) &&
+    a.mask?.sample === b.mask?.sample &&
+    a.restartPlanner === b.restartPlanner
   );
 }
 

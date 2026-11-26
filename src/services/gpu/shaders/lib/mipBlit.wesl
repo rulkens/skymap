@@ -26,15 +26,15 @@ struct VSOut {
 @group(0) @binding(1) var srcSamp: sampler;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
   // Standard 'big triangle' trick -- see compositor/vertex.wesl for the
   // why-not-a-quad rationale. Indices 0,1,2 give uv (0,0),(2,0),(0,2): a single
   // triangle covering [0,1]^2 with the off-screen corners safely clipped.
-  let x = f32(((vi << 1u) & 2u));
-  let y = f32(vi & 2u);
+  let cornerU = f32(((vertexIndex << 1u) & 2u));
+  let cornerV = f32(vertexIndex & 2u);
   var out: VSOut;
-  out.clip = vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
-  out.uv = vec2<f32>(x, y);
+  out.clip = vec4<f32>(cornerU * 2.0 - 1.0, 1.0 - cornerV * 2.0, 0.0, 1.0);
+  out.uv = vec2<f32>(cornerU, cornerV);
   return out;
 }
 

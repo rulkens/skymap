@@ -9,7 +9,7 @@
 import { call, race, take, getContext, select } from 'typed-redux-saga';
 
 import { exitTakeover } from '../takeover/takeoverActions';
-import { clipFactories } from '../../data/animation/clips/clipRegistry';
+import { APP_CLIP_FACTORIES } from '../../compositions/appClips';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
@@ -27,7 +27,7 @@ export function* clipBodySaga(id: ClipId): Generator {
   // An instant-dependent clip (`earthFlyout`) opens on the bodies the frozen
   // frame draws; static clips ignore the argument.
   yield* withFrozenClockSaga(function* (frozenSimDays) {
-    const clip = clipFactories[id](frozenSimDays);
+    const clip = APP_CLIP_FACTORIES[id](frozenSimDays);
     yield* race({
       run: call(function* () {
         // `compileClip` throws on an unresolved id-bearing cue, so wait for

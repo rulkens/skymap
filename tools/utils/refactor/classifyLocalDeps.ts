@@ -63,7 +63,7 @@
  */
 
 import { Node } from 'ts-morph';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 export type LocalDepClass = {
   readonly exclusive: readonly string[]; // unexported locals used ONLY by the target (transitively)

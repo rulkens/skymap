@@ -6,31 +6,31 @@
 
 ## Problem
 
-`deriveBodyStates(simDays)` looks like a function of time alone, but its result also depends on `trajectoryRegistry`, a module-level store that `loadSpacecraftTracksSaga` fills after boot. The same `simDays` gives Voyager at Earth before the tracks load and at its real position afterwards.
+`deriveBodyStates(simDays)` looks like a function of time alone, but its result also depends on `trajectoryRegistry`, a module-level store that `loadSampledTracksSaga` fills after boot, once per Layer that lists it with its bodies' ids. The same `simDays` gives Voyager at Earth before the tracks load and at its real position afterwards.
 
 The rest of the design copes with that:
 
 - `trajectoryRegistry.version()` exists so the `deriveBodyStates` memo can notice the store changing.
 - `bodyPositionMpcAt` parks a craft with no track at Earth, so lookups stay total.
-- `spacecraftPresent` keeps a parked craft undrawn and its mesh unrequested.
-- `loadSpacecraftTracksSaga` requests a frame itself, because a paused loop never re-reads the snapshot.
+- `bodyPresent` keeps a parked craft undrawn and its mesh unrequested.
+- `loadSampledTracksSaga` requests a frame itself, because a paused loop never re-reads the snapshot.
 
-The store is also a side door: missions writes straight into core, where every other body hands core its position as data on its `LayerBody` row. `orbit` rows carry elements and `site` rows carry a point on a host. A `sampled` row carries everything except the track, which arrives late.
+The store is also a side door: each Layer's loader writes straight into core, where every other body hands core its position as data on its `LayerBody` row. `orbit` rows carry elements and `site` rows carry a point on a host. A `sampled` row carries everything except the track, which arrives late.
 
 Core has no mission-specific rows here. Tracks are keyed by id, and adding a sampled craft edits no core file.
 
 ## Current state
 
-- **Writer:** `src/layers/missions/trails/sagas/loadSpacecraftTracksSaga.ts`.
-- **Core readers:** `deriveBodyStates`, `bodyPositionMpcAt`, `spacecraftPresent`.
-- **Missions readers:** `missionTrailsPass`, `buildMissionTrails`, `bodyRelativeState`.
+- **Writer:** `src/services/bodies/loadSampledTracksSaga.ts`, run by each Layer that lists it (missions: `loadSampledTracksSaga(MISSION_TRACK_IDS)`).
+- **Core readers:** `deriveBodyStates`, `bodyPositionMpcAt`, `bodyPresent`, `sampledTrailsPass`, `buildSampledTrails`.
+- **Missions readers:** `bodyRelativeState`.
 
 ## Options that only move the knot
 
-- **The Layer's `guides`** (the ledger's first suggestion): the trail drawing is already in missions. What core needs is the craft's position, for the shared snapshot.
+- **The Layer's `guides`** (the ledger's first suggestion): the trail rows already reach core through `guides.sampledTrails`. What core needs is the craft's position, for the shared snapshot.
 - **`track: () => SampledTrack | undefined` on `SampledBody`, with the store in missions:** matches the `orbit` and `site` pattern and closes the side door, but the hidden input stays, now behind a row field.
 - **`loaded()` and `positionMpc()` on `SampledBody`, with the solver in missions:** core stops knowing about tracks, but `sampled` becomes the only kind whose row computes its own position, and the hidden input stays.
-- **`state.engine.missions` facts for "loaded":** `deriveBodyStates` and `spacecraftPresent` have no state in hand.
+- **`state.engine.missions` facts for "loaded":** `deriveBodyStates` and `bodyPresent` have no state in hand.
 
 ## Where a design could start
 

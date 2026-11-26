@@ -1,0 +1,214 @@
+/**
+ * grandTourBeats — the grand-tour beat choreographies wrapped as registry
+ * Clips, so each beat can be played and tuned in isolation from the debug
+ * panel's clip sections without sitting through the whole tour.
+ *
+ * The tour storyboard (`compositions/tours/grandTour.ts`) stays the source of truth: these
+ * wrappers reference the SAME ClipData objects the tour plays, so inspector
+ * tuning always exercises the real beat. One file rather than one-per-clip
+ * because there is nothing here but the id/label envelope — the choreography
+ * lives in `compositions/tours/grandTour/`.
+ *
+ * Caveat for standalone playback: a registry clip runs without
+ * `withSceneSnapshotSaga`, so a beat's scene cues (the opening hide sweep,
+ * focusedOnly flips, the clock) persist after the clip ends — wind them back
+ * via the settings panel or a reload.
+ */
+
+import type { Clip } from '../../@types/animation/Clip';
+import { parkOpening, parkOpeningDwell } from '../tours/grandTour/parkOpening';
+import { youAreHereEarth, youAreHereEarthDwell } from '../tours/grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from '../tours/grandTour/earthAndMoon';
+import { solarSystem, solarSystemDwell } from '../tours/grandTour/solarSystem';
+import {
+  stellarNeighbourhood,
+  stellarNeighbourhoodDwell,
+} from '../tours/grandTour/stellarNeighbourhood';
+import { youAreHere, youAreHereDwell } from '../tours/grandTour/youAreHere';
+import { approachM31 } from '../tours/grandTour/approachM31';
+import { localGroup } from '../tours/grandTour/localGroup';
+import { neighbourhoodReveal } from '../tours/grandTour/neighbourhoodReveal';
+import { neighbourhoodFlythrough } from '../tours/grandTour/neighbourhoodFlythrough';
+import { approachVirgo } from '../tours/grandTour/approachVirgo';
+import { laniakea } from '../tours/grandTour/laniakea';
+import { cosmicWeb, cosmicWebDwell } from '../tours/grandTour/cosmicWeb';
+import { cosmicFlows } from '../tours/grandTour/cosmicFlows';
+import { emptiness } from '../tours/grandTour/emptiness';
+import { deepField } from '../tours/grandTour/deepField';
+import { theEdge } from '../tours/grandTour/theEdge';
+import { homeAgain } from '../tours/grandTour/homeAgain';
+
+export const tourParkOpening: Clip = {
+  id: 'tourParkOpening',
+  label: 'Grand tour 00 — the long way out',
+  dev: true,
+  data: parkOpening,
+};
+
+export const tourParkOpeningDwell: Clip = {
+  id: 'tourParkOpeningDwell',
+  label: 'Grand tour 00 — noon to night',
+  dev: true,
+  data: parkOpeningDwell,
+};
+
+export const tourYouAreHereEarth: Clip = {
+  id: 'tourYouAreHereEarth',
+  label: 'Grand tour 01 — the rise',
+  dev: true,
+  data: youAreHereEarth,
+};
+
+export const tourYouAreHereEarthDwell: Clip = {
+  id: 'tourYouAreHereEarthDwell',
+  label: 'Grand tour 01 — whole-Earth dwell',
+  dev: true,
+  data: youAreHereEarthDwell,
+};
+
+export const tourEarthAndMoon: Clip = {
+  id: 'tourEarthAndMoon',
+  label: 'Grand tour 02 — Earth and Moon',
+  dev: true,
+  data: earthAndMoon,
+};
+
+export const tourEarthAndMoonDwell: Clip = {
+  id: 'tourEarthAndMoonDwell',
+  label: 'Grand tour 02 — the gap dwell',
+  dev: true,
+  data: earthAndMoonDwell,
+};
+
+export const tourSolarSystem: Clip = {
+  id: 'tourSolarSystem',
+  label: 'Grand tour 03 — the Solar System',
+  dev: true,
+  data: solarSystem,
+};
+
+export const tourSolarSystemDwell: Clip = {
+  id: 'tourSolarSystemDwell',
+  label: 'Grand tour 03 — the orbits dwell',
+  dev: true,
+  data: solarSystemDwell,
+};
+
+export const tourStellarNeighbourhood: Clip = {
+  id: 'tourStellarNeighbourhood',
+  label: 'Grand tour 04 — our stellar neighbourhood',
+  dev: true,
+  data: stellarNeighbourhood,
+};
+
+export const tourStellarNeighbourhoodDwell: Clip = {
+  id: 'tourStellarNeighbourhoodDwell',
+  label: 'Grand tour 04 — the near-stars dwell',
+  dev: true,
+  data: stellarNeighbourhoodDwell,
+};
+
+export const tourYouAreHere: Clip = {
+  id: 'tourYouAreHere',
+  label: 'Grand tour 05 — the Milky Way',
+  dev: true,
+  data: youAreHere,
+};
+
+export const tourYouAreHereDwell: Clip = {
+  id: 'tourYouAreHereDwell',
+  label: 'Grand tour 05 — push-in dwell',
+  dev: true,
+  data: youAreHereDwell,
+};
+
+export const tourApproachM31: Clip = {
+  id: 'tourApproachM31',
+  label: 'Grand tour 06 — approach M31',
+  dev: true,
+  data: approachM31,
+};
+
+export const tourLocalGroup: Clip = {
+  id: 'tourLocalGroup',
+  label: 'Grand tour 07 — the local group',
+  dev: true,
+  data: localGroup,
+};
+
+export const tourNeighbourhoodReveal: Clip = {
+  id: 'tourNeighbourhoodReveal',
+  label: 'Grand tour 08 — neighbourhood reveal',
+  dev: true,
+  data: neighbourhoodReveal,
+};
+
+export const tourNeighbourhood: Clip = {
+  id: 'tourNeighbourhood',
+  label: 'Grand tour 09 — neighbourhood flythrough',
+  dev: true,
+  data: neighbourhoodFlythrough,
+};
+
+export const tourApproachVirgo: Clip = {
+  id: 'tourApproachVirgo',
+  label: 'Grand tour 10 — approach Virgo',
+  dev: true,
+  data: approachVirgo,
+};
+
+export const tourLaniakea: Clip = {
+  id: 'tourLaniakea',
+  label: 'Grand tour 11 — Laniakea',
+  dev: true,
+  data: laniakea,
+};
+
+export const tourCosmicWeb: Clip = {
+  id: 'tourCosmicWeb',
+  label: 'Grand tour 12 — cosmic web',
+  dev: true,
+  data: cosmicWeb,
+};
+
+export const tourCosmicWebDwell: Clip = {
+  id: 'tourCosmicWebDwell',
+  label: 'Grand tour 12 — web pull-back dwell',
+  dev: true,
+  data: cosmicWebDwell,
+};
+
+export const tourCosmicFlows: Clip = {
+  id: 'tourCosmicFlows',
+  label: 'Grand tour 13 — cosmic flows',
+  dev: true,
+  data: cosmicFlows,
+};
+
+export const tourEmptiness: Clip = {
+  id: 'tourEmptiness',
+  label: 'Grand tour 14 — the emptiness',
+  dev: true,
+  data: emptiness,
+};
+
+export const tourDeepField: Clip = {
+  id: 'tourDeepField',
+  label: 'Grand tour 15 — deep field',
+  dev: true,
+  data: deepField,
+};
+
+export const tourTheEdge: Clip = {
+  id: 'tourTheEdge',
+  label: 'Grand tour 16 — the edge',
+  dev: true,
+  data: theEdge,
+};
+
+export const tourHomeAgain: Clip = {
+  id: 'tourHomeAgain',
+  label: 'Grand tour 17 — home again',
+  dev: true,
+  data: homeAgain,
+};

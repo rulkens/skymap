@@ -9,6 +9,9 @@ import type { CameraArmCtx } from '../../../../../@types/camera/arms/CameraArmCt
 /** A `CameraArmRow` that also knows how to fold to and from its parent arm, and when to cross. */
 export type ClimbRow<K extends ClimbableKind> = CameraArmRow<K> & {
   readonly parent: ParentOf[K];
+  /** The tag fixes the eye, so a refold into this arm drops the position: a pose produced
+   *  in another frame has left it, which releases it to its parent. */
+  readonly pinsEye: boolean;
   toParent(framed: FramedPose<K>, ctx: CameraArmBasisCtx): FramedPose<ParentOf[K]>;
   fromParent(
     parent: FramedPose<ParentOf[K]>,

@@ -40,6 +40,10 @@ describe('hermiteTrackAt', () => {
     expect(hermiteTrackAt(track, T0 + 400)).toEqual([...cubic(12)]);
   });
 
+  it('holds the first sample before the track starts', () => {
+    expect(hermiteTrackAt(track, T0 - 400)).toEqual([...cubic(0)]);
+  });
+
   it('Voyager 1 at Titan closest approach is within 1 km of Horizons', () => {
     const { track: slice, horizons } = FLYBY;
     const t: SampledTrack = {

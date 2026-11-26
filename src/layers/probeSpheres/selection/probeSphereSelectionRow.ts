@@ -12,6 +12,7 @@ import { PROBE_SPHERE_ROSTER } from '../spheres/data/probeSphereRoster';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { ProbeSphereRef } from './@types/ProbeSphereRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const isProbeSphereId = (id: string): id is SceneBodyId =>
   isSceneBodyId(id) && PROBE_SPHERE_ROSTER.has(id);
@@ -34,7 +35,7 @@ export function probeSphereSelectionRow(): SelectionKindRow<ProbeSphereRef> {
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

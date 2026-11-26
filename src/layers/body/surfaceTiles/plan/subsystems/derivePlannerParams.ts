@@ -11,6 +11,9 @@ import type { SurfaceTileManifest } from '../../format/@types/SurfaceTileManifes
 import type { SurfaceTileBand } from '../../format/@types/SurfaceTileBand';
 import type { SurfaceTileManifestBand } from '../../format/@types/SurfaceTileManifestBand';
 import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
+import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
+import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
+import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { surfaceTileBandFromBounds } from '../../format/utils/surfaceTileBandFromBounds';
 import { SURFACE_TILE_LOD_BIAS, SURFACE_TILE_PX } from '../../format/data/surfaceTileParams';
 
@@ -38,24 +41,32 @@ export function derivePlannerParams(
     }
     return kept;
   };
-  // Albedo and height need BOTH baked: height inherits from the deepest
-  // resident ancestor (R14), but a band missing its own height coverage would
-  // still 404 every height request in its range — wasted fetches that never land.
-  const bands = bandsWhere(
-    (band) => band?.builtFrom?.albedo !== undefined && band?.builtFrom?.height !== undefined,
+  // Gating products need ALL baked: height inherits from the deepest resident
+  // ancestor (R14), but a band missing its own height coverage would still 404
+  // every height request in its range — wasted fetches that never land.
+  const bands = bandsWhere((band) =>
+    SURFACE_TILE_PRODUCTS.every(
+      (product) =>
+        SURFACE_TILE_LANE_SPECS[product].role !== 'gates-cut' ||
+        band?.builtFrom?.[product] !== undefined,
+    ),
   );
   if (bands.length === 0) return null;
+  // A standalone product gates nothing (a leaf with no night tile still draws, the
+  // global night texture shows through), so only its own bake limits its requests.
+  const requestBands = Object.fromEntries(
+    SURFACE_TILE_PRODUCTS.map((product) => [
+      product,
+      SURFACE_TILE_LANE_SPECS[product].role === 'gates-cut'
+        ? bands
+        : bandsWhere((band) => band?.builtFrom?.[product] !== undefined),
+    ]),
+  ) as Record<SurfaceTileProduct, SurfaceTileBand[]>;
   return {
     tilePx,
     baseLevel,
     bands,
-    // Night stands alone: a leaf with no night tile still draws (the global
-    // night texture shows through), so nothing else gates its requests.
-    requestBands: {
-      albedo: bands,
-      height: bands,
-      night: bandsWhere((band) => band?.builtFrom?.night !== undefined),
-    },
+    requestBands,
     lodBias: SURFACE_TILE_LOD_BIAS,
   };
 }

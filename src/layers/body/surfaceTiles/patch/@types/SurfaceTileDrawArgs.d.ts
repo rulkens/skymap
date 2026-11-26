@@ -1,5 +1,6 @@
 import type { SurfaceCutTile } from '../../plan/@types/SurfaceCutTile';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
 import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileShading } from '../../format/@types/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
@@ -37,10 +38,9 @@ export type SurfaceTileDrawArgs = {
   readonly noDisplacement: boolean;
   /** `terrain-no-skirts` debug toggle: the skirt ring collapses to zero depth. */
   readonly noSkirts: boolean;
-  /** The surfaceTileStream's atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
-  readonly surfaceAtlasView: GPUTextureView;
-  /** The surfaceTileStream's Terrain-RGB (`rgba8unorm`) HEIGHT atlas, read with
-   *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
-   *  reads it, so a cut must never be drawn without it. Not owned here. */
-  readonly heightAtlasView: GPUTextureView;
+  /** Each product's atlas view, bound at its lane row's `binding`: albedo's resident patches
+   *  sampled at each tile's resolved rect, height's Terrain-RGB codes `textureLoad`ed at the
+   *  patch's own slot (every vertex position reads it, so a cut is never drawn without it),
+   *  night's tile rects or its stand-in when no night lane exists. Not owned here. */
+  readonly atlasViews: Readonly<Record<SurfaceTileProduct, GPUTextureView>>;
 };

@@ -104,6 +104,16 @@ const VOYAGER_CARD: PaletteCard = {
   action: { kind: 'exhibit', exhibitId: 'voyager-missions' },
 };
 
+// The exhibit opens on today's date while its timeline runs; the capture pins the capture's end,
+// where the whole loop is drawn.
+const QQ8_CARD: PaletteCard = {
+  id: 'qq8Flyby',
+  label: 'The flyby of 2026 QQ8',
+  blurb: "A small asteroid held by Earth's gravity from April to December 2026.",
+  action: { kind: 'exhibit', exhibitId: 'qq8Flyby' },
+  capture: { t: '2026-12-07T00:00:00Z' },
+};
+
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
     id: 'highlights',
@@ -162,6 +172,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         capture: VOYAGER1_CAPTURE,
       },
       VOYAGER_CARD,
+      QQ8_CARD,
       {
         id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
@@ -343,6 +354,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'body-enceladus' },
         capture: WANING_GIBBOUS,
       },
+      QQ8_CARD,
     ],
   },
   {

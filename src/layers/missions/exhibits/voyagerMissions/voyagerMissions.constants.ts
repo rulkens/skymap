@@ -13,7 +13,7 @@ const STARFIELD_BRIGHTNESS = 0.3;
  * Looking along the cross product of the two craft's outbound headings (2026), so both
  * trails lie across the view and the fork reads as a split rather than foreshortened.
  * Derived through `orbitAnglesLookingAlong`; pitch is lifted from the exact 6° to 15°.
- * The mission camera's cruise view takes this bearing.
+ * The timeline camera's cruise view takes this bearing.
  */
 const YAW = -1.9305;
 const PITCH = 0.26;

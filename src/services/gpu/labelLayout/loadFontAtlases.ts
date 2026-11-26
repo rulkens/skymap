@@ -10,8 +10,8 @@
  *
  *   - `<FONT_BASE>/<id>.json` — the BMFont metric JSON emitted by
  *     `tools/buildFontAtlas.ts`.  Parsed by `parseFontMetrics` into
- *     the O(1)-lookup `FontMetrics` shape the renderer's `setLabels`
- *     call uses for per-glyph UV / size / offset / advance reads.
+ *     the O(1)-lookup `FontMetrics` shape the label encoder
+ *     uses for per-glyph UV / size / offset / advance reads.
  *
  *   - `<FONT_BASE>/<id>.webp` — the pre-baked ATLAS_PX² MSDF texture
  *     (lossless WebP; lossy would corrupt the per-channel distance

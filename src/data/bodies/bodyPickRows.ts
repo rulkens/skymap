@@ -6,7 +6,7 @@
  * `MISSION_CRAFT_IDS`).
  */
 
-import { SCENE_EARTH } from './sceneEarth';
+import { SCENE_EARTH_BODIES } from './sceneEarthBodies';
 import { SCENE_PLANETS } from './scenePlanets';
 import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
@@ -14,7 +14,7 @@ import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 export const BODY_PICK_ROWS: Readonly<
   Record<BodySourceId, readonly { readonly id: SceneBodyId }[]>
 > = {
-  earth: [SCENE_EARTH],
+  earth: SCENE_EARTH_BODIES,
   planet: SCENE_PLANETS,
   // The one body source with no table of its own: its bodies live in SCENE_PLANETS and pick
   // as `planet`; the row carries the checkbox.

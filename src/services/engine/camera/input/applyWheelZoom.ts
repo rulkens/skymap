@@ -1,6 +1,6 @@
 /**
  * applyWheelZoom — the at-rest wheel notch as a pose to commit, for the case
- * where `camera.base` IS what the frame renders; a notch a following camera
+ * where `camera.intent.base` IS what the frame renders; a notch a following camera
  * swallows goes to that driver instead. The spin epoch restarts on any base
  * change, so committing an un-spun base pops the yaw — zoom the spun pose.
  */

@@ -1,0 +1,149 @@
+/**
+ * LABEL_STYLES — every label style, one row each; a record carries its row's index in
+ * `LABEL_STYLE_IDS` and the shader reads the same table. Structure `appear` bands are the ring's
+ * `markerMin*` thresholds doubled (rows read diameters, rings radii); a test ties the two. Every px is a CSS px (times `pxScale`).
+ * Priorities are bands: rank = priority × CAPTION_PRIORITY_SCALE + apparent diameter.
+ */
+
+import type { LabelStyleId } from '../../@types/rendering/LabelStyleId';
+import type { LabelStyleRow } from '../../@types/rendering/LabelStyleRow';
+import { hexToGl } from '../../utils/color/hexToGl';
+
+const OUTLINE = { color: hexToGl('#0000001A'), emFrac: 0.16 };
+const TEXT = { font: 'cormorant', outline: OUTLINE } as const;
+const CLUSTER_APPEAR = { fromPx: 5, bandPx: 4 };
+const VOLUME_APPEAR = { fromPx: 28, bandPx: 20 };
+// A Milky Way structure's label sits on its ring's drawn top (ring radius × MARKER_RADIUS_RETUNE),
+// at least 4 px up.
+const ABOVE_RING = { placement: 'above', lift: { radii: 0.57735, minPx: 4 } } as const;
+const CAPTION_LIFT = { radii: 3, minPx: 14 };
+
+export const LABEL_STYLES = {
+  galaxyCluster: {
+    ...TEXT,
+    color: hexToGl('#FFD966'),
+    textHeight: { mpc: 1.25 },
+    appear: CLUSTER_APPEAR,
+    placement: 'centre',
+    priority: 0,
+  },
+  supercluster: {
+    ...TEXT,
+    color: hexToGl('#FFB86B'),
+    textHeight: { mpc: 5 },
+    appear: VOLUME_APPEAR,
+    placement: 'centre',
+    priority: 0,
+  },
+  void: {
+    ...TEXT,
+    color: hexToGl('#99D9F2'),
+    textHeight: { mpc: 2.5 },
+    appear: VOLUME_APPEAR,
+    placement: 'centre',
+    priority: 0,
+  },
+  galaxyGroup: {
+    ...TEXT,
+    color: hexToGl('#C2B488C8'),
+    textHeight: { mpc: 0.3 },
+    appear: { fromPx: 44, bandPx: 24 },
+    placement: 'centre',
+    priority: 0,
+  },
+  openCluster: {
+    ...TEXT,
+    ...ABOVE_RING,
+    color: hexToGl('#A3B3D1'),
+    textHeight: { mpc: 2e-6 },
+    appear: CLUSTER_APPEAR,
+    priority: 0,
+  },
+  globularCluster: {
+    ...TEXT,
+    ...ABOVE_RING,
+    color: hexToGl('#C9A8FF'),
+    textHeight: { mpc: 8e-6 },
+    appear: CLUSTER_APPEAR,
+    priority: 0,
+  },
+  nebula: {
+    ...TEXT,
+    ...ABOVE_RING,
+    color: hexToGl('#FF8FA3'),
+    textHeight: { mpc: 2e-6 },
+    appear: CLUSTER_APPEAR,
+    priority: 0,
+  },
+  gcCluster: {
+    ...TEXT,
+    ...ABOVE_RING,
+    color: hexToGl('#E8E8F0'),
+    textHeight: { mpc: 2e-6 },
+    appear: CLUSTER_APPEAR,
+    priority: 0,
+  },
+  famousGalaxy: {
+    ...TEXT,
+    color: hexToGl('#FFF2CC'),
+    // M31's em (0.0125 Mpc) over its 20 kpc radius.
+    textHeight: { timesRadius: 0.625 },
+    appear: { fromPx: 3, bandPx: 2 },
+    placement: 'above',
+    lift: CAPTION_LIFT,
+    leader: { from: 'centre', gapPx: 0, widthPx: 1.25, color: hexToGl('#E6D9B3') },
+    priority: 0,
+  },
+  milkyWay: {
+    ...TEXT,
+    color: hexToGl('#FFFFFF'),
+    textHeight: { mpc: 0.0125 },
+    placement: 'above',
+    lift: CAPTION_LIFT,
+    leader: { from: 'centre', gapPx: 0, widthPx: 1.5, color: hexToGl('#FFFFFF') },
+    // Above every other band: the orientation anchor always wins.
+    priority: 1000,
+  },
+  stellarStream: {
+    ...TEXT,
+    // Each stream passes its own tint; this row's alpha is the one they all use.
+    color: hexToGl('#FFFFFFD9'),
+    textHeight: { mpc: 5e-4 },
+    // Diameter here is the stream's length.
+    appear: { fromPx: 75, bandPx: 25 },
+    placement: 'centre',
+    priority: 0,
+  },
+  caption: {
+    ...TEXT,
+    color: hexToGl('#FFFFFF'),
+    textHeight: { timesRadius: 1 },
+    placement: 'above',
+    lift: CAPTION_LIFT,
+    leader: { from: 'rim', gapPx: 2, widthPx: 1.25 },
+    priority: 10,
+  },
+  constellation: {
+    ...TEXT,
+    color: hexToGl('#B3CCEBD6'),
+    // A sky figure has no depth of its own: always the minimum size, so every name matches.
+    textHeight: { mpc: 0 },
+    placement: 'centre',
+    priority: 5,
+  },
+  lightTime: {
+    ...TEXT,
+    color: hexToGl('#BFDBFF'),
+    // No em of its own: always the minimum size.
+    textHeight: { mpc: 0 },
+    // The sphere's recede window (camera distance 12 → 40 sphere radii) as apparent diameter at
+    // the default 60° lens on a 900 CSS px tall canvas: 2 × 779 px / 40 = 39, / 12 = 130.
+    appear: { fromPx: 39, bandPx: 91 },
+    placement: 'above',
+    lift: { radii: 1, minPx: 0 },
+    priority: 12,
+  },
+} as const satisfies Readonly<Record<string, LabelStyleRow>>;
+
+/** The order a record's `style` word indexes. */
+export const LABEL_STYLE_IDS = Object.keys(LABEL_STYLES) as readonly LabelStyleId[];

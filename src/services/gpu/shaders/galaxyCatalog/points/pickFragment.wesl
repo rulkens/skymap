@@ -16,7 +16,7 @@
 //
 // ## Why this fragment is a plain dot
 //
-// The point pick is clamped to 'u.pointSizePx' (the dot floor) in the
+// The point pick is clamped to 'uniforms.pointSizePx' (the dot floor) in the
 // vertex stage — the procedural-disk pass now owns resolved-galaxy
 // picking at the disk edge, so inflating the billboard to the apparent-
 // size circle would create a large invisible click area on top of the

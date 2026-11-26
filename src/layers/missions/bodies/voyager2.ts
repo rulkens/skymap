@@ -1,11 +1,9 @@
 /**
- * Voyager 2: the one source of its launch instant, read for both `presentFromIso`
- * and the sampled position.
+ * Voyager 2, on its sampled track from the launch pad.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
-import { VOYAGER_2_GREEN } from '../../../data/bodies/palette';
 import { CAPE_CANAVERAL_LC41 } from '../craft/data/capeCanaveralLc41';
 import { launchIsoOf } from '../events/utils/launchIsoOf';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
@@ -18,15 +16,12 @@ export const VOYAGER_2: LayerBody = {
     label: 'Voyager 2',
     meshKey: 'voyager',
     standoffRadii: 0.5,
-    presentFromIso: LAUNCH,
   }),
   position: {
     kind: 'sampled',
     sampled: {
       id: asSceneBodyId('voyager2'),
-      trailColor: VOYAGER_2_GREEN,
-      launchIso: LAUNCH,
-      launchPad: CAPE_CANAVERAL_LC41,
+      launch: { iso: LAUNCH, pad: CAPE_CANAVERAL_LC41 },
     },
   },
   rotation: { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },

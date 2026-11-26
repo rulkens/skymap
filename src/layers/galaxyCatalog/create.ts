@@ -10,7 +10,7 @@ import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from './records/@types/GalaxyRecordSource';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
-import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogReq } from './@types/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
@@ -30,6 +30,7 @@ import { wireGalaxyCatalogSourceSlot } from './records/load/wireGalaxyCatalogSou
 import { createFamousGalaxiesMetaSlot } from './famousGalaxies/load/famousGalaxiesMetaSlot';
 import { createPgcAliasSlot } from './aliases/load/pgcAliasSlot';
 import { wireHiResFamousSlot } from './disks/load/wireHiResFamousSlot';
+import { galaxySourceCanLoad } from './records/load/galaxySourceCanLoad';
 import { galaxyRecordBridge } from './selection/present/galaxyRecordBridge';
 import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
 
@@ -113,7 +114,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   return {
     catalogs,
     records,
-    recordBridge: galaxyRecordBridge(records),
+    recordBridge: galaxyRecordBridge(records, (id) =>
+      galaxySourceCanLoad(id, deps.tier(), deps.settings()),
+    ),
     pickCodes,
     get famousMeta() {
       return famousMeta;

@@ -24,8 +24,8 @@ describe('loadRefactorProject', () => {
     expect(paths.has(resolve('src/layers/galaxyCatalog/records/data/galaxyCatalogFormat.ts'))).toBe(
       true,
     );
-    expect(paths.has(resolve('tests/tools/utils/refactor/applyMoves.test.ts'))).toBe(true);
-    expect(paths.has(resolve('tools/utils/refactor/applyMoves.ts'))).toBe(true);
+    expect(paths.has(resolve('tests/tools/utils/refactor/planInline.test.ts'))).toBe(true);
+    expect(paths.has(resolve('tools/utils/refactor/planInline.ts'))).toBe(true);
     // A package's own tests/, scripts/ and .cts files: a move must rewrite them too.
     expect(paths.has(resolve('packages/desktop/tests/electronBuilderConfig.test.ts'))).toBe(true);
     expect(paths.has(resolve('packages/desktop/scripts/buildBrandAssets.ts'))).toBe(true);

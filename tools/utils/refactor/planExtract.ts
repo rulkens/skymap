@@ -61,7 +61,7 @@ import { classifyLocalDeps } from './classifyLocalDeps';
 import { ensureNamedImport } from './ensureNamedImport';
 import { removeImportKeepingTrivia } from './removeImportKeepingTrivia';
 import { retargetNamedImport } from './retargetNamedImport';
-import type { ResolvedSymbol } from './resolveSymbol';
+import type { ResolvedSymbol } from '../../@types/refactor/ResolvedSymbol';
 
 // One binding a source import brings in, paired with the two facts the move needs:
 // does the cohort use it (→ carry into dest), does anything else use it (→ keep in

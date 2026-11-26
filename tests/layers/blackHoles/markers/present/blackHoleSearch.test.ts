@@ -19,7 +19,10 @@ describe('blackHoleSearch', () => {
 
     const focusId = blackHoleSelectionRow(blackHolePickCode()).focusId!;
     expect(focusId.claims(row!.id)).toBe(true);
-    expect(focusId.decode(row!.id)).toEqual({ type: 'blackHole', id: 'sgr-a-star' });
+    expect(focusId.decode(row!.id)).toEqual({
+      kind: 'hit',
+      ref: { type: 'blackHole', id: 'sgr-a-star' },
+    });
     expect(row!.names).toEqual(expect.arrayContaining(['Sgr A*', 'Galactic Center']));
   });
 });

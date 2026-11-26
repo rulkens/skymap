@@ -1,0 +1,9 @@
+.root {
+  composes: row from '../../panel/panelGrid.module.css';
+  row-gap: var(--space-4);
+}
+
+.plot {
+  grid-column: label-start / control-end;
+  min-width: 0;
+}

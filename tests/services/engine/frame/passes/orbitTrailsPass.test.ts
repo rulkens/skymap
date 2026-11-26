@@ -11,14 +11,14 @@
  * `state.orbitTrailGroups`.
  */
 
-import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogs';
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
 
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
-import { gateOrbitTrailGroup } from '../../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { gateTrailGroup } from '../../../../../src/services/engine/layer/gateTrailGroup';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -41,7 +41,7 @@ import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orb
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
+import { SCENE_SUN } from '../../../../../src/layers/starCatalog/bodies/sceneSun';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
@@ -302,9 +302,7 @@ describe('orbitTrailsPass.enabled', () => {
       visibilityEntries: APP_VISIBILITY_REGISTRY,
       subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
     } as unknown as EngineState;
-    const groups = [
-      gateOrbitTrailGroup({ show: 'orbitTrails', rows: BODY_TRAIL_ELEMENTS }, gateState),
-    ];
+    const groups = [gateTrailGroup({ show: 'orbitTrails', rows: BODY_TRAIL_ELEMENTS }, gateState)];
     const state = makeState(makeRendererSpy(), { groups });
     const atEye = (distance: number): FrameView =>
       ({ ...makeCtx(distance), drawCamPos: [0, 0, distance] }) as unknown as FrameView;
@@ -838,7 +836,9 @@ describe('orbitTrailsPass.draw', () => {
         nowMs: 0,
         meshBodies: [],
         sceneBodies: sceneBodiesAt(CONST_J2000),
+        renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
       },
+      bodyPose: () => null,
       drawCamPos: [1, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },

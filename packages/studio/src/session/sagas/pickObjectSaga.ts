@@ -10,6 +10,7 @@ import { PICK_TIMEOUT_MS } from '../data/studioLimits';
 import { selectPreview } from '../state/selectors';
 import { focusPosition } from '../utils/focusPosition';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
+import { refOfResolution } from '../../../../../src/utils/selection/refOfResolution';
 import type { SagaContext } from '../../../../../src/store/types';
 
 function* resolvePickSaga(
@@ -23,7 +24,7 @@ function* resolvePickSaga(
       ? null
       : stores === 'position'
         ? focusPosition(selection, focusId, preview.simDays)
-        : selection.resolveFocusId(focusId);
+        : refOfResolution(selection.resolveFocusId(focusId));
   const { late } = yield* race({
     found: call(waitUntilSaga, () => value() !== null),
     late: delay(PICK_TIMEOUT_MS),

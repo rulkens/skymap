@@ -32,12 +32,12 @@ export function structurePickCodes(pickCode = testPickCode('structure')) {
   );
 }
 
-/** The structure selection row's reads over a store fixture, plus the Layer's pick codes. */
+/** The structure selection row's reads over a store fixture, plus the Layer's pick codes; the bulk is uncommitted. */
 export function structureRowRuntime(
   store: Pick<StructureStore, 'byId' | 'byCategory'>,
   pickCode = testPickCode('structure'),
 ) {
-  return { store, pickCodes: structurePickCodes(pickCode) };
+  return { store, slot: { committed: () => null }, pickCodes: structurePickCodes(pickCode) };
 }
 
 /** The single-row Layers' pick codes, as their `create` asks for them. */
@@ -58,7 +58,7 @@ export function galaxyRowRuntime(
   const records = galaxyRecordsOver(galaxies.catalogs);
   return {
     records,
-    recordBridge: galaxyRecordBridge(records),
+    recordBridge: galaxyRecordBridge(records, () => true),
     pickCodes: catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, pickCode),
   };
 }

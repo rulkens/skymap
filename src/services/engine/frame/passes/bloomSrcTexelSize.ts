@@ -1,6 +1,6 @@
 /**
- * bloomSrcTexelSize — the ONE derivation of a bloom fold's source texel size,
- * shared by the downsample and upsample passes of the pyramid.
+ * bloomSrcTexelSize — the ONE derivation of a bloom pass's source texel size,
+ * shared by the downsample, upsample, streak and veil passes.
  *
  * Tap offsets must be measured in the SOURCE level's texels: `1 / source-
  * pixel-size` per axis, read off the size the source texture ACTUALLY has

@@ -61,6 +61,7 @@ import { initialState as earthInitialState } from '../../../src/layers/body/stat
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
+import { timelineInitialState } from '../../../src/state/settings/core/timelineSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as lightTimeInitialState } from '../../../src/layers/lightTime/state/lightTime/initialState';
@@ -74,10 +75,14 @@ import { initialState as localBubbleInitialState } from '../../../src/layers/loc
 import { initialState as stellarStreamsInitialState } from '../../../src/layers/stellarStreams/state/stellarStreams/initialState';
 import { initialState as probeSpheresInitialState } from '../../../src/layers/probeSpheres/state/probeSpheres/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
+import { initialState as satelliteTuningInitialState } from '../../../src/layers/satellites/state/satelliteTuning/initialState';
+import { initialState as asteroidsInitialState } from '../../../src/layers/asteroids/state/asteroids/initialState';
+import { initialState as asteroidTuningInitialState } from '../../../src/layers/asteroids/state/asteroidTuning/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
+import { DEFAULT_FILM } from '../../../src/data/film/filmDefaults';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
@@ -117,6 +122,7 @@ export function makeSettingsFixture(
       strength: DEFAULT_BLOOM_STRENGTH,
       threshold: DEFAULT_BLOOM_THRESHOLD,
     },
+    film: DEFAULT_FILM,
     bias: { ...biasInitialState },
     thumbnails: { ...thumbnailsInitialState },
     milkyWay: { ...milkyWayInitialState },
@@ -129,6 +135,9 @@ export function makeSettingsFixture(
     localBubble: { ...localBubbleInitialState },
     probeSpheres: { ...probeSpheresInitialState },
     satellites: { ...satellitesInitialState },
+    satelliteTuning: { ...satelliteTuningInitialState },
+    asteroids: { ...asteroidsInitialState, items: { ...asteroidsInitialState.items } },
+    asteroidTuning: { ...asteroidTuningInitialState },
     stellarStreams: {
       ...stellarStreamsInitialState,
       streak: { ...stellarStreamsInitialState.streak },
@@ -157,6 +166,7 @@ export function makeSettingsFixture(
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
     picking: { ...pickingInitialState },
+    timeline: { ...timelineInitialState },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
         DebugOverlayKey,

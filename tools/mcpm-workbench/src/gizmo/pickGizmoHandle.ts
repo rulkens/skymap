@@ -1,10 +1,10 @@
-import type { GizmoHandleGeometry } from '../../@types/GizmoHandleGeometry';
-import type { GizmoHandleId } from '../../@types/GizmoHandleId';
-import type { RingHandle } from '../../@types/RingHandle';
-import type { Ray } from '../../@types/Ray';
+import type { GizmoHandleGeometry } from '../../@types/gizmo/GizmoHandleGeometry';
+import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
+import type { RingHandle } from '../../@types/gizmo/RingHandle';
+import type { Ray } from '../../@types/gizmo/Ray';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { closestPointOnRayToLine } from './closestPointOnRayToLine';
-import { PICK_TOLERANCE_FRACTION } from './gizmoHandleGeometry';
+import { PICK_TOLERANCE_FRACTION } from './pickToleranceFraction.constant';
 import { rayPlaneIntersect } from './rayPlaneIntersect';
 
 /** Perpendicular distance from `point` to the ray, clamped to the ray's `t ≥ 0` half — a point
@@ -54,7 +54,7 @@ function distanceToRing(ray: Ray, ring: RingHandle): number {
 
 /** Per-axis half-extent recovered from the resize handles' own distance from the rotate ring's
  *  shared center, rather than threading GridBox through `pickGizmoHandle` too — `geometry` already
- *  carries everything the tolerance formula (spec §5) needs. */
+ *  carries everything the tolerance formula needs. */
 function halfExtentsFromGeometry(geometry: GizmoHandleGeometry): Vec3 {
   const center = geometry.rotate[0].centerMpc;
   const half: Vec3 = [0, 0, 0];

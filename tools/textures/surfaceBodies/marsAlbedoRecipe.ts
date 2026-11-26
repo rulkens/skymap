@@ -11,8 +11,7 @@ import type { AlbedoDelight } from '../@types/AlbedoDelight';
 
 export const MARS_VIKING_DELIGHT: AlbedoDelight = {
   reliefShade: 0.36,
-  photoSunAzDeg: 64,
-  photoSunElDeg: 28,
+  photoSun: { kind: 'fixed', azDeg: 64, elDeg: 28 },
   reliefExaggeration: 6,
   flatten: 0.6,
   flattenRadiusDeg: 1.2,

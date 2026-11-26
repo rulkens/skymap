@@ -6,28 +6,25 @@
 import { takeLatest, select, put, getContext } from 'typed-redux-saga';
 
 import { flyToLonLat } from './flyToLonLatActions';
-import { startCameraTween } from './cameraSlice';
+import { startCameraTween } from './cameraIntentSlice';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { selectFocusRef } from '../selection/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { lonLatFocusPose } from '../../utils/camera/arms/lonLatFocusPose';
 import { bodyFixedEyeM } from '../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { eyeFrameOf } from '../../utils/camera/surfaceFrame/eyeFrameOf';
-import { eyeMpcOf } from '../../utils/camera/orbitPose/eyeMpcOf';
-import { centreLookingArm } from '../../utils/camera/arms/centreLookingArm';
 import { bodyRowAt } from '../../utils/scene/bodyRowAt';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
-import { toBodyArm, toWorldArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
+import { toBodyArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
+import { overLonLatPose } from '../../services/engine/camera/framing/overLonLatPose';
 import { arrivalFraming } from '../../services/engine/camera/framing/arrivalFraming';
 import { hostOf } from '../../services/engine/camera/arms/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { BODY_FOCUS } from '../../data/selection/bodyFocus';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { SagaContext } from '../../store/types';
@@ -37,8 +34,7 @@ import type { BodyRef } from '../../@types/engine/selection/BodyRef';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
-    const { lonDeg, latDeg, altKm, headingRad } = action.payload;
-    const body = action.payload.body ?? SCENE_EARTH.id;
+    const { lonDeg, latDeg, body, altKm, headingRad } = action.payload;
     if (!isSceneBodyId(body)) return;
     const durationMs = action.payload.durationMs ?? FLY_TO_LON_LAT_TWEEN_MS;
 
@@ -79,32 +75,14 @@ export function* watchFlyToLonLatSaga() {
     const heading =
       headingRad ?? (sameBody ? (eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0) : 0);
 
-    // Nadir-looking, so `toWorldArm`'s view axis already passes through the
-    // centre: only the target (surface point → centre) and distance change, and
-    // the roll carrying the heading survives the re-aim untouched.
-    const surface = lonLatFocusPose({ lonDeg, latDeg }, body, host.radiusM, rangeM, heading);
-    const world = toWorldArm(
-      surface,
-      host.state,
-      basis,
-      basis,
-      host.radiusM,
-      host.standoffRadii,
-      host.groundRadiusAtM,
-    );
-    const to = centreLookingArm(
-      eyeMpcOf(world, basis),
-      host.state.positionMpc,
-      basis,
-      world.roll ?? 0,
-    );
+    const to = overLonLatPose({ lonDeg, latDeg }, host, rangeM, heading, basis);
 
     const bodyRef: BodyRef = { type: 'body', id: body };
     if (!sameBody) yield* put(updateSelectionFocus(bodyRef));
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: to.pose,
+        to,
         motion: { style: 'eased', durationMs, ease: EASED_FOCUS_EASE },
         frame,
       }),

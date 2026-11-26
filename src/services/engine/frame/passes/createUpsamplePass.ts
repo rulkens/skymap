@@ -21,7 +21,7 @@ export function createUpsamplePass<K extends ShowKey = ShowKey>(
     draw(pass, _view, ctx, state) {
       const handle = row.handleOf(state);
       if (handle !== null) {
-        handle.draw(pass, ctx.snapshot.renderTargets.viewOf(row.sourceTargetId));
+        handle.draw(pass, ctx.snapshot.renderTargets.viewOf(row.sourceTargetId, ctx.id));
       }
     },
   } as ContentPass as ContentPass<K>;

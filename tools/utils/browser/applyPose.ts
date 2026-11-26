@@ -4,7 +4,7 @@ import {
   cancelCameraTween,
   commitCameraPose,
   setAutoRotate,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import { dispatchActions } from './dispatchActions';

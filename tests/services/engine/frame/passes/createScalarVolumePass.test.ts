@@ -62,6 +62,7 @@ function makeRow(
     targetId: 'test-target',
     renderer: makeRenderer(vi.fn()),
     liveness: () => null,
+    inputs: () => ({ jitterIndex: 0, steps: 128, weight: 1 }),
     ...overrides,
   };
 }

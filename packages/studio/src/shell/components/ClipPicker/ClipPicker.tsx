@@ -1,5 +1,5 @@
 import { CLIP_OPTIONS } from './ClipPicker.constants';
-import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
+import { APP_CLIP_REGISTRY } from '../../../../../../src/compositions/appClips';
 import { openStudio } from '../../../../../../src/state/studio/studioActions';
 import { useAppDispatch } from '../../../../../../src/store/hooks';
 import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
@@ -16,7 +16,7 @@ function ClipPicker({ clipId }: Props) {
   const dispatch = useAppDispatch();
   return (
     <span className={s.root}>
-      <span className={s.name}>{clipRegistry[clipId].label}</span>
+      <span className={s.name}>{APP_CLIP_REGISTRY[clipId].label}</span>
       <span className={s.caret} aria-hidden>
         ▾
       </span>

@@ -39,7 +39,7 @@ const files = [
 ];
 expect(files.length).toBeGreaterThan(0);
 
-/** A top-level `type`/`interface` not exempted as a `.tsx` file's own `*Props`. */
+/** A top-level `type`/`interface` other than a `.tsx` file's `*Props` (componentPropsName.test.ts names those). */
 function hasInlineType(file: string): boolean {
   const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
   const isTsx = file.endsWith('.tsx');

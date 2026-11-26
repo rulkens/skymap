@@ -143,20 +143,22 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
     // a position nothing seeds and throws at import, taking the whole file with it.
     //
     // "Ahead of the seed" means ahead of BOTH halves of it: with the anchors
-    // gone but the 39 S-star rows still focused on the place, `focusResolveOrder`
-    // throws on the dangling focus before any region is built, so the element
-    // table is mocked in step with the anchor table.
+    // gone but the S-star rows still focused on the place, `focusResolveOrder`
+    // throws on the dangling focus before any region is built, so the S-star
+    // rows leave the body registry in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
       SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'galactic-centre'),
     }));
-    vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
-      const actual = await vi.importActual<
-        typeof import('../../../src/data/bodies/orbitalElements')
-      >('../../../src/data/bodies/orbitalElements');
+    vi.doMock('../../../src/compositions/appBodies', async () => {
+      const actual = await vi.importActual<typeof import('../../../src/compositions/appBodies')>(
+        '../../../src/compositions/appBodies',
+      );
       return {
-        ...actual,
-        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'galactic-centre'),
+        APP_BODY_REGISTRY: actual.APP_BODY_REGISTRY.filter(
+          ({ position }) =>
+            position.kind !== 'orbit' || position.elements.focusId !== 'galactic-centre',
+        ),
       };
     });
     const { BODY_REGIONS: unseeded } = await import('../../../src/data/bodies/bodyRegions');
@@ -166,7 +168,7 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
     expect(galacticCentre.extentMpc).toBe(0);
 
     vi.doUnmock('../../../src/data/bodies/sceneAnchors');
-    vi.doUnmock('../../../src/data/bodies/orbitalElements');
+    vi.doUnmock('../../../src/compositions/appBodies');
     vi.resetModules();
   });
 });
