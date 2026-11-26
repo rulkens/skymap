@@ -8,7 +8,7 @@ import type { McpmParams } from '../../@types/sim/McpmParams';
  * exhaustiveness `DEFAULT_MCPM_PARAMS` already gets for free. `buildParamsPayload`,
  * `emitTraceSidecar`'s `provenance.params`, and `importParams`'s validator all key off the
  * resulting array, so the eight fields can never drift between the sidecar and the save/load
- * preset — the plan's "keep the two shapes identical" contract (spec §10).
+ * preset.
  */
 const MCPM_PARAM_KEY_SENTINEL: Record<keyof McpmParams, true> = {
   senseSpreadDeg: true,

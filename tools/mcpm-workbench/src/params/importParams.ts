@@ -44,13 +44,13 @@ function vec3(obj: Record<string, unknown>, field: string): Vec3 {
   return v as Vec3;
 }
 
-// Quaternion magnitude tolerance (spec §7): catches a hand-edited or drifted
+// Quaternion magnitude tolerance: catches a hand-edited or drifted
 // rotation here, before a non-unit quaternion reaches rotateVec3ByQuat and
 // silently scales rather than rotates.
 const QUAT_MAGNITUDE_TOLERANCE = 0.01;
 const IDENTITY_ROTATION: Vec4 = [0, 0, 0, 1];
 
-/** Optional field (spec §8): absent ⇒ identity, the same backward-compat pattern
+/** Optional field: absent ⇒ identity, the same backward-compat pattern
  * as `sources` — every sidecar/preset written before rotation existed stays
  * valid. Present ⇒ shape-checked as 4 finite numbers, then asserted unit-length
  * (the one property GridBox.rotation's rotateVec3ByQuat contract depends on). */
@@ -72,7 +72,7 @@ function vec4(obj: Record<string, unknown>, field: string): Vec4 {
   return v as Vec4;
 }
 
-/** Optional field (S15): absent ⇒ undefined, "leave selection unchanged". Present ⇒
+/** Optional field: absent ⇒ undefined, "leave selection unchanged". Present ⇒
  * validated in full against WORKBENCH_SOURCES, the one spelling of "which sources
  * exist" the Data-section toggles also key off — duplicates are tolerated, but any
  * id outside the ladder fails with the offending id named. */

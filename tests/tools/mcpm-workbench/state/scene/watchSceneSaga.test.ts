@@ -1,15 +1,9 @@
 /**
- * watchSceneSaga structural-trigger coverage — replaces the guarantee the old
- * value-diffing `buildKey` gave for free (react to ANY dispatch that moves a
- * structural field, regardless of which action caused it) with an exhaustive
- * fixture over the action list instead: `GRID_FIXTURES`/`SIM_FIXTURES` are
- * typed as `{ [K in keyof typeof slice.actions]: … }`, so TypeScript itself
- * fails to compile this file the moment a new grid/sim action is added
- * without a fixture entry here. For every fixture, trigger-list membership
- * must agree with "does this action actually move a structural field" in
- * BOTH directions — a structural action missing from the list silently stops
- * rebuilding; a non-structural action wrongly listed tears down a running
- * sim (and its GPU buffers) for nothing, every time it fires.
+ * watchSceneSaga structural-trigger coverage: `GRID_FIXTURES`/`SIM_FIXTURES` are
+ * typed `{ [K in keyof typeof slice.actions]: … }`, so a new grid/sim action without
+ * a fixture fails to compile. For every fixture, trigger-list membership must agree
+ * with "does this action move a structural field" in BOTH directions — a missing one
+ * silently stops rebuilding; a wrongly listed one tears down a running sim for nothing.
  */
 import { describe, expect, it } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';

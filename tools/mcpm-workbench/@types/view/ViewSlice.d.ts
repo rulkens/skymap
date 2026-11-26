@@ -44,7 +44,7 @@ export type ViewSlice = {
     readonly distance: number;
     /**
      * Orbit target in absolute world Mpc — deliberately NOT box-relative, so
-     * dragging the grid-box centre sliders doesn't drag the camera with it.
+     * dragging the Selection centre sliders doesn't drag the camera with it.
      * Right/middle-drag pan writes here directly.
      */
     readonly targetMpc: Vec3;

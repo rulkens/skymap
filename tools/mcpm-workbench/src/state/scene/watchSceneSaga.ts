@@ -73,10 +73,9 @@ const GPU_REQUEST_OPTIONS = {
  * `manualSizeMpc` only at the next `fitBoxToCatalog` click), and clearing
  * `importedBox` is a no-op from any state that already has it null — the one
  * narrow miss (padding edited while a preset IS loaded) is accepted, not
- * covered by the other setters riding this list. `setSeed` IS included (it's
- * outside the brief's own worked example, but `createMcpmHarness` seeds agents
- * from it at construction). `resetRequested` is excluded — Task 7's
- * `harness.reset` reseeds in place, not a rebuild.
+ * covered by the other setters riding this list. `setSeed` IS included:
+ * `createMcpmHarness` seeds agents from it at construction. `resetRequested` is
+ * excluded — `harness.reset` reseeds in place, not a rebuild.
  */
 export const SCENE_REBUILD_TRIGGERS = [
   catalogLoaded,

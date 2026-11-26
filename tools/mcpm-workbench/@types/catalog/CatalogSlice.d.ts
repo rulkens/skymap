@@ -6,24 +6,18 @@ import type { UserCatalog } from './UserCatalog';
 import type { UserFileProvenance } from './UserFileProvenance';
 
 /**
- * CatalogSlice — which v9 catalogs feed the sim, and what the last load
- * produced. `weightMode` mirrors `deriveAgentWeights`'s own union for a
- * no-remap pass-through. `nanFillCount / pointCount` is the NaN fraction,
- * computed at the display site rather than stored. `userCatalog` is the
- * visitor's loaded file, kept while `userCatalogOn` toggles it in and out of
- * the run beside `sources`. `catalogBoundsMpc` is cached (not recomputed from
- * positions) so `deriveGridBox` derives the SAME box for Viewport's build and
- * the grid panel's live readout.
+ * CatalogSlice — which catalogs feed the sim, and what the last load produced.
+ * `userCatalog` is the visitor's loaded file, kept while `userCatalogOn` toggles
+ * it in and out of the run beside `sources`. `catalogBoundsMpc` is cached so
+ * Auto fit does not rescan the positions.
  */
 export type CatalogSlice = {
   readonly sources: readonly GalaxyCatalogId[];
   readonly tier: Tier;
-  /** The last completed load's points — `watchCatalogSaga`'s own, not Viewport's
-   * closure. Null until the first `catalogLoaded`; Viewport's build path
-   * re-derives weights from it on every rebuild (weightMode can change without
-   * a reload), so only `points` itself needs to live here, not weights too. */
+  /** The last completed load's points, null until the first `catalogLoaded`. A build
+   * derives weights from them, since `weightMode` can change without a reload. */
   readonly points: CatalogPoints | null;
-  /** The loaded file inside `points`, null when off; the export reads this, not the toggle. */
+  /** The loaded file inside `points`, null when off; a build records it for the export. */
   readonly pointsUserFile: UserFileProvenance | null;
   readonly pointCount: number;
   readonly nanFillCount: number;
@@ -31,11 +25,7 @@ export type CatalogSlice = {
   readonly userCatalog: UserCatalog | null;
   readonly userCatalogOn: boolean;
   readonly catalogBoundsMpc: { readonly min: Vec3; readonly max: Vec3 } | null;
-  /**
-   * Human-readable status for a state Viewport can reach but isn't an error —
-   * currently just the zero-point case (every selected source excluded at
-   * this tier, or none selected). `catalogLoaded` clears it on every
-   * completed load so a stale message can't survive a real one.
-   */
+  /** The Data sidebar's status line: no points, or a failed build, export or load.
+   * `catalogLoaded` clears it, so a stale message cannot outlive a real load. */
   readonly statusMessage: string | null;
 };

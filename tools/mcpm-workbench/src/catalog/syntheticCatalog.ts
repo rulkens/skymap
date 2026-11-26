@@ -14,12 +14,12 @@ import { massWeightFromLog10 } from './weights/massWeightFromLog10';
 
 const SEED = 20260818;
 const CLUSTER_COUNT = 6;
-const POINTS_PER_CLUSTER = 700; // total ~4200 — "a few thousand" per spec §11
+const POINTS_PER_CLUSTER = 700; // total ~4200: enough for the probe, fast to build
 const CLUSTER_CENTER_SPREAD_MPC = 80;
 const CLUSTER_SIGMA_MPC = 12;
 const MEAN_LOG10_MASS = 10; // catalogs' real log10(M/Msun) run ~8-12
 const LOG10_MASS_SIGMA = 0.6;
-// Exercises the HUD's NaN-fill path (spec §6) without degrading `weightMode:
+// Exercises the NaN median fill without degrading `weightMode:
 // 'stellarMass'` to uniform (deriveAgentWeights only degrades on an EMPTY
 // finite set) — one in 23 keeps a healthy majority of points massed.
 const NAN_MASS_STRIDE = 23;

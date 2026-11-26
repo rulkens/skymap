@@ -35,7 +35,7 @@ export const defaultViewSlice: ViewSlice = {
     additive: true,
     previewPacked: false,
     previewPackedAtStep: null,
-    // S10: shipped default 3 = main-app volume-row parity (renderTargets.ts's
+    // Default 3 = main-app volume-row parity (renderTargets.ts's
     // `scale: 3`) — slide to 1 for full-res, no offscreen target.
     divisor: 3,
   },
@@ -139,7 +139,7 @@ export const viewSlice = createSlice({
     setDivisor: (state, action: PayloadAction<number>) => {
       state.raymarch.divisor = action.payload;
     },
-    /** T18: ControlsPanel's toggle dispatches this directly; `watchPreviewPackedSaga`
+    /** The Raymarch toggle dispatches this directly; `watchPreviewPackedSaga`
      * flips it back to false itself once the packed preview goes stale — see ViewSlice. */
     setPreviewPacked: (state, action: PayloadAction<boolean>) => {
       state.raymarch.previewPacked = action.payload;

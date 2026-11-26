@@ -3,7 +3,7 @@
  * `array<GridElem>`, so f16 halves their bytes; the agent lanes stay f32
  * whatever the grid element is. `histogram` is allocated here and first used
  * by the trace-histogram pass; `densities` and `histogramFlags` are its
- * T20 siblings — one density sample per agent-lane slot (the kernel only
+ * siblings — one density sample per agent-lane slot (the kernel only
  * ever writes the first `nDataPoints` of them) and the pass's own tiny
  * uniform (just `sampleRandomly` — the pass reuses `uniform`/McpmUniforms
  * for everything else; see histogram.wesl's header for why it can't have

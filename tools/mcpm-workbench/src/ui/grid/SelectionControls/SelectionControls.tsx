@@ -1,14 +1,9 @@
 /**
- * SelectionControls — the Selection box's controls. Both modes share ONE voxel size:
- * Viewport and this panel's size sliders both call `deriveGridBox`, so they
- * can't disagree. This panel holds no catalog data, so Auto fit reads the
- * cached `catalog.catalogBoundsMpc` rather than re-deriving from raw positions.
- * "Auto fit" (`fitBoxToCatalog`, gridSlice.ts) is a one-shot ACTION, not a
- * mode: it snapshots bounds into the manual center/size fields once,
- * `paddingMpc` baked in at click time — after that it's an ordinary manual
- * box. It keeps the voxel size unless the fitted box would not fit GPU memory,
- * and then only raises it. Below 100%, `resolveAutoFitBounds` swaps in the densest-fraction
- * bounds (`autoFitPercent`, gridSlice.ts) before that same snapshot.
+ * SelectionControls — the Selection box's controls. Viewport and these size sliders
+ * both call `deriveGridBox`, so they can't disagree about the box. Auto fit
+ * (`fitBoxToCatalog`) is a one-shot ACTION, not a mode: it snapshots the cached
+ * catalog bounds (or, below 100%, the densest fraction's) into the manual center
+ * and size once, padding baked in; after that it is an ordinary manual box.
  */
 import { useState, type ReactNode } from 'react';
 import Button from '../../../../../../src/components/common/Button/Button';

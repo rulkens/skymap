@@ -9,7 +9,7 @@ import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 /**
  * exportScfd — `packLogTraceVoxels` → `encodeScalarField`, the SAME packing
  * code `buildRhizomeVolume.ts` runs on the offline leg, so the two outputs
- * are diffable (spec §8 leg 2). Origin and voxel size come from the grid
+ * are diffable. Origin and voxel size come from the grid
  * box, not a sidecar's provenance fields — this leg has no sidecar.
  */
 export function exportScfd(values: Float32Array, box: GridBox): ArrayBuffer {

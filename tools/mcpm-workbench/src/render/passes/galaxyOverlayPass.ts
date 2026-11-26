@@ -1,10 +1,8 @@
 /**
  * createGalaxyOverlayPass — the catalog points as additive dots, the Galaxies layer
  * (mcpm/galaxyPoints.wesl): six vertices per instance, positions vertex-pulled from
- * `agents`. Task S16: the harness hands this pass its OWN `overlayAgents` lanes — every
- * point that survived source/tier load, in-box or not — not the box-culled set the
- * sim/splat share, so `nDataPoints === count` and every lane is drawn.
- *
+ * `agents`. The harness hands this pass its OWN `overlayAgents` lanes — every loaded
+ * point, in-box or not — not the box-culled set the sim/splat share, so every lane is drawn.
  * The lanes are bound read-only here, NOT through io.wesl's group(1) contract: a vertex
  * stage cannot bind read_write storage, so this pass declares its own. What keeps the dots
  * on the trace they annotate is the shared McpmCamera, not a shared binding.

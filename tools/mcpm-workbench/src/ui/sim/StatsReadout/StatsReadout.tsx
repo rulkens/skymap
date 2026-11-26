@@ -3,7 +3,7 @@
  * galaxies loaded (before the box keeps those inside it), how far the fit has run,
  * whether it runs smoothly, and the GPU memory of the box as set, live while a
  * size slider drags: the total, and the same total against the device's buffer limit.
- * A row without a usable weight gets the median (spec §6); zero is the normal
+ * A row without a usable weight gets the median; zero is the normal
  * case, so that count shows only when there is some, in the warning colour, after
  * the galaxies value: a slot that is always there, so nothing moves.
  */

@@ -1,13 +1,11 @@
 /**
  * createCsvColumnReader — a CSV's UTF-8 bytes, streaming in, into its first four
  * columns; the import settings apply later (catalogFromCsvColumns). Line rules
- * are the native build's (Polyphorm/cpplib/dataset.cpp:36-72): a line is data
- * when it starts with a digit, sign or dot; columns past the fourth are ignored.
- * Ours: one separator per file, from its first data line (comma or semicolon,
- * else tab, else spaces), so an empty field is refused instead of shifting the
- * rest. A plain-ASCII line is split in place; any other is decoded and split by
- * the regex rule as written. UTF-8 never puts a byte below 128 inside a
- * character, so lines split safely on the LF byte.
+ * are the native build's (Polyphorm's dataset.cpp loader): a line is data when it
+ * starts with a digit, sign or dot; columns past the fourth are ignored. Ours: one
+ * separator per file, from its first data line (comma or semicolon, else tab, else
+ * spaces), so an empty field is refused instead of shifting the rest. UTF-8 never
+ * puts a byte below 128 inside a character, so lines split safely on the LF byte.
  */
 import type { CsvColumnReader } from '../../../@types/catalog/import/CsvColumnReader';
 import type { CsvColumns } from '../../../@types/catalog/import/CsvColumns';

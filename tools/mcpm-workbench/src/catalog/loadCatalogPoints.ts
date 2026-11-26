@@ -1,13 +1,9 @@
 /**
- * loadCatalogPoints — fetch skymap's v9 galaxy catalogs over the runtime
- * boot seams and merge into flat position/weight arrays for the sim (log-mass
- * converted to the port's linear weight on the way in).
- *
- * Mirrors `galaxyCatalogFetcher`'s manifest → tier-filename → dataUrl →
- * fetchWithProgress → decode chain (the excluded-tier short-circuit
- * included), fanned out over `sources` and concatenated. Pure and
- * store-free: no redux, no engine state, no AssetSlot lifecycle — this
- * tool owns its own abort-less fetches.
+ * loadCatalogPoints — fetch skymap's galaxy catalogs and merge them into flat
+ * position/weight arrays for the sim (log-mass converted to the port's linear
+ * weight on the way in). Mirrors `galaxyCatalogFetcher`'s manifest → tier-filename
+ * → dataUrl → fetchWithProgress → decode chain (the excluded-tier short-circuit
+ * included), fanned out over `sources`. Store-free, with its own abort-less fetches.
  */
 import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../src/@types/data/Tier';

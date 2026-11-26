@@ -3,13 +3,11 @@
  * into an atomic u32 screen buffer (mcpm/splatTransform.wesl), then a fullscreen fragment
  * tonemaps that buffer into the HDR accum target (mcpm/splatBlit.wesl). The catalog prefix
  * of the lanes is skipped here — those rows are the Galaxies layer's to draw.
- *
  * Bind groups follow io.wesl's contract so the kernel reads the agent lanes unchanged —
  * group(0) a `McpmUniforms`-shaped buffer for the counts, group(1) slots 3..5, and
- * group(2) this pass's own camera, accumulation buffer, and (S12) footprint uniform.
- * Layouts are explicit, never 'auto'. The pass owns its group(0) buffer rather than
- * sharing the sim's, for the same two reasons tracePass does: it reads only counts,
- * and the sim's is COMPUTE-only.
+ * group(2) this pass's own camera, accumulation buffer, and footprint uniform.
+ * Layouts are explicit, never 'auto'. It owns its group(0) buffer, like tracePass:
+ * it reads only counts, and the sim's is COMPUTE-only.
  */
 import type { AgentBuffers } from '../../../@types/sim/AgentBuffers';
 import type { GridBox } from '../../../@types/grid/GridBox';

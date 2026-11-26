@@ -5,7 +5,7 @@ import { BYTES_PER_ELEMENT } from './bytesPerElement.constant';
 
 /**
  * readbackTrace — copies the harness's trace grid to a MAP_READ staging
- * buffer and returns a CPU-side snapshot for the T16/T17 export legs.
+ * buffer and returns a CPU-side snapshot for the .npy and .scfd exports.
  *
  * The staging buffer is COPY_DST | MAP_READ only — never bound in a shader —
  * so `maxStorageBufferBindingSize` (the limit that also gates the trace

@@ -48,10 +48,9 @@ is skipped; columns after the fourth are ignored. A file with three columns is
 refused. A file that fails a check is refused at the first bad line, with the
 line number and an example of the chosen format.
 
-**Weight** is required, positive and linear. Built-in catalogs use stellar mass
-in 10¹² M☉, median about 0.02; a column in 10⁹ M☉ takes a weight scale of 0.001.
-A column of log₁₀ mass in M☉ can be declared as such and is converted on load
-(workbench only). The dialog shows the weights' mean and spread, and warns when
+**Weight** is required and positive; linear unless declared as log₁₀ mass in M☉,
+which is converted on load (workbench only). Built-in catalogs use stellar mass in
+10¹² M☉, median about 0.02; a column in 10⁹ M☉ takes a weight scale of 0.001. The dialog shows the weights' mean and spread, and warns when
 the values look like logarithms or the median is far above 0.02; the loaded
 row's info tip gives the smallest, median and largest.
 
@@ -86,7 +85,7 @@ The tool links against the runtime's canonical shader tree
 identically in both apps. It keeps exactly one shader of its own,
 `src/render/shaders/blit.wesl`, the HDR→swapchain tonemap resolve.
 
-## Grid-box gizmo
+## Selection gizmo
 
 The wireframe box drawn over the sim volume carries three handle families,
 each pickable by dragging directly on the glyph:
@@ -426,7 +425,7 @@ fresh trace, `stepCount` 0, still the `?probe` boot box/catalog — nothing
 earlier in the queue has touched the grid box yet), it settles 100 sim steps
 (5× `HISTOGRAM_INTERVAL_STEPS`) plus the usual readback margin, then asserts
 `meanLogTraceAtPoints` — read via a probe-only getter Viewport installs on
-`window`, not scraped from the HUD — lands in a band.
+`window`, not read off the page — lands in a band.
 
 This step's catalog has no fork export to compare against (T12's tiny
 synthetic clusters, not the VAC anchor), so — unlike § Floor's fork-vs-

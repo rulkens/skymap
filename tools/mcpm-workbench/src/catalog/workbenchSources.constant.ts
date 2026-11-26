@@ -6,7 +6,7 @@ import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@type
  * fixed order every time, so clicking GLADE then 2MRS still yields
  * [2MRS, GLADE], never the click order. May legitimately go empty — the
  * zero-point path is a first-class state Viewport surfaces, not something
- * this helper guards against. Also `importParams`'s known-id ladder (S15) —
+ * this helper guards against. Also `importParams`'s known-id ladder —
  * the one spelling of "which sources exist" both the Data-section toggles
  * and the preset validator key off.
  */

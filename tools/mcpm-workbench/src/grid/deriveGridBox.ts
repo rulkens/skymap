@@ -14,13 +14,13 @@ function manualBounds(center: Vec3, size: Vec3): { min: Vec3; max: Vec3 } {
 }
 
 /**
- * deriveGridBox — the ONE place grid-panel config becomes the simulated
+ * deriveGridBox — the ONE place the Selection config becomes the simulated
  * GridBox; Viewport and SelectionControls share this call so they
- * can't disagree about what "the box" is. `grid.importedBox` (V3) returns
+ * can't disagree about what "the box" is. `grid.importedBox` returns
  * VERBATIM and UNCLAMPED — a preset busting the device limit refuses at
  * build (planGridBudget) instead of being silently resized. Otherwise:
  * `manualVoxelSizeMpc` clamped UP to `voxelSizeFloorMpc`, then
- * `grid.manualRotation` (F2.5) applies AFTER fitting — `autoFitGridBox`
+ * `grid.manualRotation` applies AFTER fitting — `autoFitGridBox`
  * itself carries no rotation concept.
  */
 export function deriveGridBox(grid: GridSlice): GridBox {

@@ -1,5 +1,5 @@
 /**
- * watchHistogramSaga — moves T20's throttled histogram readback off the
+ * watchHistogramSaga — moves the throttled histogram readback off the
  * frame driver. `takeLeading` on `incrementStep` replaces the old
  * `histogramInFlight` flag; the no-harness + modulo bail runs before any
  * GPU work. Unlike `acceptBuiltHarness` (watchSceneSaga), which disposes an

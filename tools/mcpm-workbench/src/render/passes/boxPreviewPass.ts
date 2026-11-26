@@ -61,7 +61,7 @@ export const GLYPH_SEGMENT_FLOATS = 12;
 const VERTICES_PER_SEGMENT = 6;
 const RING_SEGMENTS = 48; // per rotate ring, sampled evenly around the circle — closed polyline.
 // 3 translate arrows x (1 shaft + 1 tapered cone) + 6 resize crosses x 2 arms +
-// 3 rotate rings x RING_SEGMENTS (F2.5).
+// 3 rotate rings x RING_SEGMENTS.
 const GLYPH_SEGMENT_COUNT = 3 * 2 + 6 * 2 + 3 * RING_SEGMENTS;
 const GLYPH_VERTEX_COUNT = GLYPH_SEGMENT_COUNT * VERTICES_PER_SEGMENT;
 const GLYPH_STORAGE_BYTES = GLYPH_SEGMENT_COUNT * GLYPH_SEGMENT_FLOATS * 4;
@@ -97,7 +97,7 @@ function addScaled(p: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 
 }
 
 /** Two unit vectors spanning the plane perpendicular to `axisDir` — the resize cross's arms,
- *  and (F2.5) a rotate ring's own (u, v) circle basis for sampling its polyline. */
+ *  and a rotate ring's own (u, v) circle basis for sampling its polyline. */
 function crossArmVectors(axisDir: Readonly<Vec3>): readonly [Vec3, Vec3] {
   const helper: Vec3 = Math.abs(axisDir[0]) < 0.9 ? [1, 0, 0] : [0, 0, 1];
   const u = normalize3(cross3(axisDir, helper));

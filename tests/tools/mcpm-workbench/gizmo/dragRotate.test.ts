@@ -32,12 +32,12 @@ describe('dragRotate', () => {
     expect(dragRotate(ray, CENTER, AXIS_DIR, REFERENCE_DIR)).toBeNull();
   });
 
-  it('a full-turn composition from a fixed anchor reproduces the anchor rotation (spec §6)', () => {
+  it('a full-turn composition from a fixed anchor reproduces the anchor rotation', () => {
     // The fixed-anchor recompute Viewport performs every pointermove: rotation' =
     // multiplyQuat(quatFromAxisAngle(axisDir, angle_now - angle_anchor), anchorRotation).
     // angle_now - angle_anchor = 2π (one full drag around the ring back to the start) must
     // reproduce anchorRotation, up to quaternion sign (q and -q are the same rotation) — compared
-    // via rotateVec3ByQuat on a test vector, not raw component equality (spec §6).
+    // via rotateVec3ByQuat on a test vector, not raw component equality.
     const anchorRotation = quatFromAxisAngle([0, 1, 0], Math.PI / 4); // some non-identity anchor
     const fullTurn = quatFromAxisAngle(AXIS_DIR, 2 * Math.PI);
     const composed = multiplyQuat(fullTurn, anchorRotation);

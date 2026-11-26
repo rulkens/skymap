@@ -1,5 +1,5 @@
 /**
- * buildOverlayCatalog — task S16. Same 6-point / 3-in-box fixture as
+ * buildOverlayCatalog — same 6-point / 3-in-box fixture as
  * cullPointsToBox.test.ts: origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8].
  */
 import { describe, expect, it } from 'vitest';

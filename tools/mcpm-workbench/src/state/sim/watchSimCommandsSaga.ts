@@ -1,9 +1,8 @@
 /**
  * watchSimCommandsSaga — reset and clear-trace, the workbench's two one-shot
  * commands (`commands.ts`). Both call `graph.resetVolpath()` directly:
- * `volpathKeyFor` no longer folds either command into its key (Task 2), so
- * nothing else would notice the path-tracer accumulator needs wiping.
- * No-op without a harness — mirrors Viewport's old token-watcher guard.
+ * `volpathKeyFor` does not fold either command into its key, so nothing else
+ * would notice the path-tracer accumulator needs wiping. No-op without a harness.
  */
 import { takeEvery, put, select, getContext } from 'typed-redux-saga';
 

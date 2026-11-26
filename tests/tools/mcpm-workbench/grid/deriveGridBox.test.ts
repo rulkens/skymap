@@ -1,10 +1,8 @@
 /**
- * deriveGridBox — the ONE box-derivation Viewport's build and SelectionControls's
- * dims readout must never disagree on. Derivation is always the manual path
- * (S13.5: "auto fit" is a one-shot action that writes manualCenterMpc/
- * manualSizeMpc, not a persistent mode this function branches on) — covers
- * manual center+size and manualVoxelSizeMpc, stored directly (V1: grid-voxel-
- * size-currency decision record).
+ * deriveGridBox — the ONE box-derivation Viewport's build and SelectionControls
+ * must never disagree on. Derivation is always the manual path ("auto fit" is
+ * a one-shot action that writes manualCenterMpc/manualSizeMpc, not a mode) — covers
+ * manual center+size and manualVoxelSizeMpc, stored directly.
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

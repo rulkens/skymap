@@ -1,10 +1,9 @@
 /**
  * ControlsPanel — the eight McpmParams sliders, run controls, weight/init
- * mode toggles, and the rendering. Every slider writes straight
- * to the sim slice; the harness reads `params` fresh each step, so these
- * are live with no rebuild. Agent count / weight mode / init mode (and the
- * grid box, in DataPanel's Selection) are structural — `watchSceneSaga` watches those actions and rebuilds
- * the harness (debounced). Simulation's header pill runs and pauses the sim;
+ * mode toggles, and the rendering. Every slider writes straight to the sim
+ * slice; the harness reads `params` fresh each step, so these are live with no
+ * rebuild. Agent count, weight mode and init mode (and the Selection, in
+ * DataPanel) are structural: `watchSceneSaga` rebuilds the harness, debounced. Simulation's header pill runs and pauses the sim;
  * Rendering's header dropdown picks the one renderer and its rows, and the
  * Galaxies pill adds the catalog dots on top of it.
  */
@@ -116,11 +115,8 @@ function ControlsPanel({
             info="Data-point deposits scale with each galaxy's stellar mass; off, every data point deposits equally. Free agents always deposit at a flat weight either way."
             onChange={(on) => onWeightModeChange(on ? 'stellarMass' : 'uniform')}
           />
-          {/* reset / clear trace: momentary commands, not state — `state/commands.ts`
-              actions a saga (Task 7) takes. Divided from the toggle rows above with
-              the same --border-divider hairline the section headers use, and one
-              font-size step smaller than the panel's other buttons so the
-              pair reads as secondary to the run/seed/weight toggles it now sits under. */}
+          {/* reset / clear trace: momentary commands, not state (`state/commands.ts`),
+              one font-size step smaller so the pair reads as secondary to the toggles. */}
           <PanelRow>
             <div className={styles.simActions}>
               <ButtonTip

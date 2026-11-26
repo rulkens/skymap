@@ -8,8 +8,8 @@ import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 import { buildParamsPayload } from '../params/buildParamsPayload';
 
-// Local time with a numeric (no-colon) UTC offset — "+0200", matching the
-// spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so
+// Local time with a numeric (no-colon) UTC offset — "+0200". parsePolyphyTraceSidecar
+// stores provenance untyped, so
 // this exact format is this exporter's convention, not a parsed contract.
 function formatProducedAt(d: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
@@ -26,7 +26,7 @@ function formatProducedAt(d: Date): string {
 
 /**
  * emitTraceSidecar — the `polyphy-trace` v1 JSON `parsePolyphyTraceSidecar`/
- * `buildRhizomeVolume` expect next to the `.npy`, same basename (spec §8).
+ * `buildRhizomeVolume` expect next to the `.npy`, same basename.
  * `voxel_size_mpc` repeats `box.voxelSizeMpc` three times: GridBox's voxels
  * are cubic by construction (autoFitGridBox), so the importer's 0.5% spread
  * assert passes with zero margin consumed, not just under the line.
@@ -78,7 +78,7 @@ export function emitTraceSidecar(input: {
     dims: box.dims,
     origin_mpc: originMpc,
     voxel_size_mpc: [box.voxelSizeMpc, box.voxelSizeMpc, box.voxelSizeMpc],
-    // Honest metadata, not an instruction the importer acts on (spec §8's non-goal) —
+    // Honest metadata, not an instruction the importer acts on —
     // buildRhizomeVolume/the comparator keep treating the cube as the flat grid-space
     // array it is; a downstream consumer that cares reads this and applies it itself,
     // pivoting about the box CENTER, not origin_mpc (worldToBoxLocal.ts: it subtracts
@@ -97,8 +97,7 @@ export function emitTraceSidecar(input: {
         nan_mass_filled: weights.nanCount,
         ...(userFileBlock && { user_file: userFileBlock }),
       },
-      // V3's exportParams preset carries the SAME object, via the same
-      // buildParamsPayload — spec §10's "keep the two shapes identical".
+      // The params preset carries the SAME object, via the same buildParamsPayload.
       params: buildParamsPayload(params),
       n_agents: agentCount,
       steps,

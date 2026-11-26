@@ -15,7 +15,7 @@ export type McpmStep = {
   readonly parity: 0 | 1;
   readonly iteration: number;
   /**
-   * T20: the histogram pass. Its group(0) is `uniformBindGroup` above, reused
+   * The histogram pass. Its group(0) is `uniformBindGroup` above, reused
    * as-is (histogram.wesl's header explains why it can't have its own
    * full-size uniform); group(1)/group(2) are STATIC (unlike propagate/decay's
    * ping-ponged pair) — neither trace, the agent lanes, nor the

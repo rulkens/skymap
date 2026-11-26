@@ -61,10 +61,8 @@ const VIEW_UNIFORM_BYTES = 80;
 // An unbounded step count is a GPU hang, not a slow frame.
 const MAX_STEPS_CEILING = 4096;
 
-// RenderGraph.attachPreviewTrace calls this a second time — T18's preview-export
-// view, over a `previewPackedTrace.ts` buffer instead of the harness's own trace
-// buffer that attachTrace uses (task R7: moved under RenderGraph's ownership;
-// see Viewport's `runPreviewPacked`, which still builds that buffer).
+// RenderGraph.attachPreviewTrace calls this a second time for the packed-preview
+// view, over a `previewPackedTrace.ts` buffer instead of the harness's own trace.
 export function createTracePass(opts: {
   readonly device: GPUDevice;
   readonly targetFormat: GPUTextureFormat;

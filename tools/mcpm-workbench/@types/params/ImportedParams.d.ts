@@ -8,7 +8,7 @@ export type ImportedParams = {
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
-  /** S15: undefined ⇒ leave the current catalog selection untouched — every preset
+  /** Undefined ⇒ leave the current catalog selection untouched — every preset
    * saved before this field existed (and any preset that simply omits it) must
    * still import cleanly. */
   readonly sources?: readonly GalaxyCatalogId[];

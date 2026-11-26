@@ -19,7 +19,7 @@ const AROUND_DATA_SPREAD = 0.025; // main.cpp's random_spread
  * flag, weight comes from `deriveAgentWeights`. Everything past that is a free
  * agent. Deterministic by `seed` — never Math.random, or a look is
  * irreproducible across reloads. `points`/`weights` must already be
- * box-culled (`cullPointsToBox`, task S14) — an out-of-box anchor would wrap
+ * box-culled (`cullPointsToBox`) — an out-of-box anchor would wrap
  * onto the opposite face under periodic agent movement.
  */
 export function seedAgents(opts: {
@@ -62,7 +62,7 @@ export function seedAgents(opts: {
 
   const random = mulberry32(seed);
   const shortestAxis = Math.min(box.dims[0], box.dims[1], box.dims[2]);
-  // Callers pass an already-box-culled `points` (task S14's cullPointsToBox), so
+  // Callers pass an already-box-culled `points` (cullPointsToBox), so
   // nData can be 0 when every catalog point in this box selection sits outside
   // it. 'aroundData' has nothing to anchor on then — `nData - 1` below would go
   // negative and index x[-1] (undefined -> NaN) — so degrade to uniform, same

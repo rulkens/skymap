@@ -54,7 +54,7 @@ function distanceToRing(ray: Ray, ring: RingHandle): number {
 
 /** Per-axis half-extent recovered from the resize handles' own distance from the rotate ring's
  *  shared center, rather than threading GridBox through `pickGizmoHandle` too — `geometry` already
- *  carries everything the tolerance formula (spec §5) needs. */
+ *  carries everything the tolerance formula needs. */
 function halfExtentsFromGeometry(geometry: GizmoHandleGeometry): Vec3 {
   const center = geometry.rotate[0].centerMpc;
   const half: Vec3 = [0, 0, 0];

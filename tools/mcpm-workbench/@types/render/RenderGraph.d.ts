@@ -46,8 +46,8 @@ export type RenderGraph = {
     divisor: number,
   ): void;
   /**
-   * The T18 preview-export view: builds a TracePass over a packed-cube buffer. Viewport
-   * builds the buffer itself via `previewPackedTrace.ts` and owns its lifetime/disposal.
+   * The packed-preview view: builds a TracePass over a packed-cube buffer that the caller
+   * builds via `previewPackedTrace.ts` and owns.
    * Same shape as `attachTrace`; replaces and disposes any preview pass attached before.
    */
   attachPreviewTrace(source: TraceSource): void;
@@ -85,7 +85,7 @@ export type RenderGraph = {
   resetVolpath(): void;
   /**
    * Build the two agent-fed layers — the swarm splat over `agents` (box-culled, the sim's
-   * own set) and the galaxy points over `overlayAgents` (task S16: the RAW loaded set,
+   * own set) and the galaxy points over `overlayAgents` (the RAW loaded set,
    * the overlay's own lanes). Both die with their harness, so this is re-called on every
    * rebuild.
    */

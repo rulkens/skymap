@@ -5,9 +5,8 @@
  * divisor>1 upsample leg), then a fullscreen fragment resolves the mean, LOADing and
  * blending one/one like every other layer (mcpm/volpathBlit.wesl). The image is only
  * correct while the accumulator agrees with the camera, parameters and divisor that
- * produced it: the caller MUST `reset()` on any change to any of those (a viewport OR
- * divisor change resets itself). Layouts are explicit, never 'auto'; the trace grid
- * binds read-only here rather than through io.wesl's read_write contract.
+ * produced it: the caller MUST `reset()` on any change to those (a viewport OR divisor
+ * change resets itself). The trace grid binds read-only, not via io.wesl's read_write.
  */
 import type { TraceSource } from './tracePass';
 import { reducedTraceSize } from '../reducedTraceSize';
@@ -22,7 +21,7 @@ import { MCPM_CAMERA_BYTES } from '../camera/mcpmCameraBytes.constant';
 import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 /**
- * The tracer's knobs. The first nine are spec §7's set; `trimDensity` and `sampleWeight`
+ * The tracer's knobs. The first nine are Polyphorm's; `trimDensity` and `sampleWeight`
  * are the raymarch layer's own two, here because Polyphorm's trace→density transfer
  * (`traceToRho`) is defined in terms of them and the two layers must agree on it.
  */

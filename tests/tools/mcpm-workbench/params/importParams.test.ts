@@ -1,5 +1,5 @@
 /**
- * importParams — the JSON upload half of V3's save/load pair. Test 1 proves
+ * importParams — the JSON upload half of the params save/load pair. Test 1 proves
  * the round trip through the REAL exportParams serializer (not a hand-rolled
  * fixture), so a key rename in one breaks here instead of silently drifting.
  * Test 2 hand-edits a valid payload's grid box to a non-cubic one — the

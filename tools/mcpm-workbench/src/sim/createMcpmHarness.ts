@@ -31,7 +31,7 @@ import { seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
 import { AGENT_COUNT_STEP } from './agentCountStep.constant';
 
-// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the T20
+// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the
 // histogram pass a subset of propagate's — trace, agent positions, and the (dead-read)
 // weight lane — at 2, 3, 4, 5, 8. Exported for dispatchSlots.parity.test.ts.
 export const PROPAGATE_SLOTS = [0, 2, 3, 4, 5, 6, 7, 8];
@@ -88,14 +88,14 @@ export async function createMcpmHarness(opts: {
     );
   }
 
-  // Task S14: a manual box can crop the catalog (the fork's box always covers all its
+  // A manual box can crop the catalog (the fork's box always covers all its
   // data, skymap's doesn't) — cull ONCE, here, before anything downstream sizes a
   // buffer or reads a count, so nDataPoints/agentBufferLength/the histogram
   // normalization all agree with what seedAgents actually seeds.
   // Survivors keep their pre-cull weights: the port never culls, and rescaling would let a
   // cropped box re-inflate the points left inside it.
   const culled = cullPointsToBox(opts.points, opts.weights, opts.box);
-  // Task S16: the Galaxies overlay previews the RAW loaded set, in-box or not — a data
+  // The Galaxies overlay previews the RAW loaded set, in-box or not — a data
   // preview, not the sim's readout, so it gets its own voxel-space lanes over
   // `opts.points`/`opts.weights` rather than `culled`'s. Pure CPU-side math; the GPU
   // buffers it feeds are built below once `device` exists.
@@ -308,7 +308,7 @@ export async function createMcpmHarness(opts: {
       nDataPoints: culled.points.count,
       count: agentBufferLength,
     },
-    // Task S16: nDataPoints === count here — every lane is a raw catalog row, no free
+    // nDataPoints === count here — every lane is a raw catalog row, no free
     // agents follow — so galaxyOverlayPass's draw call (which uses agents.nDataPoints)
     // draws the whole RAW set unchanged.
     overlayAgents: {

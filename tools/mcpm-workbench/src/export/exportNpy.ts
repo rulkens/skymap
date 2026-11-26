@@ -13,8 +13,7 @@ const DTYPE_FOR_ELEMENT: Record<GridElement, '<f2' | '<f4'> = { f16: '<f2', f32:
  * transposes it to NumPy C-order before writing, so this `.npy`'s BYTES
  * (not just its declared shape) match what `buildRhizomeVolume.ts`'s
  * default `packLogTraceVoxels` call — and a real PolyPhy-fork export —
- * already expect (T19 gate finding: without this, 100% of non-background
- * voxels round-tripped wrong).
+ * already expect (without this, every non-background voxel round-trips wrong).
  */
 export function exportNpy(readback: TraceReadback): ArrayBuffer {
   const cOrder = xFastestToCOrder(readback.data, readback.dims);

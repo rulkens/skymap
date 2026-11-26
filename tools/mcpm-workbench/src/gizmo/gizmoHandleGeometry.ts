@@ -52,10 +52,9 @@ function rotateHandle(
 }
 
 /**
- * gizmoHandleGeometry — world-space position/direction for every gizmo handle (spec §5's "Handle
- * set" table), built from `box` and the caller-supplied axis directions. Callers pass UNIT_AXES
- * before the box has a rotation, `boxBasisVectors(box.rotation)` after (F2.5's axes swap) — this
- * function doesn't care which. `arrowLengthMpc` is the translate-arrow reach, computed by the
+ * gizmoHandleGeometry — world-space position/direction for every gizmo handle, built from
+ * `box` and the caller-supplied axis directions (UNIT_AXES, or `boxBasisVectors(box.rotation)`
+ * for a rotated box — this function doesn't care which). `arrowLengthMpc` is the translate-arrow reach, computed by the
  * caller via gizmoArrowLengthMpc.ts so it holds a constant screen size instead of scaling with
  * the box; resize stays box-scaled, rotate rides arrowLengthMpc too (RING_RADIUS_ARROW_MULTIPLE above).
  */

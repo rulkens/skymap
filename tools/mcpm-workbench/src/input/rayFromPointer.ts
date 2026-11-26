@@ -8,8 +8,8 @@ import { screenToRay } from '../gizmo/screenToRay';
 // cameraBasis only reads `.rotation` off its GridBox param — fabricated zeros elsewhere,
 // so this site skips deriveGridBox's bisection + autofit just to overwrite the one field
 // it needs. Identity, not the real box.rotation: handle geometry and drag math are
-// world-space, never voxel-space (F2.3 review MAJOR — a rotated box otherwise mis-picks
-// every handle), so cameraBasis's R⁻¹ (F2.3) must not apply here.
+// world-space, never voxel-space (a rotated box otherwise mis-picks every handle),
+// so cameraBasis's R⁻¹ must not apply here.
 const UNROTATED_BASIS_BOX: GridBox = {
   centerMpc: [0, 0, 0],
   sizeMpc: [0, 0, 0],

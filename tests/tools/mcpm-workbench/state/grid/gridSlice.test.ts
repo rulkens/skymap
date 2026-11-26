@@ -1,9 +1,9 @@
 /**
  * gridSlice — every user-facing grid-control setter must clear `importedBox`
- * back to null (V3's ruling): a preset reloads to a bit-identical box only
+ * back to null: a preset reloads to a bit-identical box only
  * until the user starts steering the grid controls again, at which point
  * the override has to die so deriveGridBox goes back to computing from
- * voxel size/manual bounds. `fitBoxToCatalog` ("auto fit", S13.5) counts as one
+ * voxel size/manual bounds. `fitBoxToCatalog` ("auto fit") counts as one
  * of these edits too — it writes manualCenterMpc/manualSizeMpc directly,
  * same as a hand-dragged slider.
  */

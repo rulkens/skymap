@@ -1,4 +1,4 @@
-/* One bordered panel-surface box, Hud's badge vocabulary. Its sixteen columns
+/* One bordered panel-surface box. Its sixteen columns
    are the one column definition: the bars and labels rows take them through
    subgrid, so a bar and its label share a track by construction.
    `--bin-count` comes from the component (the shader's bin count). */

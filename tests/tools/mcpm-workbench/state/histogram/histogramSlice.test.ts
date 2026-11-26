@@ -1,9 +1,6 @@
 /**
- * histogramSlice — `setSampleRandomly` used to be a plain field write with a
- * Viewport subscriber dispatching a separate `resetHistogram()` on the edge;
- * T12 folded the reset into the reducer itself (task-12-brief.md). This
- * covers the one thing a compiler can't catch: the fold still clears
- * history/counts, not just the flag.
+ * histogramSlice — `setSampleRandomly` resets the slice in the reducer itself;
+ * this covers what a compiler can't: it clears history and counts, not just the flag.
  */
 import { describe, expect, it } from 'vitest';
 import {

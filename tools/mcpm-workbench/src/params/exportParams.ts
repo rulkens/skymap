@@ -8,11 +8,11 @@ import { buildParamsPayload } from './buildParamsPayload';
 import type { McpmParamsPreset } from '../../@types/params/McpmParamsPreset';
 
 /**
- * exportParams — the V3 save-side of the preset pair (spec §10): McpmParams +
- * agent count + init mode + grid box + enabled data sources (S15), as pretty
+ * exportParams — the save side of the params preset: McpmParams +
+ * agent count + init mode + grid box + enabled data sources, as pretty
  * JSON ready for `triggerDownload`. `importParams` is the exact inverse.
  * Tier is deliberately NOT saved — restoring it silently from a preset would
- * be surprising (coordinator ruling, task-S15-brief.md).
+ * be surprising.
  */
 export function exportParams(input: {
   readonly params: McpmParams;

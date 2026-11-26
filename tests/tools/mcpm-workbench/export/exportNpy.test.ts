@@ -1,5 +1,5 @@
 /**
- * exportNpy — the T19 gate fix: a hand-built x-fastest readback (grid.wesl's
+ * exportNpy — a hand-built x-fastest readback (grid.wesl's
  * GPU layout) must round-trip through `exportNpy` + `readNpy` in NumPy
  * C-order, the byte order `buildRhizomeVolume.ts`'s default
  * `packLogTraceVoxels` call expects. Non-cubic dims (2x3x4) so an

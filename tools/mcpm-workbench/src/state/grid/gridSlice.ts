@@ -10,8 +10,7 @@ import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 /**
  * defaultGridSlice — a manual origin-centred cube is the boot view (an
  * auto-fit-on-boot box would stretch to the catalog's outliers until the
- * local volume is a sliver of it). `manualVoxelSizeMpc: 0.75` is a deliberate
- * choice (decision record, Q4). `manualSizeMpc` is a request: 200 Mpc rounds
+ * local volume is a sliver of it). `manualSizeMpc` is a request: 200 Mpc rounds
  * up to 272³ voxels, a 204 Mpc box, which is what the panel shows. It stays
  * 200 because `?probe` coarsens this same request to 64³ at 3.125 Mpc/vox
  * (defaultAppState.ts), the grid its energy band was measured on.
@@ -32,10 +31,9 @@ export const gridSlice = createSlice({
   name: 'grid',
   initialState: defaultGridSlice,
   reducers: {
-    // V3 ruling: every setter below a user reaches through the grid-controls UI
-    // clears `importedBox` — a loaded preset's box wins until the user steers
-    // the controls again, then the override has to die (setResolvedGrid, below,
-    // is NOT one of these: it records a completed build, not a user edit).
+    // Every setter a user reaches through the grid controls clears `importedBox`:
+    // a loaded preset's box wins until the user steers the controls again.
+    // setResolvedGrid and setMaxBufferBytes record facts, not edits, and keep it.
     setVoxelSizeMpc: (state, action: PayloadAction<number>) => {
       state.manualVoxelSizeMpc = action.payload;
       state.importedBox = null;
@@ -46,13 +44,7 @@ export const gridSlice = createSlice({
       state.paddingMpc = action.payload;
       state.importedBox = null;
     },
-    /**
-     * setAutoFitPercent — same shape as `setPaddingMpc` above: a one-shot input
-     * to the NEXT "auto fit" click, not a live modifier of the box already
-     * showing, but still a grid-controls edit under the V3 ruling so it clears
-     * `importedBox`. Clamped here (not just at the slider) so a stray dispatch
-     * can't push the fit below the 80% floor `denseFractionBounds` assumes.
-     */
+    // Clamped here, not just at the slider: `denseFractionBounds` assumes the 80% floor.
     setAutoFitPercent: (state, action: PayloadAction<number>) => {
       state.autoFitPercent = Math.min(100, Math.max(80, Math.round(action.payload)));
       state.importedBox = null;
@@ -65,23 +57,12 @@ export const gridSlice = createSlice({
       state.manualSizeMpc = action.payload;
       state.importedBox = null;
     },
-    /**
-     * setRotation — F2.5's rotate-ring setter, same shape as its three siblings above
-     * (manualCenterMpc/manualSizeMpc/…): a ring drag is "the user reaching through the
-     * grid controls" exactly like a slider nudge, so it clears `importedBox` (V3) too.
-     */
     setRotation: (state, action: PayloadAction<Readonly<Vec4>>) => {
       state.manualRotation = action.payload as Draft<Vec4>;
       state.importedBox = null;
     },
-    /**
-     * installImportedBox — the load-side setter: installs a preset's grid box verbatim AND
-     * syncs the manual center/size/rotation/voxel-size fields to match, so the sliders (which
-     * read those fields directly, not importedBox) show the loaded values, and a later
-     * translate/resize/rotate drag — which clears importedBox onto the manual path — continues
-     * from the imported orientation instead of snapping to identity. importedBox still wins in
-     * deriveGridBox until that later edit clears it.
-     */
+    /** Installs a preset's box verbatim AND syncs the manual fields to it, so the sliders
+     *  show the loaded values and a later drag continues from the imported orientation. */
     installImportedBox: (state, action: PayloadAction<GridBox>) => {
       const importedBox = action.payload;
       state.importedBox = importedBox as Draft<GridBox>;
@@ -91,17 +72,11 @@ export const gridSlice = createSlice({
       state.manualVoxelSizeMpc = importedBox.voxelSizeMpc;
     },
     /**
-     * fitBoxToCatalog — "auto fit" as a one-shot ACTION, not a persistent mode:
-     * snapshots `boundsMpc` into `manualCenterMpc`/`manualSizeMpc` once, and
-     * from then on the box is an ordinary manual one (editable, survives a
-     * catalog reload, etc — no boolean remembers how it got here). `paddingMpc`
-     * bakes in at click time: it's an input to the NEXT fit, not a live modifier
-     * of whatever box is already showing. A grid-control edit per the V3 ruling,
-     * so it clears `importedBox` too. The voxel size is kept unless the fitted sim
-     * (grids and lanes) would put the GPU bar in its warn zone; then it is raised
-     * until it does not (voxelSizeFittingMemory). Every Auto fit, the panel's and
-     * the load dialog's, runs through here, so the dialog's preview (fittedGrid)
-     * shows the raise too.
+     * fitBoxToCatalog — Auto fit as a one-shot ACTION: snapshots the bounds into the
+     * manual center and size once; from then on the box is an ordinary manual one.
+     * The voxel size is kept unless the fitted sim would put the GPU bar in its warn
+     * zone; then it is raised until it does not. The panel's and the load dialog's
+     * Auto fit both run through here, so the dialog's preview (fittedGrid) matches.
      */
     fitBoxToCatalog: (state, action: PayloadAction<AutoFitRequest>) => {
       const { min, max } = action.payload.bounds;
@@ -118,12 +93,7 @@ export const gridSlice = createSlice({
     setResolvedGrid: (state, action: PayloadAction<{ resolvedElement: GridElement }>) => {
       state.resolvedElement = action.payload.resolvedElement;
     },
-    /**
-     * setMaxBufferBytes — V2's device-limit setter, same shape as `setResolvedGrid`
-     * above: it records a fact about the hardware, not a user edit, so it does NOT
-     * clear `importedBox`. The scene saga calls it after each build, with
-     * `bufferLimitBytes(device.limits)`, the limit planGridBudget refuses against.
-     */
+    /** After each build, with `bufferLimitBytes(device.limits)`, the limit planGridBudget refuses against. */
     setMaxBufferBytes: (state, action: PayloadAction<number>) => {
       state.maxBufferBytes = action.payload;
     },

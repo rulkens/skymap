@@ -25,7 +25,7 @@ const DEG_TO_RAD = Math.PI / 180;
 
 /**
  * encodeStep — one simulation iteration: propagate over the agents, then decay
- * over the grid, then the T20 histogram pass over the (now-decayed) trace, in
+ * over the grid, then the histogram pass over the (now-decayed) trace, in
  * that order (main.cpp:1105, 1159, 1178). All three dispatches share one
  * compute pass; WebGPU orders dispatches within a pass, so decay cannot
  * observe a half-written deposit field, and the histogram pass reads the
@@ -63,7 +63,7 @@ export function encodeStep(
   i32[15] = 0;
   device.queue.writeBuffer(step.uniformBuffer, 0, uniforms);
 
-  // T20's own tiny uniform — everything else the histogram pass needs (nDataPoints,
+  // The histogram pass's own tiny uniform — everything else the histogram pass needs (nDataPoints,
   // world dims) is already in the McpmUniforms write above; group(0) reuses it as-is.
   device.queue.writeBuffer(step.histogramFlagsBuffer, 0, new Int32Array([sampleRandomly ? 1 : 0]));
   // main.cpp zeroes density_histogram every frame it samples (1181-1184), then dispatches:
@@ -97,7 +97,7 @@ export function encodeStep(
     box.dims[2] / DECAY_WG_EDGE,
   );
 
-  // T20: main.cpp recomputes grid_z with the identical formula for this pass (its own
+  // main.cpp recomputes grid_z with the identical formula for this pass (its own
   // 'active_agents + data_count' quantity), so it shares propagate's dispatch shape and
   // gridZ exactly — the kernel's own idx guard makes the (mostly-idle) coverage safe.
   pass.setPipeline(step.histogramPipeline);

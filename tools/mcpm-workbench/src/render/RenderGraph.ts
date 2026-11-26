@@ -5,9 +5,8 @@
  * swap-chain. No layer clears: `clear()` opens the frame, then the chosen renderer
  * (`drawTrace` / `drawSplat` / `drawVolpath`), `drawGalaxyOverlay` and `drawBoxPreview`
  * (last, so its wireframe sits over the galaxy dots) load and blend one/one onto
- * it, in that order. A pass constructed but never registered here is silently
- * never opened. `accumView()` is a method, not a field — the texture is rebuilt on
- * resize, so a cached view would dangle.
+ * it, in that order; a pass never registered here is silently never opened.
+ * `accumView()` is a method: the texture is rebuilt on resize, so a cached view would dangle.
  */
 import type { AgentBuffers } from '../../@types/sim/AgentBuffers';
 import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
@@ -94,17 +93,15 @@ export function createRenderGraph(
   let accumTexView: GPUTextureView | null = null;
   let blitBindGroup: GPUBindGroup | null = null;
   let tracePass: TracePass | null = null;
-  // T18's preview-export pass (task R7): built by attachPreviewTrace over the packed-cube
-  // buffer Viewport hands in, disposed early on toggle-off/staleness (disposePreviewTrace)
-  // or wholesale with the rest of the graph (dispose()) — never both `tracePass` and this
-  // one drawn in the same frame (drawTracePass's own doc comment on `reducedTex` below).
+  // The packed-preview pass: built by attachPreviewTrace over the packed-cube buffer,
+  // disposed on toggle-off/staleness (disposePreviewTrace) or with the graph — never
+  // drawn in the same frame as `tracePass`.
   let previewTracePass: TracePass | null = null;
   let volpathPass: VolpathPass | null = null;
   let splatPass: SplatPass | null = null;
   let galaxyOverlayPass: GalaxyOverlayPass | null = null;
   // The shared offscreen trace target (drawTracePass, divisor > 1) — one texture reused
-  // by whichever pass draws this frame (the live trace or T18's previewPass; never both
-  // in the same frame). `reducedDivisor` starts at 0 (not 1) so the FIRST divisor-1 frame
+  // by whichever pass draws this frame (the live trace or the packed preview). `reducedDivisor` starts at 0 (not 1) so the FIRST divisor-1 frame
   // still skips allocating it — the lazy check in drawTracePass below never runs for
   // divisor <= 1, so this trio only ever gets built once something actually needs it.
   let reducedTex: GPUTexture | null = null;

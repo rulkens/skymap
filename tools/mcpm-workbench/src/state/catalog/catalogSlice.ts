@@ -9,12 +9,9 @@ import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@t
 import type { Tier } from '../../../../../src/@types/data/Tier';
 
 /**
- * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier (spec §10's
- * worked example uses this trio). `small` was the original boot default for
- * a fast first paint, but SDSS ships no `small`-tier bin at all
- * (`tierTargets: { small: 0, ... }`, sources/sdss.ts) — the default trio was
- * silently SDSS-less at boot. `medium` is the smallest tier that actually
- * carries all three; `large` is still an explicit opt-in via the panel.
+ * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier: SDSS ships no
+ * `small`-tier bin (`tierTargets: { small: 0, ... }`, sources/sdss.ts), so
+ * `medium` is the smallest tier that carries all three.
  */
 export const defaultCatalogSlice: CatalogSlice = {
   sources: ['sdss', '2mrs', 'glade'],
@@ -73,7 +70,7 @@ export const catalogSlice = createSlice({
     /**
      * Records a failed build (e.g. `planGridBudget`'s over-budget refusal,
      * already naming buffer/bytes/limit): the thrown error's own message
-     * routed into `statusMessage`, so App.tsx's status line shows WHAT failed
+     * routed into `statusMessage`, so the Data sidebar's status line shows WHAT failed
      * instead of the message dead-ending in the console. No new copy — the
      * caller passes the caught error's `.message` straight through.
      */
