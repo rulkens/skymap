@@ -20,7 +20,13 @@ export function createCosmicWebDensitySlot(
     name: id,
     fetch,
     commit: async (volume) => {
-      await jitterMaskReady;
+      try {
+        await jitterMaskReady;
+      } catch (error) {
+        // The slot disposes only superseded values, never one whose commit failed.
+        volume.texture.destroy();
+        throw error;
+      }
       renderer.upload(id, volume, entry);
     },
     onRelease: () => renderer.unload(id),
