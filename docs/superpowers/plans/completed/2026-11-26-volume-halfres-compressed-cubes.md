@@ -1178,11 +1178,12 @@ medium).
 - [x] 5 Crop: replaced by a data check: outside the box holds 0.3% of the summed value; inside,
       r8 L1 × gain equals today's large (RMS 0.0015).
 - [x] 6 Far brightness: MCPM 0.83 @ 600, 0.43 @ 2000; 2MRS 0.96 / 0.41; owner passed by eye.
-- [ ] 7 Per-draw cost: open. K-draw bench paused part-way (2 branch rounds, 1 main round);
-      preliminary ms per extra draw of both volumes in the PR body.
-- [ ] 8 Medium and small vs today: open. Mac medium is in the partial bench; the phone check at
+- [ ] 7 Per-draw cost: deferred to the detail-region PR on the owner's word (2026-11-26). Preliminary: frame rate
+      unchanged at 120 fps (8.33 ms) on the Mac at every tier and pose measured; ms per extra draw of both volumes,
+      branch vs main: medium inside 0.96-1.11 vs 0.90, medium 600 Mpc 0.89 vs 1.05, large inside 0.97 vs 0.98 (2 rounds vs 1).
+- [ ] 8 Medium and small vs today: deferred to the detail-region PR on the owner's word (2026-11-26). Mac medium is in the partial bench; the phone check at
       small has not run (no phone attached).
-- [ ] 9 Load time: open. The loadtime tool has no volume milestone; first-frame 6.8 vs 6.5 s on
+- [ ] 9 Load time: deferred to the detail-region PR on the owner's word (2026-11-26). The loadtime tool has no volume milestone; first-frame 6.8 vs 6.5 s on
       slow 4G is noise.
 - [x] 10 CPU: the 10.5 MB bar is void after the whole-level ruling; re-measured JS heap peak
       52.6 MB on a cold load of both volumes, 46.4 MB settled, nothing kept.

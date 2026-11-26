@@ -120,6 +120,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Density volume timing acceptance** `ready` — per-draw bench at medium and large, small tier on the phone and volume arrival on a throttled link, deferred from #1178; opens the detail-region PR.
 - [ ] **Cloud bake: date-line join against the swaths** `needs-design` — the 24 h join is cut between the two mosaics only; a swath beside it ghosts (6 Nov) and mid-latitude paths stay straight. → [details](backlog/2026-11-13-cloud-dateline-join.md)
 - [ ] **Cloud bake: fixed transfer curve** `needs-design` — the per-day quantile match forces the same total cloud amount every day. → [details](backlog/2026-11-10-cloud-fixed-transfer-curve.md)
 - [ ] **Cloud shell borrows the globe's cloud texture** `ready` — the cloud map is uploaded twice (globe + shell); use `earthRenderer.getMapView('clouds')` as `surfaceTilesPass.ts` does. → [details](backlog/2026-11-16-cloud-shell-shares-globe-texture.md)

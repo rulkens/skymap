@@ -134,3 +134,23 @@ Verify agent RUNNING on :5182: image unchanged vs passed after-shots (mcpm-insid
 ## Browser verification at 00571c0b7 (:5182): PASS
 Image vs approved after-shots: mcpm-inside RMS 0.07, 2mrs-inside 0.10, mcpm-600 0.00 (shift 0.00). Console clean (load, tier cycle, 2MRS toggle). Mask 200 / 65536 B once per load; no unjittered frame in 14 samples; gate-holds-ready-volume case NOT exercised (mask always first). JS heap peak 52.6 MB cold load both volumes, 46.4 settled (ArrayBuffer bytes not measurable). Mask 404: one warning, no retry, volume draws unjittered (mean 18.8 vs 16.4: brighter without jitter, pre-existing fallback look). Mask HTML-200: 3 attempts then one warning. Missing mcpm L1: one warning per load attempt, 2MRS draws. Outputs: scratchpad/verify1178/.
 Closeout agent RUNNING (comment-audit, deletion-audit, feature-done, plan+spec → completed/, ledger archive, PR body; timing table marked pending). Owner ask open: website sentences, cube-slot release, fetcher table, bench resume.
+
+## Owner answers (ask Z38q)
+Bench: STILL BAKING, keep waiting. Teardown gap: FIX IN THIS BRANCH (release cube slots in destroy). Storage table: KEEP. Website pipeline.mdx:131 → "Both are stored as cubes of numbers, with a note of what each cube spans."; :93 → "All but the cosmic-web density field open the same way…" + "a density field is a set of cubes at three sizes". All three sent to the closeout agent (a5ca9c0a7fb2acc30) as extra commits.
+RESUME: closeout report → ff this worktree → CI green → merge ask is BLOCKED on the bench (owner word that the bake is done) + ruling on medium-inside cost; phone check 8 owed.
+
+## Closeout DONE (00571c0b7..55a522d18; CI green; PR still draft)
+ce2dfd1ad comment audit; 4d26be5f0 deletion audit (safe bin); 8bdc4a72e feature-done (plan+spec → completed/, ledger copied to docs/superpowers/plans/completed/2026-11-26-volume-halfres-compressed-cubes.ledger.md, Task 15 results: 7/8/9 unticked); 55a522d18 backlog wording. Suite 2137 files / 37516 tests.
+NOTE: the repo ledger copy is a snapshot; before the merge ask, re-copy this file over it (one commit).
+Deletion-audit judgement calls (unruled, ask owner in the final set or drop): extractPolyphormExport.py JSON sidecars nothing reads (~35 lines); `seconds` timing column in buildVolumePyramid.ts; move baseVoxelMpc to 264 to drop _pad0; duplicate ASTC/BC4 byte-size test; bytesPerRow from level length.
+Closeout agent RESUMED with the three rulings (teardown fix, two website sentences) — RUNNING.
+
+## OWNER RULING (2026-11-26 late): "we will leave the timing for the next pr"
+Checks 7, 8, 9 (K-draw bench, phone small tier, volume arrival) are DEFERRED to the detail-region PR; not a merge blocker for #1178. Carry: medium-inside prelim 0.96–1.11 vs 0.90 ms per extra draw pair (~+15%, 2 rounds vs 1), 120 fps unchanged on the Mac; bench kit in scratchpad/k1178/ (patch.mjs, kbench.mts, fit.py, arrival.mts) — scratch, may vanish.
+RESUME: ruling-commits agent report → final small commit (plan Task 15: 7/8/9 "deferred to the detail-region PR on the owner`s word"; PR body timing section likewise; re-copy this ledger into docs/superpowers/plans/completed/) → CI green → ASK for the merge word (mark ready, squash, no --auto). After merge (owner): build-mcpm, build-2mrs in main; sync-r2-secure; app deploy at once.
+
+## Ruling commits DONE (55a522d18..b7b303e65; CI green)
+4317ed95a teardown releases every cube slot (test first); 62d42813f + b7b303e65 website pipeline sentences. Suite 2139 files / 37517 tests. PR body updated.
+Final-commit agent RUNNING: plan Task 15 checks 7/8/9 = deferred to the detail-region PR on the owner`s word; PR body timing section likewise; this ledger re-copied into docs/superpowers/plans/completed/. Then CI → merge ask.
+Not applied (owner did not answer): deletion candidates extractPolyphormExport.py JSON sidecars, builder `seconds` column.
+NEXT PR (detail region): ground exploration agent a876c168ebee95af2 RUNNING; then refactor-ground checkpoint page + asks; spec; opens with the deferred timing checks. Branch from main AFTER #1178 merges.
