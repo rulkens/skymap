@@ -6,7 +6,7 @@ import type { UserFileProvenance } from '../../@types/catalog/UserFileProvenance
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
-import { buildParamsPayload } from '../params/exportParams';
+import { buildParamsPayload } from '../params/buildParamsPayload';
 
 // Local time with a numeric (no-colon) UTC offset — "+0200", matching the
 // spec §8 example. parsePolyphyTraceSidecar stores provenance untyped, so

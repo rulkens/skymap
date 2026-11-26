@@ -1,24 +1,7 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import { worldToVoxel } from '../../grid/box/worldToVoxel';
 import { cameraBasis } from './cameraBasis';
-
-/**
- * The per-frame camera the splat and overlay passes take. Lengths are world Mpc (the
- * tool's only length unit); `viewportPx` is the drawable size, from which aspect and the
- * shader's pixel arithmetic both derive — passing it instead of a bare aspect keeps the
- * two from disagreeing.
- */
-export type McpmCameraView = {
-  readonly eyeMpc: Readonly<Vec3>;
-  readonly targetMpc: Readonly<Vec3>;
-  readonly upMpc: Readonly<Vec3>;
-  readonly fovYRad: number;
-  readonly viewportPx: readonly [number, number];
-};
-
-/** camera.wesl's McpmCamera: four vec3+scalar rows, 16-byte aligned throughout. */
-export const MCPM_CAMERA_BYTES = 64;
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 /** Fill `out` (>= 16 floats) with camera.wesl's McpmCamera for `view`, in the voxel frame. */
 export function writeMcpmCamera(out: Float32Array, box: GridBox, view: McpmCameraView): void {

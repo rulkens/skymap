@@ -13,11 +13,13 @@
  */
 import type { AgentBuffers } from '../../../@types/sim/AgentBuffers';
 import type { GridBox } from '../../../@types/grid/GridBox';
-import { UNIFORM_BYTES } from '../../sim/createGridBuffers';
-import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from '../camera/writeMcpmCamera';
+import { UNIFORM_BYTES } from '../../sim/uniformBytes.constant';
+import { writeMcpmCamera } from '../camera/writeMcpmCamera';
 import vertexWgsl from '../../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
 import transformWgsl from '../../../../../src/services/gpu/shaders/mcpm/splatTransform.wesl?static';
 import blitWgsl from '../../../../../src/services/gpu/shaders/mcpm/splatBlit.wesl?static';
+import { MCPM_CAMERA_BYTES } from '../camera/mcpmCameraBytes.constant';
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 /**
  * `sampleWeight` is the raymarch's own knob: the fork feeds both views the same one.
@@ -112,7 +114,7 @@ export function createSplatPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's LAYER_BLEND, taken as an argument like targetFormat.
+          // LAYER_BLEND, taken as an argument like targetFormat.
           blend: opts.blend,
         },
       ],

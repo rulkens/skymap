@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { CameraBasis } from '../../../../tools/mcpm-workbench/src/render/camera/cameraBasis';
+import type { CameraBasis } from '../../../../tools/mcpm-workbench/@types/render/camera/CameraBasis';
 import { screenToRay } from '../../../../tools/mcpm-workbench/src/gizmo/screenToRay';
 
 // Identity basis: right=+x, up=+y, forward=+z — keeps the hand-computed

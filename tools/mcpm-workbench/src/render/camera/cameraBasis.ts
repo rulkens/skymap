@@ -4,13 +4,7 @@ import type { GridBox } from '../../../@types/grid/GridBox';
 import { cross3 } from '../../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { rotateVec3ByQuat } from '../../../../../src/utils/math/rotateVec3ByQuat';
-
-/** An orthonormal right-handed frame: `forward` looks at the target, `up` is re-derived. */
-export type CameraBasis = {
-  readonly right: Vec3;
-  readonly up: Vec3;
-  readonly forward: Vec3;
-};
+import type { CameraBasis } from '../../../@types/render/camera/CameraBasis';
 
 /**
  * cameraBasis — the frame every mcpm view projects through, shared so the raymarch, the

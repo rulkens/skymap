@@ -1,7 +1,7 @@
 import type { GridBox } from '../../@types/grid/GridBox';
 import type { GridElement } from '../../@types/grid/GridElement';
 import type { TraceReadback } from '../../@types/sim/TraceReadback';
-import { BYTES_PER_ELEMENT } from './createGridBuffers';
+import { BYTES_PER_ELEMENT } from './bytesPerElement.constant';
 
 /**
  * readbackTrace — copies the harness's trace grid to a MAP_READ staging

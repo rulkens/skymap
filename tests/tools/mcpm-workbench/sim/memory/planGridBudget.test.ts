@@ -6,10 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
-import {
-  estimateGridBudgetBytes,
-  planGridBudget,
-} from '../../../../../tools/mcpm-workbench/src/sim/memory/planGridBudget';
+import { planGridBudget } from '../../../../../tools/mcpm-workbench/src/sim/memory/planGridBudget';
+import { estimateGridBudgetBytes } from '../../../../../tools/mcpm-workbench/src/sim/memory/estimateGridBudgetBytes';
 
 const boxOf = (dims: Vec3): GridBox => ({
   centerMpc: [0, 0, 0],

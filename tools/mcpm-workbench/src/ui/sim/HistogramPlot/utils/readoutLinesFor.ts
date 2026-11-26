@@ -1,4 +1,4 @@
-import { HISTOGRAM_BASE } from '../../../../sim/createGridBuffers';
+import { HISTOGRAM_BASE } from '../../../../sim/histogramBase.constant';
 import { formatSignificant } from '../../../../utils/format/formatSignificant';
 import { MAX_BIN_INDEX } from '../data/maxBinIndex.constant';
 import { sampledTotal } from './sampledTotal';

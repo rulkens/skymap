@@ -8,7 +8,7 @@ import { memo, useCallback, type ReactNode } from 'react';
 import { downloadStem } from '../../../export/downloadStem';
 import { triggerDownload } from '../../../export/triggerDownload';
 import { deriveGridBox } from '../../../grid/deriveGridBox';
-import { exportParams, MCPM_PARAM_KEYS } from '../../../params/exportParams';
+import { exportParams } from '../../../params/exportParams';
 import { importParams } from '../../../params/importParams';
 import { setCatalogSources } from '../../../state/catalog/catalogSlice';
 import { exportNpyRequested, exportScfdRequested } from '../../../state/commands';
@@ -17,6 +17,7 @@ import { setAgentCount, setInitMode, setSimParam } from '../../../state/sim/simS
 import { useAppDispatch, useAppStore } from '../../../store/hooks';
 import FileActions, { type FileActionsProps } from '../../export/FileActions/FileActions';
 import { PARAMS_FILE_EXTENSION } from './data/paramsFileExtension.constant';
+import { MCPM_PARAM_KEYS } from '../../../params/mcpmParamKeys.constant';
 
 export type FileActionsContainerProps = Pick<FileActionsProps, 'collapsed'>;
 

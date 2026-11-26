@@ -14,7 +14,7 @@ import type { GridBox } from '../../../@types/grid/GridBox';
 import type { GridElement } from '../../../@types/grid/GridElement';
 import { worldToVoxel } from '../../grid/box/worldToVoxel';
 import { cameraBasis } from '../camera/cameraBasis';
-import { UNIFORM_BYTES } from '../../sim/createGridBuffers';
+import { UNIFORM_BYTES } from '../../sim/uniformBytes.constant';
 import { specializeGridElement } from '../../sim/specializeGridElement';
 import { uploadPaletteLut } from '../uploadPaletteLut';
 import vertexWgsl from '../../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
@@ -110,7 +110,7 @@ export function createTracePass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's LAYER_BLEND, taken as an argument like targetFormat — see its
+          // LAYER_BLEND, taken as an argument like targetFormat — see its
           // own doc comment. Orthogonal to the march's OWN 'additive' uniform, which
           // chooses how the slabs composite with each other inside the fragment.
           blend: opts.blend,

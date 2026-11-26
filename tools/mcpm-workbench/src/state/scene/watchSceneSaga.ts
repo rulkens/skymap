@@ -23,10 +23,10 @@ import { initGpu } from '../../../../../src/services/gpu/device';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveAgentWeights } from '../../catalog/weights/deriveAgentWeights';
 import { deriveGridBox } from '../../grid/deriveGridBox';
-import { disposeScene } from '../../render/renderResources';
+import { disposeScene } from '../../render/disposeScene';
 import { bufferLimitBytes } from '../../sim/memory/bufferLimitBytes';
 import { createMcpmHarness } from '../../sim/createMcpmHarness';
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
 import {
   catalogLoaded,

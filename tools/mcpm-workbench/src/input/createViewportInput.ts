@@ -25,12 +25,14 @@ import { dragRotate } from '../gizmo/dragRotate';
 import { gizmoHandleGeometry } from '../gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../gizmo/pickGizmoHandle';
 import { setManualCenterMpc, setManualSizeMpc, setRotation } from '../state/grid/gridSlice';
-import { commitCameraPose, PITCH_LIMIT, CAMERA_DISTANCE_FLOOR } from '../state/view/viewSlice';
+import { commitCameraPose } from '../state/view/viewSlice';
 import type { RootState, WorkbenchStore } from '../store/types';
 import { arrowLengthMpcFor } from './arrowLengthMpcFor';
 import { isAxisDrag } from './isAxisDrag';
 import { rayFromPointer } from './rayFromPointer';
 import { ringReferenceDirFor } from './ringReferenceDirFor';
+import { PITCH_LIMIT } from '../state/view/pitchLimit.constant';
+import { CAMERA_DISTANCE_FLOOR } from '../state/view/cameraDistanceFloor.constant';
 
 const DRAG_SPEED = 0.005;
 // Right/middle-drag pans the orbit target along the camera's right/up axes at a

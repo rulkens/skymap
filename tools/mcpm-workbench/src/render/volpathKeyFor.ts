@@ -1,5 +1,5 @@
 import type { ViewSlice } from '../../@types/view/ViewSlice';
-import type { McpmCameraView } from './camera/writeMcpmCamera';
+import type { McpmCameraView } from '../../@types/render/camera/McpmCameraView';
 
 /**
  * volpathKeyFor — Viewport.tsx's path-tracer accumulator reset key (see its own comment

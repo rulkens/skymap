@@ -23,7 +23,7 @@ const SCOPES: readonly Scope[] = [
   {
     name: 'mcpm-workbench',
     roots: ['tools/mcpm-workbench/src'],
-    allowed: ['tools/mcpm-workbench/src/ui/Viewport/data/canvasStyle.constant.ts'],
+    allowed: [],
   },
 ];
 

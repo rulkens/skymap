@@ -1,6 +1,7 @@
-import type { GridBox } from '../../@types/grid/GridBox';
 import type { McpmParams } from '../../@types/sim/McpmParams';
-import { UNIFORM_BYTES } from './createGridBuffers';
+import { UNIFORM_BYTES } from './uniformBytes.constant';
+import { DECAY_WG_EDGE } from './decayWgEdge.constant';
+import type { McpmStep } from '../../@types/sim/McpmStep';
 
 /**
  * The fork dispatches propagate as `run_compute(10, 10, grid_z)` with
@@ -19,40 +20,8 @@ export const QUIRK_DISPATCH_TRUNCATION = true;
 const PROPAGATE_DISPATCH_X = 10; // main.cpp:1122 — run_compute(10, 10, grid_z)
 const PROPAGATE_DISPATCH_Y = 10;
 const PROPAGATE_INVOCATIONS_PER_GROUP = 1000; // main.cpp:205 THREAD_GROUP_SIZE
-// Exported: importParams.ts's grid-dims validation quotes this rather than
-// restating 8 a second place — the decay dispatch below has no bounds tail,
-// so a dims value that isn't an exact multiple silently truncates it.
-export const DECAY_WG_EDGE = 8; // constants.wesl DECAY_WG_* — dims are multiples of 8
 
 const DEG_TO_RAD = Math.PI / 180;
-
-/** Everything one propagate + decay pair needs; parity selects the ping-pong side. */
-export type McpmStep = {
-  readonly propagatePipeline: GPUComputePipeline;
-  readonly decayPipeline: GPUComputePipeline;
-  readonly uniformBuffer: GPUBuffer;
-  readonly uniformBindGroup: GPUBindGroup;
-  /** Indexed by parity: [0] binds deposit = A, [1] binds deposit = B. */
-  readonly propagateBindGroups: readonly [GPUBindGroup, GPUBindGroup];
-  readonly decayBindGroups: readonly [GPUBindGroup, GPUBindGroup];
-  readonly box: GridBox;
-  readonly nDataPoints: number;
-  readonly nAgents: number;
-  readonly parity: 0 | 1;
-  readonly iteration: number;
-  /**
-   * T20: the histogram pass. Its group(0) is `uniformBindGroup` above, reused
-   * as-is (histogram.wesl's header explains why it can't have its own
-   * full-size uniform); group(1)/group(2) are STATIC (unlike propagate/decay's
-   * ping-ponged pair) — neither trace, the agent lanes, nor the
-   * histogram/densities buffers swap sides.
-   */
-  readonly histogramPipeline: GPUComputePipeline;
-  readonly histogramFlagsBuffer: GPUBuffer;
-  readonly histogramCountsBuffer: GPUBuffer;
-  readonly histogramStorageBindGroup: GPUBindGroup;
-  readonly histogramOwnBindGroup: GPUBindGroup;
-};
 
 /**
  * encodeStep — one simulation iteration: propagate over the agents, then decay

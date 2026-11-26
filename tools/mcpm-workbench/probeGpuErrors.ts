@@ -15,7 +15,7 @@ import { createServer as createNetServer } from 'node:net';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { RendererId } from './@types/view/RendererId';
-import { SETTLE_MS } from './src/render/effectiveVolpathDivisor';
+import { SETTLE_MS } from './src/render/settleMs.constant';
 
 const VIEWPORT = { width: 1280, height: 800 };
 // A control change reaches the GPU through store → Viewport's rAF loop, so

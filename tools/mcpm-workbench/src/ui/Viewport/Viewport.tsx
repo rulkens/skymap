@@ -15,8 +15,8 @@ import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import { deriveGridBox } from '../../grid/deriveGridBox';
 import { createViewportInput } from '../../input/createViewportInput';
 import { cameraViewFor } from '../../render/camera/cameraViewFor';
-import { effectiveVolpathDivisor, SETTLE_MS } from '../../render/effectiveVolpathDivisor';
-import { createRenderResources, disposeScene } from '../../render/renderResources';
+import { effectiveVolpathDivisor } from '../../render/effectiveVolpathDivisor';
+import { createRenderResources } from '../../render/renderResources';
 import { volpathKeyFor } from '../../render/volpathKeyFor';
 import { gridShapeKeyFor } from '../../state/grid/gridShapeKeyFor';
 import { incrementStep } from '../../state/sim/simSlice';
@@ -25,11 +25,13 @@ import { storeWriteIsDirty } from '../../store/storeWriteIsDirty';
 import type { RegisterSagaContext, WorkbenchStore } from '../../store/types';
 import { frameNeedsRender } from './utils/frameNeedsRender';
 import { BOX_PREVIEW_MS } from './data/boxPreviewMs.constant';
-import { canvasStyle } from './data/canvasStyle.constant';
+import { CANVAS_STYLE } from './data/canvasStyle.constant';
 import { CONTRAST } from './data/contrast.constant';
 import { EXPOSURE } from './data/exposure.constant';
 import { FPS_PUSH_INTERVAL_MS } from './data/fpsPushIntervalMs.constant';
 import { traceViewFor } from './utils/traceViewFor';
+import { SETTLE_MS } from '../../render/settleMs.constant';
+import { disposeScene } from '../../render/disposeScene';
 
 /**
  * `?probe`-gated boot signal: probeGpuErrors.ts polls `__mcpmProbeMeanLogTraceAtPoints`
@@ -327,7 +329,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     };
   }, [store, registerSagaContext]);
 
-  return <canvas ref={canvasRef} style={canvasStyle} />;
+  return <canvas ref={canvasRef} style={CANVAS_STYLE} />;
 }
 
 export default Viewport;

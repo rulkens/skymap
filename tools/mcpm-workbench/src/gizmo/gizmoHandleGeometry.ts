@@ -4,20 +4,7 @@ import type { Handle } from '../../@types/gizmo/Handle';
 import type { RingHandle } from '../../@types/gizmo/RingHandle';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
-
-/** World-space pick tolerance, as a fraction of min(halfExtentMpc) — sized off the box itself,
- *  not screen-space-constant. Resize handles only; translate arrows rebase onto their own
- *  arrowLengthMpc (see pickGizmoHandle.ts) since they hold a constant screen size instead. */
-export const PICK_TOLERANCE_FRACTION = 0.05;
-
-/** Rotate-ring radius, as a fraction of `arrowLengthMpc` — the SAME constant-screen-size
- *  length the translate arrows use, NOT a fraction of half-extent (spec §5's original
- *  sizing). RULING (supersedes spec §5, same reasoning as F1.11's arrow-length change): a
- *  box-scaled ring would swallow a tiny box or vanish off-screen on a huge one — the exact
- *  problem F1.11 fixed for the arrows. 1.3 (revised from an initial 0.8) sits the rings
- *  OUTSIDE the arrow tips — clear visual separation between the two handle families, at
- *  maintainer request. */
-export const RING_RADIUS_ARROW_MULTIPLE = 1.3;
+import { RING_RADIUS_ARROW_MULTIPLE } from './ringRadiusArrowMultiple.constant';
 
 function addScaled(center: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 {
   return [center[0] + dir[0] * scale, center[1] + dir[1] * scale, center[2] + dir[2] * scale];

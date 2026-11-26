@@ -2,11 +2,7 @@ import type { GridBox } from '../../@types/grid/GridBox';
 import type { GridElement } from '../../@types/grid/GridElement';
 import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
-
-export type PreviewPackedTrace = {
-  readonly buffer: GPUBuffer;
-  readonly element: GridElement;
-};
+import type { PreviewPackedTrace } from '../../@types/export/PreviewPackedTrace';
 
 /**
  * previewPackedTrace — packs `values` through the REAL `packLogTraceVoxels`

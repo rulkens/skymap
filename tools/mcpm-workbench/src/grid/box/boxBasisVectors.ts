@@ -1,14 +1,6 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../../src/@types/math/Vec4';
 import { rotateVec3ByQuat } from '../../../../../src/utils/math/rotateVec3ByQuat';
-
-/** The box's own three world-space unit axis directions — mirrors CameraBasis's
- * named-triplet shape (spec §2's non-goal: no matrices anywhere in the tool). */
-export type BoxBasis = {
-  readonly x: Vec3;
-  readonly y: Vec3;
-  readonly z: Vec3;
-};
+import type { BoxBasis } from '../../../@types/grid/box/BoxBasis';
 
 /**
  * boxBasisVectors — `rotation` applied (not its conjugate: this rotates a

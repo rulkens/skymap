@@ -1,7 +1,7 @@
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { PinnedAxisDims } from '../../../@types/grid/PinnedAxisDims';
 import { ceil8 } from '../../utils/math/ceil8';
-import { bufferBytesForDims } from '../../sim/memory/planGridBudget';
+import { bufferBytesForDims } from '../../sim/memory/bufferBytesForDims';
 
 function dimsAt(
   extentMpc: Readonly<Vec3>,

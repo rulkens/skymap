@@ -27,8 +27,9 @@ import { encodeStep } from './encodeStep';
 import { planGridBudget } from './memory/planGridBudget';
 import { readbackHistogram } from './readbackHistogram';
 import { readbackTrace } from './readbackTrace';
-import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';
+import { seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
+import { AGENT_COUNT_STEP } from './agentCountStep.constant';
 
 // io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the T20
 // histogram pass a subset of propagate's — trace, agent positions, and the (dead-read)

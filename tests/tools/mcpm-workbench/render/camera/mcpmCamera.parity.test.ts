@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { MCPM_CAMERA_BYTES } from '../../../../../tools/mcpm-workbench/src/render/camera/writeMcpmCamera';
+import { MCPM_CAMERA_BYTES } from '../../../../../tools/mcpm-workbench/src/render/camera/mcpmCameraBytes.constant';
 
 const WGSL_TYPE_BYTES: Record<string, number> = { f32: 4, i32: 4, u32: 4, 'vec3<f32>': 12 };
 

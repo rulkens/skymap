@@ -4,7 +4,7 @@ import type { RingHandle } from '../../@types/gizmo/RingHandle';
 import type { Ray } from '../../@types/gizmo/Ray';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { closestPointOnRayToLine } from './closestPointOnRayToLine';
-import { PICK_TOLERANCE_FRACTION } from './gizmoHandleGeometry';
+import { PICK_TOLERANCE_FRACTION } from './pickToleranceFraction.constant';
 import { rayPlaneIntersect } from './rayPlaneIntersect';
 
 /** Perpendicular distance from `point` to the ray, clamped to the ray's `t ≥ 0` half — a point

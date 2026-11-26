@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { ViewSlice } from '../../../@types/view/ViewSlice';
-import type { McpmCameraView } from './writeMcpmCamera';
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 const FOV_Y_RAD = Math.PI / 4;
 const CAMERA_UP: Vec3 = [0, 1, 0];

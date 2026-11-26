@@ -11,7 +11,7 @@
  */
 import { takeLeading, call, put, select, getContext } from 'typed-redux-saga';
 
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
 import { downloadStem } from '../../export/downloadStem';
 import { emitTraceSidecar } from '../../export/emitTraceSidecar';

@@ -2,16 +2,7 @@ import type { AgentWeights } from '../../@types/catalog/AgentWeights';
 import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
 import type { GridBox } from '../../@types/grid/GridBox';
 import { worldToVoxel } from '../grid/box/worldToVoxel';
-
-/** Voxel-space lanes for the Galaxies overlay's own draw set — same shape as seedAgents'
- * catalog-prefix lanes, but over every point that survived source/tier load (task S16):
- * the overlay is a data preview, not the sim's box-culled readout. */
-export type OverlayCatalog = {
-  readonly x: Float32Array;
-  readonly y: Float32Array;
-  readonly z: Float32Array;
-  readonly weight: Float32Array;
-};
+import type { OverlayCatalog } from '../../@types/catalog/OverlayCatalog';
 
 /**
  * buildOverlayCatalog — voxel positions + display weights for the Galaxies overlay, over

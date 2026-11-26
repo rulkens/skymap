@@ -7,7 +7,7 @@
  */
 import { takeEvery, put, select, getContext } from 'typed-redux-saga';
 
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
 import { clearTraceRequested, resetRequested } from '../commands';
 import { setCatalogStatusMessage } from '../catalog/catalogSlice';

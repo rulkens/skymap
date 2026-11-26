@@ -1,7 +1,7 @@
 import { call, put } from 'typed-redux-saga';
 
 import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
-import type { RenderResources } from '../../render/renderResources';
+import type { RenderResources } from '../../../@types/render/RenderResources';
 import { deviceLost } from '../view/viewSlice';
 
 /**

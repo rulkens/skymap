@@ -2,6 +2,8 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RendererId } from '../../../@types/view/RendererId';
 import type { ViewSlice } from '../../../@types/view/ViewSlice';
 import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import { PITCH_LIMIT } from './pitchLimit.constant';
+import { CAMERA_DISTANCE_FLOOR } from './cameraDistanceFloor.constant';
 
 /**
  * defaultViewSlice — the raymarch with the galaxy overlay, framing a box a few hundred Mpc across
@@ -67,11 +69,6 @@ export const defaultViewSlice: ViewSlice = {
     sampleCap: 512,
   },
 };
-
-// Shared with the input module's live drag register (createViewportInput.ts) so a
-// mid-gesture register value and a committed store value clamp identically.
-export const PITCH_LIMIT = 1.5;
-export const CAMERA_DISTANCE_FLOOR = 1;
 
 // 'divisor' and 'sampleCap' get their own setters (below), sibling-shaped to the
 // raymarch's setDivisor — excluded here the same way 'compressive' is.

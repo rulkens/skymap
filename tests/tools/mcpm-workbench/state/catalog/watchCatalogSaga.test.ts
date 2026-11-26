@@ -7,7 +7,7 @@
  * ever loads).
  */
 import { describe, expect, it } from 'vitest';
-import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
+import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/catalog/resolveCatalogPointsPlan';
 import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
 import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
 

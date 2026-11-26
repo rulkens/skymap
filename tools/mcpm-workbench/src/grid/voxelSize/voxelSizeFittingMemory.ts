@@ -1,6 +1,6 @@
 import type { GridSlice } from '../../../@types/grid/GridSlice';
 import type { SimLaneCounts } from '../../../@types/sim/SimLaneCounts';
-import { DECAY_WG_EDGE } from '../../sim/encodeStep';
+import { DECAY_WG_EDGE } from '../../sim/decayWgEdge.constant';
 import { estimateBoxGpuBytes } from '../../sim/memory/estimateBoxGpuBytes';
 import { simMemoryZone } from '../../sim/memory/simMemoryZone';
 import { VOXEL_SIZE_STEP_LOG10 } from './voxelSizeStepLog10.constant';

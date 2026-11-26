@@ -8,7 +8,7 @@
  *   correct; this test derives the expected slots from the WESL source
  *   rather than restating the numbers, so a renumbered binding is caught here
  *   pre-GPU too.
- * - `DECAY_WG_EDGE` (encodeStep.ts) mirrors constants.wesl's three
+ * - `DECAY_WG_EDGE` (decayWgEdge.constant.ts) mirrors constants.wesl's three
  *   `DECAY_WG_*` overrides — the decay dispatch divides each grid dimension
  *   by this, so a mismatch silently mis-shapes the dispatch (a reshape is
  *   only bitwise-identical when the divisor matches the kernel's own
@@ -23,7 +23,7 @@ import {
   HISTOGRAM_STORAGE_SLOTS,
   PROPAGATE_SLOTS,
 } from '../../../../tools/mcpm-workbench/src/sim/createMcpmHarness';
-import { DECAY_WG_EDGE } from '../../../../tools/mcpm-workbench/src/sim/encodeStep';
+import { DECAY_WG_EDGE } from '../../../../tools/mcpm-workbench/src/sim/decayWgEdge.constant';
 
 /** Parses every `@group(1) @binding(N) var<...> NAME: ...;` line into a name -> slot map. */
 function parseGroup1Bindings(text: string): Map<string, number> {
@@ -71,7 +71,7 @@ describe('dispatch bind-group slot parity (io.wesl ↔ createMcpmHarness.ts)', (
   });
 });
 
-describe('DECAY_WG_EDGE parity (constants.wesl ↔ encodeStep.ts)', () => {
+describe('DECAY_WG_EDGE parity (constants.wesl ↔ decayWgEdge.constant.ts)', () => {
   it('DECAY_WG_X/Y/Z all equal DECAY_WG_EDGE', () => {
     const text = readFileSync(
       join(process.cwd(), 'src/services/gpu/shaders/mcpm/constants.wesl'),

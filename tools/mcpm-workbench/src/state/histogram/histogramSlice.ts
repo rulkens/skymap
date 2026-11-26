@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { HistogramSlice } from '../../../@types/sim/HistogramSlice';
-import { HISTOGRAM_BINS } from '../../sim/createGridBuffers';
+import { HISTOGRAM_BINS } from '../../sim/histogramBins.constant';
 import { meanLogTraceAtPoints } from '../../sim/meanLogTraceAtPoints';
 
 // Caps the convergence plot's x-axis span rather than growing it unbounded over a

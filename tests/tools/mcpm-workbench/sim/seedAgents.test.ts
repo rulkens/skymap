@@ -6,10 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/catalog/cullPointsToBox';
-import { seedAgents, AGENT_COUNT_STEP } from '../../../../tools/mcpm-workbench/src/sim/seedAgents';
+import { seedAgents } from '../../../../tools/mcpm-workbench/src/sim/seedAgents';
 import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
 import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import { AGENT_COUNT_STEP } from '../../../../tools/mcpm-workbench/src/sim/agentCountStep.constant';
 
 const box: GridBox = {
   centerMpc: [0, 0, 0],

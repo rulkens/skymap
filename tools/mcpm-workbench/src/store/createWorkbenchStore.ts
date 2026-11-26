@@ -15,7 +15,7 @@ import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
 import { sagaContextRegistered } from './sagaContextRegistered';
 import type { RootState } from './types';
-import type { WorkbenchSagaContext } from './sagaContext';
+import type { WorkbenchSagaContext } from '../../@types/store/WorkbenchSagaContext';
 
 const TYPED_ARRAY_STATE_PATHS = ['catalog.userCatalog', 'catalog.points', 'histogram.counts'];
 const TYPED_ARRAY_ACTION_PATHS = [

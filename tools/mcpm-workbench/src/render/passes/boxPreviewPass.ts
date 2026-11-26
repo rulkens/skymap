@@ -22,9 +22,12 @@ import { boxHalfExtentMpc } from '../../grid/box/boxHalfExtentMpc';
 import { worldToVoxel } from '../../grid/box/worldToVoxel';
 import { encodeGizmoHandleId } from '../../gizmo/encodeGizmoHandleId';
 import { gizmoArrowLengthMpc } from '../../gizmo/gizmoArrowLengthMpc';
-import { gizmoHandleGeometry, PICK_TOLERANCE_FRACTION } from '../../gizmo/gizmoHandleGeometry';
-import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from '../camera/writeMcpmCamera';
+import { gizmoHandleGeometry } from '../../gizmo/gizmoHandleGeometry';
+import { writeMcpmCamera } from '../camera/writeMcpmCamera';
 import boxLinesWgsl from '../../../../../src/services/gpu/shaders/mcpm/boxLines.wesl?static';
+import { MCPM_CAMERA_BYTES } from '../camera/mcpmCameraBytes.constant';
+import { PICK_TOLERANCE_FRACTION } from '../../gizmo/pickToleranceFraction.constant';
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 export type BoxPreviewPass = {
   /**
@@ -231,8 +234,8 @@ export function createBoxPreviewPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's OVERLAY_BLEND (premultiplied-over) — this pass is the one
-          // exception to every other layer's additive LAYER_BLEND; see RenderGraph.ts.
+          // OVERLAY_BLEND (premultiplied-over) — this pass is the one
+          // exception to every other layer's additive LAYER_BLEND; see layerBlend.constant.ts.
           blend: opts.blend,
         },
       ],

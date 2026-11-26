@@ -1,23 +1,13 @@
-import type { AgentInitMode } from '../../@types/sim/AgentInitMode';
-import type { GridBox } from '../../@types/grid/GridBox';
 import type { McpmParams } from '../../@types/sim/McpmParams';
 import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
-import { DECAY_WG_EDGE } from '../sim/encodeStep';
-import { WORKBENCH_SOURCES } from '../state/catalog/catalogSlice';
-import { MCPM_PARAM_KEYS, MCPM_PARAMS_FORMAT, MCPM_PARAMS_VERSION } from './exportParams';
-
-export type ImportedParams = {
-  readonly params: McpmParams;
-  readonly agentCount: number;
-  readonly initMode: AgentInitMode;
-  readonly gridBox: GridBox;
-  /** S15: undefined ⇒ leave the current catalog selection untouched — every preset
-   * saved before this field existed (and any preset that simply omits it) must
-   * still import cleanly. */
-  readonly sources?: readonly GalaxyCatalogId[];
-};
+import { DECAY_WG_EDGE } from '../sim/decayWgEdge.constant';
+import { WORKBENCH_SOURCES } from '../catalog/workbenchSources.constant';
+import { MCPM_PARAMS_VERSION } from './mcpmParamsVersion.constant';
+import { MCPM_PARAM_KEYS } from './mcpmParamKeys.constant';
+import { MCPM_PARAMS_FORMAT } from './mcpmParamsFormat.constant';
+import type { ImportedParams } from '../../@types/params/ImportedParams';
 
 // Mirrors buildRhizomeVolume.ts's own "Voxel-size spread assert" (rule 6): a
 // hand-edited preset whose sizeMpc/dims/voxelSizeMpc no longer agree must

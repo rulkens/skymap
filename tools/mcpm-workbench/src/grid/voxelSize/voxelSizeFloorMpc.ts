@@ -1,6 +1,6 @@
 import type { GridSlice } from '../../../@types/grid/GridSlice';
 import type { PinnedAxisDims } from '../../../@types/grid/PinnedAxisDims';
-import { BYTES_PER_ELEMENT } from '../../sim/createGridBuffers';
+import { BYTES_PER_ELEMENT } from '../../sim/bytesPerElement.constant';
 import { minFeasibleVoxelSizeMpc } from './minFeasibleVoxelSizeMpc';
 import { gridElementOf } from '../gridElementOf';
 

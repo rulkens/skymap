@@ -12,8 +12,8 @@ import { takeLatest, takeEvery, call, put, select, getContext } from 'typed-redu
 
 import { previewPackedTrace } from '../../export/previewPackedTrace';
 import { widenTrace } from '../../export/widenTrace';
-import type { RenderResources } from '../../render/renderResources';
-import type { WorkbenchSagaContext } from '../../store/sagaContext';
+import type { RenderResources } from '../../../@types/render/RenderResources';
+import type { WorkbenchSagaContext } from '../../../@types/store/WorkbenchSagaContext';
 import type { RootState } from '../../store/types';
 import { incrementStep } from '../sim/simSlice';
 import { setPreviewPacked, setPreviewPackedAtStep } from './viewSlice';

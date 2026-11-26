@@ -4,7 +4,7 @@ import type { SliderRowField } from '../../../../../@types/ui/SliderRowField';
 // Ranges are workbench UI convenience, not physics — wide enough to explore well past the
 // SDSS-VAC preset in either direction. Keyed by McpmParams, not an array: a field added to
 // McpmParams is a compile error here until it gets a row, the same exhaustiveness
-// MCPM_PARAM_KEYS's sentinel gets independently (exportParams.ts), which sets the row order.
+// MCPM_PARAM_KEYS's sentinel gets independently (mcpmParamKeys.constant.ts), which sets the row order.
 export const PARAM_SLIDER_FIELDS: { readonly [P in keyof McpmParams]: SliderRowField<P> } = {
   senseSpreadDeg: {
     key: 'senseSpreadDeg',

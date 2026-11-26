@@ -1,12 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  createRenderResources,
-  disposeScene,
-} from '../../../../tools/mcpm-workbench/src/render/renderResources';
+import { createRenderResources } from '../../../../tools/mcpm-workbench/src/render/renderResources';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
 import type { McpmHarness } from '../../../../tools/mcpm-workbench/@types/sim/McpmHarness';
-import type { RenderGraph } from '../../../../tools/mcpm-workbench/src/render/RenderGraph';
+import type { RenderGraph } from '../../../../tools/mcpm-workbench/@types/render/RenderGraph';
+import { disposeScene } from '../../../../tools/mcpm-workbench/src/render/disposeScene';
 
 function stubResources() {
   const calls: string[] = [];

@@ -5,7 +5,7 @@
  * load. `takeLatest` cancels an in-flight fetch the instant a newer trigger
  * lands for free — a superseded fetch's `catalogLoaded` never fires, because
  * the generator that would `put` it is already dead. WHERE points come from is
- * `resolveCatalogPointsPlan`, below, pulled out so the decision is
+ * `resolveCatalogPointsPlan` (src/catalog/), pulled out so the decision is
  * unit-testable without a fetch, a DOM `location`, or a running saga. A load
  * from the dialog fits the box here when Auto fit is on, and frames the camera
  * on that box (or on the file, when the box stays), in the same synchronous run
@@ -14,12 +14,9 @@
 import type { Action } from '@reduxjs/toolkit';
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 
-import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Tier } from '../../../../../src/@types/data/Tier';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
-import type { CatalogSlice } from '../../../@types/catalog/CatalogSlice';
+import type { CatalogPointsPlan } from '../../../@types/catalog/CatalogPointsPlan';
 import type { GridSlice } from '../../../@types/grid/GridSlice';
-import type { UserCatalog } from '../../../@types/catalog/UserCatalog';
 import type { UserCatalogLoad } from '../../../@types/catalog/UserCatalogLoad';
 import type { UserFileProvenance } from '../../../@types/catalog/UserFileProvenance';
 import { catalogBounds } from '../../catalog/catalogBounds';
@@ -41,29 +38,7 @@ import {
   setUserCatalogOn,
   userCatalogLoaded,
 } from './catalogSlice';
-
-export type CatalogPointsPlan =
-  | { readonly kind: 'synthetic' }
-  | {
-      readonly kind: 'load';
-      readonly sources: readonly GalaxyCatalogId[];
-      readonly tier: Tier;
-      readonly userCatalog: UserCatalog | null;
-    };
-
-/**
- * `?probe` (probeGpuErrors.ts) swaps in a deterministic in-tool catalog so the
- * GPU probe never touches the network or `public/data`; otherwise the switched-on
- * built-ins, plus the loaded file's points when it is on.
- */
-export function resolveCatalogPointsPlan(
-  catalog: Pick<CatalogSlice, 'userCatalog' | 'userCatalogOn' | 'sources' | 'tier'>,
-  probeGate: boolean,
-): CatalogPointsPlan {
-  if (probeGate) return { kind: 'synthetic' };
-  const userCatalog = catalog.userCatalogOn ? catalog.userCatalog : null;
-  return { kind: 'load', sources: catalog.sources, tier: catalog.tier, userCatalog };
-}
+import { resolveCatalogPointsPlan } from '../../catalog/resolveCatalogPointsPlan';
 
 function* resolvePoints(plan: CatalogPointsPlan) {
   if (plan.kind === 'synthetic') return syntheticCatalog();

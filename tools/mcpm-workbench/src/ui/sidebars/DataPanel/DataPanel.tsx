@@ -15,7 +15,7 @@ import { APP_SOURCE_REGISTRY } from '../../../../../../src/compositions/appSourc
 import PlusIcon from '../../../../../../src/components/icons/PlusIcon/PlusIcon';
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { tierTarget } from '../../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
-import { WORKBENCH_SOURCES } from '../../../state/catalog/catalogSlice';
+import { WORKBENCH_SOURCES } from '../../../catalog/workbenchSources.constant';
 import CatalogStatusContainer from '../../containers/catalog/CatalogStatusContainer';
 import LoadCatalogDialogContainer from '../../containers/catalog/LoadCatalogDialogContainer';
 import UserCatalogRowContainer from '../../containers/catalog/UserCatalogRowContainer';

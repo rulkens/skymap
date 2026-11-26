@@ -4,26 +4,12 @@ import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
 import type { GridBox } from '../../@types/grid/GridBox';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { worldToVoxel } from '../grid/box/worldToVoxel';
-
-/**
- * The fork's UI offers agents in millions; the dispatch quantum is 100k —
- * also the propagate dispatch's truncation granularity (encodeStep.ts).
- */
-export const AGENT_COUNT_STEP = 100_000;
+import { AGENT_COUNT_STEP } from './agentCountStep.constant';
+import type { SeededAgents } from '../../@types/sim/SeededAgents';
 
 const TWO_PI = Math.PI * 2;
 const DATA_THETA_SENTINEL = -5; // main.cpp: "Marker value for input data"
 const AROUND_DATA_SPREAD = 0.025; // main.cpp's random_spread
-
-/** The six SoA lanes, in io.wesl's binding order (slots 3..8). */
-export type SeededAgents = {
-  readonly x: Float32Array;
-  readonly y: Float32Array;
-  readonly z: Float32Array;
-  readonly phi: Float32Array;
-  readonly theta: Float32Array;
-  readonly weight: Float32Array;
-};
 
 /**
  * seedAgents — the fork's `update_particles` lambda, in VOXEL coordinates.

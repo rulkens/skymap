@@ -11,8 +11,10 @@
  */
 import type { AgentBuffers } from '../../../@types/sim/AgentBuffers';
 import type { GridBox } from '../../../@types/grid/GridBox';
-import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from '../camera/writeMcpmCamera';
+import { writeMcpmCamera } from '../camera/writeMcpmCamera';
 import pointsWgsl from '../../../../../src/services/gpu/shaders/mcpm/galaxyPoints.wesl?static';
+import { MCPM_CAMERA_BYTES } from '../camera/mcpmCameraBytes.constant';
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 /** The layer's two live knobs; `pointSizePx` is galaxyPoints.wesl's screen-space `radiusPx`. */
 export type GalaxyOverlayOptions = {
@@ -74,7 +76,7 @@ export function createGalaxyOverlayPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's LAYER_BLEND: dots pile onto the trace rather than punching
+          // LAYER_BLEND: dots pile onto the trace rather than punching
           // through it, and the overlay never darkens what it sits over.
           blend: opts.blend,
         },

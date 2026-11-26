@@ -4,6 +4,4 @@
  * of these must drop its row in the same change, or the ratchet test fails on
  * the row that no longer violates.
  */
-export const TYPE_FILES_MULTI_EXPORT: ReadonlySet<string> = new Set([
-  'tools/mcpm-workbench/@types/sim/HistogramSlice.d.ts',
-]);
+export const TYPE_FILES_MULTI_EXPORT: ReadonlySet<string> = new Set([]);

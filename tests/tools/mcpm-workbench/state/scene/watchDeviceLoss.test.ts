@@ -6,7 +6,7 @@ import type { Action } from '@reduxjs/toolkit';
 import { runSaga } from 'redux-saga';
 import { describe, expect, it } from 'vitest';
 import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
-import type { RenderResources } from '../../../../../tools/mcpm-workbench/src/render/renderResources';
+import type { RenderResources } from '../../../../../tools/mcpm-workbench/@types/render/RenderResources';
 import { watchDeviceLoss } from '../../../../../tools/mcpm-workbench/src/state/scene/watchDeviceLoss';
 import { deviceLost } from '../../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 

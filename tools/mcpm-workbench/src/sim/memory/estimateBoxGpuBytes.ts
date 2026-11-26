@@ -1,7 +1,7 @@
 import type { GridSlice } from '../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../grid/deriveGridBox';
 import { gridElementOf } from '../../grid/gridElementOf';
-import { estimateGridBudgetBytes } from './planGridBudget';
+import { estimateGridBudgetBytes } from './estimateGridBudgetBytes';
 
 /**
  * estimateBoxGpuBytes — the GPU memory of the box as set now rather than the last

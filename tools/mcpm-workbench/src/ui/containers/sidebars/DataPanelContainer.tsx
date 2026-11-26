@@ -7,13 +7,10 @@ import { memo, useCallback, type ReactNode } from 'react';
 import type { Tier } from '../../../../../../src/@types/data/Tier';
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { deriveGridBox } from '../../../grid/deriveGridBox';
-import {
-  setCatalogSources,
-  setCatalogTier,
-  toggleCatalogSource,
-} from '../../../state/catalog/catalogSlice';
+import { setCatalogSources, setCatalogTier } from '../../../state/catalog/catalogSlice';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import DataPanel, { type DataPanelProps } from '../../sidebars/DataPanel/DataPanel';
+import { toggleCatalogSource } from '../../../catalog/toggleCatalogSource';
 
 export type DataPanelContainerProps = Pick<DataPanelProps, 'id' | 'collapsed'>;
 

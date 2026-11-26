@@ -13,11 +13,13 @@ import type { TraceSource } from './tracePass';
 import { reducedTraceSize } from '../reducedTraceSize';
 import { specializeGridElement } from '../../sim/specializeGridElement';
 import { uploadPaletteLut } from '../uploadPaletteLut';
-import { MCPM_CAMERA_BYTES, writeMcpmCamera, type McpmCameraView } from '../camera/writeMcpmCamera';
+import { writeMcpmCamera } from '../camera/writeMcpmCamera';
 import vertexWgsl from '../../../../../src/services/gpu/shaders/mcpm/vertex.wesl?static';
 import volpathWgsl from '../../../../../src/services/gpu/shaders/mcpm/volpath.wesl?static';
 import volpathBlitWgsl from '../../../../../src/services/gpu/shaders/mcpm/volpathBlit.wesl?static';
 import traceUpsampleWgsl from '../../../../../src/services/gpu/shaders/mcpm/traceUpsample.wesl?static';
+import { MCPM_CAMERA_BYTES } from '../camera/mcpmCameraBytes.constant';
+import type { McpmCameraView } from '../../../@types/render/camera/McpmCameraView';
 
 /**
  * The tracer's knobs. The first nine are spec §7's set; `trimDensity` and `sampleWeight`
@@ -155,7 +157,7 @@ export function createVolpathPass(opts: {
       targets: [
         {
           format: opts.targetFormat,
-          // RenderGraph's LAYER_BLEND, taken as an argument like targetFormat.
+          // LAYER_BLEND, taken as an argument like targetFormat.
           blend: opts.blend,
         },
       ],

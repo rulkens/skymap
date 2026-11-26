@@ -16,7 +16,7 @@ import type { AgentInitMode } from '../../../../@types/sim/AgentInitMode';
 import type { McpmParams } from '../../../../@types/sim/McpmParams';
 import type { RendererId } from '../../../../@types/view/RendererId';
 import type { ViewSlice } from '../../../../@types/view/ViewSlice';
-import { MCPM_PARAM_KEYS } from '../../../params/exportParams';
+import { MCPM_PARAM_KEYS } from '../../../params/mcpmParamKeys.constant';
 import SimulationStatusIconContainer from '../../containers/sim/SimulationStatusIconContainer';
 import SimulationTipContainer from '../../containers/sim/SimulationTipContainer';
 import SpiralIcon from '../../../../../../src/components/icons/SpiralIcon/SpiralIcon';

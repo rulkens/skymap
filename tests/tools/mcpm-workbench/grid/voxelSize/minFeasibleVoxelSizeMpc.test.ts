@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { bufferBytesForDims } from '../../../../../tools/mcpm-workbench/src/sim/memory/planGridBudget';
+import { bufferBytesForDims } from '../../../../../tools/mcpm-workbench/src/sim/memory/bufferBytesForDims';
 import { minFeasibleVoxelSizeMpc } from '../../../../../tools/mcpm-workbench/src/grid/voxelSize/minFeasibleVoxelSizeMpc';
 import { ceil8 } from '../../../../../tools/mcpm-workbench/src/utils/math/ceil8';
 const dimsAt = (extent: Vec3, voxelSizeMpc: number): Vec3 => [
