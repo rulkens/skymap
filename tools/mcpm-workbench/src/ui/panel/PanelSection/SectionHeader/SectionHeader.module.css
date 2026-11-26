@@ -106,6 +106,12 @@
   margin: 0;
 }
 
+/* The same dim as a disabled Button. */
+.toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .control {
   grid-column: control;
   justify-self: end;

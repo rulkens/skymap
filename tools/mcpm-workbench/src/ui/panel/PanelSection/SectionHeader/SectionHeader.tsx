@@ -20,6 +20,7 @@ function SectionHeader({
   onToggle,
   on,
   onChange,
+  toggleDisabled,
   toggleLabel = `Toggle ${title}`,
   control,
   summary,
@@ -62,6 +63,7 @@ function SectionHeader({
           type="checkbox"
           className={styles.toggle}
           checked={on}
+          disabled={toggleDisabled}
           onChange={(e) => onChange(e.target.checked)}
           aria-label={toggleLabel}
         />

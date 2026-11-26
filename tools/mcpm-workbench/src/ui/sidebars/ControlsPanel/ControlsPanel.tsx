@@ -40,6 +40,7 @@ export type ControlsPanelProps = {
   readonly id: string;
   readonly collapsed: boolean;
   readonly running: boolean;
+  readonly runningDisabled: boolean;
   readonly initMode: AgentInitMode;
   readonly weightMode: CatalogSlice['weightMode'];
   readonly params: McpmParams;
@@ -63,6 +64,7 @@ function ControlsPanel({
   id,
   collapsed,
   running,
+  runningDisabled,
   initMode,
   weightMode,
   params,
@@ -99,6 +101,7 @@ function ControlsPanel({
           onToggle={() => setSimOpen((v) => !v)}
           on={running}
           onChange={onRunningChange}
+          toggleDisabled={runningDisabled}
           toggleLabel="running"
         >
           <ToggleRow

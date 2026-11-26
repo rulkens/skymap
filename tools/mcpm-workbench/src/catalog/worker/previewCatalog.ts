@@ -40,6 +40,8 @@ function outcomeOf(source: CatalogSource, settings: CatalogImportSettings): Cata
   if (source.kind === 'packed') {
     try {
       const { points } = loadPackedCatalog(source.bin, source.metadataText);
+      if (points.count === 0)
+        return { kind: 'problem', message: 'No points found', showExample: false };
       const weightStats = weightStatsFor(points.weight);
       return {
         kind: 'ready',

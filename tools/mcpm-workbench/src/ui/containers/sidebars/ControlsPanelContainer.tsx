@@ -11,6 +11,7 @@ import type { RendererId } from '../../../../@types/view/RendererId';
 import type { ViewSlice } from '../../../../@types/view/ViewSlice';
 import { setWeightMode } from '../../../state/catalog/catalogSlice';
 import { clearTraceRequested, resetRequested } from '../../../state/commands';
+import { selectSimRunning } from '../../../state/sim/selectSimRunning';
 import { setAgentCount, setInitMode, setRunning, setSimParam } from '../../../state/sim/simSlice';
 import {
   setGalaxyIntensity,
@@ -28,7 +29,9 @@ export type ControlsPanelContainerProps = {
 
 function ControlsPanelContainer({ id, collapsed }: ControlsPanelContainerProps): ReactNode {
   const dispatch = useAppDispatch();
-  const running = useAppSelector((s) => s.sim.running);
+  // The status icon's truth: a lost device stops the sim but leaves `sim.running` set.
+  const running = useAppSelector(selectSimRunning);
+  const deviceLost = useAppSelector((s) => s.view.deviceLost);
   const initMode = useAppSelector((s) => s.sim.initMode);
   const weightMode = useAppSelector((s) => s.catalog.weightMode);
   const params = useAppSelector((s) => s.sim.params);
@@ -75,6 +78,7 @@ function ControlsPanelContainer({ id, collapsed }: ControlsPanelContainerProps):
       id={id}
       collapsed={collapsed}
       running={running}
+      runningDisabled={deviceLost}
       initMode={initMode}
       weightMode={weightMode}
       params={params}

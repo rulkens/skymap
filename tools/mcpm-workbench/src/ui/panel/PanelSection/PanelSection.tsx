@@ -19,6 +19,8 @@ export type PanelSectionProps = {
   /** The header pill's state; omit for a section without one. */
   readonly on?: boolean;
   readonly onChange?: (on: boolean) => void;
+  /** Dims the pill and ignores clicks on it, keeping its place in the header. */
+  readonly toggleDisabled?: boolean;
   /** The pill's accessible name; defaults to `Toggle <title>`. */
   readonly toggleLabel?: string;
   /** A header control in the pill's place, for a section that has no pill. */

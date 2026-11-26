@@ -20,9 +20,10 @@ describe('selectKth', () => {
       for (let k = 0; k < input.length; k++) {
         const values = Float64Array.from(input);
         expect(selectKth(values, k)).toBe(sorted[k]);
-        for (let i = 0; i < k; i++) expect(values[i]).toBeLessThanOrEqual(values[k]!);
-        for (let i = k + 1; i < values.length; i++)
-          expect(values[i]).toBeGreaterThanOrEqual(values[k]!);
+        // One assertion per rank, not per element: 600k expect calls timed out under load.
+        const pivot = values[k]!;
+        expect(values.subarray(0, k).every((v) => v <= pivot)).toBe(true);
+        expect(values.subarray(k + 1).every((v) => v >= pivot)).toBe(true);
       }
     }
   });
