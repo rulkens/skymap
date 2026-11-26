@@ -37,7 +37,7 @@ Ten formats, each a magic + version header followed by fixed- or variable-size r
 
 ## `public/data/` layout
 
-Each format has its own `<family>/v<N>/` folder, where `N` is that format's current version. A version bump moves the family to a new folder so a CDN can never serve a stale `.bin` alongside code that expects the new layout (`max-age=86400` on these responses would otherwise pair mismatched bytes and code for up to a day):
+Each format has its own `<family>/v<N>/` folder, where `N` is that format's current version. Hashed data files are `immutable` ([DEPLOY.md](DEPLOY.md), "Cache-Control + CORS"), so no CDN pairs stale bytes with new code; the folder carries the version so a bump writes new logical names, and the old files stay on R2 for tabs still on the old manifest:
 
 - `galaxy-catalog/v10/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
 - `star-catalog/v1/`: `stars-{small,medium,large}.bin` (SKST, the `format: 'skst'` side of the A/B)

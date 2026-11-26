@@ -37,13 +37,13 @@ curl -L -o data/raw/mcpm/trace.bin.bz2 \
   https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/trace.bin.bz2
 
 # 3. Extract + downsample (peak RAM ≈ 10 GB for the 712×1200×728 f32 cube)
-.venv/bin/python tools/extractMcpmCube.py
+.venv/bin/python tools/volumes/extractMcpmCube.py
 
 # 4. Build the .scfd files locally
 npm run build-mcpm
 
 # 5. Upload .npy tiers + .scfd outputs to R2 (idempotent)
-npm run sync-r2
+npm run sync-r2-secure
 ```
 
 ### Why a project-local venv (not conda, not system pip)

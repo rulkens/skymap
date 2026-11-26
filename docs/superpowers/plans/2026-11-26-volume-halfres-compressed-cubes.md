@@ -268,8 +268,8 @@ Each fix stands after the feature's deletions. No test.
 
 Steps:
 
-- [ ] Edit as above, within the comment budget (comments.md).
-- [ ] `npm run typecheck:fast`; `npm test -- volumeUniformsLayout` (the vertex struct is parsed).
+- [x] Edit as above, within the comment budget (comments.md).
+- [x] `npm run typecheck:fast`; `npm test -- volumeUniformsLayout` (the vertex struct is parsed).
 
 **Commit:** `Volume docs and comments: right paths, the secure sync, the shader's real maths`
 
