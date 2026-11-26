@@ -3,7 +3,7 @@
  * for the recovery margin, and a paused or unmeasured sim stays neutral.
  */
 import { describe, expect, it } from 'vitest';
-import { frameRateZone } from '../../../../../../../tools/mcpm-workbench/src/ui/sim/SimulationStatusIcon/utils/frameRateZone';
+import { frameRateZone } from '../../../../../../../tools/mcpm-workbench/src/ui/containers/sim/utils/frameRateZone';
 
 describe('frameRateZone', () => {
   it.each([

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { FrameRateZone } from '../../../../@types/sim/FrameRateZone';
 import { selectSimRunning } from '../../../state/sim/selectSimRunning';
 import { useAppSelector } from '../../../store/hooks';
-import { frameRateZone } from '../../sim/SimulationStatusIcon/utils/frameRateZone';
+import { frameRateZone } from './utils/frameRateZone';
 
 /**
  * useFrameRateZone — the frame-rate zone to show, selected as the zone rather than
