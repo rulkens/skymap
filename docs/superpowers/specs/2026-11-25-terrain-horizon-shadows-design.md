@@ -141,7 +141,8 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
   ```
 
   - Reads use `textureLoad` with manual bilinear over the four surrounding posts, one load per
-    texel of each post's 2×2 block (16 per fragment), shared by sun and sky. Each post is
+    texel of each post's 2×2 block (16 per fragment, 8 on a coarse pointer, §7), shared by sun
+    and sky. Each post is
     decoded to angles before interpolating: the map has a knee, so filtering bytes is wrong.
   - The sun's azimuth and elevation come from the sun direction in the fragment's local
     east/north/up frame.
@@ -187,6 +188,13 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 - Flat tiles repack as byte 0.
 - The globe shaders call the same `horizonLookup` functions, with the rect set to the whole globe.
 - The globe and the tiles read the same values at the hand-off, so nothing pops.
+- **Phones read the sun only.** On a coarse pointer (`matchMedia('(pointer: coarse)')`, read once
+  when the body Layer builds its pipelines) every pipeline linking `horizonLookup` sets its
+  `HORIZON_SKY` override false: each post loads only the texels of the two sunward sectors, 8
+  loads instead of 16, with the same sun and a sky term of 1. A fine pointer keeps all 16 and the
+  sky term. On a OnePlus 7T at close Jezero: 16.8 ms (57.5 fps) without horizon, 21.1 ms median
+  (p90 51 ms, 37.9 fps) with 16 loads, 16.8 ms (p90 18.6 ms, 55.5 fps) with 8. Desktop pays
+  about 1.0 ms for 16.
 
 ## 8. Deploy and size
 

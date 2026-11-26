@@ -104,12 +104,16 @@ function concatCubeSphereFaces(resolution: number): {
   return { positions, uvs, tangents, indices };
 }
 
-/** @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved by `resolveDepthCompare`. */
+/**
+ * @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved by `resolveDepthCompare`.
+ * @param horizonConstants `horizonLookupConstants`, passed to the fragment stage as is.
+ */
 export function createEarthRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
+  horizonConstants: Record<string, GPUPipelineConstantValue>,
 ): EarthRenderer {
   // Tangents (unit +u=east) feed the fragment's tangent-space normal mapping.
   const mesh = concatCubeSphereFaces(CUBESPHERE_FACE_RESOLUTION);
@@ -249,6 +253,7 @@ export function createEarthRenderer(
       fragment: {
         module: fsModule,
         entryPoint: 'fs',
+        constants: horizonConstants,
         targets: [{ format: targetFormat }],
       },
       primitive: {

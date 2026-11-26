@@ -68,12 +68,14 @@ type BodyResources = {
 /**
  * @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved
  *   through `resolveDepthCompare`.
+ * @param horizonConstants `horizonLookupConstants`, passed to the fragment stage as is.
  */
 export function createTexturedBodyRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
+  horizonConstants: Record<string, GPUPipelineConstantValue>,
 ): TexturedBodyRenderer {
   const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
@@ -187,6 +189,7 @@ export function createTexturedBodyRenderer(
     fragment: {
       module: fsModule,
       entryPoint: 'fs',
+      constants: horizonConstants,
       targets: [{ format: targetFormat }],
     },
     primitive: {

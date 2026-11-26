@@ -49,6 +49,7 @@ const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
  *   splits `vertex_index` into `(i, j)`. The two must be the same number.
  * @param reversedZ selects this slab's depth convention, resolved through
  *   `resolveDepthCompare` with intent `'nearer-or-equal'` (see the module header).
+ * @param horizonConstants `horizonLookupConstants`, passed to the fragment stage as is.
  */
 export function createSurfaceTileRenderer(
   device: GPUDevice,
@@ -56,6 +57,7 @@ export function createSurfaceTileRenderer(
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
   resolution: number,
+  horizonConstants: Record<string, GPUPipelineConstantValue>,
 ): SurfaceTileRenderer {
   // Mirrors earthRenderer's whole-globe sampler: these views carry the base globe's mip chain.
   const baseSampler = device.createSampler({
@@ -166,6 +168,7 @@ export function createSurfaceTileRenderer(
         fragment: {
           module: fsModule,
           entryPoint: 'fs',
+          constants: horizonConstants,
           targets: [{ format: targetFormat }], // opaque replace, alpha=1
         },
         primitive: {
