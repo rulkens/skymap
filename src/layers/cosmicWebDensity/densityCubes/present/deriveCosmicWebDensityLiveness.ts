@@ -36,5 +36,6 @@ export function deriveCosmicWebDensityLiveness(
     runtime.renderer,
     (id) => state.settings.cosmicWebDensity.items[id],
     (id) => fade[id] * emphasis,
+    () => null,
   );
 }

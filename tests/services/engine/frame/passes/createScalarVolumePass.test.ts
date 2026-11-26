@@ -80,6 +80,7 @@ const SETTINGS_STUB: VolumeFieldSettings = {
 const LIVENESS_STUB: VolumeFieldLiveness<FieldId> = {
   settingsOf: () => SETTINGS_STUB,
   fadeOpacityOf: () => 1,
+  regionOf: () => null,
 };
 
 describe('createScalarVolumePass', () => {

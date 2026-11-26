@@ -126,6 +126,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       INPUTS,
     );
     const s = uniformScratch(device);
@@ -159,6 +160,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: statics.paletteId }),
       () => 1,
+      () => null,
       INPUTS,
     );
     const s = uniformScratch(device);
@@ -187,6 +189,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: MCPM_ENTRY.paletteId }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -201,6 +204,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -215,6 +219,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -238,6 +243,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ enabled: true }),
       () => 0,
+      () => null,
       INPUTS,
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
@@ -256,6 +262,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       { ...INPUTS, jitterIndex: 1_000_005 },
     );
     expect(uniformScratch(device)?.[63]).toBe(5);
@@ -292,6 +299,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       { ...INPUTS, weight: 0.25 },
     );
 
@@ -331,6 +339,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(pass.draw).not.toHaveBeenCalled();
@@ -367,6 +376,7 @@ function fieldsDrawn(r: ReturnType<typeof createVolumeFieldRenderer>): number {
     [0, 0, 5],
     () => fullSettings(),
     () => 1,
+    () => null,
     INPUTS,
   );
   return (pass.drawIndexed as unknown as { mock: { calls: unknown[] } }).mock.calls.length;

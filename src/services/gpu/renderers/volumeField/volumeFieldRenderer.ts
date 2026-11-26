@@ -326,7 +326,17 @@ export function createVolumeFieldRenderer<Id extends string>({
       }
       return false;
     },
-    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf, inputs) {
+    draw(
+      pass,
+      viewProj,
+      viewportPx,
+      pxPerRad,
+      cameraPosWorld,
+      settingsOf,
+      fadeOpacityOf,
+      _regionOf,
+      inputs,
+    ) {
       // WebGPU's default blend constant is 0, which would erase every field.
       const w = inputs.weight;
       pass.setBlendConstant({ r: w, g: w, b: w, a: w });

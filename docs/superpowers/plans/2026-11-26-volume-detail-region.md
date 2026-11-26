@@ -253,9 +253,9 @@ deriveVolumeLiveness(renderer, fieldSettingsOf, fadeOpacityOf, regionOf): Volume
 
 Steps:
 
-- [ ] Types, then the four source files; the compiler lists every call to fix.
-- [ ] No new test: plumbing of a reader that is `() => null` everywhere.
-- [ ] `npm run typecheck:fast`; `npm test -- volumeField createScalarVolumePass cosmicWebDensity`.
+- [x] Types, then the four source files; the compiler lists every call to fix.
+- [x] No new test: plumbing of a reader that is `() => null` everywhere.
+- [x] `npm run typecheck:fast`; `npm test -- volumeField createScalarVolumePass cosmicWebDensity`.
 
 **Commit:** `Prep: a per-field detail-region reader rides the volume liveness bundle`
 

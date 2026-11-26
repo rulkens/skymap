@@ -50,6 +50,7 @@ describe('deriveVolumeLiveness (pure core)', () => {
         renderer,
         () => rawSettings(),
         () => 1,
+        () => null,
       ),
     ).toBeNull();
   });
@@ -60,6 +61,7 @@ describe('deriveVolumeLiveness (pure core)', () => {
       renderer,
       () => rawSettings({ intensity: 5 }),
       () => 1,
+      () => null,
     )!;
     const clamped = liveness.settingsOf(FIELD_ID);
     // The raw intensity 5 is clamped through clampVolumeIntensity.

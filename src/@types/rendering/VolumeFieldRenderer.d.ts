@@ -17,6 +17,7 @@ import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
+import type { DetailRegionDraw } from './DetailRegionDraw';
 
 export type VolumeFieldRenderer<Id extends string = string> = {
   /**
@@ -45,7 +46,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
   /**
    * Dispatch one raymarch per active field, additively blended.  The
    * per-field tunables are read each frame from `settingsOf`.
-   * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
+   * `fadeOpacityOf` supplies the fade-out opacity per id, `regionOf` its detail region.  The palette
    * is re-uploaded in place when `settingsOf(id).paletteId` diverges
    * from what's resident. `inputs` (jitter index, step count, blend
    * weight) holds for every field of this call.
@@ -58,6 +59,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
+    regionOf: (id: Id) => DetailRegionDraw | null,
     inputs: VolumeFieldDrawInputs,
   ): void;
   destroy(): void;

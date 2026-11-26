@@ -94,6 +94,7 @@ describe('VolumeUniforms layout', () => {
       [301, 302, 303],
       () => settings,
       () => 1,
+      () => null,
       { jitterIndex: 409, steps: 410, weight: 1 },
     );
 
