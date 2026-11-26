@@ -1000,8 +1000,8 @@ Steps:
 
 Steps:
 
-- [ ] Edit as above; plain sentences, the file's own density.
-- [ ] Grep the docs for `mcpm-small`, `three tiers`, `buildMcpmVolume`, `--clamp 0.2`: only
+- [x] Edit as above; plain sentences, the file's own density.
+- [x] Grep the docs for `mcpm-small`, `three tiers`, `buildMcpmVolume`, `--clamp 0.2`: only
       history (`completed/`, `docs/research/`, `docs/grill-sessions/`) keeps them.
 
 **Commit:** `Docs: the volume pyramid, its build and its landmines`
