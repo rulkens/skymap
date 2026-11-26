@@ -25,11 +25,11 @@
  *   clip started; this guard stops NEW ones from being planted DURING it.
  *
  * SCOPE — guard only `watchFocusTweenSaga` and `watchSelectionRevealSaga` (a tour's
- * visibility is its cues'). The clip RELIES on:
- *   - `watchFadesSaga` driving `intentOpacity` for in-clip fade cues.
- *   - `watchSelectionRowsSaga` reconciling `selectionRows.focus` for the isolation dim
- *     that in-clip `focus()` cues trigger.
- * Parking either of those would make in-clip focus/fade cues silently no-op.
+ * visibility is its clips'). A clip's scene steps never dispatch; a `keep` play's end
+ * commit does, but as a `'cut'`, because a commit from a saga cancel reaches the workers
+ * only after `clipEnded`, where this guard no longer holds. `watchFadesSaga` and
+ * `watchSelectionRowsSaga` must stay unguarded: the commit's settings and focus writes
+ * still reach the fade registry and the focus row through them.
  */
 import { select } from 'typed-redux-saga';
 

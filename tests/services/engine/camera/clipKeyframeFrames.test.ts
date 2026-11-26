@@ -340,7 +340,9 @@ describe('frame-tagged keyframes', () => {
   it('the clip driver hands out a decoded body arm, never a re-encoded absolute one', () => {
     const store = configureStore({ reducer: rootReducer });
     const data = earthFramedClip();
-    store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player' }));
+    store.dispatch(
+      clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     const state = store.getState() as unknown as RootState;
     const clipRow = CAMERA_DRIVERS.find((d) => d.id === 'clip')!;
 

@@ -212,6 +212,7 @@ function runScript(): Trace {
       ),
       frame: DEFAULT_ORIENTATION,
       by: 'player',
+      atEnd: 'revert',
     }),
   );
   const clipLeg = trace.length;

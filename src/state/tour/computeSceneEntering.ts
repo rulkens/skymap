@@ -2,45 +2,29 @@
  * computeSceneEntering — the scene entering beat K, RECONSTRUCTED rather than
  * tracked: the tour-start baseline folded through every scene cue of beats 0..K-1,
  * so a mid-fly skip or a Prev is jump-to-index with no path-dependence. The fold
- * runs cues through the `setVisibilityActionsFor` writes `applySceneEffect` dispatches and
- * through the REAL settings reducer, so it cannot drift from playback.
+ * runs cues through `sceneActionsOf` and the REAL settings reducer, so it cannot
+ * drift from playback.
  *
- * Only `show` / `hide` / `scene` participate. `frameTo` is excluded even though it
- * DOES write a setting: `orientation` lives on `SceneSnapshot`, not the returned
- * `SettingsSnapshot`, so the authored pole is carried forward live instead.
+ * A `frameTo` folds into `orientation`, which `captureSettings` drops: the pole
+ * lives on `SceneSnapshot`, not the returned `SettingsSnapshot`, so the authored
+ * pole is carried forward live instead.
  */
 
 import settingsReducer from '../settings/settingsReducer';
 import { captureSettings } from '../scene/captureSettings';
-import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
-import type { Action } from '@reduxjs/toolkit';
+import { sceneActionsOf } from '../../utils/animation/sceneActionsOf';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { Effect } from '../../@types/animation/Effect';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
-/** Settings actions a single effect node contributes (empty for non-scene nodes). */
-function actionsOf(effect: Effect, settings: EngineSettingsState): readonly Action[] {
-  switch (effect.kind) {
-    case 'show':
-    case 'hide': {
-      const on = effect.kind === 'show';
-      return effect.args.flatMap((arg) => setVisibilityActionsFor(settings, arg, on));
-    }
-    case 'scene':
-      return [effect.action];
-    default:
-      return [];
-  }
-}
-
 /** Fold one clip's cues (tree order) into the settings state. */
 function foldClip(state: EngineSettingsState, clip: ClipData): EngineSettingsState {
   const walk = (effects: readonly Effect[], acc: EngineSettingsState): EngineSettingsState => {
     let s = acc;
     for (const e of effects) {
-      for (const action of actionsOf(e, s)) s = settingsReducer(s, action);
+      for (const action of sceneActionsOf(e, s)) s = settingsReducer(s, action);
       if (e.kind === 'seq' || e.kind === 'all') s = walk(e.children, s);
       else if (e.kind === 'fork') s = walk([e.child], s);
     }

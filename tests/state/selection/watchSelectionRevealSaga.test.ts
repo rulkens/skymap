@@ -90,6 +90,7 @@ describe('watchSelectionRevealSaga', () => {
         data: { start: 'live', timeline: [] },
         frame: DEFAULT_ORIENTATION,
         by: 'player',
+        atEnd: 'revert',
       }),
     );
     h.store.dispatch(updateSelectionFocus(ISS));

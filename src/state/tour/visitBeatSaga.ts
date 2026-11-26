@@ -119,7 +119,7 @@ export function* visitBeatSaga(
       frameBasis,
     );
     const winner = yield* race({
-      landed: call(playClip, enterClip, orientation),
+      landed: call(playClip, enterClip, orientation, 'keep' as const),
       next: take(advanceTour),
       prev: take(prevBeat),
     });

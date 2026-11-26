@@ -20,23 +20,22 @@
  *
  * ### The "load behind the mask, then reveal" idiom
  *
- * `fade(['flow'], 0, 0)` sets `clipOpacity('flow') → 0` INSTANTLY, BEFORE
- * `scene(setFlowEnabled(true))` enables the flow field. The flow
- * renderer starts loading and its `intentOpacity` begins to fade up — but
- * the clip channel's factor-0 keeps composed alpha at zero. The viewer sees
+ * `fade(['flow'], 0, 0)` sets the clip factor for `flow` to 0 INSTANTLY, BEFORE
+ * `scene(setFlowEnabled(true))` switches the flow field on in the clip's scene
+ * (the overlay, never intent). The flow renderer starts loading and its registry
+ * fade heads up — but the factor-0 keeps composed alpha at zero. The viewer sees
  * nothing while the GPU data arrives. The subsequent `fade(['flow'], 1, 3)`
  * lifts the clip factor over 3 seconds, smoothly revealing the now-loaded
  * field. Without the mask the intent fade would expose a half-populated
  * field mid-load.
  *
- * ### clipOpacity crossfade: galaxies stay LOADED
+ * ### Clip-factor crossfade: galaxies stay LOADED
  *
  * `all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)])` dims the galaxy
- * points and brightens the flow field using only the `clipOpacity` channel
- * — it does NOT dispatch `hide(['survey'])`. The intent store is untouched:
- * the galaxy points remain enabled, their GPU buffers remain resident, and
- * they will reappear at full opacity when the clip ends and the clip channel
- * resets to 1. This avoids a load/unload cycle mid-clip and keeps the
+ * points and brightens the flow field using only the clip factor — it is
+ * NOT a `hide(['survey'])`. The survey switch is untouched: the galaxy points
+ * remain enabled, their GPU buffers remain resident, and they reappear at
+ * full opacity when the clip ends and the factor returns to 1. This avoids a load/unload cycle mid-clip and keeps the
  * transition reversible without extra bookkeeping.
  *
  * ### Beat structure
@@ -45,7 +44,7 @@
  *   A  — crossfade: flow fades in, galaxy points fade out (both stay loaded)
  *   B  — dolly from 300 Mpc → dwell → 950 Mpc while the orbit decelerates
  *   C  — hold at the cosmic-web scale
- *   D  — fade all active layers to black on clipOpacity (transient; intent untouched)
+ *   D  — fade all active layers to black on the clip factor (transient; switches untouched)
  */
 
 import type { Clip } from '../../@types/animation/Clip';
@@ -75,7 +74,7 @@ export const cosmicFlows: Clip = {
     timeline: [
       wait(2), // lead-in: hold the start pose for 2 s (the forked bob still runs)
       hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0), // snap cosmic web off — instant intent
-      fade(['flow'], 0, 0), // mask: clipOpacity(flow) → 0 before enable
+      fade(['flow'], 0, 0), // mask: the flow clip factor → 0 before enable
       scene(setFlowEnabled(true)), // load the flow field behind the mask
 
       fork(oscillate('pitch', { amp: 0.09, period: 16 })), // gentle bob throughout the clip
@@ -83,7 +82,7 @@ export const cosmicFlows: Clip = {
 
       hold(2), // I — establish on the MW
 
-      all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // A — crossfade via clipOpacity only
+      all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // A — crossfade via the clip factor only
 
       all([
         // B — 11 s pull-back

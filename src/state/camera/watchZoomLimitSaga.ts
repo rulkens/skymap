@@ -31,7 +31,12 @@ export function* watchZoomLimitSaga() {
     }
     // While it plays, the clip swallows every pose-moving step (`replayInput`'s `stepRegister`).
     yield* put(
-      clipStarted({ data: payload.lift, frame: yield* select(selectOrientation), by: 'skyLift' }),
+      clipStarted({
+        data: payload.lift,
+        frame: yield* select(selectOrientation),
+        by: 'skyLift',
+        atEnd: 'revert',
+      }),
     );
   });
   yield* takeEvery(exitTakeover, function* ({ payload }) {

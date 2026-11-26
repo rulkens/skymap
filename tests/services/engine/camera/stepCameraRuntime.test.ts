@@ -878,7 +878,9 @@ describe('a clip fov channel drives the drawn lens', () => {
   const playing = (data: ClipData) => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
     h.frame(2);
-    h.store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player' }));
+    h.store.dispatch(
+      clipStarted({ data, frame: DEFAULT_ORIENTATION, by: 'player', atEnd: 'revert' }),
+    );
     return h;
   };
 
@@ -941,6 +943,7 @@ describe('a clip fov channel drives the drawn lens', () => {
         data: resolveClipStart(data, liveClipStartPose(h.state)),
         frame: DEFAULT_ORIENTATION,
         by: 'player',
+        atEnd: 'revert',
       }),
     );
     h.frame(1);

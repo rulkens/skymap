@@ -17,7 +17,6 @@ import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFr
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
-import type { ClipOwner } from '../../@types/animation/ClipOwner';
 import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIntentState';
 import type { CameraAim } from '../../@types/camera/pose/CameraAim';
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
@@ -26,7 +25,6 @@ import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose
 import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { FrameTween } from '../../@types/camera/focusMotion/FrameTween';
-import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 // `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
 // mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the
@@ -73,15 +71,12 @@ const cameraIntentSlice = createSlice({
       camera.tween = null;
     },
 
-    // A FRESH `{ data, frame }` wrapper each time: the clip clock detects a new
+    // A FRESH `{ data, frame, atEnd }` wrapper each time: the clip clock detects a new
     // clip by reference inequality, not deep descriptor equality. `data` must
     // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
     // at the dispatch site. `frame` is the orientation frame live at dispatch time;
     // the driver holds the clip against THIS frame for its whole run.
-    clipStarted: (
-      camera,
-      action: PayloadAction<{ data: ClipData; frame: OrientationFrameId; by: ClipOwner }>,
-    ) => {
+    clipStarted: (camera, action: PayloadAction<NonNullable<CameraIntentState['clip']>>) => {
       camera.clip = action.payload;
     },
     // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is

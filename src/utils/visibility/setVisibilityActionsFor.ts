@@ -1,7 +1,7 @@
 /**
- * The writes one cue arg makes: the one cue path for bare, scoped and label addresses alike,
- * shared by `applySceneEffect` and `computeSceneEntering` so the tour fold cannot drift from
- * playback. A bare per-item show address writes its section switch where the cluster has
+ * The writes one show/hide arg makes: the one path for bare, scoped and label addresses alike,
+ * reached through `sceneActionsOf` by both scene folds (a clip's `sceneView`, the tour's
+ * `computeSceneEntering`). A bare per-item show address writes its section switch where the cluster has
  * one, else every item; a label cue only ever writes `labelEnabled`. `overMs` rides every
  * write to the reactive fade sync; the reducer never reads it.
  */

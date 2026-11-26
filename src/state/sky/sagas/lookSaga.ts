@@ -24,5 +24,12 @@ export function* lookSaga(row: PlacedRow, spot: SkySpot, simDays: number) {
     ),
   );
   const clip = lookClip(runtime.from, runtime.fovYRad, look, spot, yield* call(skyArmCtxSaga, 0));
-  yield* put(clipStarted({ data: clip, frame: yield* select(selectOrientation), by: 'skyLook' }));
+  yield* put(
+    clipStarted({
+      data: clip,
+      frame: yield* select(selectOrientation),
+      by: 'skyLook',
+      atEnd: 'revert',
+    }),
+  );
 }

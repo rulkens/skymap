@@ -400,9 +400,9 @@ export function hide(
  * fade — move the transient clip opacity of `args` to `to` over `over`
  * seconds.
  *
- * Does NOT touch intent (the layer stays loaded/enabled). Only drives
- * `clipOpacity` — the clip-owned channel that multiplies into final alpha.
- * Resets to 1 at clip end. Use for cross-dissolve and "load behind mask then
+ * Does NOT touch the switch (the layer stays loaded/enabled). Only drives the
+ * clip factor (`clipOpacityOf`), which multiplies into final alpha and is back
+ * to 1 at clip end. Use for cross-dissolve and "load behind mask then
  * reveal" idioms.
  */
 export function fade(
@@ -414,11 +414,10 @@ export function fade(
 }
 
 /**
- * scene — dispatch a settings action as a one-shot cue.
+ * scene — fold a settings action into the clip's scene from its beat on.
  *
  * `action` is a `SettingsAction` — a narrow union of settings-slice creators
- * the clip model has approved. Every reconcile saga fires for free. The union
- * widens in Plan C as the tour needs additional knobs.
+ * the clip model has approved, widened as the tour needs additional knobs.
  */
 export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
   return { kind: 'scene', action };
@@ -427,12 +426,11 @@ export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
 /**
  * frameTo — reorient the camera's "up" pole to `frame` over `opts.over` seconds.
  *
- * A cue-style effect (like `scene` / `focus`): it fires at its beat and awaits
- * ZERO duration. At fire time `applySceneEffect` dispatches `setOrientation` +
- * `startFrameTween`, seeding the roll from the LIVE basis `B(t)` — the same two
- * writes (and the same live-basis capture) the interactive
- * `watchOrientationChangeSaga` performs. A beat that should dwell through the
- * reorientation sequences a `wait(opts.over)` after it; the cue itself adds no
+ * A scene step (like `scene` / `focus`): it applies from its beat and awaits
+ * ZERO duration. The clip's view holds `frame` from then on, and the clip player
+ * starts a frame roll from the LIVE basis `B(t)`, as the interactive
+ * `watchOrientationChangeSaga` does. A beat that should dwell through the
+ * reorientation sequences a `wait(opts.over)` after it; the step itself adds no
  * awaited time. `ease` defaults to `'easeInOutCubic'`, the natural S-curve for an A→B roll.
  */
 export function frameTo(
@@ -452,8 +450,8 @@ export function frameTo(
  * play time, before `compileClip` runs. `compileClip` throws if it encounters a
  * `focusId` cue that was not resolved.
  *
- * The resolved `kind:'focus'` arm remains in `SceneEffect` and is what
- * `applySceneEffect` dispatches: the split keeps the clip-authoring vocabulary
+ * The resolved `kind:'focus'` arm remains in `SceneEffect` and is what a compiled
+ * clip's focus steps carry: the split keeps the clip-authoring vocabulary
  * (durable IDs) separate from the runtime dispatch vocabulary (concrete refs).
  */
 export function focus(id: FocusId | null): FocusBoundEffect & { kind: 'focusId' } {

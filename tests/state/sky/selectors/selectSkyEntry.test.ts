@@ -55,7 +55,12 @@ describe('selectSkyEntry', () => {
   it('is null while a camera clip plays', () => {
     const store = storeAt(5_000);
     store.dispatch(
-      clipStarted({ data: { start: 'live', timeline: [] }, frame: 'ecliptic', by: 'player' }),
+      clipStarted({
+        data: { start: 'live', timeline: [] },
+        frame: 'ecliptic',
+        by: 'player',
+        atEnd: 'revert',
+      }),
     );
     expect(entry(store)).toBeNull();
   });

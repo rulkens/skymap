@@ -179,6 +179,7 @@ describe('focus release while engaged (round 10)', () => {
         ),
         frame: DEFAULT_ORIENTATION,
         by: 'player',
+        atEnd: 'revert',
       }),
     );
 

@@ -7,5 +7,5 @@
 export type StepSpan = {
   readonly segs: readonly [number, number];
   readonly composites: readonly [number, number];
-  readonly cues: readonly [number, number];
+  readonly steps: readonly [number, number];
 };

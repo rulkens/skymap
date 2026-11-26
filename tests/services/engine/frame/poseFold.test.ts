@@ -754,6 +754,7 @@ describe('runFrame — the regime fold', () => {
         ),
         frame: DEFAULT_ORIENTATION,
         by: 'player',
+        atEnd: 'revert',
       }),
     );
 

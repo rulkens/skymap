@@ -237,7 +237,12 @@ describe('the sky takeover', () => {
     const store = build();
     store.dispatch(enterSky({ spot: COPENHAGEN, pointLocalM: POINT }));
     store.dispatch(
-      clipStarted({ data: { start: 'live', timeline: [] }, frame: 'ecliptic', by: 'player' }),
+      clipStarted({
+        data: { start: 'live', timeline: [] },
+        frame: 'ecliptic',
+        by: 'player',
+        atEnd: 'revert',
+      }),
     );
     expect(selectTakeoverSource(state(store))).toBeNull();
     expect(state(store).selection.focus).toEqual({ type: 'body', id: EARTH });

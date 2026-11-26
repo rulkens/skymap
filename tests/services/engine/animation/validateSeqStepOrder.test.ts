@@ -24,7 +24,7 @@ const compile = (closing: Effect, opening: Effect, overlap = 1) =>
     ],
   });
 
-describe('validateSeqCueOrder', () => {
+describe('validateSeqStepOrder', () => {
   it('throws when an overlap fires a later show before an earlier hide of the same layer', () => {
     expect(() => compile(hide([X]), show([X]))).toThrow(/seq at 0s, join 1/);
   });
