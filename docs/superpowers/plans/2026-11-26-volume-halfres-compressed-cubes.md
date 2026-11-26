@@ -225,17 +225,17 @@ as `galaxyCatalogFormat.ts:243` does. The message keeps its regenerate hint.
 
 Steps:
 
-- [ ] **Failing test first.** Extend `decodeScalarField rejects a v2 header with a regenerate-hint
+- [x] **Failing test first.** Extend `decodeScalarField rejects a v2 header with a regenerate-hint
       error`:
   - the thrown error is a `FormatVersionError` with `found` 2 and `expected` 3;
   - its message matches `/regenerat/`;
   - `defaultRetryPolicy(0, error)` is `'give-up'`. The bug it pins: a plain `Error` made the
     policy download a stale cube three times, and `installFormatVersionAlert` never fired.
-- [ ] Run it: it fails on the class assertion.
-- [ ] Throw the typed error. The test passes.
-- [ ] Delete `rejects unsupported version with regenerate hint` (`:176-181`): it checks the same
+- [x] Run it: it fails on the class assertion.
+- [x] Throw the typed error. The test passes.
+- [x] Delete `rejects unsupported version with regenerate hint` (`:176-181`): it checks the same
       branch with version 99 and adds nothing the extended test misses.
-- [ ] `npm test -- scalarFieldFormat retryPolicy`.
+- [x] `npm test -- scalarFieldFormat retryPolicy`.
 
 **Commit:** `SCFD version mismatch throws FormatVersionError, so a stale cube is fetched once`
 

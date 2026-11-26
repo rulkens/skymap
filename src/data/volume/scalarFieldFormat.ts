@@ -74,6 +74,7 @@ import type { ScalarCube } from '../../@types/data/volume/ScalarCube';
 import type { ScalarFieldFrameKind } from '../../@types/data/volume/ScalarFieldFrameKind';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
+import { FormatVersionError } from '../formatVersionError';
 
 const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 3;
@@ -209,7 +210,10 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   }
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    throw new Error(
+    throw new FormatVersionError(
+      'scalar field',
+      version,
+      VERSION,
       `decodeScalarField: unsupported version ${version} (expected ${VERSION}); regenerate the cube via the dataset's build pipeline`,
     );
   }
