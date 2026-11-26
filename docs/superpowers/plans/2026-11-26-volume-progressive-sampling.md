@@ -528,16 +528,16 @@ cosmicWebDensityPass(runtime, planner): ContentPass<'cosmicWebDensity'>
 
 Steps:
 
-- [ ] Test `at the cap the march stops and the upsample keeps compositing`:
+- [x] Test `at the cap the march stops and the upsample keeps compositing`:
   - Fixture: a stub runtime with one live field, and a plans store whose
     `get(planner, ctx)` returns a plan with `draw: false`.
   - The density pass's `enabled` is false, and `cosmicWebDensityUpsamplePass`'s `enabled` is
     true.
   - With `draw: true`, both are enabled, and `draw` hands the plan's `inputs` to the renderer.
     The regression this guards: a converged volume vanishing at rest.
-- [ ] Planner, Layer, frame order and pass, as above. `checkFrameOrder` runs at boot, and the
+- [x] Planner, Layer, frame order and pass, as above. `checkFrameOrder` runs at boot, and the
       existing frame-order tests cover the new plan line.
-- [ ] `npm run typecheck:fast`,
+- [x] `npm run typecheck:fast`,
       `npm test -- cosmicWebDensity checkFrameOrder frameOrderBoot executeFrame renderFrame`.
 - [ ] Controller, after the commit (`npm run shot`, with the dev server's own `--url`):
   - inside pose mono, `#pose=a,-239.45,-16.5,201.3,0.5,0.3,30,0&layers=cosmicWebDensity,cosmicWebDensity:mcpm`,

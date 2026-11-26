@@ -21,7 +21,7 @@ export type ScalarVolumePassRow<Id extends string, K extends ShowKey = ShowKey> 
   /** `RenderTargetSpec.id` this raymarch draws into; its `sizeOf` is the viewport. */
   readonly targetId: string;
   readonly renderer: VolumeFieldRenderer<Id>;
-  /** Shared with the upsample row's `enabled`; `null` = nothing live. */
+  /** `null` = nothing to march this frame. */
   liveness(
     state: PassState,
     ctx: FrameView,
