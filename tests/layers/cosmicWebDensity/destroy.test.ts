@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { destroy } from '../../../src/layers/cosmicWebDensity/destroy';
 import { createJitterMaskSlot } from '../../../src/layers/cosmicWebDensity/densityCubes/load/createJitterMaskSlot';
+import { createCosmicWebDensitySlot } from '../../../src/layers/cosmicWebDensity/densityCubes/load/createCosmicWebDensitySlot';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import type { GpuVolume } from '../../../src/@types/rendering/GpuVolume';
+import type { VolumeFieldRenderer } from '../../../src/@types/rendering/VolumeFieldRenderer';
+import type { CosmicWebDensityFieldId } from '../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId';
 import { useFetchMock } from '../../setup/fetchMock';
 
 describe('cosmicWebDensity destroy', () => {
@@ -29,5 +34,35 @@ describe('cosmicWebDensity destroy', () => {
     await loaded;
 
     expect(writeTexture).not.toHaveBeenCalled();
+  });
+
+  it('a Layer torn down while a cube is in flight uploads nothing and destroys the late volume', async () => {
+    const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[0];
+    const renderer = {
+      upload: vi.fn(),
+      unload: vi.fn(),
+      destroy: vi.fn(),
+    } as unknown as VolumeFieldRenderer<CosmicWebDensityFieldId>;
+    const volume = { texture: { destroy: vi.fn() } } as unknown as GpuVolume;
+    let arrive!: (v: GpuVolume) => void;
+    const slot = createCosmicWebDensitySlot(entry, {
+      renderer,
+      fetch: () => new Promise<GpuVolume>((resolve) => (arrive = resolve)),
+    });
+    const loaded = slot.load({ storage: 'scfd', binBaseName: entry.binBaseName });
+    await vi.waitFor(() => expect(arrive).toBeDefined());
+
+    destroy({
+      renderer,
+      upsample: { destroy: vi.fn() },
+      jitterMask: { destroy: vi.fn() },
+      jitterMaskSlot: { release: vi.fn() },
+      slots: { [entry.id]: slot },
+    } as unknown as CosmicWebDensityRuntime);
+    arrive(volume);
+    await loaded;
+
+    expect(renderer.upload).not.toHaveBeenCalled();
+    expect(volume.texture.destroy).toHaveBeenCalledOnce();
   });
 });
