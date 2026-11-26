@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 import { setRunning } from '../../../../../../tools/mcpm-workbench/src/state/sim/simSlice';
 import { rootReducer } from '../../../../../../tools/mcpm-workbench/src/store/rootReducer';
-import { usePauseSimWhileOpen } from '../../../../../../tools/mcpm-workbench/src/ui/sidebars/DataPanel/usePauseSimWhileOpen';
+import { usePauseSimWhileOpen } from '../../../../../../tools/mcpm-workbench/src/ui/containers/catalog/usePauseSimWhileOpen';
 
 function setup(running: boolean) {
   const store = configureStore({

@@ -9,10 +9,10 @@
 import type { ReactNode } from 'react';
 import CompactInfoTip from '../../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
 import type { UserCatalogLoad } from '../../../../../@types/catalog/UserCatalogLoad';
+import type { GridSlice } from '../../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../grid/deriveGridBox';
 import { estimateBoxGpuBytes } from '../../../../sim/memory/estimateBoxGpuBytes';
 import { fittedGrid } from '../../../../state/grid/fittedGrid';
-import { useAppSelector } from '../../../../store/hooks';
 import { formatBytes } from '../../../../utils/format/formatBytes';
 import GpuBufferMeter from '../../../sim/GpuBufferMeter/GpuBufferMeter';
 import { formatVoxelSizeMpc } from '../../../../utils/format/formatVoxelSizeMpc';
@@ -24,11 +24,11 @@ export type GridInfoProps = {
   readonly pointCount: number | null;
   readonly fitBounds: UserCatalogLoad['fitBounds'];
   readonly stale: boolean;
+  readonly grid: GridSlice;
+  readonly agentCount: number;
 };
 
-function GridInfo({ pointCount, fitBounds, stale }: GridInfoProps): ReactNode {
-  const grid = useAppSelector((s) => s.grid);
-  const agentCount = useAppSelector((s) => s.sim.agentCount);
+function GridInfo({ pointCount, fitBounds, stale, grid, agentCount }: GridInfoProps): ReactNode {
   const lanes = { agentCount, pointCount: pointCount ?? 0 };
   const loadGrid = fitBounds ? fittedGrid(grid, fitBounds, lanes) : grid;
   const box = pointCount !== null ? deriveGridBox(loadGrid) : null;

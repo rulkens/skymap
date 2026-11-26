@@ -19,8 +19,8 @@ import { rootReducer } from '../../../../../../tools/mcpm-workbench/src/store/ro
 import { formatBytes } from '../../../../../../tools/mcpm-workbench/src/utils/format/formatBytes';
 import { formatVoxelSizeMpc } from '../../../../../../tools/mcpm-workbench/src/utils/format/formatVoxelSizeMpc';
 import { resolveAutoFitBounds } from '../../../../../../tools/mcpm-workbench/src/grid/autoFit/resolveAutoFitBounds';
-import DataPanel from '../../../../../../tools/mcpm-workbench/src/ui/sidebars/DataPanel/DataPanel';
-import LoadCatalogDialog from '../../../../../../tools/mcpm-workbench/src/ui/catalog/LoadCatalogDialog/LoadCatalogDialog';
+import DataPanelContainer from '../../../../../../tools/mcpm-workbench/src/ui/containers/sidebars/DataPanelContainer';
+import LoadCatalogDialogContainer from '../../../../../../tools/mcpm-workbench/src/ui/containers/catalog/LoadCatalogDialogContainer';
 
 // The worker's handler runs in-process; only the disk read is faked, so a test decides when it lands.
 vi.mock(
@@ -121,7 +121,7 @@ function Controlled(): ReactNode {
       <button type="button" onClick={() => setOpen(true)}>
         Open
       </button>
-      <LoadCatalogDialog open={open} onOpenChange={setOpen} />
+      <LoadCatalogDialogContainer open={open} onOpenChange={setOpen} />
     </>
   );
 }
@@ -341,7 +341,7 @@ describe('LoadCatalogDialog', () => {
 
   it('opens on a page drop while the Data section is folded', () => {
     read.mockReturnValue(new Promise(() => {}));
-    setup(<DataPanel id="data" collapsed={false} />);
+    setup(<DataPanelContainer id="data" collapsed={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'Data' }));
     expect(screen.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-expanded', 'false');
     drop(csv('a.csv'));
@@ -353,7 +353,7 @@ describe('LoadCatalogDialog', () => {
   // collapsed aside's inert subtree.
   it('opens on a page drop while the data sidebar is collapsed, outside the inert aside', () => {
     read.mockReturnValue(new Promise(() => {}));
-    setup(<DataPanel id="data" collapsed />);
+    setup(<DataPanelContainer id="data" collapsed />);
     expect(document.getElementById('data')).toHaveAttribute('inert');
     drop(csv('a.csv'));
     expect(dialog()).toHaveAttribute('open');

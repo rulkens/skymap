@@ -11,10 +11,10 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { createWorkbenchStore } from '../../store/createWorkbenchStore';
 import { defaultAppState } from '../../store/defaultAppState';
-import ControlsPanel from '../sidebars/ControlsPanel/ControlsPanel';
-import DataPanel from '../sidebars/DataPanel/DataPanel';
-import DeviceLostToast from '../sim/DeviceLostToast/DeviceLostToast';
-import FileActions from '../export/FileActions/FileActions';
+import ControlsPanelContainer from '../containers/sidebars/ControlsPanelContainer';
+import DataPanelContainer from '../containers/sidebars/DataPanelContainer';
+import DeviceLostToastContainer from '../containers/sim/DeviceLostToastContainer';
+import FileActionsContainer from '../containers/export/FileActionsContainer';
 import SidebarToggle from '../sidebars/SidebarToggle/SidebarToggle';
 import Viewport from '../Viewport/Viewport';
 import styles from './App.module.css';
@@ -57,12 +57,12 @@ function App(): ReactNode {
         />
         <div className={styles.sidebars}>
           <div className={styles.column}>
-            <DataPanel id={dataId} collapsed={!dataOpen} />
-            <ControlsPanel id={controlsId} collapsed={!controlsOpen} />
+            <DataPanelContainer id={dataId} collapsed={!dataOpen} />
+            <ControlsPanelContainer id={controlsId} collapsed={!controlsOpen} />
           </div>
-          <FileActions collapsed={!controlsOpen} />
+          <FileActionsContainer collapsed={!controlsOpen} />
         </div>
-        <DeviceLostToast />
+        <DeviceLostToastContainer />
       </div>
     </Provider>
   );

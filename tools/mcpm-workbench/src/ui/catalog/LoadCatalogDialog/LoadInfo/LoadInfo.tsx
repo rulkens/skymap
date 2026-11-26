@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 import type { CatalogPreview } from '../../../../../@types/catalog/import/CatalogPreview';
 import type { UserCatalogLoad } from '../../../../../@types/catalog/UserCatalogLoad';
 import CatalogInfo from '../CatalogInfo/CatalogInfo';
-import GridInfo from '../GridInfo/GridInfo';
+import GridInfoContainer from '../../../containers/catalog/GridInfoContainer';
 import styles from './LoadInfo.module.css';
 
 export type LoadInfoProps = {
@@ -28,7 +28,7 @@ function LoadInfo({ pointCount, bounds, weight, fitBounds, stale }: LoadInfoProp
   return (
     <div className={styles.root}>
       <CatalogInfo pointCount={pointCount} bounds={bounds} weight={weight} stale={stale} />
-      <GridInfo pointCount={pointCount} fitBounds={fitBounds} stale={stale} />
+      <GridInfoContainer pointCount={pointCount} fitBounds={fitBounds} stale={stale} />
     </div>
   );
 }

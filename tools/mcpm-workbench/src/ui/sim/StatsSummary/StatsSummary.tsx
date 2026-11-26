@@ -1,21 +1,15 @@
-/**
- * StatsSummary — the folded Stats header's one line. Its own component so the
- * per-step subscription re-renders this text alone, not the whole sidebar, and
- * only while Stats is folded (PanelSection mounts a summary only then).
- */
+/** StatsSummary — the folded Stats header's one line: step, frame rate and GPU memory. */
 import type { ReactNode } from 'react';
-import { estimateBoxGpuBytes } from '../../../sim/memory/estimateBoxGpuBytes';
-import { useAppSelector } from '../../../store/hooks';
 import { formatStatsSummary } from './utils/formatStatsSummary';
 
-function StatsSummary(): ReactNode {
-  const stepCount = useAppSelector((s) => s.sim.stepCount);
-  const fps = useAppSelector((s) => s.view.fps);
-  const grid = useAppSelector((s) => s.grid);
-  const agentCount = useAppSelector((s) => s.sim.agentCount);
-  const pointCount = useAppSelector((s) => s.catalog.pointCount);
+export type StatsSummaryProps = {
+  readonly stepCount: number;
+  readonly fps: number;
+  readonly gpuBytes: number;
+};
 
-  return formatStatsSummary(stepCount, fps, estimateBoxGpuBytes(grid, agentCount, pointCount));
+function StatsSummary({ stepCount, fps, gpuBytes }: StatsSummaryProps): ReactNode {
+  return formatStatsSummary(stepCount, fps, gpuBytes);
 }
 
 export default StatsSummary;

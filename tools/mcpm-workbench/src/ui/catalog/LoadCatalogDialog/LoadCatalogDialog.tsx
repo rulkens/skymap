@@ -5,7 +5,7 @@
  * listener: a file dropped anywhere opens it with that file chosen. A chosen
  * file is read once into the catalog worker and derived there at once, then
  * again when a setting changes, so what it holds shows before Load and the page
- * never waits on it; Load dispatches that result. The store sees only a parsed
+ * never waits on it; Load hands that result on. The store sees only a parsed
  * catalog, so a refused or warned file leaves the loaded one in place. Closing
  * keeps every choice but drops the file from memory, so the backdrop may close
  * it; only Auto fit is on again at every open.
@@ -15,11 +15,10 @@ import type { CatalogFiles } from '../../../../@types/catalog/import/CatalogFile
 import type { CatalogImportFieldProblems } from '../../../../@types/catalog/import/CatalogImportFieldProblems';
 import type { CatalogImportFields } from '../../../../@types/catalog/import/CatalogImportFields';
 import type { CatalogParse } from '../../../../@types/catalog/import/CatalogParse';
+import type { UserCatalogLoad } from '../../../../@types/catalog/UserCatalogLoad';
 import Button from '../../../../../../src/components/common/Button/Button';
 import { createCatalogWorkerClient } from '../../../catalog/worker/createCatalogWorkerClient';
 import { createCatalogWorkerTransport } from '../../../catalog/worker/createCatalogWorkerTransport';
-import { userCatalogLoaded } from '../../../state/catalog/catalogSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import FormField from '../../panel/FormField/FormField';
 import ImportIcon from '../../icons/ImportIcon/ImportIcon';
 import SegmentedControl from '../../panel/SegmentedControl/SegmentedControl';
@@ -42,10 +41,17 @@ const ICON_SIZE = 12;
 export type LoadCatalogDialogProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+  /** The Selection box share Auto fit keeps; the worker fits to it while parsing. */
+  readonly autoFitPercent: number;
+  readonly onLoad: (load: UserCatalogLoad) => void;
 };
 
-function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): ReactNode {
-  const dispatch = useAppDispatch();
+function LoadCatalogDialog({
+  open,
+  onOpenChange,
+  autoFitPercent,
+  onLoad,
+}: LoadCatalogDialogProps): ReactNode {
   const titleId = useId();
   const noteId = useId();
   const fileStatusId = useId();
@@ -72,7 +78,6 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
   const [checked, setChecked] = useState<readonly (keyof CatalogImportFieldProblems)[]>([]);
   const [slowRead, setSlowRead] = useState(false);
   const [autoFit, setAutoFit] = useState(true);
-  const autoFitPercent = useAppSelector((s) => s.grid.autoFitPercent);
 
   const packed = files?.kind === 'packed';
   // A packed pair carries its own settings, so its fields are never in the way.
@@ -213,7 +218,7 @@ function LoadCatalogDialog({ open, onOpenChange }: LoadCatalogDialogProps): Reac
         onSubmit={(e) => {
           e.preventDefault();
           if (!loadable) return;
-          dispatch(userCatalogLoaded({ catalog, fitBounds: loadFit }));
+          onLoad({ catalog, fitBounds: loadFit });
           dialogRef.current?.close();
         }}
         onKeyDown={(e) => {

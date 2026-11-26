@@ -8,23 +8,29 @@
  * the galaxies value: a slot that is always there, so nothing moves.
  */
 import type { ReactNode } from 'react';
-import { estimateBoxGpuBytes } from '../../../sim/memory/estimateBoxGpuBytes';
-import { useAppSelector } from '../../../store/hooks';
 import { formatBytes } from '../../../utils/format/formatBytes';
 import { formatFps } from '../../../utils/format/formatFps';
 import GpuBufferMeter from '../GpuBufferMeter/GpuBufferMeter';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import styles from './StatsReadout.module.css';
 
-function StatsReadout(): ReactNode {
-  const pointCount = useAppSelector((s) => s.catalog.pointCount);
-  const nanFillCount = useAppSelector((s) => s.catalog.nanFillCount);
-  const grid = useAppSelector((s) => s.grid);
-  const agentCount = useAppSelector((s) => s.sim.agentCount);
-  const stepCount = useAppSelector((s) => s.sim.stepCount);
-  const fps = useAppSelector((s) => s.view.fps);
-  const gpuBytes = estimateBoxGpuBytes(grid, agentCount, pointCount);
+export type StatsReadoutProps = {
+  readonly pointCount: number;
+  readonly nanFillCount: number;
+  readonly stepCount: number;
+  readonly fps: number;
+  readonly gpuBytes: number;
+  readonly maxBufferBytes: number | null;
+};
 
+function StatsReadout({
+  pointCount,
+  nanFillCount,
+  stepCount,
+  fps,
+  gpuBytes,
+  maxBufferBytes,
+}: StatsReadoutProps): ReactNode {
   return (
     <>
       <dl className={styles.root}>
@@ -54,7 +60,7 @@ function StatsReadout(): ReactNode {
         </div>
       </dl>
       <PanelRow infoName="memory used for simulation" info="Memory used for simulation.">
-        <GpuBufferMeter usedBytes={gpuBytes} limitBytes={grid.maxBufferBytes} />
+        <GpuBufferMeter usedBytes={gpuBytes} limitBytes={maxBufferBytes} />
       </PanelRow>
     </>
   );

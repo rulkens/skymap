@@ -1,10 +1,12 @@
-/** StepCountValue — the tip's step cell, as Stats shows it; the only part that re-renders per step. */
+/** StepCountValue — the tip's step cell, as Stats shows it. */
 import type { ReactNode } from 'react';
-import { useAppSelector } from '../../../../store/hooks';
 import styles from '../SimulationTip.module.css';
 
-function StepCountValue(): ReactNode {
-  const stepCount = useAppSelector((s) => s.sim.stepCount);
+export type StepCountValueProps = {
+  readonly stepCount: number;
+};
+
+function StepCountValue({ stepCount }: StepCountValueProps): ReactNode {
   return <span className={styles.value}>{stepCount.toLocaleString()}</span>;
 }
 

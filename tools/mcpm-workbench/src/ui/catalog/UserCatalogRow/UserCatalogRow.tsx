@@ -1,26 +1,37 @@
-/** UserCatalogRow — the loaded file as a Data row: on/off, its size and weight range in the ⓘ. */
+/**
+ * UserCatalogRow — the loaded file as a Data row: on/off, its size and weight range in the ⓘ.
+ * It takes the row count, never the points: React's dev build walks the props it logs.
+ */
 import type { ReactNode } from 'react';
+import type { WeightStats } from '../../../../@types/catalog/weights/WeightStats';
 import { formatWeight } from '../../../utils/format/formatWeight';
-import { setUserCatalogOn } from '../../../state/catalog/catalogSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import styles from './UserCatalogRow.module.css';
 
-function UserCatalogRow(): ReactNode {
-  const dispatch = useAppDispatch();
-  const userCatalog = useAppSelector((s) => s.catalog.userCatalog);
-  const on = useAppSelector((s) => s.catalog.userCatalogOn);
-  if (!userCatalog) return null;
-  const { fileName, points, weightStats } = userCatalog;
+export type UserCatalogRowProps = {
+  readonly fileName: string;
+  readonly rowCount: number;
+  readonly weightStats: WeightStats;
+  readonly on: boolean;
+  readonly onChange: (on: boolean) => void;
+};
+
+function UserCatalogRow({
+  fileName,
+  rowCount,
+  weightStats,
+  on,
+  onChange,
+}: UserCatalogRowProps): ReactNode {
   return (
     <div className={styles.root} title={fileName}>
       <ToggleRow
         label={fileName}
         on={on}
-        onChange={(v) => dispatch(setUserCatalogOn(v))}
+        onChange={onChange}
         info={
           <>
-            {points.count.toLocaleString()} rows
+            {rowCount.toLocaleString()} rows
             <br />
             weights {formatWeight(weightStats.min)} – {formatWeight(weightStats.max)}, median{' '}
             {formatWeight(weightStats.median)}

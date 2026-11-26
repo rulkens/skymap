@@ -1,16 +1,14 @@
-/** FrameRateValue — the tip's frame-rate cell, in the icon's zone colour; re-renders per fps sample, alone. */
+/** FrameRateValue — the tip's frame-rate cell, in the icon's zone colour. */
 import type { ReactNode } from 'react';
-import { selectSimRunning } from '../../../../state/sim/selectSimRunning';
-import { useAppSelector } from '../../../../store/hooks';
-import { formatFps } from '../../../../utils/format/formatFps';
-import { useFrameRateZone } from '../../SimulationStatusIcon/useFrameRateZone';
+import type { FrameRateZone } from '../../../../../@types/sim/FrameRateZone';
 import styles from '../SimulationTip.module.css';
 
-function FrameRateValue(): ReactNode {
-  const zone = useFrameRateZone();
-  const text = useAppSelector((s) =>
-    !selectSimRunning(s) ? 'paused' : s.view.fps > 0 ? formatFps(s.view.fps) : '—',
-  );
+export type FrameRateValueProps = {
+  readonly zone: FrameRateZone;
+  readonly text: string;
+};
+
+function FrameRateValue({ zone, text }: FrameRateValueProps): ReactNode {
   return (
     <span className={styles.value} data-zone={zone}>
       {text}

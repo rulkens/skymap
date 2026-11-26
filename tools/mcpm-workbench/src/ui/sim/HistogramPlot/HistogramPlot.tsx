@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import CompactInfoTip from '../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
-import { useAppSelector } from '../../../store/hooks';
+import type { HistogramSlice } from '../../../../@types/sim/HistogramSlice';
 import { barFractions } from './utils/barFractions';
 import { binLabel } from './utils/binLabel';
 import { COUNT_BIN_COUNT } from './data/countBinCount.constant';
@@ -18,8 +18,11 @@ import { READOUT_TIPS } from './data/readoutTips.constant';
 import { readoutLinesFor } from './utils/readoutLinesFor';
 import styles from './HistogramPlot.module.css';
 
-function HistogramPlot(): ReactNode {
-  const histogram = useAppSelector((s) => s.histogram);
+export type HistogramPlotProps = {
+  readonly histogram: HistogramSlice;
+};
+
+function HistogramPlot({ histogram }: HistogramPlotProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const readoutLines = readoutLinesFor(histogram.counts, histogram.meanLogTraceAtPoints);
   const fractions = barFractions(histogram.counts);

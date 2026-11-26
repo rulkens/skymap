@@ -9,53 +9,60 @@
  */
 import { useState, type ReactNode } from 'react';
 import skymapIconUrl from '../../../../../../public/favicon.svg';
+import type { Tier } from '../../../../../../src/@types/data/Tier';
+import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { APP_SOURCE_REGISTRY } from '../../../../../../src/compositions/appSources';
 import PlusIcon from '../../../../../../src/components/icons/PlusIcon/PlusIcon';
+import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { tierTarget } from '../../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
-import { deriveGridBox } from '../../../grid/deriveGridBox';
-import {
-  setCatalogSources,
-  setCatalogTier,
-  toggleCatalogSource,
-  WORKBENCH_SOURCES,
-} from '../../../state/catalog/catalogSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import ButtonTip from '../../panel/ButtonTip/ButtonTip';
-import CatalogStatus from '../../catalog/CatalogStatus/CatalogStatus';
-import SelectionControls from '../../grid/SelectionControls/SelectionControls';
-import HistogramReadout from '../../sim/HistogramReadout/HistogramReadout';
+import { WORKBENCH_SOURCES } from '../../../state/catalog/catalogSlice';
+import CatalogStatusContainer from '../../containers/catalog/CatalogStatusContainer';
+import LoadCatalogDialogContainer from '../../containers/catalog/LoadCatalogDialogContainer';
+import UserCatalogRowContainer from '../../containers/catalog/UserCatalogRowContainer';
+import SelectionControlsContainer from '../../containers/grid/SelectionControlsContainer';
+import HistogramReadoutContainer from '../../containers/sim/HistogramReadoutContainer';
+import StatsReadoutContainer from '../../containers/sim/StatsReadoutContainer';
+import StatsSummaryContainer from '../../containers/sim/StatsSummaryContainer';
+import TierRow from '../../catalog/TierRow/TierRow';
 import DatabaseIcon from '../../icons/DatabaseIcon/DatabaseIcon';
 import GaugeIcon from '../../icons/GaugeIcon/GaugeIcon';
 import HistogramIcon from '../../icons/HistogramIcon/HistogramIcon';
 import MarqueeIcon from '../../icons/MarqueeIcon/MarqueeIcon';
-import LoadCatalogDialog from '../../catalog/LoadCatalogDialog/LoadCatalogDialog';
+import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import PanelRow from '../../panel/PanelRow/PanelRow';
 import PanelSection from '../../panel/PanelSection/PanelSection';
-import StatsReadout from '../../sim/StatsReadout/StatsReadout';
-import StatsSummary from '../../sim/StatsSummary/StatsSummary';
-import TierRow from '../../catalog/TierRow/TierRow';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
-import UserCatalogRow from '../../catalog/UserCatalogRow/UserCatalogRow';
 import { formatDataSummary } from './utils/formatDataSummary';
-import { usePauseSimWhileOpen } from './usePauseSimWhileOpen';
 import { formatSelectionSummary } from './utils/formatSelectionSummary';
 import styles from './DataPanel.module.css';
 
 export type DataPanelProps = {
   readonly id: string;
   readonly collapsed: boolean;
+  readonly tier: Tier;
+  readonly sources: readonly GalaxyCatalogId[];
+  /** A file is loaded and switched on. */
+  readonly userCatalogOn: boolean;
+  readonly selectionSizeMpc: Vec3;
+  readonly onTierChange: (tier: Tier) => void;
+  readonly onSourceToggle: (source: GalaxyCatalogId, on: boolean) => void;
 };
 
-function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
-  const dispatch = useAppDispatch();
-  const catalog = useAppSelector((s) => s.catalog);
-  const grid = useAppSelector((s) => s.grid);
+function DataPanel({
+  id,
+  collapsed,
+  tier,
+  sources,
+  userCatalogOn,
+  selectionSizeMpc,
+  onTierChange,
+  onSourceToggle,
+}: DataPanelProps): ReactNode {
   const [dataOpen, setDataOpen] = useState(true);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [histogramOpen, setHistogramOpen] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  usePauseSimWhileOpen(dialogOpen);
 
   return (
     <>
@@ -72,12 +79,9 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             icon={<DatabaseIcon size={12} />}
             open={dataOpen}
             onToggle={() => setDataOpen((v) => !v)}
-            summary={formatDataSummary(
-              catalog.sources.length,
-              catalog.userCatalog !== null && catalog.userCatalogOn,
-            )}
+            summary={formatDataSummary(sources.length, userCatalogOn)}
           >
-            <UserCatalogRow />
+            <UserCatalogRowContainer />
             <PanelRow>
               <ButtonTip tip="Opens a catalog file from this computer; it is read here, not uploaded.">
                 {(describedBy) => (
@@ -93,19 +97,17 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
                 )}
               </ButtonTip>
             </PanelRow>
-            <TierRow tier={catalog.tier} onChange={(t) => dispatch(setCatalogTier(t))} />
+            <TierRow tier={tier} onChange={onTierChange} />
             {WORKBENCH_SOURCES.map((s) => (
               <ToggleRow
                 key={s}
                 label={APP_SOURCE_REGISTRY[s].label}
-                on={catalog.sources.includes(s)}
+                on={sources.includes(s)}
                 // Excluded at the current tier (e.g. SDSS at 'small') carries no bin for
                 // this tier, but selection must survive a tier switch — mute + hint, never
                 // disable.
-                hint={tierTarget(s, catalog.tier) === 0 ? `not in ${catalog.tier} tier` : undefined}
-                onChange={(on) =>
-                  dispatch(setCatalogSources(toggleCatalogSource(catalog.sources, s, on)))
-                }
+                hint={tierTarget(s, tier) === 0 ? `not in ${tier} tier` : undefined}
+                onChange={(on) => onSourceToggle(s, on)}
               />
             ))}
           </PanelSection>
@@ -114,21 +116,21 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             icon={<MarqueeIcon size={12} />}
             open={selectionOpen}
             onToggle={() => setSelectionOpen((v) => !v)}
-            summary={formatSelectionSummary(deriveGridBox(grid).sizeMpc)}
+            summary={formatSelectionSummary(selectionSizeMpc)}
           >
-            <SelectionControls />
+            <SelectionControlsContainer />
           </PanelSection>
         </div>
         <div className={styles.pinned}>
-          <CatalogStatus />
+          <CatalogStatusContainer />
           <PanelSection
             title="Stats"
             icon={<GaugeIcon size={12} />}
             open={statsOpen}
             onToggle={() => setStatsOpen((v) => !v)}
-            summary={<StatsSummary />}
+            summary={<StatsSummaryContainer />}
           >
-            <StatsReadout />
+            <StatsReadoutContainer />
           </PanelSection>
           <PanelSection
             title="Histogram"
@@ -136,11 +138,11 @@ function DataPanel({ id, collapsed }: DataPanelProps): ReactNode {
             open={histogramOpen}
             onToggle={() => setHistogramOpen((v) => !v)}
           >
-            <HistogramReadout />
+            <HistogramReadoutContainer />
           </PanelSection>
         </div>
       </aside>
-      <LoadCatalogDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <LoadCatalogDialogContainer open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   );
 }

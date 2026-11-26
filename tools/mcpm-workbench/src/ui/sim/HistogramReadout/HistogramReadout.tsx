@@ -4,26 +4,29 @@
  * while the sections scroll.
  */
 import { type ReactNode } from 'react';
-import { setSampleRandomly } from '../../../state/histogram/histogramSlice';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import HistogramPlot from '../HistogramPlot/HistogramPlot';
+import HistogramPlotContainer from '../../containers/sim/HistogramPlotContainer';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import styles from './HistogramReadout.module.css';
 
-function HistogramReadout(): ReactNode {
-  const dispatch = useAppDispatch();
-  const sampleRandomly = useAppSelector((s) => s.histogram.sampleRandomly);
+export type HistogramReadoutProps = {
+  readonly sampleRandomly: boolean;
+  readonly onSampleRandomlyChange: (on: boolean) => void;
+};
 
+function HistogramReadout({
+  sampleRandomly,
+  onSampleRandomlyChange,
+}: HistogramReadoutProps): ReactNode {
   return (
     <div className={styles.root}>
       <div className={styles.plot}>
-        <HistogramPlot />
+        <HistogramPlotContainer />
       </div>
       <ToggleRow
         label="jittered sampling"
         on={sampleRandomly}
         info="Samples the histogram at random positions instead of the catalog points themselves (the fork's HIST RNG SAMPLING toggle) — a coverage check, not the convergence signal itself."
-        onChange={(on) => dispatch(setSampleRandomly(on))}
+        onChange={onSampleRandomlyChange}
       />
     </div>
   );

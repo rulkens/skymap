@@ -8,19 +8,19 @@ import { Provider } from 'react-redux';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { rootReducer } from '../../../../../../tools/mcpm-workbench/src/store/rootReducer';
 import { deviceLost } from '../../../../../../tools/mcpm-workbench/src/state/view/viewSlice';
-import DeviceLostToast from '../../../../../../tools/mcpm-workbench/src/ui/sim/DeviceLostToast/DeviceLostToast';
+import DeviceLostToastContainer from '../../../../../../tools/mcpm-workbench/src/ui/containers/sim/DeviceLostToastContainer';
 
 // jsdom has no Popover API, and counts a popover as hidden, so the queries pass `hidden`.
 beforeAll(() => {
   HTMLElement.prototype.showPopover = function () {};
 });
 
-describe('DeviceLostToast', () => {
+describe('DeviceLostToastContainer', () => {
   it('shows nothing while the device is fine, then the alert with Reload once it is lost', () => {
     const store = configureStore({ reducer: rootReducer });
     render(
       <Provider store={store}>
-        <DeviceLostToast />
+        <DeviceLostToastContainer />
       </Provider>,
     );
     expect(screen.queryByRole('alert', { hidden: true })).toBeNull();
