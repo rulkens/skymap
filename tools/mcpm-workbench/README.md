@@ -61,6 +61,10 @@ Built-in tiers keep the brightest N galaxies by absolute magnitude plus a
 flux-limited local supplement (see `tools/catalog/selectTierRecords.ts`), so a
 medium-tier run is not comparable with the published SDSS run.
 
+A trace exported from a run with a loaded file names it in its sidecar, under
+`provenance.catalog.user_file`: file name, row count, format and weight
+settings, and for RA/Dec/z files the H0 and Ωm used.
+
 ## Architecture
 
 State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
