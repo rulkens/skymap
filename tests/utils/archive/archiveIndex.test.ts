@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { decodeSurfaceTileArchiveIndex } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/decodeSurfaceTileArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/findSurfaceTileArchiveEntry';
-import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
+import { decodeSurfaceTileArchiveIndex } from '../../../src/utils/archive/decodeArchiveIndex';
+import { findSurfaceTileArchiveEntry } from '../../../src/utils/archive/findArchiveEntry';
+import { surfaceTileMortonKey } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
+import { encodeSurfaceTileArchiveIndex } from '../../../tools/utils/archive/encodeArchiveIndex';
 
 const entry = (key: number) => ({ key, part: 0, offset: key * 10, length: 5 });
 

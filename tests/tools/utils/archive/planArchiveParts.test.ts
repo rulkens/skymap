@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { planSurfaceTileParts } from '../../../../tools/utils/textures/planSurfaceTileParts';
+import { planSurfaceTileParts } from '../../../../tools/utils/archive/planArchiveParts';
 
 it('fills a part to exactly maxPartBytes before opening the next', () => {
   const { entries, partCount } = planSurfaceTileParts(

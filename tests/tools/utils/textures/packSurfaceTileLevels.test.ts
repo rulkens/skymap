@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import type { SurfaceTileProduct } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { decodeSurfaceTileArchiveIndex } from '../../../../src/layers/body/surfaceTiles/archive/utils/decodeSurfaceTileArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../../../src/layers/body/surfaceTiles/archive/utils/findSurfaceTileArchiveEntry';
+import { decodeSurfaceTileArchiveIndex } from '../../../../src/utils/archive/decodeArchiveIndex';
+import { findSurfaceTileArchiveEntry } from '../../../../src/utils/archive/findArchiveEntry';
 import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import { packSurfaceTileLevels } from '../../../../tools/utils/textures/packSurfaceTileLevels';

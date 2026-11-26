@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { decodeSurfaceTileArchiveIndex } from '../../../src/layers/body/surfaceTiles/archive/utils/decodeSurfaceTileArchiveIndex';
+import { decodeSurfaceTileArchiveIndex } from '../../../src/utils/archive/decodeArchiveIndex';
 import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import type { R2Upload } from '../@types/R2Upload';
 

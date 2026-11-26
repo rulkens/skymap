@@ -1,4 +1,4 @@
-import type { SurfaceTileArchiveEntry } from '../../../src/layers/body/surfaceTiles/archive/@types/SurfaceTileArchiveEntry';
+import type { SurfaceTileArchiveEntry } from '../../../src/@types/archive/ArchiveEntry';
 
 /** planSurfaceTileParts — assigns part + offset in key order; a new part starts
  *  when the next tile would exceed `maxPartBytes`. `tiles` must be sorted by key. */

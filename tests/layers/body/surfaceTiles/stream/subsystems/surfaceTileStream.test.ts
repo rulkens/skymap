@@ -42,7 +42,7 @@ import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { resolveStandaloneRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/resolveStandaloneRect';
 import { flattenAtlasRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/flattenAtlasRect';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
+import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/archive/encodeArchiveIndex';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,

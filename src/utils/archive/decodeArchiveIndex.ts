@@ -1,10 +1,10 @@
-import type { SurfaceTileArchiveIndex } from '../@types/SurfaceTileArchiveIndex';
+import type { SurfaceTileArchiveIndex } from '../../@types/archive/ArchiveIndex';
 import {
   SURFACE_TILE_ARCHIVE_ENTRY_BYTES,
   SURFACE_TILE_ARCHIVE_HEADER_BYTES,
   SURFACE_TILE_ARCHIVE_MAGIC,
   SURFACE_TILE_ARCHIVE_VERSION,
-} from '../data/surfaceTileArchiveFormat';
+} from '../../data/archive/archiveFormat';
 
 /** decodeSurfaceTileArchiveIndex — reads the header and checks the size; throws on a
  *  wrong magic, an unknown version or a truncated entry table. */

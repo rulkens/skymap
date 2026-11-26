@@ -1,9 +1,9 @@
 import type { SurfaceTileId } from '../../format/@types/SurfaceTileId';
-import type { SurfaceTileArchiveIndex } from '../../archive/@types/SurfaceTileArchiveIndex';
+import type { SurfaceTileArchiveIndex } from '../../../../../@types/archive/ArchiveIndex';
 import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import type { TileRead } from '../@types/TileRead';
-import { decodeSurfaceTileArchiveIndex } from '../../archive/utils/decodeSurfaceTileArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../archive/utils/findSurfaceTileArchiveEntry';
+import { decodeSurfaceTileArchiveIndex } from '../../../../../utils/archive/decodeArchiveIndex';
+import { findSurfaceTileArchiveEntry } from '../../../../../utils/archive/findArchiveEntry';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
 import { dataUrl } from '../../../../../services/loading/fetchWithProgress';

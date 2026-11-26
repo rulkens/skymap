@@ -1,9 +1,9 @@
-import type { SurfaceTileArchiveEntry } from '../@types/SurfaceTileArchiveEntry';
-import type { SurfaceTileArchiveIndex } from '../@types/SurfaceTileArchiveIndex';
+import type { SurfaceTileArchiveEntry } from '../../@types/archive/ArchiveEntry';
+import type { SurfaceTileArchiveIndex } from '../../@types/archive/ArchiveIndex';
 import {
   SURFACE_TILE_ARCHIVE_ENTRY_BYTES,
   SURFACE_TILE_ARCHIVE_HEADER_BYTES,
-} from '../data/surfaceTileArchiveFormat';
+} from '../../data/archive/archiveFormat';
 
 /** findSurfaceTileArchiveEntry — binary search over the key-sorted entries. */
 export function findSurfaceTileArchiveEntry(
