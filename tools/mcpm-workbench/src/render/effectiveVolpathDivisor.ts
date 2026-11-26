@@ -7,11 +7,8 @@
  * AND raymarch divisors — so the name is legacy-scoped, not the function's only
  * caller. The sim step shares only SETTLE_MS: it pauses outright in that window.
  */
-
-/** Coarsening floor while an interaction is fresh, regardless of the user's own value. */
-export const BOOST_DIVISOR = 8;
-/** How long after the last interaction before the boost releases. */
-export const SETTLE_MS = 200;
+import { SETTLE_MS } from './settleMs.constant';
+import { BOOST_DIVISOR } from './boostDivisor.constant';
 
 export function effectiveVolpathDivisor(userDivisor: number, msSinceInteraction: number): number {
   return msSinceInteraction < SETTLE_MS ? Math.max(userDivisor, BOOST_DIVISOR) : userDivisor;

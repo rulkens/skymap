@@ -1,10 +1,10 @@
 /**
  * TS↔WESL parity for the T20 histogram pass's three mirrored numbers:
- * - `HISTOGRAM_FLAGS_BYTES` (createGridBuffers.ts) ↔ histogram.wesl's
+ * - `HISTOGRAM_FLAGS_BYTES` (histogramFlagsBytes.constant.ts) ↔ histogram.wesl's
  *   `HistogramFlags` struct (its own tiny group(2) uniform).
- * - `HISTOGRAM_BINS` (createGridBuffers.ts) ↔ constants.wesl's
+ * - `HISTOGRAM_BINS` (histogramBins.constant.ts) ↔ constants.wesl's
  *   `N_HISTOGRAM_BINS` — sizes the `histogram` buffer.
- * - `HISTOGRAM_BASE` (createGridBuffers.ts) ↔ constants.wesl's
+ * - `HISTOGRAM_BASE` (histogramBase.constant.ts) ↔ constants.wesl's
  *   `HISTOGRAM_BASE` — must agree or the UI's "(log <base>)" readout lies
  *   about which log the shader actually took.
  * `?static` WESL linking has no value injection, so these mirrors only stay
@@ -14,11 +14,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import {
-  HISTOGRAM_BASE,
-  HISTOGRAM_BINS,
-  HISTOGRAM_FLAGS_BYTES,
-} from '../../../../tools/mcpm-workbench/src/sim/createGridBuffers';
+import { HISTOGRAM_BASE } from '../../../../tools/mcpm-workbench/src/sim/histogramBase.constant';
+import { HISTOGRAM_FLAGS_BYTES } from '../../../../tools/mcpm-workbench/src/sim/histogramFlagsBytes.constant';
+import { HISTOGRAM_BINS } from '../../../../tools/mcpm-workbench/src/sim/histogramBins.constant';
 
 function parseWeslStructFields(text: string, structName: string): Array<[string, string]> {
   const structRe = new RegExp(`struct\\s+${structName}\\s*{([^}]*)}`, 's');
@@ -41,7 +39,7 @@ function readWeslConst(text: string, name: string): number | undefined {
   return undefined;
 }
 
-describe('HistogramFlags struct size parity (histogram.wesl ↔ createGridBuffers.ts)', () => {
+describe('HistogramFlags struct size parity (histogram.wesl ↔ histogramFlagsBytes.constant.ts)', () => {
   it('HistogramFlags struct size equals HISTOGRAM_FLAGS_BYTES', () => {
     const text = readFileSync(
       join(process.cwd(), 'src/services/gpu/shaders/mcpm/histogram.wesl'),
@@ -54,7 +52,7 @@ describe('HistogramFlags struct size parity (histogram.wesl ↔ createGridBuffer
   });
 });
 
-describe('N_HISTOGRAM_BINS / HISTOGRAM_BASE parity (constants.wesl ↔ createGridBuffers.ts)', () => {
+describe('N_HISTOGRAM_BINS / HISTOGRAM_BASE parity (constants.wesl ↔ histogramBins/histogramBase.constant.ts)', () => {
   const text = readFileSync(
     join(process.cwd(), 'src/services/gpu/shaders/mcpm/constants.wesl'),
     'utf-8',

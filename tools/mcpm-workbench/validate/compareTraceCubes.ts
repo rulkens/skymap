@@ -22,7 +22,7 @@ import { parseExportMetadata } from './parseExportMetadata';
 import { readPackedCatalog } from './readPackedCatalog';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { PackedTraceInputLayout } from '../../../src/utils/volume/packLogTraceVoxels';
-import type { TraceStats } from '../@types/TraceStats';
+import type { TraceStats } from '../@types/validate/TraceStats';
 
 const LOG_HISTOGRAM_BIN_COUNT = 64;
 const DEFAULT_DATA_POINT_BINS = 17; // the fork's N_HISTOGRAM_BINS

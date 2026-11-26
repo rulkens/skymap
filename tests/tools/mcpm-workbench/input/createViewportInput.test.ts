@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import type { ViewSlice } from '../../../../tools/mcpm-workbench/@types/ViewSlice';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import type { ViewSlice } from '../../../../tools/mcpm-workbench/@types/view/ViewSlice';
 import { createViewportInput } from '../../../../tools/mcpm-workbench/src/input/createViewportInput';
 import { gizmoArrowLengthMpc } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
 import { createWorkbenchStore } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
 import type { PreloadedState } from '../../../../tools/mcpm-workbench/src/store/createWorkbenchStore';
-import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
+import { defaultAppState } from '../../../../tools/mcpm-workbench/src/store/defaultAppState';
 import { commitCameraPose } from '../../../../tools/mcpm-workbench/src/state/view/viewSlice';
 
 /**
@@ -143,8 +143,8 @@ describe('createViewportInput — gizmo routing (dragAnchor hits a handle)', () 
       markDirty: () => {},
     });
 
-    // showGridBox's term of isWireframeVisible is pointer-gated (F1.8) — a real pointerdown
-    // is always preceded by the browser's own pointerenter, so the fixture reproduces that.
+    // Hover shows the wireframe only after a pointerenter, which a real pointerdown
+    // always follows, so the fixture fires one.
     fire('pointerenter', {});
     fire('pointerdown', mouseDown(clientXFor(ndcXForWorldX(arrowLengthMpc))));
     expect(input.getDragHandleId()).toEqual({ kind: 'translate', axis: 0 });
@@ -283,9 +283,8 @@ describe('createViewportInput — store→register adoption', () => {
   });
 });
 
-describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8)', () => {
-  // showGridBox defaults to true (defaultAppState.grid) — every case below relies on that.
-  it('hides the showGridBox-driven wireframe once the pointer leaves the canvas', () => {
+describe('createViewportInput — isWireframeVisible pointer-inside gating', () => {
+  it('hides the wireframe once the pointer leaves the canvas', () => {
     const { store } = createWorkbenchStore(defaultAppState);
     const { canvas, fire } = makeCanvas();
     const input = createViewportInput({
@@ -296,10 +295,10 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     });
 
     fire('pointerenter', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     fire('pointerleave', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 
   it('keeps the wireframe visible while a gizmo drag is in flight, pointer outside or not', () => {
@@ -322,12 +321,12 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     expect(input.getDragHandleId()).not.toBeNull();
 
     // Gestures are window-tracked with no pointer capture — leaving the canvas mid-drag
-    // is the expected, legitimate path (F1.8's first exception), not a corner case.
+    // is the expected, legitimate path, not a corner case.
     fire('pointerleave', {});
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     win.fire('pointerup', mouseUp(clientXFor(ndcXForWorldX(arrowLengthMpc))));
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 
   it('keeps the flash-window wireframe visible with the pointer outside the canvas', () => {
@@ -342,10 +341,10 @@ describe('createViewportInput — isWireframeVisible pointer-inside gating (F1.8
     });
 
     // Pointer never entered — the panel edit that triggers the flash happens with the
-    // mouse on a slider outside the canvas (F1.8's second exception).
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(true);
+    // mouse on a slider outside the canvas.
+    expect(input.isWireframeVisible(performance.now())).toBe(true);
 
     flashActive = false;
-    expect(input.isWireframeVisible(store.getState(), performance.now())).toBe(false);
+    expect(input.isWireframeVisible(performance.now())).toBe(false);
   });
 });

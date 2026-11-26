@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import { applyTranslateDrag } from '../../../../tools/mcpm-workbench/src/gizmo/applyTranslateDrag';
 
 // centerMpc=[1,2,3], sizeMpc=[8,8,8] — same fixture shape as gizmoHandleGeometry.test.ts.

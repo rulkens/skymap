@@ -1,6 +1,6 @@
 /**
  * TS↔WESL parity: io.wesl's `McpmUniforms` struct vs. `UNIFORM_BYTES`
- * (createGridBuffers.ts, the buffer's allocated size) and encodeStep.ts's
+ * (uniformBytes.constant.ts, the buffer's allocated size) and encodeStep.ts's
  * field-by-index `Float32Array`/`Int32Array` write (the layout that write
  * actually encodes — see its inline comments for the field each index
  * represents). `?static` WESL linking is pure text substitution with no value
@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { UNIFORM_BYTES } from '../../../../tools/mcpm-workbench/src/sim/createGridBuffers';
+import { UNIFORM_BYTES } from '../../../../tools/mcpm-workbench/src/sim/uniformBytes.constant';
 
 const WGSL_SCALAR_BYTES: Record<string, number> = { f32: 4, i32: 4, u32: 4 };
 
@@ -28,7 +28,7 @@ function parseWeslStructFields(text: string, structName: string): Array<[string,
   return fields;
 }
 
-describe('McpmUniforms TS↔WESL parity (io.wesl ↔ createGridBuffers.ts + encodeStep.ts)', () => {
+describe('McpmUniforms TS↔WESL parity (io.wesl ↔ uniformBytes.constant.ts + encodeStep.ts)', () => {
   const text = readFileSync(join(process.cwd(), 'src/services/gpu/shaders/mcpm/io.wesl'), 'utf-8');
   const fields = parseWeslStructFields(text, 'McpmUniforms');
 

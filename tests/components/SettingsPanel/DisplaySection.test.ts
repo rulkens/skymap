@@ -165,6 +165,19 @@ describe('DisplaySection', () => {
       expect(fovSlider(1 / 60).getAttribute('aria-valuetext')).toBe('1′');
       expect(fovSlider(60).getAttribute('aria-valuetext')).toBe('60°');
     });
+
+    it('is typed in degrees, and the box shows the degrees it holds', () => {
+      const onFovDegChange = vi.fn<(next: number) => void>();
+      const slider = fovSlider(60, onFovDegChange);
+      fireEvent.contextMenu(slider);
+      const input = within(slider).getByRole('textbox') as HTMLInputElement;
+      expect(Number(input.value)).toBeCloseTo(60, 9);
+      fireEvent.change(input, { target: { value: '30' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      // Snapped to the 256-stop grid: one stop is a ~3.5% zoom, so within half of it.
+      const sent = onFovDegChange.mock.calls[0]![0];
+      expect(Math.abs(sent / 30 - 1)).toBeLessThan(0.018);
+    });
   });
 
   describe('bloom controls', () => {

@@ -1,0 +1,49 @@
+/* A flat gauge, kept apart from the slider pills on purpose: lower, squarer,
+   no control border or surface, small readout type at the start (a pill's
+   value sits at its end), and no hover, focus or pointer. The text stays in the body colour: 4.5:1 or more over the tinted
+   fill and the bare track in every zone. */
+.root {
+  --zone-color: var(--color-fg-tertiary);
+  position: relative;
+  display: flex;
+  min-inline-size: 0;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+}
+
+.root[data-zone='warn'] {
+  --zone-color: var(--tool-status-warn);
+}
+
+.root[data-zone='bad'] {
+  --zone-color: var(--tool-status-bad);
+}
+
+/* Scaled, not resized, so a size slider's drag animates no layout. */
+.fill {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--zone-color) 35%, transparent);
+  transform: scaleX(var(--fill));
+  transform-origin: left;
+  transition:
+    transform var(--duration-base) var(--ease-standard),
+    background var(--duration-color) var(--ease-standard);
+}
+
+.value {
+  position: relative;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-base);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

@@ -1,5 +1,5 @@
 /**
- * exportNpy — the T19 gate fix: a hand-built x-fastest readback (grid.wesl's
+ * exportNpy — a hand-built x-fastest readback (grid.wesl's
  * GPU layout) must round-trip through `exportNpy` + `readNpy` in NumPy
  * C-order, the byte order `buildRhizomeVolume.ts`'s default
  * `packLogTraceVoxels` call expects. Non-cubic dims (2x3x4) so an
@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { readNpy } from '../../../../tools/parsers/npyReader';
 import { exportNpy } from '../../../../tools/mcpm-workbench/src/export/exportNpy';
-import type { TraceReadback } from '../../../../tools/mcpm-workbench/@types/TraceReadback';
+import type { TraceReadback } from '../../../../tools/mcpm-workbench/@types/sim/TraceReadback';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // x-fastest per grid.wesl: raw offset for logical (i, j, k) is

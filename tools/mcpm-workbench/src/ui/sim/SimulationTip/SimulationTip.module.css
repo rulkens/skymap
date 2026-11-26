@@ -1,0 +1,30 @@
+/* The load dialog's info-table look: a dim label column and a value column, one
+   line per row. Values sit right in a column as wide as a 4-digit grid, so a
+   growing step count never widens the tip. */
+.root {
+  display: grid;
+  grid-template-columns: max-content minmax(18ch, max-content);
+  column-gap: var(--space-6);
+}
+
+.label {
+  color: var(--color-fg-tertiary);
+}
+
+.value {
+  justify-self: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.value[data-zone='good'] {
+  color: var(--tool-status-good);
+}
+
+.value[data-zone='warn'] {
+  color: var(--tool-status-warn);
+}
+
+.value[data-zone='bad'] {
+  color: var(--tool-status-bad);
+}

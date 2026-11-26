@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { acceptBuiltHarness } from '../../../../../tools/mcpm-workbench/src/state/scene/acceptBuiltHarness';
-import type { McpmHarness } from '../../../../../tools/mcpm-workbench/@types/McpmHarness';
+import type { McpmHarness } from '../../../../../tools/mcpm-workbench/@types/sim/McpmHarness';
 
 function fakeHarness(): McpmHarness {
   return { dispose: vi.fn() } as unknown as McpmHarness;

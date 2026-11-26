@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { cameraBasis } from '../../../../tools/mcpm-workbench/src/render/cameraBasis';
+import { cameraBasis } from '../../../../tools/mcpm-workbench/src/render/camera/cameraBasis';
 import { screenToRay } from '../../../../tools/mcpm-workbench/src/gizmo/screenToRay';
 import { gizmoHandleGeometry } from '../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
 import { pickGizmoHandle } from '../../../../tools/mcpm-workbench/src/gizmo/pickGizmoHandle';
@@ -19,9 +19,8 @@ const UNIT_AXES: readonly [Vec3, Vec3, Vec3] = [
 ];
 const ARROW_LENGTH_MPC = 2;
 
-// Reachable today via importParams.ts's `vec4()` (spec §8), before any rotate-ring UI
-// exists. gizmoHandleGeometry always uses UNIT_AXES in F1/F2.3 scope (world-space,
-// independent of box.rotation), so the translate axis0 tip sits at world [2,0,0]
+// Reachable via importParams.ts's `vec4()` as well as the rotate rings. With UNIT_AXES
+// (world-space, independent of box.rotation), so the translate axis0 tip sits at world [2,0,0]
 // regardless of this rotation.
 const ROTATED_BOX: GridBox = {
   centerMpc: [0, 0, 0],
@@ -38,7 +37,7 @@ const EYE_MPC: Vec3 = [2, 0, -10];
 const TARGET_MPC: Vec3 = [2, 0, 0];
 const UP_MPC: Vec3 = [0, 1, 0];
 
-describe('gizmo pick ray world-space contract at a rotated GridBox (spec §5)', () => {
+describe('gizmo pick ray world-space contract at a rotated GridBox', () => {
   it('hits the translate handle when cameraBasis gets an identity-rotation box copy (the fix)', () => {
     const geometry = gizmoHandleGeometry(ROTATED_BOX, UNIT_AXES, ARROW_LENGTH_MPC);
     const basis = cameraBasis(EYE_MPC, TARGET_MPC, UP_MPC, {

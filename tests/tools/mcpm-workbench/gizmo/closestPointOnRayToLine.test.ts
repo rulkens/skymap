@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Ray } from '../../../../tools/mcpm-workbench/@types/Ray';
+import type { Ray } from '../../../../tools/mcpm-workbench/@types/gizmo/Ray';
 import { closestPointOnRayToLine } from '../../../../tools/mcpm-workbench/src/gizmo/closestPointOnRayToLine';
 
 describe('closestPointOnRayToLine', () => {

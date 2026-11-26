@@ -1,47 +1,93 @@
 /**
- * watchCatalogSaga — only `resolveCatalogPointsPlan`'s priority order is
- * tested here: a real bug in it (e.g. a probe drop starting the network
- * fetch anyway) would ship undetected past a saga-plumbing test that just
- * asserts `takeLatest` was called. The saga's own wiring isn't tested — a
- * mis-wired trigger breaks the app in an impossible-to-miss way (no catalog
- * ever loads).
+ * watchCatalogSaga — `resolveCatalogPointsPlan`'s priority order, and the one
+ * trigger that must NOT reload: a mis-wired trigger that never loads is
+ * impossible to miss, a needless reload silently restarts the run.
  */
-import { describe, expect, it } from 'vitest';
-import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
-import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/CatalogPoints';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
+import { describe, expect, it, vi } from 'vitest';
+import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/catalog/resolveCatalogPointsPlan';
+import {
+  catalogLoaded,
+  setCatalogSources,
+  setCatalogTier,
+  userCatalogLoaded,
+} from '../../../../../tools/mcpm-workbench/src/state/catalog/catalogSlice';
+import { watchCatalogSaga } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
+import { rootReducer } from '../../../../../tools/mcpm-workbench/src/store/rootReducer';
+import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { UserCatalog } from '../../../../../tools/mcpm-workbench/@types/catalog/UserCatalog';
 
-const packedPoints: CatalogPoints = {
+const userPoints: CatalogPoints = {
   positions: new Float32Array([1, 2, 3]),
-  log10StellarMass: new Float32Array([4]),
+  weight: new Float32Array([4]),
   count: 1,
-  sources: ['sdss'],
+  sources: [],
+};
+
+const userCatalog: UserCatalog = {
+  points: userPoints,
+  fileName: 'desi.csv',
+  settings: { format: { kind: 'cartesianMpc' }, weight: { kind: 'linear', scale: 1 } },
+  weightStats: { min: 4, median: 4, max: 4 },
 };
 
 describe('resolveCatalogPointsPlan', () => {
-  it('a packed override wins outright, even under the probe gate', () => {
+  it('plan carries the loaded catalog when it is on', () => {
     const plan = resolveCatalogPointsPlan(
-      { packedOverride: packedPoints, sources: ['sdss'], tier: 'medium' },
-      true,
+      { userCatalog, userCatalogOn: true, sources: ['sdss'], tier: 'medium' },
+      false,
     );
 
-    expect(plan).toEqual({ kind: 'packedOverride', points: packedPoints });
+    expect(plan).toEqual({ kind: 'load', sources: ['sdss'], tier: 'medium', userCatalog });
   });
 
-  it('the probe gate wins over a network fetch when there is no override', () => {
+  it('plan carries no loaded catalog when it is off', () => {
     const plan = resolveCatalogPointsPlan(
-      { packedOverride: null, sources: ['sdss'], tier: 'medium' },
+      { userCatalog, userCatalogOn: false, sources: ['sdss', 'glade'], tier: 'large' },
+      false,
+    );
+
+    expect(plan).toEqual({
+      kind: 'load',
+      sources: ['sdss', 'glade'],
+      tier: 'large',
+      userCatalog: null,
+    });
+  });
+
+  it('the probe gate still wins', () => {
+    const plan = resolveCatalogPointsPlan(
+      { userCatalog, userCatalogOn: true, sources: ['sdss'], tier: 'medium' },
       true,
     );
 
     expect(plan).toEqual({ kind: 'synthetic' });
   });
+});
 
-  it('falls through to the network fetch with the live sources/tier', () => {
-    const plan = resolveCatalogPointsPlan(
-      { packedOverride: null, sources: ['sdss', 'glade'], tier: 'large' },
-      false,
-    );
+describe('watchCatalogSaga', () => {
+  it('a tier change with no built-in source on keeps the loaded points, so the run does not restart', async () => {
+    const loads: Action[] = [];
+    const record: Middleware = () => (next) => (action) => {
+      if (catalogLoaded.match(action)) loads.push(action as Action);
+      return next(action);
+    };
+    const saga = createSagaMiddleware();
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (getDefault) =>
+        getDefault({ serializableCheck: false, immutableCheck: false }).concat(record, saga),
+    });
+    saga.run(watchCatalogSaga);
 
-    expect(plan).toEqual({ kind: 'network', sources: ['sdss', 'glade'], tier: 'large' });
+    store.dispatch(setCatalogSources([]));
+    await vi.waitFor(() => expect(loads).toHaveLength(1));
+    store.dispatch(userCatalogLoaded({ catalog: userCatalog, fitBounds: null }));
+    await vi.waitFor(() => expect(loads).toHaveLength(2));
+    store.dispatch(setCatalogTier('large'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(loads).toHaveLength(2);
   });
 });

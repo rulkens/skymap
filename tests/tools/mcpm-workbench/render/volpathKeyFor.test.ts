@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { defaultAppState } from '../../../../tools/mcpm-workbench/src/state/defaultAppState';
+import { defaultAppState } from '../../../../tools/mcpm-workbench/src/store/defaultAppState';
 import { volpathKeyFor } from '../../../../tools/mcpm-workbench/src/render/volpathKeyFor';
-import type { McpmCameraView } from '../../../../tools/mcpm-workbench/src/render/writeMcpmCamera';
+import type { McpmCameraView } from '../../../../tools/mcpm-workbench/@types/render/camera/McpmCameraView';
 
 const CAM: McpmCameraView = {
   eyeMpc: [0, 0, 600],

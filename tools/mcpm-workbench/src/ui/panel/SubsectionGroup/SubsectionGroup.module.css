@@ -1,0 +1,17 @@
+.root {
+  composes: row from '../panelGrid.module.css';
+  row-gap: var(--space-4);
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--border-default);
+}
+
+.title {
+  grid-column: content;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: inherit;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-fg-faint);
+}

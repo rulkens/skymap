@@ -1,0 +1,24 @@
+/* Its own inset, like the dialog's body and footer, so the divider runs border to border. */
+.root {
+  display: grid;
+  row-gap: var(--space-2);
+  padding-block: var(--space-8);
+  padding-inline: var(--inset);
+  border-block-end: 1px solid var(--border-divider);
+}
+
+/* The sidebars' section-title look. Not `composes: sectionHeader`: its dim
+   colour lands after this file's and won, so the title read as a hint. */
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-fg-tertiary);
+}

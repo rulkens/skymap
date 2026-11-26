@@ -1,0 +1,4 @@
+.root {
+  composes: row from '../../panel/panelGrid.module.css';
+  composes: reveal from '../../panel/reveal.module.css';
+}

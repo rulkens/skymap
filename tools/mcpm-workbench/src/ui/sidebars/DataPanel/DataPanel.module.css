@@ -1,0 +1,73 @@
+.root {
+  composes: start from '../sidebar.module.css';
+}
+
+.header {
+  flex: none;
+  padding-block: var(--space-8) var(--space-3);
+  padding-inline: var(--panel-inset);
+  user-select: none;
+}
+
+/* No token is 32px; twice the largest one keeps the display-serif headline size. */
+.title {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: calc(var(--font-size-input) * 2);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-fg);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+/* Skymap's own icon (the favicon), one cap high on the baseline: the tile spans
+   the capitals, so icon and name read as one lockup and the line box keeps its height. */
+.icon {
+  flex: none;
+  block-size: 1cap;
+  inline-size: 1cap;
+}
+
+.sections {
+  composes: sections from '../sidebar.module.css';
+}
+
+.pinned {
+  composes: pinned from '../sidebar.module.css';
+  padding-block-end: var(--space-8);
+}
+
+/* Closes the catalog list as one more row: the plus where a row's label starts. */
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-5);
+  border: 1px dashed var(--border-control);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-md);
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .addRow:hover {
+    border-color: var(--border-hover);
+    color: var(--color-fg);
+  }
+}
+
+.addRow:active {
+  background: var(--surface-control-active);
+}
+
+.addRow:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}

@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BOOST_DIVISOR,
-  SETTLE_MS,
-  effectiveVolpathDivisor,
-} from '../../../../tools/mcpm-workbench/src/render/effectiveVolpathDivisor';
+import { effectiveVolpathDivisor } from '../../../../tools/mcpm-workbench/src/render/effectiveVolpathDivisor';
+import { SETTLE_MS } from '../../../../tools/mcpm-workbench/src/render/settleMs.constant';
+import { BOOST_DIVISOR } from '../../../../tools/mcpm-workbench/src/render/boostDivisor.constant';
 
 describe('effectiveVolpathDivisor', () => {
   it('boosts below the settle threshold', () => {

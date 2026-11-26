@@ -8,12 +8,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { parsePolyphyTraceSidecar } from '../../../../tools/parsers/polyphyTraceSidecar';
-import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/field/autoFitGridBox';
+import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/grid/autoFit/autoFitGridBox';
 import { emitTraceSidecar } from '../../../../tools/mcpm-workbench/src/export/emitTraceSidecar';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
-import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
-import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/McpmParams';
+import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/sim/McpmParams';
 
 const PARAMS: McpmParams = {
   senseSpreadDeg: 20,
@@ -29,7 +29,7 @@ const PARAMS: McpmParams = {
 function pointsFixture(): CatalogPoints {
   return {
     positions: new Float32Array(0),
-    log10StellarMass: new Float32Array(0),
+    weight: new Float32Array(0),
     count: 1_642_391,
     sources: ['sdss', '2mrs', 'glade'],
   };
@@ -38,12 +38,10 @@ function pointsFixture(): CatalogPoints {
 const WEIGHTS: AgentWeights = {
   weights: new Float32Array(0),
   nanCount: 20_114,
-  medianLog10Mass: 10.2,
 };
 
 // Mirrors emitTraceSidecar's own local-time-with-numeric-offset format —
-// asserted independently of the test runner's timezone (spec §8's example
-// is CEST, but CI may run in UTC or anywhere else).
+// asserted independently of the test runner's timezone (CI may run in UTC or anywhere).
 function expectedProducedAt(d: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
   const offsetMin = -d.getTimezoneOffset();
@@ -77,6 +75,7 @@ describe('emitTraceSidecar', () => {
       steps: 5000,
       seed: 12345,
       producedAt,
+      userFile: null,
     });
 
     // The wire format itself, ahead of the parser: keys stay snake_case.
@@ -146,6 +145,7 @@ describe('emitTraceSidecar', () => {
       steps: 1000,
       seed: 1,
       producedAt: new Date(),
+      userFile: null,
     });
 
     const sidecar = parsePolyphyTraceSidecar(text);
@@ -161,5 +161,47 @@ describe('emitTraceSidecar', () => {
     expect(vx).toBe(vy);
     expect(vy).toBe(vz);
     expect(sidecar.dims).toEqual(box.dims);
+  });
+
+  const sidecarWith = (userFile: Parameters<typeof emitTraceSidecar>[0]['userFile']) =>
+    JSON.parse(
+      emitTraceSidecar({
+        box: autoFitGridBox({ min: [0, 0, 0], max: [100, 50, 30] }, 64, 4),
+        points: pointsFixture(),
+        weights: WEIGHTS,
+        tier: 'medium',
+        params: PARAMS,
+        agentCount: 5_000_000,
+        steps: 1000,
+        seed: 1,
+        producedAt: new Date(),
+        userFile,
+      }),
+    ) as { frame: string; provenance: { catalog: Record<string, unknown> } };
+
+  it('records the loaded file and its import settings', () => {
+    const sidecar = sidecarWith({
+      fileName: 'desi_bgs.csv',
+      nPoints: 2000,
+      settings: {
+        format: { kind: 'raDecRedshift', h0KmSMpc: 67.4, omegaM: 0.31 },
+        weight: { kind: 'linear', scale: 0.001 },
+      },
+    });
+    expect(sidecar.provenance.catalog.user_file).toEqual({
+      name: 'desi_bgs.csv',
+      n_points: 2000,
+      format: 'raDecRedshift',
+      weight_kind: 'linear',
+      weight_scale: 0.001,
+      h0_km_s_mpc: 67.4,
+      omega_m: 0.31,
+      distance_kind: 'comoving',
+    });
+    expect(sidecar.frame).toBe('equatorial-cartesian');
+  });
+
+  it('omits user_file when no catalog is on', () => {
+    expect(sidecarWith(null).provenance.catalog).not.toHaveProperty('user_file');
   });
 });

@@ -1,0 +1,10 @@
+.root {
+  composes: reveal from '../../panel/reveal.module.css';
+  grid-column: content;
+  margin: 0;
+  padding-block: var(--space-4);
+  padding-inline-start: var(--space-5);
+  border-inline-start: 2px solid var(--tool-status-bad);
+  font-size: var(--font-size-md);
+  color: var(--color-fg);
+}

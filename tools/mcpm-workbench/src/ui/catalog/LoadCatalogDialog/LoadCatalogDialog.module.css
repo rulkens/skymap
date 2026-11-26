@@ -1,0 +1,116 @@
+/* A fixed size, so no choice, error or warning ever moves the dialog, its
+   header or its footer: what does not fit scrolls in the body. The height holds
+   the form, the file contents and a problem with its example; on a short screen
+   it is the screen.
+   One control height for every row; SegmentedControl reads it too. */
+.root {
+  --control-block-size: calc(2 * var(--space-8));
+  --inset: var(--space-12);
+  container-type: inline-size;
+  inline-size: min(36rem, 100vw - 2 * var(--corner-offset));
+  block-size: min(40rem, 100dvh - 2 * var(--corner-offset));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  background: var(--surface-card-strong);
+  backdrop-filter: blur(var(--blur-card));
+  box-shadow: var(--shadow-card);
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+  /* Drawn in the top layer, but it inherits from where it is mounted: the
+     sidebar pair passes clicks through to the canvas. */
+  pointer-events: auto;
+}
+
+/* A phone gets a sheet: the screen's height less the corner inset. */
+@media (width < 38rem) {
+  .root {
+    block-size: calc(100dvh - 2 * var(--corner-offset));
+  }
+}
+
+.root::backdrop {
+  background: var(--surface-scrim);
+}
+
+/* Fades in on open and out on close; display and overlay stay discrete so the
+   closing fade is seen before the dialog leaves the top layer. */
+.root,
+.root::backdrop {
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    overlay var(--duration-base) allow-discrete,
+    display var(--duration-base) allow-discrete;
+}
+
+.root:not([open]),
+.root:not([open])::backdrop {
+  opacity: 0;
+  transition-duration: var(--duration-fast);
+}
+
+@starting-style {
+  .root[open],
+  .root[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Header, body, file contents once a file is chosen, footer; only the body
+   scrolls, so the file contents take their room from it. The column ignores
+   content width: a long reading line once widened the dialog by a pixel and
+   rewrapped the form. */
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  block-size: 100%;
+}
+
+/* The one track definition: every FormField takes these columns through subgrid.
+   Each region (header, body, footer) owns its inset, so the dividers run border to border.
+   12ch holds "Weight scale". A problem sits at the end of the free row, so it
+   moves no control. No row gap: the free row, mostly empty, would still charge
+   one, and at 400 wide the form only just fits. */
+.body {
+  display: grid;
+  grid-template-columns:
+    [label-start] minmax(12ch, max-content)
+    [label-end control-start] minmax(0, 1fr)
+    [control-end];
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-8);
+  padding-block: var(--space-10);
+  padding-inline: var(--inset);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Narrow: both columns fall on one track, so each label sits above its control.
+   The form, not .root: a container query never matches the container itself. */
+@container (inline-size < 30rem) {
+  .form {
+    --inset: var(--space-8);
+  }
+
+  .body {
+    grid-template-columns: [label-start control-start] minmax(0, 1fr) [label-end control-end];
+  }
+}
+
+.fields {
+  grid-column: label-start / control-end;
+  display: grid;
+  grid-template-columns: subgrid;
+  row-gap: var(--space-8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root::backdrop {
+    transition: none;
+  }
+}

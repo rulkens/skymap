@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GizmoHandleId } from '../../../../tools/mcpm-workbench/@types/GizmoHandleId';
+import type { GizmoHandleId } from '../../../../tools/mcpm-workbench/@types/gizmo/GizmoHandleId';
 import { encodeGizmoHandleId } from '../../../../tools/mcpm-workbench/src/gizmo/encodeGizmoHandleId';
 
 describe('encodeGizmoHandleId', () => {

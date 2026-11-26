@@ -5,11 +5,12 @@
  * origin [-8,-8,-8], voxelSizeMpc 2, dims [8,8,8].
  */
 import { describe, expect, it } from 'vitest';
-import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/field/cullPointsToBox';
-import { seedAgents, AGENT_COUNT_STEP } from '../../../../tools/mcpm-workbench/src/sim/seedAgents';
-import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
-import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
-import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
+import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/catalog/cullPointsToBox';
+import { seedAgents } from '../../../../tools/mcpm-workbench/src/sim/seedAgents';
+import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
+import type { GridBox } from '../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import { AGENT_COUNT_STEP } from '../../../../tools/mcpm-workbench/src/sim/agentCountStep.constant';
 
 const box: GridBox = {
   centerMpc: [0, 0, 0],
@@ -23,7 +24,7 @@ function pointsFrom(positions: readonly number[]): CatalogPoints {
   const count = positions.length / 3;
   return {
     positions: new Float32Array(positions),
-    log10StellarMass: new Float32Array(count).fill(10),
+    weight: new Float32Array(count).fill(10),
     count,
     sources: ['sdss'],
   };
@@ -66,7 +67,6 @@ describe('seedAgents aroundData anchoring', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([1, 1, 1]),
       nanCount: 0,
-      medianLog10Mass: 10,
     };
     const culled = cullPointsToBox(points, weights, box);
     expect(culled.points.count).toBe(2); // sanity: the outsider really was dropped
@@ -94,7 +94,6 @@ describe('seedAgents aroundData anchoring', () => {
     const weights: AgentWeights = {
       weights: new Float32Array([1]),
       nanCount: 0,
-      medianLog10Mass: 10,
     };
     const culled = cullPointsToBox(points, weights, box);
     expect(culled.points.count).toBe(0);

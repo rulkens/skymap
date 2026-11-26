@@ -1,21 +1,14 @@
 /**
- * watchSceneSaga structural-trigger coverage — replaces the guarantee the old
- * value-diffing `buildKey` gave for free (react to ANY dispatch that moves a
- * structural field, regardless of which action caused it) with an exhaustive
- * fixture over the action list instead: `GRID_FIXTURES`/`SIM_FIXTURES` are
- * typed as `{ [K in keyof typeof slice.actions]: … }`, so TypeScript itself
- * fails to compile this file the moment a new grid/sim action is added
- * without a fixture entry here. For every fixture, trigger-list membership
- * must agree with "does this action actually move a structural field" in
- * BOTH directions — a structural action missing from the list silently stops
- * rebuilding; a non-structural action wrongly listed tears down a running
- * sim (and its GPU buffers) for nothing, every time it fires.
+ * watchSceneSaga structural-trigger coverage: `GRID_FIXTURES`/`SIM_FIXTURES` are
+ * typed `{ [K in keyof typeof slice.actions]: … }`, so a new grid/sim action without
+ * a fixture fails to compile. For every fixture, trigger-list membership must agree
+ * with "does this action move a structural field" in BOTH directions — a missing one
+ * silently stops rebuilding; a wrongly listed one tears down a running sim for nothing.
  */
 import { describe, expect, it } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
-import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/GridBox';
-import type { GridBudget } from '../../../../../tools/mcpm-workbench/@types/GridBudget';
-import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/gridShapeOf';
+import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
+import { gridShapeOf } from '../../../../../tools/mcpm-workbench/src/state/grid/gridShapeOf';
 import {
   catalogLoaded,
   setWeightMode,
@@ -39,11 +32,6 @@ const SAMPLE_BOX: GridBox = {
   voxelSizeMpc: 1.171875,
   rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
 };
-const SAMPLE_BUDGET: GridBudget = {
-  perBufferBytes: { depositA: 1, depositB: 1, trace: 1, agents: 1 },
-  totalBytes: 4,
-  refusal: null,
-};
 
 // One fixture per grid action — the mapped type is the exhaustiveness check:
 // add a case reducer to gridSlice without adding a row here and this object
@@ -57,13 +45,12 @@ const GRID_FIXTURES: {
   setManualSizeMpc: gridSlice.actions.setManualSizeMpc([10, 20, 30]),
   setRotation: gridSlice.actions.setRotation([0, 0, Math.SQRT1_2, Math.SQRT1_2]),
   installImportedBox: gridSlice.actions.installImportedBox(SAMPLE_BOX),
-  fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({ min: [0, 0, 0], max: [10, 10, 10] }),
-  setShowGridBox: gridSlice.actions.setShowGridBox(true),
-  setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
-  setResolvedGrid: gridSlice.actions.setResolvedGrid({
-    resolvedElement: 'f32',
-    byteBudget: SAMPLE_BUDGET,
+  fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({
+    bounds: { min: [0, 0, 0], max: [10, 10, 10] },
+    lanes: { agentCount: 0, pointCount: 0 },
   }),
+  setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
+  setResolvedGrid: gridSlice.actions.setResolvedGrid({ resolvedElement: 'f32' }),
   setMaxBufferBytes: gridSlice.actions.setMaxBufferBytes(123),
 };
 
