@@ -19,9 +19,9 @@ import FileActions, { type FileActionsProps } from '../../export/FileActions/Fil
 import { PARAMS_FILE_EXTENSION } from './data/paramsFileExtension.constant';
 import { MCPM_PARAM_KEYS } from '../../../params/mcpmParamKeys.constant';
 
-export type FileActionsContainerProps = Pick<FileActionsProps, 'collapsed'>;
+export type FileActionsContainerProps = Pick<FileActionsProps, 'id' | 'collapsed'>;
 
-function FileActionsContainer({ collapsed }: FileActionsContainerProps): ReactNode {
+function FileActionsContainer({ id, collapsed }: FileActionsContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const onExportTrace = useCallback(() => dispatch(exportNpyRequested()), [dispatch]);
@@ -60,6 +60,7 @@ function FileActionsContainer({ collapsed }: FileActionsContainerProps): ReactNo
 
   return (
     <FileActions
+      id={id}
       collapsed={collapsed}
       onExportTrace={onExportTrace}
       onExportScfd={onExportScfd}

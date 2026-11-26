@@ -23,6 +23,7 @@ function App(): ReactNode {
   const { store, registerSagaContext } = useMemo(() => createWorkbenchStore(defaultAppState), []);
   const dataId = useId();
   const controlsId = useId();
+  const footerId = useId();
   const [dataOpen, setDataOpen] = useState(true);
   const [controlsOpen, setControlsOpen] = useState(true);
   const columnOpen = dataOpen || controlsOpen;
@@ -41,14 +42,14 @@ function App(): ReactNode {
         <SidebarToggle
           side="end"
           expanded={controlsOpen}
-          controls={controlsId}
+          controls={`${controlsId} ${footerId}`}
           label="controls"
           onToggle={() => setControlsOpen((v) => !v)}
         />
         <SidebarToggle
           side="column"
           expanded={columnOpen}
-          controls={`${dataId} ${controlsId}`}
+          controls={`${dataId} ${controlsId} ${footerId}`}
           label="panels"
           onToggle={() => {
             setDataOpen(!columnOpen);
@@ -60,7 +61,7 @@ function App(): ReactNode {
             <DataPanelContainer id={dataId} collapsed={!dataOpen} />
             <ControlsPanelContainer id={controlsId} collapsed={!controlsOpen} />
           </div>
-          <FileActionsContainer collapsed={!controlsOpen} />
+          <FileActionsContainer id={footerId} collapsed={!controlsOpen} />
         </div>
         <DeviceLostToastContainer />
       </div>

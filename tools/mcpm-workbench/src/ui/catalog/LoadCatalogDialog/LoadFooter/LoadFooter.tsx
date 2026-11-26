@@ -3,7 +3,6 @@ import type { ReactNode, Ref } from 'react';
 import Button from '../../../../../../../src/components/common/Button/Button';
 import ImportIcon from '../../../../../../../src/components/icons/ImportIcon/ImportIcon';
 import controls from '../dialogControl.module.css';
-import { ICON_SIZE } from './data/iconSize.constant';
 import styles from './LoadFooter.module.css';
 
 export type LoadFooterProps = {
@@ -42,7 +41,7 @@ function LoadFooter({
         disabled={!loadable}
         aria-busy={busy}
       >
-        <ImportIcon size={ICON_SIZE} />
+        <ImportIcon size={12} />
         {/* Both labels share one cell, so the button keeps its width. */}
         <span className={styles.loadLabels}>
           <span data-shown={!warned} aria-hidden={warned}>

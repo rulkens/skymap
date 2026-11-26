@@ -1,10 +1,9 @@
 /**
  * FileActions — the right sidebar's pinned footer: the two exports (trace,
  * .scfd) and the params preset save/load. App mounts it beside the scrolling
- * column rather than in the controls aside, so it hides with the controls
- * through its own `collapsed`. FileActionsContainer does the requests, the
- * preset's save and its import; this component reads the chosen preset file and
- * shows why an import failed.
+ * column rather than in the controls aside, so it is its own landmark and hides
+ * with the controls through its own `collapsed`. This component reads the chosen
+ * preset file and shows why an import failed.
  */
 import { useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import Button from '../../../../../../src/components/common/Button/Button';
@@ -15,9 +14,8 @@ import FloppyIcon from '../../../../../../src/components/icons/FloppyIcon/Floppy
 import FolderOpenIcon from '../../../../../../src/components/icons/FolderOpenIcon/FolderOpenIcon';
 import styles from './FileActions.module.css';
 
-const ICON_SIZE = 12;
-
 export type FileActionsProps = {
+  readonly id: string;
   readonly collapsed: boolean;
   readonly onExportTrace: () => void;
   readonly onExportScfd: () => void;
@@ -27,6 +25,7 @@ export type FileActionsProps = {
 };
 
 function FileActions({
+  id,
   collapsed,
   onExportTrace,
   onExportScfd,
@@ -56,7 +55,13 @@ function FileActions({
   // The visible label is the short word; the accessible name keeps the verb
   // and the group, which the probe and screen readers both rely on.
   return (
-    <div className={styles.root} inert={collapsed}>
+    <div
+      id={id}
+      className={styles.root}
+      role="region"
+      aria-label="Export and params"
+      inert={collapsed}
+    >
       <div className={styles.group} role="group" aria-labelledby={exportLabelId}>
         <span id={exportLabelId} className={styles.groupLabel}>
           export
@@ -73,7 +78,7 @@ function FileActions({
                 aria-label="download trace"
                 onClick={onExportTrace}
               >
-                <FilamentIcon size={ICON_SIZE} />
+                <FilamentIcon size={12} />
                 <span className={styles.actionLabel}>trace</span>
               </Button>
             )}
@@ -89,7 +94,7 @@ function FileActions({
                 aria-label="download .scfd"
                 onClick={onExportScfd}
               >
-                <CubeIcon size={ICON_SIZE} />
+                <CubeIcon size={12} />
                 <span className={styles.actionLabel}>.scfd</span>
               </Button>
             )}
@@ -102,7 +107,7 @@ function FileActions({
         </span>
         <div className={styles.pair}>
           <ButtonTip
-            tip="Saves the simulation sliders, agent count, seeding, grid box and built-in catalogs as .mcpm.json; not the seed, tier, weighting or view."
+            tip="Saves the simulation sliders, agent count, seeding, selection and built-in catalogs as .mcpm.json; not the seed, tier, weighting or view."
             align="center"
           >
             {(describedBy) => (
@@ -115,13 +120,13 @@ function FileActions({
                   setParamsError(null);
                 }}
               >
-                <FloppyIcon size={ICON_SIZE} />
+                <FloppyIcon size={12} />
                 <span className={styles.actionLabel}>save</span>
               </Button>
             )}
           </ButtonTip>
           <ButtonTip
-            tip="Loads a saved .mcpm.json params file: simulation sliders, agent count, seeding, grid box and, if saved, the built-in catalogs."
+            tip="Loads a saved .mcpm.json params file: simulation sliders, agent count, seeding, selection and, if saved, the built-in catalogs."
             align="end"
           >
             {(describedBy) => (
@@ -131,7 +136,7 @@ function FileActions({
                 aria-label="load params"
                 onClick={() => paramsFileInputRef.current?.click()}
               >
-                <FolderOpenIcon size={ICON_SIZE} />
+                <FolderOpenIcon size={12} />
                 <span className={styles.actionLabel}>load</span>
               </Button>
             )}
