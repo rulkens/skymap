@@ -5,7 +5,7 @@
  * the device a stand-in and the fetches mocked, so what these pin is that a
  * verdict, a touch and an upload land where the residency then says they did.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock(
   '../../../../../../src/layers/body/surfaceTiles/stream/load/fetchSurfaceTileManifest',
@@ -39,11 +39,16 @@ import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTi
 import { equirectUvToDirection } from '../../../../../../src/utils/math/equirectUvToDirection';
 import { codeHeightM } from '../../../../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
+import { resolveStandaloneRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/resolveStandaloneRect';
+import { flattenAtlasRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/flattenAtlasRect';
+import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
+import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   NIGHT_TILE_ATLAS_SIDE,
+  HORIZON_TILE_PX,
 } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import {
   HEIGHT_GRID_BYTES,
@@ -519,5 +524,63 @@ describe('surfaceTileStream debug stats', () => {
       droppedAllocations: 0,
       deepestLevelKeys: ['0,0'],
     });
+  });
+});
+
+describe('surfaceTileStream absent tiles', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a horizon tile its loaded level index lacks is missing, not empty, and its leaf reads the ancestor', async () => {
+    // Bug caught: a tile the bake leaves out read as 'empty' (the leaf drawn lit, no shadows), or
+    // never named missing, so the planner allocates and fetches it again whenever LRU allows.
+    const z = MIN_TILE_LEVEL + 1;
+    const horizon = (level: number, x: number): SurfaceTileId => ({
+      product: 'horizon',
+      z: level,
+      x,
+      y: 0,
+    });
+    const [parent, baked, absent] = [horizon(z - 1, 0), horizon(z, 0), horizon(z, 1)];
+    const listed = [{ key: surfaceTileMortonKey(0, 0), part: 0, offset: 0, length: 4 }];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('.idx')
+          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          : new Response(new Uint8Array(4), { status: 206 }),
+      ),
+    );
+    vi.stubGlobal('createImageBitmap', async () => ({
+      width: HORIZON_TILE_PX,
+      height: HORIZON_TILE_PX,
+      close: () => {},
+    }));
+    const manifest = manifestOf(PREFIX, ['albedo', 'height', 'horizon']);
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(manifest);
+    const stream = createSurfaceTileStream({ device: stubDevice(), requestRender: () => {} });
+    stream.apply(plan({ wantManifest: EARTH }));
+    await tick();
+    stream.apply(
+      plan({
+        verdict: ENGAGE_EARTH,
+        params: derivePlannerParams(manifest, BASE_LEVEL),
+        requests: [parent, baked].map((tile, i) => ({ tile, screenPx: 1000 - i })),
+      }),
+    );
+    await tick();
+
+    const { residency } = stream;
+    expect(residency.isMissing(absent)).toBe(true);
+    expect(residency.isMissing(baked)).toBe(false);
+    expect(residency.isEmpty(absent)).toBe(false);
+    const leaf = resolveStandaloneRect({
+      ...absent,
+      product: 'horizon',
+      maxLevel: z,
+      baseLevel: BASE_LEVEL,
+      residentSlot: residency.residentSlot,
+      isEmpty: residency.isEmpty,
+    });
+    expect(leaf).toEqual(flattenAtlasRect(residency.residentSlot(parent)!, 1, 1, 0));
   });
 });

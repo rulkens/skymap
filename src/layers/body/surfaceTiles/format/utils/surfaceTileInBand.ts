@@ -3,11 +3,10 @@ import { surfaceTileBandOverlapsUv } from './surfaceTileBandOverlapsUv';
 import { surfaceTileColumns } from './surfaceTileColumns';
 
 /**
- * surfaceTileInBand — does a file exist for `(z, x, y)`? A band claims a tile
- * when it overlaps the tile's PARENT box, not the tile's own: that closure is
- * what puts all three siblings of every baked tile on disk (R11), so a node
- * whose children a band bakes never waits on a sibling that will never exist.
- * The bake enumerates from this predicate; the walk gates requests on it.
+ * surfaceTileInBand — does a band claim `(z, x, y)`? A band claims a tile when
+ * it overlaps the tile's PARENT box, not the tile's own, so a claimed tile may
+ * be requested; a tile its level index lacks is absent (`isMissing`). The walk
+ * gates requests on this predicate.
  */
 export function surfaceTileInBand(
   bands: readonly SurfaceTileBand[],

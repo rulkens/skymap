@@ -27,4 +27,7 @@ export type PatchInstanceWords = {
   readonly edgeCoarser: number;
   /** Cells across that sub-rect: `128 >> levelDelta`. */
   readonly heightCells: number;
+  /** The leaf's horizon-atlas rect in post uv (`horizonPostRect`); `NO_HORIZON_RECT` (all
+   *  zero, read as fully lit) when the tile is `'empty'` or nothing is resident. */
+  readonly horizonRect: Readonly<Vec4>;
 };

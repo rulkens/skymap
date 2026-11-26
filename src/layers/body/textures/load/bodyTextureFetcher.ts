@@ -31,9 +31,13 @@ export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (r
       }
       const blob = await res.blob();
       // Linear maps carry NUMERIC channels and a grey map's byte is its coverage;
-      // default colour management would shift either, so decode raw.
+      // default colour management would shift either, so decode raw. Alpha is data too
+      // (horizon sectors), so it must not premultiply the colour channels.
       if (isLinearTextureKind(req.kind) || isGreyTextureKind(req.kind)) {
-        return await createImageBitmap(blob, { colorSpaceConversion: 'none' });
+        return await createImageBitmap(blob, {
+          colorSpaceConversion: 'none',
+          premultiplyAlpha: 'none',
+        });
       }
       return await createImageBitmap(blob);
     } catch (err) {

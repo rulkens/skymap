@@ -191,7 +191,7 @@ describe('texturedBodiesPass.draw', () => {
     expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
   });
 
-  it('packs a length-44 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
+  it('packs a length-48 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
     const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
     const marsRadiusM = innerBoundRadiusM(mars.surface);
     const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
@@ -204,7 +204,7 @@ describe('texturedBodiesPass.draw', () => {
 
     const u0 = renderer.draw.mock.calls[0]![2];
     expect(u0).toBeInstanceOf(Float32Array);
-    expect(u0).toHaveLength(44);
+    expect(u0).toHaveLength(48);
     const expectedSun = sunDirLocal(mars.positionMpc, RENDER_ORIGIN_MPC, mars.orientation);
     expect(u0[16]).toBeCloseTo(expectedSun[0]);
     expect(u0[17]).toBeCloseTo(expectedSun[1]);
