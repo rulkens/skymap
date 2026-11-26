@@ -9,6 +9,8 @@ This directory is gitignored. Contributors download the pre-extracted
 
 ## Contributor (every full data rebuild)
 
+`build-mcpm` needs basisu (see docs/DATA.md).
+
 ```bash
 mkdir -p data/raw/mcpm
 for f in mcpm_sdss_d8.npy mcpm_sdss_d4.npy mcpm_sdss_d2.npy; do

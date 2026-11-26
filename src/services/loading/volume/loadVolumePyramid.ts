@@ -59,7 +59,10 @@ export async function loadVolumePyramid(
     for (const { level, mip, dims } of [...levels].reverse()) {
       const url = dataUrl(volumePyramidLevelPath(binBaseName, format, level));
       const res = await fetch(url, { signal });
-      if (!res.ok) throw new HttpError(res.status, url);
+      if (!res.ok) {
+        void res.body?.cancel();
+        throw new HttpError(res.status, url);
+      }
       if (!res.body) throw new Error(`loadVolumePyramid: no body streams from ${url}`);
       const [w, h, depth] = dims;
       // A row of blocks: blockEdge texel rows, one block deep.

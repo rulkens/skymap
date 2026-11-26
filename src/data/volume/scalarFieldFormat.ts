@@ -19,7 +19,7 @@
  *
  * v1 and v2 files are rejected outright with a "regenerate" hint — same
  * precedent as the GalaxyCatalog and Filament decoders.  Operators run the
- * relevant builder (e.g. `npm run build-mcpm`) and re-sync R2 in lockstep
+ * relevant builder (e.g. `npm run build-dust`) and re-sync R2 in lockstep
  * with the code deploy.
  *
  * Layout (little-endian):
