@@ -1,7 +1,7 @@
 /**
  * createCosmicWebDensitySlot — one density row's asset slot, construction-pure. Its commit waits
- * for the jitter mask, so no frame marches a cube with zero jitter (a visible step grid); a failed
- * mask fetch fails the commit, which the slot turns into `gave-up`.
+ * for the jitter mask, so no frame marches a cube with zero jitter (a visible step grid) while the
+ * mask is still on its way.
  */
 
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
