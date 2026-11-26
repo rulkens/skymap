@@ -75,7 +75,10 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
           state.settings.earth.ambientLight,
           state.settings.earth.oceanRoughness,
           sunAngularRadiusRad(earthState.positionMpc, RENDER_ORIGIN_MPC),
-          runtime.earthRenderer.hasMap('horizon') ? WHOLE_GLOBE_HORIZON_RECT : NO_HORIZON_RECT,
+          runtime.earthRenderer.hasMap('horizon') &&
+            !state.settings.surfaceTileDebug.overlays['terrain-no-shadows']
+            ? WHOLE_GLOBE_HORIZON_RECT
+            : NO_HORIZON_RECT,
         ),
         viewFlipsWinding(ctx),
       );

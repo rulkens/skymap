@@ -40,6 +40,9 @@ export type SurfaceTileDrawArgs = {
   readonly noDisplacement: boolean;
   /** `terrain-no-skirts` debug toggle: the skirt ring collapses to zero depth. */
   readonly noSkirts: boolean;
+  /** `terrain-no-shadows` debug toggle: every patch gets `NO_HORIZON_RECT`, so the
+   *  fragment skips the horizon lookup and draws lit. */
+  readonly noShadows: boolean;
   /** Each product's atlas view, bound at its lane row's `binding`: albedo's resident patches
    *  sampled at each tile's resolved rect, height's Terrain-RGB codes `textureLoad`ed at the
    *  patch's own slot (every vertex position reads it, so a cut is never drawn without it),

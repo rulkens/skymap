@@ -118,6 +118,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         debugLodOverlay: state.settings.surfaceTileDebug.overlays['surface-lod-overlay'],
         noDisplacement: state.settings.surfaceTileDebug.overlays['terrain-no-displacement'],
         noSkirts: state.settings.surfaceTileDebug.overlays['terrain-no-skirts'],
+        noShadows: state.settings.surfaceTileDebug.overlays['terrain-no-shadows'],
         atlasViews,
       });
     },

@@ -85,7 +85,8 @@ export function texturedBodiesPass(runtime: BodyRuntime): ContentPass {
         bodySlabCamAltitudeSq(pose.eyeRelBodyM, radiusM),
         narrowMat4(composeBodySlabCamRelVp(view.slab.vp, radiusM)),
         sunAngularRadiusRad(bodyState.positionMpc, RENDER_ORIGIN_MPC),
-        runtime.texturedBodyRenderer.hasMap(body.id as BodyTextureId, 'horizon')
+        runtime.texturedBodyRenderer.hasMap(body.id as BodyTextureId, 'horizon') &&
+          !state.settings.surfaceTileDebug.overlays['terrain-no-shadows']
           ? WHOLE_GLOBE_HORIZON_RECT
           : NO_HORIZON_RECT,
       );
