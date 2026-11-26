@@ -69,7 +69,7 @@ function DataPanel({
       <aside id={id} className={styles.root} aria-label="Data" inert={collapsed}>
         <header className={styles.header}>
           <h1 className={styles.title}>
-            <img className={styles.icon} src={skymapIconUrl} alt="" aria-hidden />
+            <img className={styles.icon} src={skymapIconUrl} alt="" />
             MCPM Workbench
           </h1>
         </header>
