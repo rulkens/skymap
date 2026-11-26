@@ -893,7 +893,7 @@ unclear, and no entry here reads them as a licence.
   `src/services/gpu/shaders/mcpm/`, which their own headers describe as a port
   of Polyphorm's D3D11 kernels ("the algorithm verbatim"), served on the
   `/mcpm/` workbench page; (2) five colour ramps in
-  `src/data/volume/scalarFieldPalettes.ts`, sampled from Polyphorm's
+  `packages/shared/src/data/volume/scalarFieldPalettes.ts`, sampled from Polyphorm's
   `palette_*.tga` files; (3) the hidden "Polyphorm (2MRS)" volume, a run of
   the software over 2MRS made by us, and cubes exported from the workbench.
 - **By:** Oskar Elek, Joseph N. Burchett, J. Xavier Prochaska and Angus G.
@@ -2617,7 +2617,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
   font; `public/fonts/OFL-Sora.txt` holds them.
 - **Upstream:** <https://github.com/sora-xor/sora-font>
 - **Enters skymap:** `public/fonts/Sora-Thin.woff2` (`@font-face` in
-  `src/styles/tokens.css`).
+  `packages/shared/src/styles/tokens.css`).
 - **Modified:** Converted to WOFF2; whether it was subsetted is not recorded.
 - **Checked:** 2026-10-07: <https://raw.githubusercontent.com/sora-xor/sora-font/master/OFL.txt>
 
@@ -2776,7 +2776,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
 
 <!-- attribution: id=mulberry32; hosts=gist.github.com -->
 
-- **What:** The 32-bit generator in `src/utils/random/mulberry32.ts`, used
+- **What:** The 32-bit generator in `packages/shared/src/utils/random/mulberry32.ts`, used
   wherever the app needs the same "random" numbers on every load.
 - **By:** Tommy Ettinger, 2017.
 - **Licence:** Public domain (CC0). The gist's header: "To the extent possible
@@ -2837,7 +2837,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
 
 <!-- attribution: id=colormaps -->
 
-- **What:** Colour ramps in `src/data/volume/scalarFieldPalettes.ts`. Five
+- **What:** Colour ramps in `packages/shared/src/data/volume/scalarFieldPalettes.ts`. Five
   anchor colours each of `viridis`, `magma` and `inferno`, which the file
   says "match matplotlib's `_cm_listed.py`"; `inferno` colours the cosmic web
   glow. And a `coolwarm` ramp whose comment says its anchors are "borrowed
@@ -2898,7 +2898,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
 
 <!-- attribution: id=dialkit -->
 
-- **What:** `src/components/common/Slider/Slider.tsx`, which its header calls
+- **What:** `packages/shared/src/components/common/Slider/Slider.tsx`, which its header calls
   "a reimplementation of dialkit's Slider adapted to skymap's tokens". The
   package is not a dependency and, by the header, none of its animation code
   is used.

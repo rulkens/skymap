@@ -2,7 +2,7 @@
 
 `http://localhost:<port>/?mock=<name>#<hash>` on the dev server renders the default export of
 `src/dev/mocks/<name>.tsx` above the running app: real components, `*.module.css`, the
-`src/styles/tokens.css` variables and the store (it sits inside the app's `<Provider>`, so
+`packages/shared/src/styles/tokens.css` variables and the store (it sits inside the app's `<Provider>`, so
 containers work). Dev only: `src/main.tsx` imports the mount (`src/dev/mountMock.tsx`) behind
 `import.meta.env.DEV`, so none of this ships.
 

@@ -25,7 +25,7 @@ the `?mock=` mount never ships. How a mock is written: `src/dev/mocks/README.md`
 
 ## Craft rules
 
-- **Tokens only**: `src/styles/tokens.css`, per ui-ux.md "Layout, type and colour". No raw
+- **Tokens only**: `packages/shared/src/styles/tokens.css`, per ui-ux.md "Layout, type and colour". No raw
   colours, sizes or spacing.
 - **Find real panels by `aria-label`**: CSS-module class names are hashed. Some labels come
   through props, so grep won't find the literal. `Navigation cheatsheet` is `Panel`'s `ariaLabel`

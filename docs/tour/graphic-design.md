@@ -4,9 +4,9 @@ How the tour's on-screen text looks. The narration reads like **film
 subtitles**: one line at a time, centred at the bottom, over the live scene.
 It keeps the splash's type (Cormorant Garamond + mono label) so the splash and
 the tour read as one film. Code: `src/components/TourOverlay/`; tokens in
-`src/styles/global.css`.
+`packages/shared/src/styles/global.css`.
 
-## Tokens (from `src/styles/global.css`)
+## Tokens (from `packages/shared/src/styles/global.css`)
 
 | Token | Value | Use |
 |---|---|---|

@@ -43,7 +43,7 @@ Playback half exists; reliability and offline halves do not.
   (`takeLatest`) and restore scene state in a `finally`
   (`src/state/tour/guidedTourSaga.ts`), so loop-restart is low-risk.
 - **Local data serving** — catalog/tile loading funnels through `dataUrl()`
-  (`src/services/loading/fetchWithProgress.ts:29`) → `VITE_DATA_BASE_URL`,
+  (`packages/shared/src/services/loading/fetchWithProgress.ts:29`) → `VITE_DATA_BASE_URL`,
   already empty in dev. Ship `dist/` + a built `public/data/` (~280 MB
   catalogs per docs/DEPLOY.md, plus tiles/textures) and that part is offline.
 - **Bulk settings restore** — `mergeSettingsSnapshot`
@@ -56,7 +56,7 @@ Playback half exists; reliability and offline halves do not.
 **Missing (effort concentrates in the first two):**
 
 1. **Robustness: none.** No `device.lost` handler, no `uncapturederror`, no
-   watchdog, no auto-reload — `src/services/gpu/device.ts` requests the
+   watchdog, no auto-reload — `packages/shared/src/services/gpu/device.ts` requests the
    device once at startup and throws; its docblock notes driver crashes are
    unhandled. Pragmatic shape: supervised auto-reload (a kiosk can just
    reload; reload + autostart makes recovery a non-event) plus an external

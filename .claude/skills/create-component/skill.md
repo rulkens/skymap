@@ -208,7 +208,7 @@ Don't create `index.ts` re-exports inside component folders (CLAUDE.md).
 ### 8. No global CSS
 
 All styling goes in `<ComponentName>.module.css` (CSS Modules). Never
-edit `src/styles/global.css` or any other top-level stylesheet from a
+edit `packages/shared/src/styles/global.css` or any other top-level stylesheet from a
 component change. Never write global selectors (`:global(.foo)` /
 unscoped `body button { … }` rules) inside a module either — they leak
 out of the file's scope and undo the entire point of CSS Modules.
@@ -219,7 +219,7 @@ screen away, and the dev-tools trail to "who set this rule" is cold.
 Module-local rules can't reach past their own file, so the blast radius
 of any styling decision matches the blast radius of the component.
 
-`src/styles/global.css` is for design tokens (CSS custom properties)
+`packages/shared/src/styles/global.css` is for design tokens (CSS custom properties)
 and the body / html reset only. If you find yourself wanting to add a
 _rule_ there to support a component, the rule belongs in the
 component's module instead.
@@ -537,7 +537,7 @@ existing code. Each one points back to a rule explaining the _why_.
 - **Omitting `.root`** because "the component is small" — rule 5.
 - **Template-literal / string-concat `className`** instead of `cx(...)` — rule 5c.
 - **`index.ts` barrel re-exports** — rule 7.
-- **Editing `src/styles/global.css`** or writing `:global(.foo)` rules
+- **Editing `packages/shared/src/styles/global.css`** or writing `:global(.foo)` rules
   inside a module to support a component — rule 8.
 - **Scaffolding a test file for a thin presentational wrapper** — see
   "Tests" under "What the skill does"; default is no test file.

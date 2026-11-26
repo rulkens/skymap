@@ -17,7 +17,7 @@ The gesture code is platform-uniform — there is no Windows-specific branch to 
 - No UA sniffing, `maxTouchPoints`, or media-query gating of the handlers. `useIsMobile` is a viewport-width check used only for UI layout, never by input code.
 - No `setPointerCapture` (deliberately removed for an iOS WebKit bug — module header, `orbitControls.ts:27-46`).
 - Single wiring point: `attachOrbitControls` called once from `src/services/engine/phases/wireInput.ts:325`. The hover-pick bindings (`inputBindings.ts`) don't touch drag state.
-- The app's **only** defense against native browser pinch-zoom is `#c { touch-action: none; }` (`src/styles/global.css:385-390`) — nothing on `html`/`body`, no `user-scalable=no` in the viewport meta (`index.html:14`).
+- The app's **only** defense against native browser pinch-zoom is `#c { touch-action: none; }` (`packages/shared/src/styles/global.css:385-390`) — nothing on `html`/`body`, no `user-scalable=no` in the viewport meta (`index.html:14`).
 - `onWheel` (`orbitControls.ts:484-531`) `preventDefault`s unconditionally and reads `e.deltaY` raw — no `ctrlKey` (trackpad-pinch convention) or `deltaMode` handling.
 
 ## Hypotheses, ranked

@@ -329,8 +329,10 @@ Code: `src/main/sync/`, with `tools/deploy/r2/buildOfflineInventory.ts` on the p
 - **Module scripts are blocked on `file://`.** The control page is an IIFE with a plain `defer`
   script (`plainScript` plugin in `vite.config.ts`). A `type="module"` tag renders nothing.
 - **Fonts for `file://`.** `tokens.css` names its faces at `/fonts/`, which on `file://` is the
-  disk root. The `bundledFonts` plugin rebases them so Vite bundles the files beside the page. A
-  new asset type on the page also needs adding to its CSP meta.
+  disk root. The `bundledFonts` plugin rebases them so Vite bundles the files beside the page. It
+  keys on and rebases from `packages/shared/src/styles/tokens.css`, so moving that file breaks
+  it; `tests/bundledFonts.test.ts` fails if it does. A new asset type on the page also needs
+  adding to its CSP meta.
 - **Port 47823 and the single instance.** The port is fixed so bookmarks and trusted origins
   survive. A second Electron on the machine fails to listen. An Electron left behind by a crashed
   dev run or a test harness keeps the port and the lock; find it with `lsof -i :47823` and kill

@@ -13,7 +13,7 @@ Sites inlining the conversion as of 2026-07-14 (grep `Math.PI / 180` /
 `(deg * Math.PI) / 180`):
 
 - `src/utils/math/raDecDistToCartesian.ts:35-36`
-- `src/utils/math/raDecDistToEqCart.ts`
+- `packages/shared/src/utils/math/raDecDistToEqCart.ts`
 - `src/utils/math/eqRaDecToUnitCart.ts`
 - `src/utils/math/galacticToCartesian.ts`
 - `src/services/engine/camera/framing/cameraFraming.ts:36` (`DEFAULT_FOV_Y_RAD`)

@@ -104,7 +104,7 @@ How to find and prove it:
 
 ## Mitigations baked into skymap
 
-- **shaderCompileLogger.ts** — every renderer routes `device.createShaderModule` through `createShaderModuleWithDevLog(device, code, label)`, which logs the linked WGSL alongside any compile-time error in dev mode. The linked output carries no sourcemap, so Chrome's error line numbers refer to the LINKED output, not your source `.wesl` files. Reading the linked output in the dev console is the only way to map "error at line 142" back to a source file. The helper is at `src/services/gpu/shaderCompileLogger.ts`; copy the pattern into other projects.
+- **shaderCompileLogger.ts** — every renderer routes `device.createShaderModule` through `createShaderModuleWithDevLog(device, code, label)`, which logs the linked WGSL alongside any compile-time error in dev mode. The linked output carries no sourcemap, so Chrome's error line numbers refer to the LINKED output, not your source `.wesl` files. Reading the linked output in the dev console is the only way to map "error at line 142" back to a source file. The helper is at `packages/shared/src/services/gpu/shaderCompileLogger.ts`; copy the pattern into other projects.
 
 - **`label:` everywhere** — every WebGPU resource (shader module, render pipeline, bind group, bind group layout, pipeline layout, buffer, texture) has a `label` field. Browser-console errors that previously said "(unlabeled)" now name the offending resource. Worth its weight in debugging time.
 
