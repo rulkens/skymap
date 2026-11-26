@@ -34,7 +34,7 @@ import { sizeSliderFor } from './utils/sizeSliderFor';
 import { VOXEL_SIZE_INFO } from './data/voxelSizeInfo.constant';
 import { VOXEL_SIZE_MIN_MPC } from './data/voxelSizeMinMpc.constant';
 import { voxelSizeSliderFor } from './utils/voxelSizeSliderFor';
-import { withAxis } from './utils/withAxis';
+import { withAxis } from '../../../../../../src/utils/math/withAxis';
 import styles from './SelectionControls.module.css';
 
 export type SelectionControlsProps = {

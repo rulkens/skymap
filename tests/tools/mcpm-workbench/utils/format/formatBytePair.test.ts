@@ -1,6 +1,6 @@
 /** formatBytePair — used and max in one unit, picked by the max, so they compare at a glance. */
 import { describe, expect, it } from 'vitest';
-import { formatBytePair } from '../../../../../../../tools/mcpm-workbench/src/ui/sim/GpuBufferMeter/utils/formatBytePair';
+import { formatBytePair } from '../../../../../tools/mcpm-workbench/src/utils/format/formatBytePair';
 
 describe('formatBytePair', () => {
   it('a gigabyte limit puts a smaller buffer in GB too', () => {

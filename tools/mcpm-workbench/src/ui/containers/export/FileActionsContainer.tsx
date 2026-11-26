@@ -16,7 +16,7 @@ import { installImportedBox } from '../../../state/grid/gridSlice';
 import { setAgentCount, setInitMode, setSimParam } from '../../../state/sim/simSlice';
 import { useAppDispatch, useAppStore } from '../../../store/hooks';
 import FileActions, { type FileActionsProps } from '../../export/FileActions/FileActions';
-import { PARAMS_FILE_EXTENSION } from './paramsFileExtension.constant';
+import { PARAMS_FILE_EXTENSION } from './data/paramsFileExtension.constant';
 
 export type FileActionsContainerProps = Pick<FileActionsProps, 'collapsed'>;
 

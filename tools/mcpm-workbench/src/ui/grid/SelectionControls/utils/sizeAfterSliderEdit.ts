@@ -2,7 +2,7 @@ import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
 import type { GridSlice } from '../../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../grid/deriveGridBox';
 import { builtAxisSizeMpc } from './builtAxisSizeMpc';
-import { withAxis } from './withAxis';
+import { withAxis } from '../../../../../../../src/utils/math/withAxis';
 
 /**
  * sizeAfterSliderEdit — the `manualSizeMpc` a size-slider edit writes: the

@@ -8,7 +8,7 @@
  * the text a dash.
  */
 import type { CSSProperties, ReactNode } from 'react';
-import { formatBytePair } from './utils/formatBytePair';
+import { formatBytePair } from '../../../utils/format/formatBytePair';
 import { gpuBufferReading } from './utils/gpuBufferReading';
 import styles from './GpuBufferMeter.module.css';
 

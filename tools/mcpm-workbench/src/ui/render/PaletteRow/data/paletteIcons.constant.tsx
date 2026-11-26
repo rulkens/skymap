@@ -5,7 +5,7 @@ import {
   PALETTE_IDS,
 } from '../../../../../../../src/data/volume/scalarFieldPalettes';
 import PaletteSwatch from '../../PaletteSwatch/PaletteSwatch';
-import { paletteGradientStops } from '../../PaletteSwatch/utils/paletteGradientStops';
+import { paletteGradientStops } from '../../../../utils/color/paletteGradientStops';
 
 export const PALETTE_ICONS = Object.fromEntries(
   PALETTE_IDS.map((id) => [

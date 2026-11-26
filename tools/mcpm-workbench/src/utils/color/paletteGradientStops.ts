@@ -1,4 +1,4 @@
-import type { GradientStop } from '../../../../../@types/ui/GradientStop';
+import type { GradientStop } from '../../../@types/ui/GradientStop';
 
 // u8 units. Above 1.5, so the LUT's own rounding never adds a stop.
 const TOLERANCE = 2;

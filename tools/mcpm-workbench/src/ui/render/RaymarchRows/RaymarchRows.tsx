@@ -6,7 +6,7 @@ import PaletteRow from '../PaletteRow/PaletteRow';
 import SliderRows from '../../panel/SliderRows/SliderRows';
 import ToggleRow from '../../panel/ToggleRow/ToggleRow';
 import SubsectionGroup from '../../panel/SubsectionGroup/SubsectionGroup';
-import { PALETTE_INFO } from '../PaletteRow/data/paletteInfo.constant';
+import { PALETTE_INFO } from '../data/paletteInfo.constant';
 import { RAYMARCH_PREVIEW_SLIDER_FIELDS } from './data/raymarchPreviewSliderFields.constant';
 import { RAYMARCH_SLIDER_FIELDS } from './data/raymarchSliderFields.constant';
 

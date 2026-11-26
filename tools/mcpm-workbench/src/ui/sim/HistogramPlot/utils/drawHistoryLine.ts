@@ -1,4 +1,4 @@
-import { cssVar } from './cssVar';
+import { cssVar } from '../../../../../../../src/utils/browser/cssVar';
 import { historyPoints } from './historyPoints';
 import { HISTORY_HALO_WIDTH } from '../data/historyHaloWidth.constant';
 import { HISTORY_INSET_FRACTION } from '../data/historyInsetFraction.constant';

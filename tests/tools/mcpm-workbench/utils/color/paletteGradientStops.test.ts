@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildPaletteLut,
-  PALETTE_IDS,
-} from '../../../../../../../src/data/volume/scalarFieldPalettes';
-import { rampLut } from '../../../../../../../src/utils/color/rampLut';
-import { paletteGradientStops } from '../../../../../../../tools/mcpm-workbench/src/ui/render/PaletteSwatch/utils/paletteGradientStops';
+import { buildPaletteLut, PALETTE_IDS } from '../../../../../src/data/volume/scalarFieldPalettes';
+import { rampLut } from '../../../../../src/utils/color/rampLut';
+import { paletteGradientStops } from '../../../../../tools/mcpm-workbench/src/utils/color/paletteGradientStops';
 
 const channels = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
