@@ -8,22 +8,18 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
  * Each volume lives as a registry entry so its presentation defaults
  * (palette, contrast, exposure, …) sit next to its `binBaseName`. Boot
  * visibility lives in the owning Layer's `initialState`, not here. Covers
- * every production cube (MCPM, Polyphorm 2MRS, …), each loaded from its
- * own `.scfd` file.
+ * every production cube (MCPM, Polyphorm 2MRS, …).
  */
 export type CosmicWebDensitySourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {
     readonly type: 'cosmicWebDensity';
-    /**
-     * Filename stem under `public/data/` (the loader appends `.scfd`,
-     * with the tier suffix wired in by tier-aware fetchers).
-     */
+    /** Stem of the cube's files: the pyramid sidecar `<stem>.json`, or the `<stem>.scfd`. */
     readonly binBaseName: string;
     /**
-     * Whether this volume ships per-tier `.scfd` variants
-     * (`<binBaseName>-<tier>.scfd`). False for tier-agnostic cubes whose
-     * single file is reused across every tier (MCPM workbench is
-     * untiered; MCPM itself is per-tier).
+     * 'pyramid': `volume-pyramid/v1/` sidecar + level files, base level by tier.
+     * 'scfd': one SCFD v3 cube at every tier.
      */
-    readonly tiered: boolean;
+    readonly storage: 'pyramid' | 'scfd';
+    /** Asset-queue rank of this row's cube (`AssetWiringRow.priority`). */
+    readonly priority: number;
   };

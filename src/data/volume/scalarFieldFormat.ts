@@ -19,7 +19,7 @@
  *
  * v1 and v2 files are rejected outright with a "regenerate" hint — same
  * precedent as the GalaxyCatalog and Filament decoders.  Operators run the
- * relevant builder (e.g. `npm run build-mcpm`) and re-sync R2 in lockstep
+ * relevant builder (e.g. `npm run build-dust`) and re-sync R2 in lockstep
  * with the code deploy.
  *
  * Layout (little-endian):
@@ -74,15 +74,15 @@ import type { ScalarCube } from '../../@types/data/volume/ScalarCube';
 import type { ScalarFieldFrameKind } from '../../@types/data/volume/ScalarFieldFrameKind';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
+import { FormatVersionError } from '../formatVersionError';
 
 const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 3;
 export const SCFD_HEADER_BYTES = 96;
 
-// Version-stamped folder: max-age=86400 lets a CDN serve an old .scfd
-// alongside new code for up to a day, so the epoch has to live in the
-// path itself to make that pairing impossible (images/earth-tiles/'s
-// TILE_PREFIX precedent).
+// Version-stamped folder: hashed data files are immutable (DEPLOY.md, "Cache-Control
+// + CORS"), so a version bump writes new logical names rather than fighting a cache,
+// and the old files stay on R2 for tabs still on the old manifest.
 export const SCALAR_FIELD_DATA_PREFIX = `scalar-field/v${VERSION}`;
 
 // Exported for shellMeshFormat.ts: the `.shell` format's frame byte reuses
@@ -209,7 +209,10 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   }
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    throw new Error(
+    throw new FormatVersionError(
+      'scalar field',
+      version,
+      VERSION,
       `decodeScalarField: unsupported version ${version} (expected ${VERSION}); regenerate the cube via the dataset's build pipeline`,
     );
   }

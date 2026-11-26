@@ -8,7 +8,7 @@
  * workbench and the app show the same named ramp.
  *
  * The LUT's alpha channel is uploaded but never read — the raymarch takes its
- * opacity from Polyphorm's `opticalThickness * r` instead (spec §15 decision 6).
+ * opacity from Polyphorm's `opticalThickness * r` instead.
  */
 import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../src/data/volume/scalarFieldPalettes';

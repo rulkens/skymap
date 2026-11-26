@@ -13,13 +13,17 @@ import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { CosmicWebDensityRuntime } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import type { LoadState } from '../../../../../src/@types/loading/LoadState';
 
-const RUNTIME = {
-  renderer: {
-    hasActiveFields: (_settingsOf: unknown, fadeOpacityOf: (id: string) => number) =>
-      fadeOpacityOf('mcpm') > 0,
-  },
-} as unknown as CosmicWebDensityRuntime;
+const runtimeWithMask = (kind: LoadState<unknown>['kind']) =>
+  ({
+    renderer: {
+      hasActiveFields: (_settingsOf: unknown, fadeOpacityOf: (id: string) => number) =>
+        fadeOpacityOf('mcpm') > 0,
+    },
+    jitterMaskSlot: { state: () => ({ kind }) },
+  }) as unknown as CosmicWebDensityRuntime;
+const RUNTIME = runtimeWithMask('ready');
 
 const CTX = {
   snapshot: { isReady: true, nowMs: 0, focusBlend: 0, focusPickId: null },
@@ -45,6 +49,19 @@ describe('deriveCosmicWebDensityLiveness', () => {
     expect(live!.fadeOpacityOf('mcpm')).toBeGreaterThan(0);
     expect(live!.fadeOpacityOf('mcpm')).toBeLessThanOrEqual(0.5);
     expect(live!.fadeOpacityOf('polyphorm-2mrs')).toBe(0);
+  });
+
+  // A cube marched before its jitter mask lands shows a visible step grid.
+  it('is null while the jitter mask is still loading', () => {
+    expect(
+      deriveCosmicWebDensityLiveness(runtimeWithMask('loading'), STATE, CTX, fadeOf(1)),
+    ).toBeNull();
+  });
+
+  it('is live once the loader gave up on the jitter mask: unjittered beats off', () => {
+    expect(
+      deriveCosmicWebDensityLiveness(runtimeWithMask('error'), STATE, CTX, fadeOf(1)),
+    ).not.toBeNull();
   });
 
   it('each field recedes strongly at full focus', () => {

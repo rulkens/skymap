@@ -25,6 +25,7 @@ import { proceduralDisksPass } from '../../../src/layers/galaxyCatalog/disks/pro
 import { texturedDisksPass } from '../../../src/layers/galaxyCatalog/disks/textured/passes/texturedDisksPass';
 import { cosmicWebDensityPass } from '../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../../src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass';
+import { cosmicWebDensityAccumulationPlanner } from '../../../src/layers/cosmicWebDensity/frame';
 import { milkyWayAggregatePass } from '../../../src/layers/milkyWay/cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from '../../../src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../src/layers/milkyWay/cloud/passes/milkyWayPass';
@@ -94,7 +95,14 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
   const clear = { r: 0, g: 0, b: 0, a: 0 };
   const specs = [
     { id: 'hdr', format: 'rgba16float', depth: null, scale: 1, clearValue: opaque },
-    { id: 'cosmic-web-density', format: 'rgba16float', depth: null, scale: 3, clearValue: clear },
+    {
+      id: 'cosmic-web-density',
+      format: 'rgba16float',
+      depth: null,
+      scale: 3,
+      clearValue: clear,
+      retained: true,
+    },
     { id: 'mw-aggregate', format: 'rgba16float', depth: null, scale: 2, clearValue: clear },
     { id: 'swap', format: 'bgra8unorm', depth: null, scale: 1, clearValue: opaque },
   ];
@@ -138,7 +146,10 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
   const densityRuntime = {
     renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
+    jitterMaskSlot: { state: () => ({ kind: 'ready' }) },
+    slots: {},
   } as unknown as CosmicWebDensityRuntime;
+  const densityPlanner = cosmicWebDensityAccumulationPlanner(densityRuntime);
   const milkyWayCloudRenderer = {
     drawStars: logged('milkyWayCloudRenderer.drawStars'),
     drawDust: logged('milkyWayCloudRenderer.drawDust'),
@@ -227,6 +238,8 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
   const state = {
     viewRig: 'mono',
     frameIndex: 0,
+    tier: 'medium',
+    perViewPlanMemory: new Map(),
     // Every core handle null (its pass reports `enabled: false`), then the two a
     // frame cannot run without.
     gpu: {
@@ -245,14 +258,17 @@ export function makeRenderFrameFixture(options: RenderFrameFixtureOptions = {}) 
       galaxyPointSpritesPass(galaxyRuntime),
       proceduralDisksPass(galaxyRuntime),
       texturedDisksPass(galaxyRuntime),
-      cosmicWebDensityPass(densityRuntime),
+      cosmicWebDensityPass(densityRuntime, densityPlanner),
       cosmicWebDensityUpsamplePass(densityRuntime),
       milkyWayAggregatePass(milkyWayRuntime),
       milkyWayUpsamplePass(milkyWayRuntime),
       milkyWayPass(milkyWayRuntime),
     ].map((contentPass) => gatePassByFade(contentPass, gateState)),
     computes: [],
-    planners: VIEW_RIGS.mono.program.flatMap(stubPlannersFor),
+    // The density passes read their planner's value, so it plans for real.
+    planners: VIEW_RIGS.mono.program
+      .flatMap(stubPlannersFor)
+      .map((stub) => (stub.name === densityPlanner.name ? densityPlanner : stub)),
   } as unknown as EngineState;
 
   const input: RenderFrameInput = {

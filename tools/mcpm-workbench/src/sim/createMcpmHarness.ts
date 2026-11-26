@@ -7,31 +7,31 @@
  * the deposit ping-pong needs two bind groups that differ only in which
  * physical buffer sits at slot 0.
  */
-import type { AgentInitMode } from '../../@types/AgentInitMode';
-import type { AgentWeights } from '../../@types/AgentWeights';
-import type { CatalogPoints } from '../../@types/CatalogPoints';
-import type { GridBox } from '../../@types/GridBox';
-import type { GridElement } from '../../@types/GridElement';
-import type { HistogramReadback } from '../../@types/HistogramReadback';
-import type { McpmHarness } from '../../@types/McpmHarness';
-import type { McpmParams } from '../../@types/McpmParams';
+import type { AgentInitMode } from '../../@types/sim/AgentInitMode';
+import type { AgentWeights } from '../../@types/catalog/AgentWeights';
+import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { GridElement } from '../../@types/grid/GridElement';
+import type { HistogramReadback } from '../../@types/sim/HistogramReadback';
+import type { McpmHarness } from '../../@types/sim/McpmHarness';
+import type { McpmParams } from '../../@types/sim/McpmParams';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import propagateSource from '../../../../src/services/gpu/shaders/mcpm/propagate.wesl?static';
 import decaySource from '../../../../src/services/gpu/shaders/mcpm/decay.wesl?static';
 import histogramSource from '../../../../src/services/gpu/shaders/mcpm/histogram.wesl?static';
-import { buildOverlayCatalog } from '../field/buildOverlayCatalog';
-import { cullPointsToBox } from '../field/cullPointsToBox';
-import { renormalizeWeightMass } from '../field/renormalizeWeightMass';
+import { buildOverlayCatalog } from '../catalog/buildOverlayCatalog';
+import { cullPointsToBox } from '../catalog/cullPointsToBox';
 import { createGridBuffers } from './createGridBuffers';
 import { encodeStep } from './encodeStep';
-import { planGridBudget } from './planGridBudget';
+import { planGridBudget } from './memory/planGridBudget';
 import { readbackHistogram } from './readbackHistogram';
 import { readbackTrace } from './readbackTrace';
-import { AGENT_COUNT_STEP, seedAgents } from './seedAgents';
+import { seedAgents } from './seedAgents';
 import { specializeGridElement } from './specializeGridElement';
+import { AGENT_COUNT_STEP } from './agentCountStep.constant';
 
-// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the T20
+// io.wesl's @group(1) slot contract: propagate binds 0 and 2..8, decay 0..2, the
 // histogram pass a subset of propagate's — trace, agent positions, and the (dead-read)
 // weight lane — at 2, 3, 4, 5, 8. Exported for dispatchSlots.parity.test.ts.
 export const PROPAGATE_SLOTS = [0, 2, 3, 4, 5, 6, 7, 8];
@@ -88,20 +88,14 @@ export async function createMcpmHarness(opts: {
     );
   }
 
-  // Task S14: a manual box can crop the catalog (the fork's box always covers all its
+  // A manual box can crop the catalog (the fork's box always covers all its
   // data, skymap's doesn't) — cull ONCE, here, before anything downstream sizes a
   // buffer or reads a count, so nDataPoints/agentBufferLength/the histogram
   // normalization all agree with what seedAgents actually seeds.
+  // Survivors keep their pre-cull weights: the port never culls, and rescaling would let a
+  // cropped box re-inflate the points left inside it.
   const culled = cullPointsToBox(opts.points, opts.weights, opts.box);
-  // Fix round 1: cullPointsToBox filters values, it doesn't rescale them — restore the
-  // sum-to-TOTAL_WEIGHT_MASS invariant over the culled population specifically, the one
-  // both the deposit and galaxyOverlayPass's weightScale actually read (see
-  // renormalizeWeightMass's docblock).
-  const seedWeights: AgentWeights = {
-    ...culled.weights,
-    weights: renormalizeWeightMass(culled.weights.weights),
-  };
-  // Task S16: the Galaxies overlay previews the RAW loaded set, in-box or not — a data
+  // The Galaxies overlay previews the RAW loaded set, in-box or not — a data
   // preview, not the sim's readout, so it gets its own voxel-space lanes over
   // `opts.points`/`opts.weights` rather than `culled`'s. Pure CPU-side math; the GPU
   // buffers it feeds are built below once `device` exists.
@@ -279,7 +273,7 @@ export async function createMcpmHarness(opts: {
   function uploadAgents(mode: AgentInitMode, seed: number): void {
     const seeded = seedAgents({
       points: culled.points,
-      weights: seedWeights,
+      weights: culled.weights,
       box: opts.box,
       agentCount: opts.agentCount,
       mode,
@@ -314,7 +308,7 @@ export async function createMcpmHarness(opts: {
       nDataPoints: culled.points.count,
       count: agentBufferLength,
     },
-    // Task S16: nDataPoints === count here — every lane is a raw catalog row, no free
+    // nDataPoints === count here — every lane is a raw catalog row, no free
     // agents follow — so galaxyOverlayPass's draw call (which uses agents.nDataPoints)
     // draws the whole RAW set unchanged.
     overlayAgents: {

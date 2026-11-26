@@ -1,0 +1,12 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4) var(--space-8);
+}
+
+.field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}

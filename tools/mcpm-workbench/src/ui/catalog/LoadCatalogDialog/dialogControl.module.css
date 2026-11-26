@@ -1,0 +1,45 @@
+/* The load dialog's buttons and number inputs: one control height for every row,
+   `--control-block-size`, which the dialog's root sets. */
+.button,
+.number {
+  box-sizing: border-box;
+  block-size: var(--control-block-size);
+}
+
+@media (pointer: coarse) {
+  .button,
+  .number {
+    min-block-size: var(--touch-target);
+  }
+}
+
+.number {
+  inline-size: 8ch;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .number:hover {
+    border-color: var(--border-hover);
+  }
+}
+
+.number:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.number[data-warned='true'] {
+  border-color: var(--tool-status-warn);
+}
+
+.number[aria-invalid='true'] {
+  border-color: var(--tool-status-bad);
+}

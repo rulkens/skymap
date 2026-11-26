@@ -32,8 +32,6 @@ export function starCatalogPlanner(
 ): Extract<FrameContentPlanner<void, 'starCatalog'>, { scope: 'once' }> {
   let anchor: OctreeCutSpec | null = null;
   let changedAtMs = -Infinity;
-  // The pool's LRU clock; any strictly increasing count serves.
-  let frameIndex = 0;
   // A landing chunk changes the cut without changing `sameOctreeCut`'s inputs.
   const seenEpoch = new WeakMap<OctreeChunkStream<StarColumns>, number>();
   // The cut and frame of the last chunk plan, and whether it left chunks wanted.
@@ -64,7 +62,9 @@ export function starCatalogPlanner(
       const inputs = starCutInputs(runtime, state.settings.starCatalogs, fade, views);
       const nowMs = views[0]!.snapshot.nowMs;
       if (nowMs < changedAtMs) changedAtMs = nowMs;
-      frameIndex++;
+      // This planner runs once per rendered frame, so the frame index paces the chunk plans and
+      // serves as the pool's LRU clock (any strictly increasing count does).
+      const { frameIndex } = state;
 
       let inFlight = 0;
       let residencyChanged = false;

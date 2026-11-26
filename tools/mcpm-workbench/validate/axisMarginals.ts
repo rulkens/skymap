@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { TraceStats } from '../@types/TraceStats';
+import type { TraceStats } from '../@types/validate/TraceStats';
 
 /**
  * axisMarginals — sum a flat cube down to one 1D profile per axis, in a

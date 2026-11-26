@@ -75,7 +75,12 @@ while the exhibit runs, handed the section's data) and a `cameraDriver`
 (`ExhibitCameraDriver`: core lifts it into the driver table, turns it on only while an
 exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
 drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
-read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
+read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. A kind
+two Layers' exhibits share is core's, beside the others in
+`src/components/ExhibitOverlay/kinds/`: the timeline kind (`timelineKind`, its hold in
+`src/state/exhibits/timeline/`, its camera row's geometry in `src/utils/camera/timeline/`)
+plays any exhibit whose sampled bodies have dated events, its lane and clock speed in core's
+`settings.timeline`. An
 exhibit states its id in its type (`Exhibit<'solarSystem'>`); `ExhibitId` follows from the rows.
 
 **`subsystems/` vs `render/`.** Both stay, inside a module. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A module with no per-frame decision state has no `subsystems/` folder.

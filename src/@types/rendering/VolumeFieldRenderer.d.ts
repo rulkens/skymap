@@ -11,11 +11,12 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../data/volume/ScalarCube';
+import type { GpuVolume } from './GpuVolume';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
+import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
 
 export type VolumeFieldRenderer<Id extends string = string> = {
   /**
@@ -23,10 +24,13 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  /** `statics` are the per-cube, non-tunable presentation facts, read once here. */
+  /**
+   * Takes ownership of `volume.texture` (destroyed on re-upload, `unload` and `destroy`).
+   * `statics` are the per-cube, non-tunable presentation facts, read once here.
+   */
   upload(
     id: Id,
-    cube: ScalarCube,
+    volume: GpuVolume,
     statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
   ): void;
   unload(id: Id): void;
@@ -43,7 +47,8 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * per-field tunables are read each frame from `settingsOf`.
    * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
    * is re-uploaded in place when `settingsOf(id).paletteId` diverges
-   * from what's resident.
+   * from what's resident. `inputs` (jitter index, step count, blend
+   * weight) holds for every field of this call.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -53,6 +58,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
+    inputs: VolumeFieldDrawInputs,
   ): void;
   destroy(): void;
 };

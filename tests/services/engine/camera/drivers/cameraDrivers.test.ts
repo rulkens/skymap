@@ -342,7 +342,7 @@ describe('pickWinner', () => {
 
 describe('the mission row, lifted from the timeline kind', () => {
   const drivers = composeControlSchemes(Object.values(APP_EXHIBIT_REGISTRY)).skymap.drivers;
-  const mission = drivers.find((d) => d.id === 'mission')!;
+  const mission = drivers.find((d) => d.id === 'timeline')!;
   const inExhibit = (id: ExhibitId) => {
     const store = makeStore();
     store.dispatch(takeoverStarted({ kind: 'exhibit', id, entry: 'cut' }));
@@ -375,7 +375,7 @@ describe('the mission row, lifted from the timeline kind', () => {
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
     const claimed = { ...APPROACHING, dragClaimed: true };
-    expect(pickWinner(drivers, s, claimed).id).toBe('mission');
+    expect(pickWinner(drivers, s, claimed).id).toBe('timeline');
   });
 });
 

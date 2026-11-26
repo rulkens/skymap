@@ -393,7 +393,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py, consumed by buildRhizomeVolume.ts.',
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py; `polyphorm_2mrs_d{2,4,8}.npy` feed buildVolumePyramid.ts (`npm run build-2mrs`).',
   },
 
   // ─── MCPM workbench (promoted dev-tool exports) ───────────────────────
@@ -2240,7 +2240,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, Vesta, Ceres and Bennu, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100 (Bennu 2007–2054), UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-sampled-tracks`.',
+      'Holds `<centre>/<id>.csv` (`jd,x_km,y_km,z_km`, named by the row id, not its Horizons target): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, Vesta, Ceres and Bennu, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100 (Bennu 2007–2054), UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-sampled-tracks`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',

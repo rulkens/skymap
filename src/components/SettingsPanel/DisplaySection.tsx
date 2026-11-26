@@ -76,6 +76,7 @@ function formatEv(ev: number): string {
 const LENS_STOPS = Math.log2(LENS_MAX_DEG / LENS_MIN_DEG);
 const LENS_STOP_STEP = LENS_STOPS / 256;
 const lensDegAt = (stops: number): number => LENS_MIN_DEG * 2 ** stops;
+const lensStopsAt = (deg: number): number => Math.log2(deg / LENS_MIN_DEG);
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -212,12 +213,13 @@ function DisplaySection({
       <div className={styles.panelRow}>
         <Slider
           label="Field of view"
-          value={Math.log2(fovDeg / LENS_MIN_DEG)}
+          value={lensStopsAt(fovDeg)}
           min={0}
           max={LENS_STOPS}
           step={LENS_STOP_STEP}
           onChange={(stops) => onFovDegChange(lensDegAt(stops))}
           format={(stops) => formatLensDeg(lensDegAt(stops))}
+          displayed={{ fromValue: lensDegAt, toValue: lensStopsAt }}
         />
       </div>
 

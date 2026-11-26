@@ -8,12 +8,13 @@ export const MCPM_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'mcpm',
-  tiered: true, // small / medium / large `.scfd` variants
+  storage: 'pyramid',
+  priority: 70, // the largest single boot payload, and it only reads at the widest rung
   paletteId: 'inferno',
   contrast: 1.7,
   contrastCenter: 0.0,
   densityScale: 18.0,
   envelope: { inner: 0.85, outer: 1.05 },
   exposure: 18.0,
-  trim: 0.3,
+  trim: 0,
 } as const satisfies CosmicWebDensitySourceEntry;

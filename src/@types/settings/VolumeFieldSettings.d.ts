@@ -21,21 +21,19 @@ export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */
   intensity: number;
   /**
-   * LUT-coordinate contrast around the 0.5 pivot (gamma-style remap).
-   * 1.0 is identity; > 1.0 pushes mid-tones toward the saturated ends
-   * of the palette (more visible structure for divergent palettes
-   * centered on the cosmic mean); < 1.0 compresses toward the midpoint.
-   * Orthogonal to `intensity`: intensity controls overall opacity,
-   * contrast controls dynamic-range remapping.
+   * Width of the deadband-and-stretch window (`applyContrastWindow` in
+   * `fragment.wesl`): samples within 1 − 1/contrast of the field's
+   * contrast centre are hidden, the rest stretched over the palette.
+   * 1.0 is identity. Orthogonal to `intensity`: intensity controls
+   * overall opacity, contrast hides the noise floor.
    */
   contrast: number;
   /**
-   * Per-cube opacity multiplier driving the scalar-volume shader's
-   * alpha integral (`1 - exp(-densityScale * sample * step)`).
-   * Orthogonal to `intensity` (global mix-in weight) and `contrast`
-   * (LUT-coordinate remap): density tunes optical-depth contribution
-   * per voxel-step, so it shifts the balance between "transparent fog"
-   * and "saturated cloud" without changing the colour ramp.
+   * Per-cube opacity multiplier in the shader's per-step alpha,
+   * `lut.a · intensity · densityScale · stepLength`. Orthogonal to
+   * `intensity` (global mix-in weight) and `contrast` (the window):
+   * it shifts the balance between "transparent fog" and "saturated
+   * cloud" without changing the colour ramp.
    */
   densityScale: number;
   /**
@@ -46,10 +44,9 @@ export type VolumeFieldSettings = DataItemSettings & {
    */
   paletteId: ScalarFieldPaletteId;
   /**
-   * User-tunable low-end cutoff in normalised LUT-coord space [0, 1].
-   * Hard-suppresses voxels with deviation-from-center < trim — the
-   * "Polyphorm trim_density" knob exposed in the SettingsPanel as a
-   * Trim slider.
+   * Extra low-end cut in [0, 0.95], applied above the contrast deadband:
+   * the fraction of the surviving deviation range that is hard-suppressed.
+   * 0 leaves the contrast deadband alone. The Trim slider.
    */
   trim: number;
   /**

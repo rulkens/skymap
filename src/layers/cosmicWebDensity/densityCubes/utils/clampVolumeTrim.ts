@@ -4,10 +4,10 @@
  *
  * ### What the trim threshold does
  *
- * The raymarch discards (alpha = 0) any sample whose normalised density falls
- * below the trim threshold.  This culls the void between filaments so the
- * overlay reads as structure rather than a diffuse haze.  A threshold of 0
- * disables trimming entirely; a threshold approaching 1 would suppress
+ * The raymarch cuts this fraction of the deviation range that survives the
+ * contrast deadband, so the void between filaments goes transparent and the
+ * overlay reads as structure rather than a diffuse haze.  0 leaves the
+ * contrast deadband alone; a threshold approaching 1 would suppress
  * everything including real structure.
  *
  * ### Why 0.95 as the ceiling

@@ -3,17 +3,11 @@
  * struct itself, so a field reorder in `blackHoleLensing.wesl` (a field
  * inserted ahead of `anchorPosRelCamM`, say) would drift silently past a
  * packer test asserting only its own documented offsets and hand the GPU a
- * shifted struct. This parses `struct BlackHoleLensingUniforms` out of the
- * .wesl file, derives its std140 float offsets, then drives the REAL packer
- * with a distinct sentinel per field and asserts each sentinel lands where
- * the struct — not the packer — says it should. Follows the
- * `atmosphereUniformsLayout.parity.test.ts`
- * precedent for locating/parsing the struct and computing WGSL alignment;
- * the embedded `cam: CameraUniforms` prefix is treated as an opaque 80-byte
- * block, its own byte-for-byte parity living in `cameraUniforms.test.ts`.
- * `mat3x3<f32>` gets its own column-by-column check (`viewBasis`): std140
- * pads each column to 16 bytes, so a flat `lanes` count would misplace the
- * 2nd/3rd columns.
+ * shifted struct. This lays out `struct BlackHoleLensingUniforms` from the
+ * .wesl file, then drives the REAL packer with a distinct sentinel per field
+ * and asserts each sentinel lands where the struct — not the packer — says it
+ * should. The embedded `cam: CameraUniforms` prefix is an opaque block here;
+ * `viewBasis` (mat3x3) is checked column by column, each padded to 16 bytes.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -26,69 +20,16 @@ import {
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
+import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../..');
 const weslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/blackHoleLensing.wesl');
 
-/** std140 alignment + size for the types BlackHoleLensingUniforms uses.
- *  `lanes: 0` marks the embedded `CameraUniforms` prefix — its block offset
- *  still comes from this table (it advances the cursor 80 bytes), but its
- *  content is not asserted here; see the module header for why. `lanes: -1`
- *  marks `mat3x3<f32>`, checked column-by-column (its own 16-byte column
- *  stride) rather than as a flat run of floats. */
-const WESL_TYPES: Record<string, { align: number; size: number; lanes: number }> = {
-  f32: { align: 4, size: 4, lanes: 1 },
-  'vec3<f32>': { align: 16, size: 12, lanes: 3 },
-  'vec4<f32>': { align: 16, size: 16, lanes: 4 },
-  CameraUniforms: { align: 16, size: 80, lanes: 0 },
-  'mat3x3<f32>': { align: 16, size: 48, lanes: -1 },
-};
-
-function roundUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-function structFields(source: string, name: string): Array<{ name: string; type: string }> {
-  const body = source.match(new RegExp(`struct\\s+${name}\\s*\\{([^}]*)\\}`))?.[1];
-  if (!body) throw new Error(`struct ${name} not found in blackHoleLensing.wesl`);
-  return body
-    .split(',')
-    .map((line) => line.replace(/\/\/.*$/gm, '').trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [fieldName, type] = line.split(':').map((part) => part.trim());
-      if (!fieldName || !type)
-        throw new Error(`unparsable BlackHoleLensingUniforms field: '${line}'`);
-      return { name: fieldName, type };
-    });
-}
-
-type FieldLayout = { name: string; floatOffset: number; lanes: number };
-
-/** Std140 layout, in declaration order, converted to float indices (every
- *  member here is 4-byte aligned, so bytes/4 is exact). */
-function structLayout(fields: Array<{ name: string; type: string }>): {
-  layout: FieldLayout[];
-  totalFloats: number;
-} {
-  const layout: FieldLayout[] = [];
-  let cursor = 0;
-  let maxAlign = 4;
-  for (const { name, type } of fields) {
-    const spec = WESL_TYPES[type];
-    if (!spec) throw new Error(`unhandled WESL type '${type}' on field ${name}`);
-    const offset = roundUp(cursor, spec.align);
-    layout.push({ name, floatOffset: offset / 4, lanes: spec.lanes });
-    cursor = offset + spec.size;
-    maxAlign = Math.max(maxAlign, spec.align);
-  }
-  return { layout, totalFloats: roundUp(cursor, maxAlign) / 4 };
-}
-
 describe('BlackHoleLensingUniforms WESL/packer parity', () => {
   const wesl = readFileSync(weslPath, 'utf8');
-  const { layout, totalFloats } = structLayout(structFields(wesl, 'BlackHoleLensingUniforms'));
+  const struct = weslStructLayout(wesl, 'BlackHoleLensingUniforms', 'uniform');
+  const totalFloats = struct.size / 4;
 
   it('struct float count matches BLACK_HOLE_LENSING_UNIFORM_FLOATS', () => {
     expect(totalFloats).toBe(BLACK_HOLE_LENSING_UNIFORM_FLOATS);
@@ -180,11 +121,12 @@ describe('BlackHoleLensingUniforms WESL/packer parity', () => {
     // never sampled by the shader; `_pad1` is unread.
     const zeroPadFields = new Set<string>(['_pad0', '_pad1']);
 
-    for (const field of layout) {
-      if (field.lanes === 0) {
+    for (const { name, type, offset } of struct.fields) {
+      const field = { name, floatOffset: offset / 4 };
+      if (type === 'CameraUniforms') {
         // The opaque cam: CameraUniforms prefix — content unchecked here.
         continue;
-      } else if (field.lanes === -1) {
+      } else if (type === 'mat3x3<f32>') {
         // mat3x3<f32>: three columns, each its own 16-byte (4-float) slot —
         // lane 3 of every column is std140 padding, never written.
         const mat = mat3ByField[field.name];
@@ -195,11 +137,11 @@ describe('BlackHoleLensingUniforms WESL/packer parity', () => {
           }
           expect(rec[field.floatOffset + col * 4 + 3]).toBe(0);
         }
-      } else if (field.lanes === 4) {
+      } else if (type === 'vec4<f32>') {
         const vec = vec4ByField[field.name];
         if (!vec) throw new Error(`no sentinel vec4 for field '${field.name}'`);
         for (let lane = 0; lane < 4; lane++) expect(rec[field.floatOffset + lane]).toBe(vec[lane]);
-      } else if (field.lanes === 3) {
+      } else if (type === 'vec3<f32>') {
         const vec = vectorByField[field.name];
         if (!vec) throw new Error(`no sentinel vector for field '${field.name}'`);
         for (let lane = 0; lane < 3; lane++) expect(rec[field.floatOffset + lane]).toBe(vec[lane]);

@@ -49,8 +49,11 @@ export type RenderTargets = {
    * row's size — a reconcile where nothing moved keeps view identity. Throws
    * for `swap` (and any unknown id): the swap chain is executor-resolved from
    * the acquired frame view, not an allocated texture this owner holds.
+   *
+   * `viewId` selects a retained row's texture for that view and is ignored for every other row.
+   * Throws for a retained row without a `viewId`, or one `reconcileViews` has not seen.
    */
-  viewOf(id: string): GPUTextureView;
+  viewOf(id: string, viewId?: string): GPUTextureView;
   /**
    * A `dimension: 'cube'` view over a row whose spec declares
    * `fixedSizePx.layers === 6` (today, only `'sky-cubemap'`) — `viewOf`'s
@@ -100,6 +103,10 @@ export type RenderTargets = {
    * saga-callback surface) — same word, two independent concerns.
    */
   reconcile(state: EngineState, size: Size): void;
+  /** Allocate (and clear) each retained row's texture for every id in `viewIds` that lacks one, at
+   *  the row's held size; release the textures of ids absent from `viewIds`. Rows without
+   *  `retained` are untouched. `runFrame` calls it once per frame, after deriving the views. */
+  reconcileViews(state: EngineState, viewIds: readonly string[]): void;
   /**
    * Replace the `swap` row's format in `specs` — the single home for the
    * live swap-chain format, so a caller that reconfigures the swap chain

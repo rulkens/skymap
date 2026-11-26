@@ -4,10 +4,10 @@ A WebGPU dev tool that visualises the **MCPM cosmic-web simulation** — the
 constrained-realisation dark-matter density field skymap's volume renderers
 already consume, driven live rather than baked offline. It runs the port of
 Polyphorm's agent-based sim (propagate/decay/histogram compute kernels) over
-a real catalog box, with four render layers (raymarch, agent splat, galaxy
-overlay, path tracer) and `.npy`/`.scfd` export plus a headless comparator
-CLI (`validate/compareTraceCubes.ts`) for validating against a real
-PolyPhy-fork export.
+a real catalog box, drawn by one chosen renderer (raymarch, agent splat or
+path tracer) with an optional galaxy overlay on top, and `.npy`/`.scfd`
+export plus a headless comparator CLI (`validate/compareTraceCubes.ts`) for
+validating against a real PolyPhy-fork export.
 
 This is a sibling dev tool, like `tools/flow-workbench/` and
 `tools/galaxy-renderer/` — its own self-contained Vite + React + TS app, not
@@ -22,17 +22,61 @@ npm run mcpm-workbench
 Then open <http://localhost:5500> (see `tools/utils/io/devPorts.ts` for the
 full port registry).
 
+## Load your own catalog
+
+**Load catalog** in the Data section reads a file in the browser; nothing is
+uploaded. Dropping the file on the page does the same. The loaded file becomes
+a row in the Data list, switched on, with every built-in catalog switched off;
+after that they toggle freely and can run together.
+
+- **CSV, `x, y, z, weight`**: positions in Mpc, equatorial cartesian, observer
+  at the origin. The native Polyphorm build reads the same file, and is more
+  lenient: it splits each line on any separator, so a file that mixes
+  separators loads there and is refused here.
+- **CSV, `RA, Dec, redshift, weight`**: RA and Dec in degrees. Redshifts become
+  line-of-sight comoving distances under flat ΛCDM with your H0 and Ωm, the same
+  conversion Skymap's catalogs use; the dialog starts at the app's values, H0 =
+  70 km/s/Mpc and Ωm = 0.315. Workbench only: the native build does not read it.
+- **Packed `.bin` + `_metadata.txt`**: the Polyphorm fork's own catalog pair,
+  loaded as is. A `.txt` chosen with a `.bin` is read as its metadata.
+
+A `.csv`, one galaxy per line; `.tsv`, `.txt` and `.dat` files are read too.
+Each file has one separator, taken from its first data line: commas or
+semicolons, else tabs, else spaces; an empty field between commas or tabs is
+refused. A line that does not start with a number (header, `#` comment, blank)
+is skipped; columns after the fourth are ignored. A file with three columns is
+refused. A file that fails a check is refused at the first bad line, with the
+line number and an example of the chosen format.
+
+**Weight** is required and positive; linear unless declared as log₁₀ mass in M☉,
+which is converted on load (workbench only). Built-in catalogs use stellar mass in
+10¹² M☉, median about 0.02; a column in 10⁹ M☉ takes a weight scale of 0.001. The dialog shows the weights' mean and spread, and warns when
+the values look like logarithms or the median is far above 0.02; the loaded
+row's info tip gives the smallest, median and largest.
+
+**Limits:** files over 400 MB are refused. 324,901 rows is the largest size
+tested.
+
+Built-in tiers keep the brightest N galaxies by absolute magnitude plus a
+flux-limited local supplement (see `tools/catalog/selectTierRecords.ts`), so a
+medium-tier run is not comparable with the published SDSS run.
+
+A trace exported from a run with a loaded file names it in its sidecar, under
+`provenance.catalog.user_file`: file name, row count, format and weight
+settings, and for RA/Dec/z files the H0 and Ωm used.
+
 ## Architecture
 
 State lives in an RTK store (`src/store/`) mirroring skymap's own `src/store/`
-scaffold: five slices (`catalog`, `grid`, `sim`, `view`, `histogram`) plus a
-`commands.ts` for one-shot actions (reset, clear-trace, export). Redux-saga
+scaffold: five slices (`catalog`, `grid`, `sim`, `view`, `histogram`, each in
+`src/state/<slice>/`) plus `src/state/commands.ts` for one-shot
+actions (reset, clear-trace, export). Redux-saga
 owns every side effect — seven watch-sagas (catalog load, scene
 build/rebuild/device-loss, sim commands, npy/scfd export, previewPacked
 pack/dispose, histogram readback, palette re-attach) — each mediating one
 concern against the WebGPU objects held in `RenderResources`
 (`src/render/renderResources.ts`), handed to the saga layer once via
-`registerSagaContext`. `Viewport.tsx` stays a dumb frame driver: it owns the
+`registerSagaContext`. `src/ui/Viewport/Viewport.tsx` stays a dumb frame driver: it owns the
 canvas and the rAF loop's dirty/FPS/interaction-boost bookkeeping and draws
 the per-frame layers off `resources`; it dispatches only `setFps` and the
 sim-step counter, everything else is a saga's job.
@@ -45,7 +89,7 @@ The tool links against the runtime's canonical shader tree
 identically in both apps. It keeps exactly one shader of its own,
 `src/render/shaders/blit.wesl`, the HDR→swapchain tonemap resolve.
 
-## Grid-box gizmo
+## Selection gizmo
 
 The wireframe box drawn over the sim volume carries three handle families,
 each pickable by dragging directly on the glyph:
@@ -56,11 +100,10 @@ each pickable by dragging directly on the glyph:
 - **Rings — rotate.** Radius = 1.3× the arrow length, sitting outside the
   arrow tips for visual separation from the translate handles.
 
-**Reachability.** The handles are only drawn (and pickable) while the
-wireframe itself is visible: the "show box" toggle in the grid panel keeps
-them on screen. A drag in progress keeps the wireframe visible even if "show
-box" is off, so a gesture that starts with the box shown never gets stranded
-mid-drag if the toggle changes underneath it.
+**Reachability.** The handles are drawn (and pickable) while the wireframe
+is: whenever the pointer is over the canvas, for a moment after a grid edit,
+and for the whole of a drag, even when the pointer leaves the canvas
+mid-drag.
 
 **`rotation` semantics.** The gizmo's ring drag writes a unit quaternion to
 `GridBox.rotation`, applied **about the box's center** — `worldToBoxLocal`
@@ -110,9 +153,12 @@ orientation check passed during T18's fix round.
 
 ## Validation (Phase 3 gate)
 
-2026-08-18. Numbers below are the **second correction** to this section —
+2026-08-18. Measured before the 2026-11-25 weight fix; not re-validated since.
+
+Numbers below are the **second correction** to this section —
 see "Comparator fix, round 2" below for what changed and why every row in
-the two main tables moved again. The dev-only packed-catalog loader (T21) fed
+the two main tables moved again. The packed-catalog loader (T21; dev-only
+then, now part of Load catalog) fed
 the fork's real VAC catalog (`sdssGalaxy_rsdCorr_dbscan_e2p0ms3_dz0p001_m10p0_t=0.0.bin`,
 324,901 points) through two independent headless runs at the anchor's exact
 grid box — center `(-239.469, -16.5618, 201.275)` Mpc, size
@@ -383,7 +429,7 @@ fresh trace, `stepCount` 0, still the `?probe` boot box/catalog — nothing
 earlier in the queue has touched the grid box yet), it settles 100 sim steps
 (5× `HISTOGRAM_INTERVAL_STEPS`) plus the usual readback margin, then asserts
 `meanLogTraceAtPoints` — read via a probe-only getter Viewport installs on
-`window`, not scraped from the HUD — lands in a band.
+`window`, not read off the page — lands in a band.
 
 This step's catalog has no fork export to compare against (T12's tiny
 synthetic clusters, not the VAC anchor), so — unlike § Floor's fork-vs-

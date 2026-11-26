@@ -25,7 +25,7 @@ Audit read-only at main f9a85995c. Paths are relative to `src/` unless they star
 | 13 | Engine lifecycle: `@types/engine/state/EngineState.d.ts:56-60`, `services/engine/engine.ts:399` | flags | `booted=false` means "not yet" and "destroyed"; "settled" defined twice | `isSceneSettled` vs `whenStablyReady` | **maybe** | 7 / 8 (`booted`), 5 / 5 (`sceneSettled`) |
 | 14 | `createClipPlayer`: `services/engine/subsystems/clipPlayer.ts:41` | closure flags | `idle`, `playing`, `held-final-frame` (`pendingEnd`), plus `endResolver` | Comment on two-frame deferred completion | **maybe** | 1 / 2 |
 | 15 | Follow approach: `@types/engine/camera/FollowMemory.d.ts`, `services/engine/camera/stepCameraRuntime.ts:222` | nullable fields + flag | `none`, `approaching(from, durationMs, distanceTarget)`, `saturated` | Comment: "the two are one fact and cannot disagree on phase" | **maybe** | 9 / 6 |
-| 16 | `missionHoldSaga`: `layers/missions/timeline/sagas/missionHoldSaga.ts:44` | saga (race loop) | `entering`, `flying-in`, `holding`, `playing`; locals `task`, `fly`, `speed`, `mission` | `missionPlaySaga` re-checks `time.profile === profile` because `task` shadows store facts | **maybe** | 2 / not counted |
+| 16 | `timelineHoldSaga`: `state/exhibits/timeline/timelineHoldSaga.ts:47` | saga (race loop) | `entering`, `flying-in`, `holding`, `playing`; locals `task`, `fly`, `speed`, `course` | `timelinePlaySaga` re-checks `time.profile === profile` because `task` shadows store facts | **maybe** | 2 / not counted |
 | 17 | Foci wait polling: `state/tour/waitUntilSaga.ts:33`, used at `visitBeatSaga.ts:92`, `state/camera/clipBodySaga.ts:45`, `state/camera/watchClipPathInspectSaga.ts:73` | saga (poll) | `waiting-for-foci`, `ready` | No timeout on any foci wait; the recorder latch exists because of this window | **maybe** | 7 / 3 |
 
 Counts: 7 convert, 10 maybe, 15 leave (section 3).
@@ -146,8 +146,8 @@ Sketch: `type PlayerPhase = {kind:'idle'} | {kind:'playing'; prevElapsedSec: num
 ### 15. Follow approach (maybe)
 `FollowMemory` has `from`, `distanceTarget`, `durationMs` null together plus `saturated`. `stepCameraRuntime.ts:222` derives `DriverActivity.approachDone` from it, with a comment that the two "are one fact". A union `none | approaching{...} | saturated{...}` removes the null checks in `cameraDrivers.ts:168-193`. 9 src, 6 test. The camera goldens make it risky for a modest gain.
 
-### 16. missionHoldSaga (maybe)
-A 7-way `race` loop with `task`, `fly`, `speed`, `mission` locals. `task !== null` shadows `time.profile !== null && !paused`; `missionPlaySaga.ts:42` re-reads `s.time.profile === profile` to guard that shadow. The loop already re-reads `paused` from the store each pass, so it is half level-triggered. Moving `speed` and `mission` into store state and making play a reconcile of `(timeState, mission)` would delete the fork/cancel bookkeeping. Do it after finding 8. Cost: 2 src files.
+### 16. timelineHoldSaga (maybe)
+A 7-way `race` loop with `task`, `fly`, `speed`, `course` locals. `task !== null` shadows `time.profile !== null && !paused`; `timelinePlaySaga.ts:41` re-reads `s.time.profile === profile` to guard that shadow. The loop already re-reads `paused` from the store each pass, so it is half level-triggered. Moving `speed` and `course` into store state and making play a reconcile of `(timeState, course)` would delete the fork/cancel bookkeeping. Do it after finding 8. Cost: 2 src files.
 
 ### 17. Foci-wait polling (maybe)
 `waitUntilSaga(() => clipFociReady(...) && cameraRuntime() !== null)` is called from `visitBeatSaga`, `clipBodySaga` and `watchClipPathInspectSaga`. It polls every 100 ms with no timeout in any of them. A clip with an id that never resolves holds the takeover until `exitTakeover`. `resolveFocusId` now answers `absent`, so the clip can fail fast. Cost: 7 src, 3 test.

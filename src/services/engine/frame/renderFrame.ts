@@ -102,6 +102,10 @@ export function renderFrame(input: RenderFrameInput): void {
       bodyRowSlabs: bodyRowSlabs(viewCtx),
     });
 
+  // This frame's per-view planner values, installed for next frame's `prev` as the last statement.
+  // A view id or planner absent this frame never enters it, so it drops out of the memory.
+  const nextPlanMemory = new Map<string, Map<string, unknown>>();
+
   // Several sections' steps share ONE encoder while the view stays `===`; mono's rig
   // returns `canvas` for every section, so the whole frame is one submit.
   let pending: FrameStep[] = [];
@@ -156,11 +160,17 @@ export function renderFrame(input: RenderFrameInput): void {
       accumulate(canvas, frame);
     } else {
       for (const view of views) {
-        runPlanSteps(section.steps, state.planners, { scope: 'perView', view }, state);
+        runPlanSteps(
+          section.steps,
+          state.planners,
+          { scope: 'perView', view, previous: state.perViewPlanMemory, next: nextPlanMemory },
+          state,
+        );
         accumulate(view, expand(section.steps, view));
       }
     }
   }
 
   flush(true);
+  state.perViewPlanMemory = nextPlanMemory;
 }

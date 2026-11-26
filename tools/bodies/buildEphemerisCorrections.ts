@@ -10,7 +10,7 @@
  * runtime order (ΔM, Kepler, position); throws above 1,000 km. Reads `data/raw/horizons/<centre>/`.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { format, resolveConfig } from 'prettier';
 
@@ -28,7 +28,7 @@ import { FITTED_BODIES } from './fittedBodies';
 import { HORIZONS_BODIES } from './horizonsBodies';
 import { fitSinusoidSeries } from '../utils/math/fitSinusoidSeries';
 import { meanAnomalyCorrectionTarget } from '../utils/math/meanAnomalyCorrectionTarget';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { horizonsCsvPath } from '../utils/io/horizonsCsvPath';
 
 const GENERATED_PATH = 'src/layers/body/bodies/ephemerisCorrections.generated.ts';
 const GENERATED_BANNER =
@@ -57,7 +57,7 @@ function fetchRowById(id: string): HorizonsBody {
 }
 
 function readSeries(body: HorizonsBody) {
-  const csvPath = join(rawDataPath('horizons'), body.centre, `${body.target}.csv`);
+  const csvPath = horizonsCsvPath(body);
   const lines = readFileSync(csvPath, 'utf8').trim().split('\n').slice(1);
   const cols = [0, 1, 2, 3].map(() => new Float64Array(lines.length));
   lines.forEach((line, i) => line.split(',').forEach((v, c) => (cols[c]![i] = Number(v))));

@@ -2,7 +2,7 @@
  * VolumeFieldDefaults — per-id presentation defaults for scalar-volume
  * fields registered with the renderer.
  *
- * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
+ * A field's data file carries only data (dims, frame, voxels, range).  How a
  * field should LOOK on first registration — its palette and
  * `densityScale` — is presentation, not data, and lives on each field's
  * source row (`src/layers/cosmicWebDensity/sources/`), built into
@@ -93,15 +93,11 @@ export type VolumeFieldDefaults = {
    */
   exposure: number;
   /**
-   * Default user-tunable low-end cutoff (Trim) in normalised LUT space.
+   * Default Trim: an extra cut above the contrast deadband, in [0, 0.95].
    * Per-cube starting point; user can override via the Trim slider.
    *
-   *   - 0.0 = no trim (every voxel passes).  Right for a cube whose
-   *     palette is already calibrated against the cosmic mean, where
-   *     trimming would crop scientifically meaningful structure.
-   *   - 0.2 = light trim hiding the low-density fog band.  MCPM
-   *     default — see the analysis in the spec for the percentile
-   *     breakdown that motivates this value.
+   *   - 0.0 = contrast's deadband alone.  Every shipped source uses it:
+   *     contrast 1.7 already hides the low-density fog.
    */
   trim: number;
 };

@@ -1,6 +1,6 @@
 /**
  * Core-cluster settings selectors — orientation, camera, tonemap, hdr,
- * bloom, film, debug, and the eleven clip-path-tuning leaves. Every Layer's own
+ * bloom, film, debug, timeline, and the eleven clip-path-tuning leaves. Every Layer's own
  * cluster selectors live in `src/layers/<layer>/state/<slice>/selectors.ts`
  * instead; this module is the one-file-per-cluster-group override of the
  * repo's one-function-per-file rule.
@@ -118,3 +118,12 @@ export const selectClipPathPassByDir = (state: RootState): PassByDir =>
 
 export const selectClipPathTuningActive = (state: RootState): ClipPathTuningActive =>
   selectSettings(state).debug.clipPathInspect.active;
+
+// --- timeline cluster ---------------------------------------------------------
+
+/** The timeline exhibit's selected lane (a body id), or null for none. */
+export const selectTimelineLane = (state: RootState): string | null =>
+  selectSettings(state).timeline.lane;
+
+export const selectTimelineSpeed = (state: RootState): number =>
+  selectSettings(state).timeline.speed;

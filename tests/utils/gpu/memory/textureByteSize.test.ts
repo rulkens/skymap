@@ -70,6 +70,22 @@ describe('textureByteSize', () => {
     expect(bytes).toBe(4 * 4 * 4 * 4); // 256
   });
 
+  it.each([
+    ['ASTC 6×6', 'astc-6x6-unorm', 31_788_288],
+    ['BC4', 'bc4-r-unorm', 35_761_824],
+  ] as const)("sizes MCPM's half-res %s base and its mips exactly", (_name, format, expected) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bytes = textureByteSize({
+      ...baseDescriptor,
+      size: { width: 336, height: 576, depthOrArrayLayers: 324 },
+      format,
+      dimension: '3d',
+      mipLevelCount: 3,
+    } as GPUTextureDescriptor);
+    expect(bytes).toBe(expected);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('falls back to 4 bytes/texel for an unknown format and warns once', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const descriptor = {

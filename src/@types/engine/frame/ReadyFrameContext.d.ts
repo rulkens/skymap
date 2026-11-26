@@ -85,7 +85,7 @@ export type ReadyFrameContext = {
    * The offscreen render-target table (`hdr`, `cosmic-web-density`, …).  Forwarded
    * here from `state.gpu.renderTargets` — same reference, no allocation —
    * so the executor's `viewFor` and any layer that samples an offscreen
-   * (`ctx.snapshot.renderTargets.viewOf('cosmic-web-density')`) never reach back into `state`.
+   * (`ctx.snapshot.renderTargets.viewOf('foreground:0')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
   /** The focus sphere (recedingFocus.produceFocus, ticked once/frame); blend 0 if none. */

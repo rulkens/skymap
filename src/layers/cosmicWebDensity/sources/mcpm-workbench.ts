@@ -8,7 +8,8 @@ export const MCPM_WORKBENCH_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'mcpm-workbench',
-  tiered: false, // one cube per workbench run; no per-tier variants
+  storage: 'scfd', // one cube per workbench run; no pyramid
+  priority: 82,
   // Same physical quantity as MCPM/Polyphorm2MRS (log-normalized MCPM trace
   // density), so its presentation defaults mirror theirs — distinct palette
   // (magma, where the two shipping runs both use inferno) so a promoted
@@ -19,5 +20,5 @@ export const MCPM_WORKBENCH_ENTRY = {
   densityScale: 18.0,
   envelope: { inner: 0.85, outer: 1.05 },
   exposure: 18.0,
-  trim: 0.3,
+  trim: 0,
 } as const satisfies CosmicWebDensitySourceEntry;

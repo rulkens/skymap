@@ -24,7 +24,6 @@
 // the spec calls for.
 
 import package::lib::camera::CameraUniforms;
-import package::lib::util::hash21Hq;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::volumeRaymarch::localRayFromWorld;
 import package::lib::volumeRaymarch::intersectUnitAabb;
@@ -80,22 +79,23 @@ struct VolumeUniforms {
   // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
   // useful range for "fiery cosmic-web" looks.
   exposure: f32,
-  // User-tunable low-end cutoff in normalised LUT-coordinate space
-  // [0, 1].  Voxels with deviation-from-center less than 'trim' get
-  // hard-suppressed (visibility = 0).  Equivalent to Polyphorm's
-  // 'trim_density' knob but in normalised space rather than raw
-  // trace units.  Default 0 = no trim (every voxel contributes to
-  // the deadband as set by 'contrast').  Combined with the contrast-
-  // derived deadband by taking the max — user can crank trim past
-  // contrast's implicit deadband to suppress more, never less.
+  // Extra cut above the contrast deadband, in [0, 0.95]: the fraction
+  // of what survives that deadband which is also hard-suppressed.
+  // 0 = contrast's deadband alone.
   trim: f32,
-  // Per-draw frame counter (f32 because the uniform is f32-typed
-  // throughout — the integer monotonicity is what matters, not the
-  // exact value).  Used as a temporal seed for the ray-march jitter
-  // hash so the screen-space dither pattern decorrelates frame-to-
-  // frame instead of staying locked in screen space.  CPU side
-  // wraps at 1e6 to keep the f32 mantissa happy.
-  frame: f32,
+  // Index into the jitter sequence: the engine frame index, so every
+  // view of one frame (all five dome faces) shares a phase.  The CPU
+  // wraps it at 1e6 (a multiple of the mask's slice count), so the
+  // integer is exact in f32.
+  jitterIndex: f32,
+  // March steps per ray (an integer, exact in f32).
+  steps: f32,
+  gain: f32,
+  _pad0: f32,
+  baseVoxelMpc: f32,
+  // The stored box inside the native grid's [0,1]³ (GpuVolume.nativeBox).
+  nativeBoxOffset: vec3<f32>,
+  nativeBoxScale: vec3<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: VolumeUniforms;
@@ -111,10 +111,11 @@ struct VolumeUniforms {
 // filtering via the sampler.
 @group(0) @binding(3) var palette: texture_2d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
+// r8unorm blue-noise ranks: size wide, slices × size tall (see the jitter below).
+@group(0) @binding(5) var jitterMask: texture_2d<f32>;
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
-const STEP_COUNT: i32 = 128;
 const SATURATION_THRESHOLD: f32 = 0.99;
 
 struct FsIn {
@@ -168,11 +169,11 @@ struct FsIn {
 fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
-  // Deadband from contrast's implicit floor, OR'd with the explicit
-  // trim cutoff (max takes whichever is stricter).
+  // Trim cuts a fraction of what survives contrast's deadband, so it
+  // bites from just above 0.
   let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
   let trimDeadband = clamp(trim, 0.0, 0.95);
-  let deadband = max(contrastDeadband, trimDeadband);
+  let deadband = contrastDeadband + trimDeadband * (1.0 - contrastDeadband);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,
@@ -200,50 +201,43 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   }
 
   // Fixed-step march from tMin to tMax.  stepLength normalises against
-  // STEP_COUNT so opacity is invariant to changes in the constant.
-  let stepLength = (tMax - tMin) / f32(STEP_COUNT);
-  // Jitter the start offset by [0, stepLength) per fragment to break
-  // the visible step-grid moiré that would otherwise slide across the
-  // cube during camera motion.  Without jitter, the 192 fixed sample
-  // positions along each ray show through as a coherent grid because
-  // every pixel uses the same step phase — at high densityScale
-  // (every shipping cube defaults to 18), per-step opacity is large
-  // enough to make that grid visible.  Per-fragment jitter decorrelates
-  // neighbouring rays:
-  // visible aliasing becomes high-frequency grain instead of a moving
-  // grid, and the accumulated integral stays unbiased (jitter averages
-  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
-  // used instead of the cheaper sin-based hash21 because the latter's
-  // diagonal banding is visible as a stationary screen-space pattern.
+  // the step count so opacity is invariant to it.
+  let stepLength = (tMax - tMin) / uniforms.steps;
+  // Jitter the start offset by [0, stepLength) per fragment: with one shared
+  // step phase the sample positions show as a coherent grid that slides
+  // across the cube in motion (per-step opacity at densityScale 18 is
+  // large enough to see it). Jitter turns that into grain and keeps the
+  // integral unbiased.
   //
-  // Temporal seed: offsetting the hash input by frame * irrational
-  // constants decorrelates the dither pattern frame-to-frame, so the
-  // residual grain looks like film noise rather than a stationary
-  // screen-space pattern the eye can latch onto.  Without TAA this
-  // produces visible shimmer when stationary — accepted tradeoff,
-  // because the alternative (no temporal seed) means the same screen
-  // pixel always picks the same step phase, which is exactly the
-  // failure mode the user reported.  The constants 7.13 / 13.71 are
-  // arbitrary irrationals that don't share factors with anything in
-  // the hash mixer.
-  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.frame * 7.13, uniforms.frame * 13.71);
-  let jitter = hash21Hq(jitterSeed) * stepLength;
+  // The offset comes from a blue-noise mask (64² per slice, slices stacked
+  // vertically): each slice is spatially blue and each pixel's run through
+  // the slices is spread out, so the progressive running mean of
+  // consecutive frames converges in a few samples. The frame index picks
+  // the slice, so the grain still changes every frame in motion. The
+  // temporal kernel is toroidal: any run of `slices` consecutive frames
+  // reads each slice once, so no per-cycle shift is needed.
+  let maskDims = textureDimensions(jitterMask);
+  let slices = maskDims.y / maskDims.x;
+  let frame = u32(uniforms.jitterIndex);
+  let texel = vec2<u32>(fragCoord.xy) % vec2<u32>(maskDims.x);
+  let maskValue = textureLoad(jitterMask, vec2<u32>(texel.x, (frame % slices) * maskDims.x + texel.y), 0).r;
+  let jitter = maskValue * stepLength;
+  // The camera is the ray origin, so local distance t times |M·dir| is world distance and one
+  // pixel spans t·|M·dir| / (pxPerRad·baseVoxelMpc) base voxels: its log2 is the LOD.
+  let lodOffset = log2(length((uniforms.modelMatrix * vec4<f32>(rayDirLocal, 0.0)).xyz)
+                       / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
+  // Opacity and the envelope stay in native-grid units, so a cropped box looks like the whole grid.
+  let nativeStepLength = stepLength * length(uniforms.nativeBoxScale * rayDirLocal);
+  let maxLod = f32(textureNumLevels(volume) - 1u);
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
-  for (var stepIndex = 0; stepIndex < STEP_COUNT; stepIndex = stepIndex + 1) {
+  for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {
+    // Local [0,1]^3 is the stored box, so 'samplePos' is directly the texture coordinate.
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
-    // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
-    // local AABB, so 'samplePos' is directly the texture coordinate.
-    //
-    // Why textureSampleLevel with explicit LOD 0 instead of textureSample:
-    // textureSample requires UNIFORM control flow (it computes implicit
-    // mipmap derivatives across a quad of fragments), but the early-out
-    // 'break' below at saturation makes the loop's iteration count vary
-    // across neighbouring fragments — non-uniform.  textureSampleLevel
-    // takes an explicit LOD instead of computing one, so it works in
-    // non-uniform control flow.  Our 3D texture has only one mip level
-    // anyway, so explicit LOD 0 is exactly what we want.
-    let sampleValue = textureSampleLevel(volume, volumeSampler, samplePos, 0.0).r;
+    // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
+    // textureSample's implicit derivatives are undefined.
+    let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
+    let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
@@ -256,31 +250,19 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the palette LUT (an N x 1 2D texture; see
-    // the binding declaration). Same uniformity constraint as the volume
-    // sample above, so explicit LOD 0.  The v-coordinate is fixed at 0.5
+    // the binding declaration), one mip, so explicit LOD 0.  The v-coordinate is fixed at 0.5
     // -- the centre of the single texel row -- so clamp-to-edge sampling
     // never bleeds in a neighbouring row.
     let lut = textureSampleLevel(palette, paletteSampler, vec2<f32>(signedT, 0.5), 0.0);
-    // Per-step alpha = density * stepLength.  This is the discrete form
+    // Per-step alpha = density * nativeStepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
     // sum(density * dx) which is path-length-correct (a longer ray
     // through the same density yields proportionally more opacity).
-    //
-    // The original (buggy) formula was 'lut.a * intensity * stepLength
-    // * STEP_COUNT * 0.01', which cancels the '/ STEP_COUNT' inside
-    // stepLength and ends up with per-step alpha ∝ total path length.
-    // That made the contribution amplitude depend on the ray's full
-    // extent, so a long ray (camera far from cube) over-saturated the
-    // first sample's RGB (alpha can exceed 1, scaling lut.rgb past
-    // unity in the pre-multiply), while a short ray (camera inside)
-    // produced smaller per-step contributions and a darker result.
-    // The visible symptom: the blob got LIGHTER as the camera entered
-    // it.  The fix below makes per-step alpha proportional to the
-    // sampled length, and the multi-step composite naturally
-    // integrates to the correct total optical depth.
+    // Per-step alpha must not scale with the ray's whole extent, or the
+    // blob gets lighter as the camera enters it.
     //
     // The DENSITY_SCALE constant tunes how aggressive the opacity is
-    // per local-space unit.  Local space spans [0,1]^3 so a full
+    // per native-grid unit.  The native grid spans [0,1]^3 so a full
     // diagonal ray has length √3 ≈ 1.73; at lut.a=0.9, intensity=0.5,
     // DENSITY_SCALE=1 we get N·(0.9·0.5·√3/N) ≈ 0.78 of opacity which
     // reads as "saturated through the dense centre" — a reasonable
@@ -294,15 +276,16 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // regime).
     //
     // Two extra multipliers on top of the canonical
-    // lut.a * intensity * densityScale * stepLength:
+    // lut.a * intensity * densityScale * nativeStepLength:
     //   - visibility from the contrast window, fading out near-mean
     //     voxels (problem 1: "contrast was amplifying noise").
     //   - sphericalEnvelope fading out the cube corners (problem 2:
     //     "the cube silhouette is visible").  Cubes that don't want
     //     this set both envelope edges past √3 and the multiplier is
     //     pinned to 1.0 — same shader path, no branching.
-    let envelope = sphericalEnvelope(samplePos, uniforms.envelopeInner, uniforms.envelopeOuter);
-    let alpha = lut.a * uniforms.intensity * uniforms.densityScale * stepLength
+    let envelope = sphericalEnvelope(uniforms.nativeBoxOffset + samplePos * uniforms.nativeBoxScale,
+                                     uniforms.envelopeInner, uniforms.envelopeOuter);
+    let alpha = lut.a * uniforms.intensity * uniforms.densityScale * nativeStepLength
               * visibility * envelope;
     // Bright-end-weighted exposure boost.  An earlier draft scaled
     // every voxel uniformly by exposure (rgb * alpha * uniforms.exposure),

@@ -1,22 +1,13 @@
 /**
- * Unit tests for `redshiftToDistanceMpc`.
- *
- * The function evaluates the flat-ΛCDM line-of-sight comoving-distance
- * integral by Simpson's rule (see the source for the formula).  We pin
- * the boundary case (z = 0), a small-z value where ΛCDM and linear
- * Hubble nearly agree, a high-z value where they diverge sharply, and
- * monotonicity across the operative redshift range.
- *
- * Reference values are computed against an independent Python integration
- * with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70 km/s/Mpc.  Tolerances are
- * generous enough that small tweaks to `SIMPSON_PANELS` don't churn the
- * tests — the load-bearing assertion is "agrees with the analytic limit
- * at low z and diverges from linear Hubble at high z".
+ * redshiftToDistanceMpc — z = 0, a small z where ΛCDM and linear Hubble nearly
+ * agree, a high z where they diverge, and monotonicity. Reference values come from
+ * an independent Python integration with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70;
+ * tolerances leave room for a different `SIMPSON_PANELS`.
  */
 
 import { describe, it, expect } from 'vitest';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
-import { HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
+import { C_KM_S, HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
 
 describe('redshiftToDistanceMpc', () => {
   it('maps negative z to a negative (mirrored) distance, not the origin', () => {
@@ -55,5 +46,19 @@ describe('redshiftToDistanceMpc', () => {
     for (const z of [0.05, 0.5, 1.0, 3.0, 5.0]) {
       expect(redshiftToDistanceMpc(z)).toBeLessThan(HUBBLE_DISTANCE_MPC * z);
     }
+  });
+
+  it('doubling H0 halves the distance', () => {
+    const at70 = redshiftToDistanceMpc(0.5, { h0KmSMpc: 70, omegaM: 0.3 });
+    const at140 = redshiftToDistanceMpc(0.5, { h0KmSMpc: 140, omegaM: 0.3 });
+    expect(at140 / at70).toBeCloseTo(0.5, 12);
+  });
+
+  it('omegaM 1 matches the Einstein-de Sitter closed form', () => {
+    const z = 0.5;
+    const h0 = 70;
+    const closedForm = ((2 * C_KM_S) / h0) * (1 - 1 / Math.sqrt(1 + z));
+    const d = redshiftToDistanceMpc(z, { h0KmSMpc: h0, omegaM: 1 });
+    expect(Math.abs(d - closedForm) / closedForm).toBeLessThan(1e-5);
   });
 });

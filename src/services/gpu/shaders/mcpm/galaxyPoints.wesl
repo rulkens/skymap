@@ -9,10 +9,8 @@
 import package::mcpm::camera::McpmCamera;
 import package::mcpm::camera::voxelToNdc;
 
+// pointWeight arrives at mean 1 over the drawn set (buildOverlayCatalog).
 struct OverlayParams {
-  // Multiplying a raw weight by this gives mean 1 across the data rows
-  // (deriveAgentWeights normalises their mean to 1e6 / nDataPoints).
-  weightScale: f32,
   intensity: f32,
   // Screen-constant, not world-constant: the layer answers "where are the galaxies",
   // which a dot shrinking into invisibility with distance would stop doing.
@@ -27,8 +25,7 @@ struct OverlayParams {
 @group(1) @binding(4) var<uniform> overlay: OverlayParams;
 
 const POINT_COLOR: vec3<f32> = vec3<f32>(0.45, 0.75, 1.0);
-// The weights are log-mass, so mean-relative spread is narrow; squaring widens it enough
-// that massive galaxies read brighter without flat dots elsewhere. Floor keeps every
+// Squaring widens the mean-relative spread so massive galaxies read brighter. Floor keeps every
 // catalog point visible; the cap keeps a giant from blooming under additive blend.
 const WEIGHT_CONTRAST: f32 = 2.0;
 const INTENSITY_FLOOR: f32 = 0.06;
@@ -51,7 +48,7 @@ fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) pointInd
 
   var out: PointVsOut;
   out.offset = corner;
-  let wNorm = max(pointWeight[pointIndex] * overlay.weightScale, 0.0);
+  let wNorm = max(pointWeight[pointIndex], 0.0);
   // The user knob folds in HERE, not in the fragment: OverlayParams is bound
   // VERTEX-visible only (the lanes beside it cannot be read by a fragment stage).
   out.intensity =

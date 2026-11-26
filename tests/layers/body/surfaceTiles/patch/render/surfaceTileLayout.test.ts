@@ -17,10 +17,14 @@ import {
   SURFACE_TILE_UNIFORM_BYTES,
   writePatchInstance,
 } from '../../../../../../src/layers/body/surfaceTiles/patch/render/surfaceTileLayout';
+import { weslStructLayout } from '../../../../../helpers/wesl/weslStructLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../../..');
-const ioWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/bodies/surfaceTile/io.wesl');
+const ioWesl = readFileSync(
+  resolve(repoRoot, 'src/services/gpu/shaders/bodies/surfaceTile/io.wesl'),
+  'utf8',
+);
 const layoutPath = resolve(
   repoRoot,
   'src/layers/body/surfaceTiles/patch/render/surfaceTileLayout.ts',
@@ -29,68 +33,35 @@ const layoutPath = resolve(
 /** WGSL scalar kind a field's bytes carry -- the only distinction the writer makes. */
 type Kind = 'float' | 'uint';
 
-/** std140/std430 alignment + byte size for the subset these three structs use. */
-const WESL_TYPES: Record<string, { align: number; size: number; kind: Kind; lanes: number }> = {
-  f32: { align: 4, size: 4, kind: 'float', lanes: 1 },
-  u32: { align: 4, size: 4, kind: 'uint', lanes: 1 },
-  'vec2<f32>': { align: 8, size: 8, kind: 'float', lanes: 2 },
-  'vec2<u32>': { align: 8, size: 8, kind: 'uint', lanes: 2 },
-  'vec3<f32>': { align: 16, size: 12, kind: 'float', lanes: 3 },
-  'vec4<f32>': { align: 16, size: 16, kind: 'float', lanes: 4 },
-  'mat4x4<f32>': { align: 16, size: 64, kind: 'float', lanes: 16 },
+/** Scalar kind and 4-byte lane count per WGSL type these structs use; offsets come from the helper. */
+const LANES: Record<string, { kind: Kind; lanes: number }> = {
+  f32: { kind: 'float', lanes: 1 },
+  u32: { kind: 'uint', lanes: 1 },
+  'vec2<f32>': { kind: 'float', lanes: 2 },
+  'vec2<u32>': { kind: 'uint', lanes: 2 },
+  'vec3<f32>': { kind: 'float', lanes: 3 },
+  'vec4<f32>': { kind: 'float', lanes: 4 },
+  'mat4x4<f32>': { kind: 'float', lanes: 16 },
 };
 
 /** One scalar write the layout demands: a byte offset + the kind stored there + owning field. */
 type ScalarWrite = { offset: number; kind: Kind; field: string };
 
-function roundUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
-/**
- * Parse `struct NAME { ... }` from the WESL text into ordered `{ name, type }` fields. io.wesl's
- * fields carry multi-line doc comments, so comments are stripped PER PHYSICAL LINE before splitting
- * each `name: type,` line on its colon.
- */
-function structFields(source: string, name: string): Array<{ name: string; type: string }> {
-  const body = source.match(new RegExp(`struct\\s+${name}\\s*\\{([^}]*)\\}`))?.[1];
-  if (!body) throw new Error(`struct ${name} not found in io.wesl`);
-  return body
-    .split('\n')
-    .map((line) => line.replace(/\/\/.*$/, '').trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [fieldName, type] = line
-        .replace(/,$/, '')
-        .split(':')
-        .map((part) => part.trim());
-      if (!fieldName || !type) throw new Error(`unparsable ${name} field: '${line}'`);
-      return { name: fieldName, type };
-    });
-}
-
-/**
- * Expand a struct to the ordered scalar writes std430 demands (a vecN is N float writes at
- * offset+0/+4/...), plus the struct's size rounded up to its max member alignment.
- */
-function structLayout(fields: Array<{ name: string; type: string }>): {
-  writes: ScalarWrite[];
-  structSize: number;
-} {
+/** Expand a struct to the ordered scalar writes it demands (a vecN is N writes at offset+0/+4/...). */
+function scalarWritesOf(
+  structName: string,
+  addressSpace: 'uniform' | 'storage',
+): { writes: ScalarWrite[]; structSize: number } {
+  const { fields, size } = weslStructLayout(ioWesl, structName, addressSpace);
   const writes: ScalarWrite[] = [];
-  let cursor = 0;
-  let maxAlign = 4;
-  for (const { name, type } of fields) {
-    const spec = WESL_TYPES[type];
-    if (!spec) throw new Error(`unhandled WESL type '${type}' on field ${name}`);
-    const offset = roundUp(cursor, spec.align);
+  for (const { name, type, offset } of fields) {
+    const spec = LANES[type];
+    if (!spec) throw new Error(`no lane rule for WESL type '${type}' on field ${name}`);
     for (let lane = 0; lane < spec.lanes; lane++) {
       writes.push({ offset: offset + lane * 4, kind: spec.kind, field: name });
     }
-    cursor = offset + spec.size;
-    maxAlign = Math.max(maxAlign, spec.align);
   }
-  return { writes, structSize: roundUp(cursor, maxAlign) };
+  return { writes, structSize: size };
 }
 
 /**
@@ -168,17 +139,16 @@ function writerLayout(source: string, fnName: string): ScalarWrite[] {
 const byOffset = (a: ScalarWrite, b: ScalarWrite): number => a.offset - b.offset;
 
 describe('PatchInstance CPU/WESL layout parity', () => {
-  const ioWesl = readFileSync(ioWeslPath, 'utf8');
   const layout = readFileSync(layoutPath, 'utf8');
 
   it('writer offsets + kinds match the struct layout, field by field', () => {
-    const { writes: expected } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    const { writes: expected } = scalarWritesOf('PatchInstance', 'storage');
     const actual = writerLayout(layout, 'writePatchInstance');
     expect([...actual].sort(byOffset)).toEqual([...expected].sort(byOffset));
   });
 
   it('PATCH_INSTANCE_BYTES stride equals the struct size', () => {
-    const { structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    const { structSize } = scalarWritesOf('PatchInstance', 'storage');
     expect(PATCH_INSTANCE_BYTES).toBe(structSize);
   });
 
@@ -186,7 +156,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   // vec4s still parses and still packs, but pads the record past 112 bytes
   // (spec §7's field-order note), and the derived check above would follow it.
   it('the record is 112 bytes with its scalar head pinned (the rects and height words are pinned lane by lane below)', () => {
-    const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    const { writes, structSize } = scalarWritesOf('PatchInstance', 'storage');
     expect(PATCH_INSTANCE_BYTES).toBe(112);
     expect(structSize).toBe(112);
     const firstOffset = (field: string) =>
@@ -238,17 +208,16 @@ describe('PatchInstance CPU/WESL layout parity', () => {
 });
 
 describe('SurfaceTileUniforms CPU/WESL layout parity', () => {
-  const ioWesl = readFileSync(ioWeslPath, 'utf8');
   const layout = readFileSync(layoutPath, 'utf8');
 
   it('writer offsets + kinds match the struct layout, field by field', () => {
-    const { writes: expected } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
+    const { writes: expected } = scalarWritesOf('SurfaceTileUniforms', 'uniform');
     const actual = writerLayout(layout, 'writeSurfaceTileUniforms');
     expect([...actual].sort(byOffset)).toEqual([...expected].sort(byOffset));
   });
 
   it('SURFACE_TILE_UNIFORM_BYTES stride equals the struct size', () => {
-    const { structSize } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
+    const { structSize } = scalarWritesOf('SurfaceTileUniforms', 'uniform');
     expect(SURFACE_TILE_UNIFORM_BYTES).toBe(structSize);
   });
 });

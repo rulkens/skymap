@@ -1,7 +1,8 @@
 /**
  * cosmicWebDensityUpsamplePass — composites the reduced-res
- * `cosmic-web-density` offscreen into HDR. Shares the raymarch's liveness gate,
- * so the two cannot disagree about whether the offscreen was written.
+ * `cosmic-web-density` offscreen into HDR. Gates on the plain liveness, never on
+ * the march's plan `draw` or on `touched`: the retained offscreen holds the
+ * converged mean on the frames the march rests.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

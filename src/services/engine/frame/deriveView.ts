@@ -3,7 +3,8 @@
  * beside the snapshot — never read off `snapshot.cam`), turned and offset by
  * a `ViewSpec`, through that view's own frustum and size. The frame context
  * rides along by reference as `snapshot`, so every view of a frame shares its
- * clock, body states and stamps.
+ * clock, body states and stamps. `previous` (this view id's last `vp`, size and
+ * `stillFrames`) feeds only `stillFrames`.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
@@ -15,6 +16,7 @@ import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPosePro
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { computeViewProj } from '../../../utils/camera/projection/computeViewProj';
+import { stillFramesOf } from '../../../utils/frame/stillFramesOf';
 import { viewFromCameraEye } from '../../../utils/camera/projection/viewFromCameraEye';
 import { turnedOrbitCamera } from '../../../utils/camera/viewRig/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
@@ -34,6 +36,7 @@ export function deriveView(
   snapshot: ReadyFrameContext,
   cam: OrbitCamera,
   spec: ViewSpec,
+  previous?: Pick<FrameView, 'vp' | 'canvasSize' | 'stillFrames'>,
 ): FrameView {
   const { bodyStates, slabBodyCandidates, meshBodies, sceneBodies } = snapshot;
   const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;
@@ -133,6 +136,7 @@ export function deriveView(
     snapshot,
     cam: viewCam,
     vp,
+    stillFrames: stillFramesOf(previous, vp, sizePx),
     slabs,
     bodyPose,
     canvasSize: sizePx,

@@ -1,9 +1,8 @@
 /**
- * End-to-end smoke test for tools/volumes/buildRhizomeVolume.ts. Mirrors
- * tests/tools/buildMcpmVolume.smoke.test.ts's shape: write a synthetic
- * .npy (+ here, a sidecar) into a tmpdir, build, decode the .scfd, assert
- * header fields. Local fixture helpers only — see buildMcpmVolume's smoke
- * test for the precedent against extracting a shared one.
+ * End-to-end smoke test for tools/volumes/buildRhizomeVolume.ts: write a
+ * synthetic .npy and its sidecar into a tmpdir, build, decode the .scfd,
+ * assert header fields. Local fixture helpers only, as in
+ * buildDustVolume's smoke test, rather than a shared one.
  */
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
@@ -241,45 +240,5 @@ describe('buildRhizomeVolume (smoke)', () => {
     writeSidecar(join(dir, 'cube.json'), { dims: [2, 3, 4] });
 
     await expect(buildRhizomeVolume({ npyPath, outPath })).rejects.toThrow(/expected 3D cube/);
-  });
-
-  it('--clamp zeroes below-threshold voxels and leaves above-threshold voxels bit-identical', async () => {
-    // Raw ramp 0..63 normalises (log(1+v)/log(64)) to a spread of packed
-    // values below and above any mid-range threshold, so the clamped and
-    // unclamped builds diverge on some voxels and agree on others.
-    const values = Array.from({ length: 64 }, (_, i) => i);
-    writeF32Npy(npyPath, values, dims);
-    writeSidecar(join(dir, 'cube.json'), { dims });
-
-    const clampedOutPath = join(dir, 'clamped.scfd');
-    await buildRhizomeVolume({ npyPath, outPath });
-    await buildRhizomeVolume({ npyPath, outPath: clampedOutPath, clamp: 0.2 });
-
-    const plainBuf = readFileSync(outPath);
-    const clampedBuf = readFileSync(clampedOutPath);
-    const plainCube = decodeScalarField(
-      plainBuf.buffer.slice(plainBuf.byteOffset, plainBuf.byteOffset + plainBuf.byteLength),
-    );
-    const clampedCube = decodeScalarField(
-      clampedBuf.buffer.slice(clampedBuf.byteOffset, clampedBuf.byteOffset + clampedBuf.byteLength),
-    );
-
-    const thresholdBits = f32ToF16Bits(0.2);
-    let sawZeroed = false;
-    let sawPreserved = false;
-    for (let i = 0; i < plainCube.voxels.length; i++) {
-      const plainVoxel = plainCube.voxels[i]!;
-      const clampedVoxel = clampedCube.voxels[i]!;
-      if (plainVoxel < thresholdBits) {
-        expect(clampedVoxel).toBe(0);
-        if (plainVoxel !== 0) sawZeroed = true;
-      } else {
-        // At/above threshold: bit-identical, not just numerically close.
-        expect(clampedVoxel).toBe(plainVoxel);
-        sawPreserved = true;
-      }
-    }
-    expect(sawZeroed).toBe(true);
-    expect(sawPreserved).toBe(true);
   });
 });

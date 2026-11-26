@@ -41,7 +41,7 @@ import { watchKeyboardEventsSaga } from '../../../src/state/input/watchKeyboardE
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
-import { stepMissionSpeed } from '../../../src/layers/missions/state/missions/slice';
+import { stepTimelineSpeed } from '../../../src/state/settings/core/timelineSlice';
 import { setRate } from '../../../src/state/time/timeSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { selectFocusRef } from '../../../src/state/selection/selectors';
@@ -131,7 +131,7 @@ describe('watchKeyboardEventsSaga', () => {
     store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
     h.emit!(']');
     await flush();
-    expect(recorded.at(-1)).toEqual(stepMissionSpeed({ step: 1 }));
+    expect(recorded.at(-1)).toEqual(stepTimelineSpeed({ step: 1 }));
   });
 
   // Clearing focus would release the sky arm under the restore: standing, Esc only leaves.

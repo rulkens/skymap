@@ -285,7 +285,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'JPL’s positions for 8 planets and 18 moons from 1900 to 2100, which our orbits are corrected to.',
     about:
-      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it.',
+      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it, and so is the path of the asteroid 2026 QQ8 through 2026, the year Earth temporarily captured it.',
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
     shows: 'No switch. It corrects the positions of the planets and moons between 1900 and 2100.',
     scene: 'planets-and-their-moons',

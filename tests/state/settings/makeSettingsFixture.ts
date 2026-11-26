@@ -61,6 +61,7 @@ import { initialState as earthInitialState } from '../../../src/layers/body/stat
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
+import { timelineInitialState } from '../../../src/state/settings/core/timelineSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as lightTimeInitialState } from '../../../src/layers/lightTime/state/lightTime/initialState';
@@ -165,6 +166,7 @@ export function makeSettingsFixture(
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
     picking: { ...pickingInitialState },
+    timeline: { ...timelineInitialState },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
         DebugOverlayKey,

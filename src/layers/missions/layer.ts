@@ -1,7 +1,7 @@
 /**
  * The missions Layer: the craft's trail rows, captions and their "Spacecraft" label item, the
- * `missions` and `missionTrails` settings clusters, the track load, and the Voyager exhibit with
- * its mission timeline kind. It owns the nine craft body rows, their registry row and the `craft`
+ * `missions` and `missionTrails` settings clusters, the track load, and the Voyager exhibit on
+ * core's timeline kind. It owns the nine craft body rows, their registry row and the `craft`
  * selection kind with its pick code, and draws them: meshes (rows and slots its own) through core's
  * one mesh handle, the rovers' contact shadows, and glints through its own glint renderer.
  * A craft's InfoCard is the body card.
@@ -55,7 +55,7 @@ export const missionsLayer = defineLayer({
       show: 'missionTrails',
       rows: MISSION_TRAIL_ROWS,
       nearPlanets: (state) => state.settings.missionTrails.nearPlanets,
-      dim: (state, id) => emphasisDim(state.settings.missions.craft, id),
+      dim: (state, id) => emphasisDim(state.settings.timeline.lane, id),
     },
   }),
   selection: {

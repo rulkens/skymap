@@ -97,9 +97,11 @@ export const PRELUDE: FrameSection = {
 export const SCENE: FrameSection = {
   scope: 'perView',
   steps: [
-    // Plan row first (`checkFrameOrder`'s boot rule): this view's markers, sized and
-    // culled from its own eye, before its first GPU step (`runPlanSteps`).
+    // Plan rows first (`checkFrameOrder`'s boot rule): this view's markers, sized and
+    // culled from its own eye, and its density-mean step, before its first GPU step
+    // (`runPlanSteps`).
     { kind: 'plan', name: 'structure-markers' },
+    { kind: 'plan', name: 'cosmic-web-density-accumulation' },
     // Bakes the froxel volume its apply row (below) reads, once PER VIEW: each view is
     // its own submit, so the bake lands after the previous view's apply and before this
     // view's; no once-scope PRELUDE line could give that ordering.
@@ -108,8 +110,15 @@ export const SCENE: FrameSection = {
     // `milky-way-field` on the hdr NEAR0 line. Per view for the same reason.
     { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
-    // inside the hdr COSMO step below, so this render must precede that step.
-    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // inside the hdr COSMO step below, so this render must precede that step. Retained,
+    // restarted by the accumulation planner.
+    {
+      kind: 'render',
+      target: 'cosmic-web-density',
+      slab: COSMO,
+      passes: ['cosmic-web-density'],
+      restartPlanner: 'cosmic-web-density-accumulation',
+    },
     // Twin of the density render, into a 1/5-res offscreen merged by
     // `zone-of-avoidance-upsample`.
     { kind: 'render', target: 'zoa', slab: COSMO, passes: ['zone-of-avoidance'] },

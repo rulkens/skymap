@@ -35,11 +35,11 @@ export function missionLabelSource(pickCode: number) {
     slab: NEAR0,
     toggle: 'missions',
     style: 'caption',
-    changes: (state) => state.settings.missions.craft,
+    changes: (state) => state.settings.timeline.lane,
     items: (state) =>
       CRAFT.map(({ body, sampled }) => ({
         body,
-        dim: sampled ? emphasisDim(state.settings.missions.craft, body.id) : 1,
+        dim: sampled ? emphasisDim(state.settings.timeline.lane, body.id) : 1,
       })),
     describe: ({ body, dim }) => {
       // A baked albedo is a whole-surface mean far below a planet's, so the caption keeps its hue

@@ -99,8 +99,14 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['build-mcpm', 'build-dust', 'build-flow-field', 'build-local-bubble'],
-        does: 'Write the density field of the cosmic web, the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
+        scripts: [
+          'build-mcpm',
+          'build-2mrs',
+          'build-dust',
+          'build-flow-field',
+          'build-local-bubble',
+        ],
+        does: 'Write the two density fields of the cosmic web (SDSS and 2MRS), the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
         manual: DATA,
       },
       {
@@ -114,8 +120,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'data/raw/horizons/README.md',
       },
       {
-        scripts: ['build-sampled-tracks'],
-        does: 'Write one track file per Voyager from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded, and compile their launch, flyby and milestone events.',
+        scripts: ['build-sampled-tracks', 'build-mission-events'],
+        does: 'Write one track file per Voyager and one for 2026 QQ8 from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded, and compile the Voyagers’ launch, flyby and milestone events. Body ids after -- write only those tracks.',
         manual: DATA,
       },
       {
@@ -164,8 +170,13 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SCENE,
       },
       {
-        scripts: ['build-fonts', 'build-env-brdf-lut', 'build-pgc-aliases'],
-        does: 'Write three small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, and the catalogue names the search knows a galaxy by.',
+        scripts: [
+          'build-fonts',
+          'build-env-brdf-lut',
+          'build-blue-noise-mask',
+          'build-pgc-aliases',
+        ],
+        does: 'Write four small files that are committed: the label font as a distance-field atlas, a lookup table for lighting the 3D models, a noise pattern that hides the step grid in the cosmic-web volume, and the catalogue names the search knows a galaxy by.',
         manual: DATA,
       },
       {

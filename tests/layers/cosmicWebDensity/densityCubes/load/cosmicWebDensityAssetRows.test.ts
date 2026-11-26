@@ -1,5 +1,5 @@
 /**
- * cosmicWebDensityAssetRows — the tiered/untiered request builders.
+ * cosmicWebDensityAssetRows — the request each row builds from its storage and the tier.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -11,12 +11,18 @@ import type { CosmicWebDensityRuntime } from '../../../../../src/layers/cosmicWe
 const ROWS = cosmicWebDensityAssetRows({ slots: {} } as unknown as CosmicWebDensityRuntime);
 
 describe('cosmicWebDensityAssetRows', () => {
-  it('a tiered row carries the tier, an untiered row carries none', () => {
+  it('medium and large ask for the same pyramid level; small asks for level 2', () => {
     const mcpm = ROWS.find((row) => row.key === 'mcpm')!;
-    expect(mcpm.req('medium')).toEqual({ binBaseName: 'mcpm', tier: 'medium' });
+    const level1 = { storage: 'pyramid', binBaseName: 'mcpm', baseLevel: 1 };
+    expect(mcpm.req('medium')).toEqual(level1);
+    expect(mcpm.req('large')).toEqual(level1);
+    expect(mcpm.req('small')).toEqual({ ...level1, baseLevel: 2 });
+  });
+
+  it('the workbench row asks for its .scfd at every tier', () => {
     const workbench = ROWS.find((row) => row.key === 'mcpm-workbench')!;
-    const untiered = workbench.req('medium');
-    expect(untiered).toEqual({ binBaseName: 'mcpm-workbench' });
-    expect(untiered).not.toHaveProperty('tier');
+    for (const tier of ['small', 'medium', 'large'] as const) {
+      expect(workbench.req(tier)).toEqual({ storage: 'scfd', binBaseName: 'mcpm-workbench' });
+    }
   });
 });

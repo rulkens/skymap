@@ -1,35 +1,53 @@
 /**
- * create — the density family's construction in dependency order: the one
- * renderer holding every cube, its upsample, then one slot per source row
- * committing into the renderer. No fade is driven here: each asset row's
+ * create — the density family's construction in dependency order: the jitter
+ * mask texture (bound by the renderer from the start, filled by its own slot),
+ * the one renderer holding every cube, its upsample, then one slot per source
+ * row committing into the renderer. No fade is driven here: each asset row's
  * `gates` lets core fade a cube in on its slot's commit.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { CosmicWebDensityFieldId } from './@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
+import type { CosmicWebDensitySlotDeps } from './@types/CosmicWebDensitySlotDeps';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
+import { BLUE_NOISE_MASK_SIZE, BLUE_NOISE_MASK_SLICES } from '../../data/volume/blueNoiseMask';
 import { createVolumeFieldRenderer } from '../../services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';
-import { MCPM_ENTRY } from './sources/mcpm';
-import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
-import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
 import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
+import { createCosmicWebDensityFetcher } from './densityCubes/load/createCosmicWebDensityFetcher';
+import { createJitterMaskSlot } from './densityCubes/load/createJitterMaskSlot';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
-  const renderer = createVolumeFieldRenderer<CosmicWebDensityFieldId>(
-    deps.ctx.device,
-    HDR_TARGET_FORMAT,
-    deps.fadeBgl,
-  );
+  const jitterMask = deps.ctx.device.createTexture({
+    label: 'scalarVolume-jitter-mask',
+    size: [BLUE_NOISE_MASK_SIZE, BLUE_NOISE_MASK_SIZE * BLUE_NOISE_MASK_SLICES],
+    format: 'r8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  const renderer = createVolumeFieldRenderer<CosmicWebDensityFieldId>({
+    device: deps.ctx.device,
+    targetFormat: HDR_TARGET_FORMAT,
+    fadeBgl: deps.fadeBgl,
+    jitterMask,
+  });
+  const slotDeps: CosmicWebDensitySlotDeps = {
+    renderer,
+    fetch: createCosmicWebDensityFetcher(deps.ctx.device),
+  };
   return {
     renderer,
     upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-    slots: {
-      mcpm: createCosmicWebDensitySlot(MCPM_ENTRY, renderer),
-      'polyphorm-2mrs': createCosmicWebDensitySlot(POLYPHORM_2MRS_ENTRY, renderer),
-      'mcpm-workbench': createCosmicWebDensitySlot(MCPM_WORKBENCH_ENTRY, renderer),
-    },
+    jitterMask,
+    jitterMaskSlot: createJitterMaskSlot(deps.ctx.device, jitterMask),
+    // `Object.fromEntries` widens keys to `string`; the rows tuple names every field id.
+    slots: Object.fromEntries(
+      COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
+        entry.id,
+        createCosmicWebDensitySlot(entry, slotDeps),
+      ]),
+    ) as CosmicWebDensityRuntime['slots'],
   };
 }
