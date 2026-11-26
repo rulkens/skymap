@@ -1,7 +1,7 @@
 # surfaceHorizon: the horizon bake
 
 Bakes per-post horizon angles (16 sectors, 129 × 129 posts per tile) from a body's height archives.
-Spec: `docs/superpowers/specs/2026-11-25-terrain-horizon-shadows-design.md` §3–§4, §7.
+Spec: `docs/superpowers/specs/completed/2026-11-25-terrain-horizon-shadows-design.md` §3–§4, §7.
 
 ```
 npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]

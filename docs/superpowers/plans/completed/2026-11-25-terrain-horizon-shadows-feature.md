@@ -1,6 +1,6 @@
 # Terrain horizon shadows, PR B: the feature
 
-> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../specs/2026-11-25-terrain-horizon-shadows-design.md)
+> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../../specs/completed/2026-11-25-terrain-horizon-shadows-design.md)
 > §3–§8, §10, §11.
 > **Base.** Main after PR A ([`…-prep.md`](completed/2026-11-25-terrain-horizon-shadows-prep.md)) merged
 > as #1171. This plan is written against that tree: `TileRead`, `SurfaceTileResidency.isEmpty`, lane rows with
@@ -301,15 +301,15 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 
 **Files:** none in git beyond the manifest merges the tool writes under `public/data` (gitignored).
 
-- [ ] Bake each body overnight on all cores: `npm run bake-horizon -- --body moon --workers <cores>`,
+- [x] Bake each body overnight on all cores: `npm run bake-horizon -- --body moon --workers <cores>`,
       then `mars`, then `earth` (≈14 CPU-hours in total; announce before starting).
-- [ ] Check sizes against spec §8 (Earth ≈111, Moon ≈129, Mars ≈100 MB of packs; flat share ≈26 %
+- [x] Check sizes against spec §8 (Earth ≈111, Moon ≈129, Mars ≈100 MB of packs; flat share ≈26 %
       on Earth, 0 % elsewhere). Task 11 keeps the Moon's posts and bakes 1.3× (Mars) and 1.6×
       (Earth) the posts around regional bands (Jezero alone: 11.2 MB, was 6.0), so judge those
       two against that. A total outside ±20 % stops the task: report, don't ship.
-- [ ] Desktop offline inventory: confirm `tools/deploy/syncR2.ts:136-152` picks up the horizon
+- [x] Desktop offline inventory: confirm `tools/deploy/syncR2.ts:136-152` picks up the horizon
       archives and globe images with no edit (docs/DESKTOP.md).
-- [ ] **Owner step:** `npm run sync-r2-secure`. The plan does not run it.
+- [x] **Owner step:** `npm run sync-r2-secure`. The plan does not run it.
 
 ---
 
@@ -317,9 +317,9 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 
 **Files:** none (results in the PR description).
 
-- [ ] `npm run perf -- --url http://localhost:<port>` at `mars-jezero-146km` with the Jezero time
+- [x] `npm run perf -- --url http://localhost:<port>` at `mars-jezero-146km` with the Jezero time
       below, horizon present vs main: added GPU ≤ ≈1 ms. Over budget stops the PR.
-- [ ] Shots (`npm run shot -- '<url>' --url …`) at the six poses, compared side by side with the
+- [x] Shots (`npm run shot -- '<url>' --url …`) at the six poses, compared side by side with the
       spike's `.claude/desk/bake-spike/*-bakeC4.jpg` (spike worktree); the owner gives the verdict.
 
 | Name | Hash |
@@ -332,7 +332,7 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 | `jezero` | `#t=2026-11-20T16:21:00Z&pose=b,mars,691403.5436897384,3139457.9759868933,1068139.0390700782,13398.757351951235,34480.79569896407,48551.77155165493,0.9746901454013925,-0.16237362891140072,-0.15366823058639975,0.042348923322054366,0.809025631138166,-0.5862457648929799,-0.21951238951566024,-0.5649002857103499,-0.795425658407805` |
 | `grand-canyon` | author at a low sun with the app's share link; the spike has none |
 
-- [ ] Everest (spec §11, left open): the owner decides from the `everest` pair whether it ships as is.
+- [x] Everest (spec §11, left open): the owner decides from the `everest` pair whether it ships as is.
 
 ---
 
@@ -370,7 +370,7 @@ DATA.md, RENDERER.md.
       levels stop at z2, the small globe's source (`utils/horizonLevelsOfBand.ts`); a wrong-sized
       tile on disk throws in `readHorizonTileFile`; `bakeHorizonSubTile` /
       `bakeHorizonSubTileResolved` renamed. Commit.
-- [ ] Re-bake all three bodies (Task 8), clearing each `<prefix>/horizon/` first.
+- [x] Re-bake all three bodies (Task 8), clearing each `<prefix>/horizon/` first.
 
 ---
 
