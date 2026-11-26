@@ -617,7 +617,7 @@ Steps:
     `touched` or `renderedTargets`.
   - Below the cap it votes `awake`, and `loading` only at rest.
   - Keep the bullet to the file's density, citing paths, not code.
-- [ ] No test (docs).
+- [x] No test (docs).
 
 **Done when:** the unprojection advice names its slab and the COSMO form, and the progressive
 scheme has a renderer-map entry.
