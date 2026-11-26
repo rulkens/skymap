@@ -73,6 +73,14 @@ describe('cli', { timeout: 30_000 }, () => {
     );
   });
 
+  it('moves a folder as the files git lists under it', () => {
+    const root = repo();
+    writeFileSync(join(root, 'src/stale.ts'), 'export {};');
+    expect(run(root, 'src/lib', 'src/core').status).toBe(0);
+    expect(existsSync(join(root, 'src/core/a.ts'))).toBe(true);
+    expect(readFileSync(join(root, 'src/use.ts'), 'utf8')).toContain(`'./core/a'`);
+  });
+
   it('exits 2 on bad arguments', () => {
     expect(run(repo(), 'only-one').status).toBe(2);
   });

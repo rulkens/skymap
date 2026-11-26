@@ -277,6 +277,66 @@ describe('planMoves', () => {
     if (r.ok) expect(r.plan.edits).toEqual([]);
   });
 
+  describe('a folder row', () => {
+    const files = {
+      'src/ui/Card.tsx': `import s from './Card.module.css';`,
+      'src/ui/Card.module.css': '.a {}',
+      'src/ui/deep/x.ts': `import '../Card';`,
+      'tests/ui/Card.test.ts': `import '../../src/ui/Card';`,
+      'src/use.ts': `import './ui/deep/x';`,
+    };
+    const perFile = [
+      { from: 'src/ui/Card.tsx', to: 'src/box/Card.tsx' },
+      { from: 'src/ui/Card.module.css', to: 'src/box/Card.module.css' },
+      { from: 'src/ui/deep/x.ts', to: 'src/box/deep/x.ts' },
+    ];
+
+    it.each([
+      ['src/ui', 'src/box'],
+      ['src/ui/', 'src/box/'],
+    ])('%s -> %s plans exactly what its per-file rows would', (from, to) => {
+      const r = plan([{ from, to }], files);
+      expect(r.ok).toBe(true);
+      expect(r).toEqual(plan(perFile, files));
+    });
+
+    it('merges into an existing folder, refusing a clash per file', () => {
+      const r = plan([{ from: 'a', to: 'b' }], { 'a/x.ts': '', 'a/y.ts': '', 'b/y.ts': '' });
+      expect(codes(r)).toEqual(['occupied-destination:b/y.ts']);
+    });
+
+    it('a file row inside a folder row is a duplicate source', () => {
+      const r = plan(
+        [
+          { from: 'a', to: 'b' },
+          { from: 'a/x.ts', to: 'c/x.ts' },
+        ],
+        { 'a/x.ts': '', 'a/y.ts': '' },
+      );
+      expect(codes(r)).toEqual(['duplicate-source:a/x.ts']);
+    });
+
+    it('refuses a folder holding no file git lists', () => {
+      const r = planMoves(
+        [{ from: 'empty', to: 'x' }],
+        {
+          texts: new Map(),
+          listed: new Set(['/r/a.ts']),
+          fileExists: () => false,
+          directoryExists: (p) => p === '/r/empty',
+        },
+        context,
+      );
+      expect(r.ok ? [] : r.refusals).toEqual([
+        {
+          code: 'missing-source',
+          path: 'empty',
+          detail: 'is a folder holding no file git lists; check case',
+        },
+      ]);
+    });
+  });
+
   it('drags companions and reports findings', () => {
     const r = plan([{ from: 'src/ui/Card.tsx', to: 'src/box/Card.tsx' }], {
       'src/ui/Card.tsx': `import s from './Card.module.css';`,

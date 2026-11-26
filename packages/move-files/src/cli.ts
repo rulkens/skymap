@@ -3,6 +3,7 @@
  *
  *   move-files <from> <to> | --manifest <file.json> [--dry]
  *
+ * A folder `from` moves every file git lists under it.
  * Exit 0 clean, 1 written (or `--dry`) with findings, 2 refused or bad
  * arguments with nothing written, 3 a write failed partway.
  */
@@ -18,7 +19,9 @@ import { readMoveManifest } from './readMoveManifest';
 import { readSnapshot } from './readSnapshot';
 import { renderMoveReport } from './renderMoveReport';
 
-const USAGE = 'Usage: move-files <from> <to>  |  move-files --manifest <file.json>  [--dry]';
+const USAGE =
+  'Usage: move-files <from> <to>  |  move-files --manifest <file.json>  [--dry]\n' +
+  '  A folder <from> moves every file git lists under it.';
 
 function requestedMoves() {
   const { values, positionals } = parseArgs({
