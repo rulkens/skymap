@@ -11,7 +11,13 @@ import { proseKind } from '../../../../components/ExhibitOverlay/kinds/proseKind
 import { sourcesKind } from '../../../../components/ExhibitOverlay/kinds/sourcesKind';
 import { timelineKind } from '../../../../components/ExhibitOverlay/kinds/timelineKind';
 import type { Exhibit } from '../../../../@types/exhibits/Exhibit';
-import { CRUISE, END_ISO } from './qq8Flyby.constants';
+import {
+  CRUISE,
+  END_ISO,
+  GALAXY_CATALOGS_OFF,
+  STARS_DIMMED_UNLABELLED,
+  STRUCTURES_OFF,
+} from './qq8Flyby.constants';
 import {
   CAPTURED,
   EVENTS,
@@ -29,6 +35,9 @@ export const qq8Flyby: Exhibit<'qq8Flyby'> = {
   label: LABEL,
   settings: {
     orbitTrails: { enabled: true },
+    galaxyCatalogs: GALAXY_CATALOGS_OFF,
+    structures: STRUCTURES_OFF,
+    starCatalogs: STARS_DIMMED_UNLABELLED,
     timeline: { lane: LANE.bodyId, speed: 1 },
     picking: {
       off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite', 'asteroid'],
