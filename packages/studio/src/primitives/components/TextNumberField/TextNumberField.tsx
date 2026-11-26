@@ -4,7 +4,7 @@ import { AUTO_TEXT } from '../../../data/autoText';
 import { SHIFT_FACTOR } from './TextNumberField.constants';
 import s from './TextNumberField.module.css';
 
-type Props = {
+type TextNumberFieldProps = {
   /** Null: unset; the field is empty and reads `auto`. */
   readonly value: number | null;
   readonly label: string;
@@ -16,7 +16,15 @@ type Props = {
   readonly onCommit: (value: number, gesture: string) => void;
 };
 
-function TextNumberField({ value, label, unit, step = 1, min, max, onCommit }: Props) {
+function TextNumberField({
+  value,
+  label,
+  unit,
+  step = 1,
+  min,
+  max,
+  onCommit,
+}: TextNumberFieldProps) {
   const id = useId();
   const sessions = useRef(0);
   const gesture = useRef('');

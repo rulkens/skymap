@@ -19,13 +19,13 @@ import type { ChannelFamily } from '../../../@types/rows/ChannelFamily';
 import type { Timeline } from '../../../@types/rows/Timeline';
 import s from './Ruler.module.css';
 
-type Props = {
+type RulerProps = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
 };
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the looped span, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window }: Props) {
+function Ruler({ timeline, window }: RulerProps) {
   const playheadSec = useAppSelector(selectPlayheadSec);
   const looped = useAppSelector(selectShownLoop);
   const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);

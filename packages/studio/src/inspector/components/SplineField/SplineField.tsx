@@ -9,14 +9,14 @@ import {
 } from '../../../../../../src/services/engine/animation/pathDefaults';
 import type { SplineConfig } from '../../../../../../src/@types/animation/SplineConfig';
 
-type Props = {
+type SplineFieldProps = {
   readonly value: SplineConfig | undefined;
   readonly spaced?: boolean;
   readonly onChange: (value: SplineConfig, label: string, gesture: string | null) => void;
 };
 
 /** A Fly's curve as rows: the curve, and the two knobs only Head-on has. Ranges from the Clip path debug panel. */
-function SplineField({ value = ABSENT_SPLINE, spaced, onChange }: Props) {
+function SplineField({ value = ABSENT_SPLINE, spaced, onChange }: SplineFieldProps) {
   const isDefault = value.kind === DEFAULT_SPLINE_CONFIG.kind;
   return (
     <>

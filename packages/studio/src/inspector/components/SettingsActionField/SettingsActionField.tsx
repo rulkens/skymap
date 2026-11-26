@@ -16,7 +16,7 @@ import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog
 import type { SettingsAction } from '../../../../../../src/compositions/@types/SettingsAction';
 import type { SettingKind } from '../../../@types/kinds/SettingKind';
 
-type Props = {
+type SettingsActionFieldProps = {
   readonly action: SettingsAction;
   readonly onChange: (action: SettingsAction) => void;
 };
@@ -25,7 +25,7 @@ type Props = {
  * A Set step as rows of the inspector's grid: which setting, the catalog when it is one, and on or
  * off. Switching the setting keeps the on/off, so Flow on becomes Focused labels on.
  */
-function SettingsActionField({ action, onChange }: Props) {
+function SettingsActionField({ action, onChange }: SettingsActionFieldProps) {
   const kind = settingKindOf(action);
   const catalog: GalaxyCatalogId = setGalaxyCatalogVisible.match(action)
     ? action.payload.id

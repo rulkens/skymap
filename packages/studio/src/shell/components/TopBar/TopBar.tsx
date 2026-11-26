@@ -18,13 +18,13 @@ import { selectFailureLine } from '../../state/selectFailureLine';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './TopBar.module.css';
 
-type Props = {
+type TopBarProps = {
   readonly keysOpen: boolean;
   readonly onToggleKeys: () => void;
 };
 
 /** Three groups aligned with the dock's columns below: the clip and its state | transport, zoom | undo, keys, close. */
-function TopBar({ keysOpen, onToggleKeys }: Props) {
+function TopBar({ keysOpen, onToggleKeys }: TopBarProps) {
   const dispatch = useAppDispatch();
   const clipId = useAppSelector(selectStudioClipId);
   const resolution = useAppSelector(selectCurrentResolution);

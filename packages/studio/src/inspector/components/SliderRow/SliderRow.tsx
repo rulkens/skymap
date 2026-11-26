@@ -1,7 +1,7 @@
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import RangedNumberField from '../../../primitives/components/RangedNumberField/RangedNumberField';
 
-type Props = {
+type SliderRowProps = {
   readonly label: string;
   /** The value the engine uses. */
   readonly value: number;
@@ -17,7 +17,17 @@ type Props = {
 };
 
 /** One knob of a composite field (a Fly's curve, a zoom-pan's tuning) as a slider row. */
-function SliderRow({ label, value, resetTo, unit, min, max, step, spaced, onChange }: Props) {
+function SliderRow({
+  label,
+  value,
+  resetTo,
+  unit,
+  min,
+  max,
+  step,
+  spaced,
+  onChange,
+}: SliderRowProps) {
   const atDefault = value === resetTo;
   return (
     <InspectorRow

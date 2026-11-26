@@ -5,14 +5,14 @@ import { useAppDispatch } from '../../../../../../src/store/hooks';
 import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
 import s from './ClipPicker.module.css';
 
-type Props = { readonly clipId: ClipId };
+type ClipPickerProps = { readonly clipId: ClipId };
 
 /**
  * The studio's title, as a picker of every clip. Choosing one reopens the studio on it, the same
  * takeover a `#studio=` link starts; the left clip's unsaved edits go with it (Q28 keeps a draft
  * only for the clip it was made on).
  */
-function ClipPicker({ clipId }: Props) {
+function ClipPicker({ clipId }: ClipPickerProps) {
   const dispatch = useAppDispatch();
   return (
     <span className={s.root}>

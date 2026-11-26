@@ -34,7 +34,7 @@ import type { GeodesicTuning } from '../../../../../../src/@types/camera/focusMo
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
-type Props = {
+type FieldRowProps = {
   readonly spec: FieldSpec<InspectorSubject>;
   readonly subject: InspectorSubject;
   readonly rowRef: RowRef;
@@ -45,7 +45,7 @@ type Props = {
  * and bright with ↺ back to it otherwise: the `resetTo` value, or absent (its fallback, or `auto` when
  * the engine decides). A required param with no `resetTo` is always authored.
  */
-function FieldRow({ spec, subject, rowRef }: Props) {
+function FieldRow({ spec, subject, rowRef }: FieldRowProps) {
   const dispatch = useAppDispatch();
   const objects = useObjectIndex();
   const pick = useAppSelector(selectPick);

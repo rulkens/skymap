@@ -3,7 +3,7 @@ import cx from 'classnames';
 import type { LayerOption } from '../../../@types/kinds/LayerOption';
 import s from './LayerPickField.module.css';
 
-type Props = {
+type LayerPickFieldProps = {
   readonly label: string;
   /** What the closed field reads: the picked names as one list. */
   readonly summary: string;
@@ -16,7 +16,7 @@ type Props = {
  * A multi-pick that opens in place, not as a popover, so the inspector's scroll never clips it.
  * The picks keep the options' order, and the last one stays checked: a step needs a layer to act on.
  */
-function LayerPickField({ label, summary, value, options, onChange }: Props) {
+function LayerPickField({ label, summary, value, options, onChange }: LayerPickFieldProps) {
   const [open, setOpen] = useState(false);
   const toggle = (address: string, on: boolean) =>
     onChange(options.map((o) => o.address).filter((a) => (a === address ? on : value.includes(a))));

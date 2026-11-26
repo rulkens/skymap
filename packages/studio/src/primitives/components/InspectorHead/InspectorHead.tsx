@@ -2,7 +2,7 @@ import type { GlyphId } from '../../../@types/kinds/GlyphId';
 import Glyph from '../Glyph/Glyph';
 import s from './InspectorHead.module.css';
 
-type Props = {
+type InspectorHeadProps = {
   readonly glyph?: GlyphId;
   /** Where the row sits: its block, Start, or Clip. */
   readonly where: string;
@@ -11,7 +11,7 @@ type Props = {
   readonly title: string;
 };
 
-function InspectorHead({ glyph, where, range, title }: Props) {
+function InspectorHead({ glyph, where, range, title }: InspectorHeadProps) {
   return (
     <header className={s.root}>
       <p className={s.where}>

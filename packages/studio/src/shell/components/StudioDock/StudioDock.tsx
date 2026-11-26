@@ -16,10 +16,10 @@ import { useIsMobile } from '../../../../../../src/hooks/useIsMobile';
 import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
 import s from './StudioDock.module.css';
 
-type Props = { readonly clipId: ClipId };
+type StudioDockProps = { readonly clipId: ClipId };
 
 /** The studio's bottom dock: top bar, timeline, legend. Opaque, so the renderer never shows through. */
-function StudioDock({ clipId }: Props) {
+function StudioDock({ clipId }: StudioDockProps) {
   const narrow = useIsMobile();
   const root = useRef<HTMLElement>(null);
   const [fraction, setFraction] = useDockHeight();

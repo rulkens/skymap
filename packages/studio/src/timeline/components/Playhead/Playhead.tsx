@@ -4,10 +4,10 @@ import { useAppSelector } from '../../../../../../src/store/hooks';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import s from './Playhead.module.css';
 
-type Props = { readonly window: TimeWindow };
+type PlayheadProps = { readonly window: TimeWindow };
 
 /** The playhead's line, drawn over the lanes inside an overlay that spans exactly the track area. */
-function Playhead({ window }: Props) {
+function Playhead({ window }: PlayheadProps) {
   const playheadSec = useAppSelector(selectPlayheadSec);
   return <span className={s.root} style={{ left: `${timeToPercent(playheadSec, window)}%` }} />;
 }
