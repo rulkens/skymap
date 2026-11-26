@@ -353,16 +353,16 @@ export const DENSITY_SAMPLE_CAP_BY_TIER: Readonly<Record<Tier, number>> = {
 
 Steps:
 
-- [ ] Rename with move-files, then edit the file to the table above (one constant, its doc).
-- [ ] `cosmicWebDensityPass`'s `inputs` reads `DENSITY_MARCH_STEPS_BY_TIER[state.tier]`, a
+- [x] Rename with move-files, then edit the file to the table above (one constant, its doc).
+- [x] `cosmicWebDensityPass`'s `inputs` reads `DENSITY_MARCH_STEPS_BY_TIER[state.tier]`, a
       stopgap until Task 7 takes `inputs` from the plan.
-- [ ] Website fact `render-density-march`: "128 steps" becomes "up to 128 steps", and `source`
+- [x] Website fact `render-density-march`: "128 steps" becomes "up to 128 steps", and `source`
       points at the new file. No other copy changes.
-- [ ] The docs test reads `Math.max(...sourceNumbers(<new file>, 'DENSITY_MARCH_STEPS_BY_TIER'))`
+- [x] The docs test reads `Math.max(...sourceNumbers(<new file>, 'DENSITY_MARCH_STEPS_BY_TIER'))`
       and expects `up to ${max} steps`. `sourceNumbers` already parses an object literal's numbers.
-- [ ] Grep for `densityMarchSteps` and `DENSITY_MARCH_STEPS\b`: nothing outside `completed/` plans.
-- [ ] No new test: these are constants.
-- [ ] `npm run typecheck:fast`, `npm test -- docsRenderingFacts cosmicWebDensity`.
+- [x] Grep for `densityMarchSteps` and `DENSITY_MARCH_STEPS\b`: nothing outside `completed/` plans.
+- [x] No new test: these are constants.
+- [x] `npm run typecheck:fast`, `npm test -- docsRenderingFacts cosmicWebDensity`.
 
 **Done when:** the step count is per tier, the cap table exists, and the site's fact still matches
 its constant.
