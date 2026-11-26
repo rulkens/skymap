@@ -85,7 +85,8 @@ fn horizonSkyAtPost(angles: mat4x4<f32>) -> f32 {
 // Visible fraction of the sun's disc (x) and the sky-view factor on a horizontal surface (y),
 // both 0..1, from the four posts around 'uv'. One post is live at a time: holding all four
 // decoded and blending them before the sun's pick tripled the pass. Without HORIZON_SKY each
-// post loads only the texels of the two sunward sectors (8 loads, not 16), the same sun.
+// post loads only the sunward sectors' texels, the same sun: one where the two sectors share a
+// texel (three sector pairs in four), two where they straddle one, so 4 to 8 loads, not 16.
 fn horizonVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
                      sunAzimuthRad: f32, sunElevationRad: f32, sunRadiusRad: f32) -> vec2<f32> {
   if (rect.z == 0.0) {
@@ -95,6 +96,7 @@ fn horizonVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
   let sector = fract(sunAzimuthRad / TAU) * HORIZON_SECTORS;
   let lower = horizonSectorTexel(u32(floor(sector)) % u32(HORIZON_SECTORS));
   let upper = horizonSectorTexel((u32(floor(sector)) + 1u) % u32(HORIZON_SECTORS));
+  let upperOwnTexel = any(upper.xy != lower.xy);
   var horizon = 0.0;
   var sky = 0.0;
   for (var corner = 0u; corner < 4u; corner++) {
@@ -107,9 +109,12 @@ fn horizonVisibility(atlas: texture_2d<f32>, rect: vec4<f32>, uv: vec2<f32>,
       horizon += weight * mix(horizonSectorAngle(angles, lower), horizonSectorAngle(angles, upper), fract(sector));
       sky += weight * horizonSkyAtPost(angles);
     } else {
-      let lowerAngle = horizonTexelAngles(atlas, block, lower.xy)[lower.z];
-      let upperAngle = horizonTexelAngles(atlas, block, upper.xy)[upper.z];
-      horizon += weight * mix(lowerAngle, upperAngle, fract(sector));
+      let lowerAngles = horizonTexelAngles(atlas, block, lower.xy);
+      var upperAngles = lowerAngles;
+      if (upperOwnTexel) {
+        upperAngles = horizonTexelAngles(atlas, block, upper.xy);
+      }
+      horizon += weight * mix(lowerAngles[lower.z], upperAngles[upper.z], fract(sector));
     }
   }
   let sun = smoothstep(-sunRadiusRad, sunRadiusRad, sunElevationRad - horizon);

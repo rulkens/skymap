@@ -47,9 +47,12 @@ it('the sun-only path reads the same angle per sector as the 16-load path, and s
     x: number;
     y: number;
   }) => number;
-  for (const end of ['lower', 'upper']) {
-    expect(source).toContain(`horizonTexelAngles(atlas, block, ${end}.xy)[${end}.z]`);
-  }
+  // The upper sector reuses the lower one's load exactly when the two share a texel.
+  expect(source).toContain('let upperOwnTexel = any(upper.xy != lower.xy);');
+  expect(source).toMatch(
+    /let lowerAngles = horizonTexelAngles\(atlas, block, lower\.xy\);\s*var upperAngles = lowerAngles;\s*if \(upperOwnTexel\) \{\s*upperAngles = horizonTexelAngles\(atlas, block, upper\.xy\);\s*\}/,
+  );
+  expect(source).toContain('mix(lowerAngles[lower.z], upperAngles[upper.z], fract(sector))');
   for (let sector = 0; sector < HORIZON_SECTORS; sector++) {
     const { dx: x, dy: y } = horizonTexelOf(sector);
     expect(columns[columnOf({ x, y })], `sector ${sector}`).toEqual([x, y]);
