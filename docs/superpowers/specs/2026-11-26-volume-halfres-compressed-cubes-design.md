@@ -338,7 +338,7 @@ value. The renderer knows no format and holds no CPU copy.
 **Shader** (`fragment.wesl`), per sample:
 
 ```wgsl
-let lod = clamp(log2(max(t, 1e-6)) + lodOffset, 0.0, u.maxLod);  // lodOffset per ray
+let lod = clamp(log2(max(t, 1e-6)) + lodOffset, 0.0, f32(textureNumLevels(volume) - 1u));  // lodOffset per ray
 let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * u.gain, 1.0);
 ```
 
@@ -365,7 +365,7 @@ MCPM ASTC, per draw on vs off: inside 0.400 / 0.375 ms, outside 600 Mpc 0.575 / 
 | Offset | Member | Type | SCFD value |
 | --- | --- | --- | --- |
 | 260 | `gain` | f32 | 1 |
-| 264 | `maxLod` | f32 (`mipLevelCount − 1`) | 0 |
+| 264 | `_pad0` | f32 | 0 |
 | 268 | `baseVoxelMpc` | f32 | header voxel size |
 | 272 | `nativeBoxOffset` | vec3<f32> | (0, 0, 0) |
 | 284 | pad | f32 | 0 |

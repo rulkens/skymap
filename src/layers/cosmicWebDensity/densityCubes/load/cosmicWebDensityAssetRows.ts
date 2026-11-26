@@ -2,7 +2,7 @@
  * The Layer's asset rows, one per source row, keyed by its id, then the jitter
  * mask. Switching a cube off releases it, and the slot's `onRelease` frees its
  * GPU textures. The mask serves every cube, so it loads with the first and goes
- * with the last; the liveness holds the march until it settles.
+ * with the last.
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';

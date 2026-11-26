@@ -16,7 +16,6 @@ export type CosmicWebDensityRuntime = {
   readonly upsample: AdditiveUpsample;
   /** Bound by the renderer from creation, zero until `jitterMaskSlot` commits; the Layer frees it. */
   readonly jitterMask: GPUTexture;
-  /** The liveness waits for it to settle, so no cube marches the zero mask's step grid. */
   readonly jitterMaskSlot: AssetSlot<ArrayBuffer, void>;
   readonly slots: Readonly<
     Record<CosmicWebDensityFieldId, AssetSlot<GpuVolume, CosmicWebDensityReq>>

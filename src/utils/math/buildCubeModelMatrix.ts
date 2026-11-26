@@ -7,10 +7,6 @@
  * inside `volumeFieldRenderer` — because two renderers depend on it, and a
  * renderer importing from a sibling renderer would couple their teardown and
  * load order for no reason. Both consume this neutral helper instead.
- *
- * The parameter is the narrow `CubePlacement` structural type: the volume
- * renderer passes `GpuVolume.placement`, the flow renderer builds one from
- * `FlowFieldMeta` + an identity rotation. See `CubePlacement` for that rationale.
  */
 import { mat4, type Mat4 } from 'wgpu-matrix';
 import { FRAME_TO_WORLD } from '../../data/frameToWorld';

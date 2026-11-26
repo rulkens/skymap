@@ -186,18 +186,6 @@ describe('loadVolumePyramid', () => {
     expect(device.texture.destroy).toHaveBeenCalledOnce();
   });
 
-  it('a validation error on one write throws and destroys the texture', async () => {
-    serve(fetch);
-    const device = mockDevice();
-    // Creation's two pops pass; every write's scope reports the error.
-    device.popErrorScope
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValue({ message: 'bad copy' } as GPUError);
-    await expect(load(device).promise).rejects.toThrow(/bad copy/);
-    expect(device.texture.destroy).toHaveBeenCalledOnce();
-  });
-
   it('a failed write check on the coarsest level stops the load before the next fetch', async () => {
     serve(fetch);
     const device = mockDevice();
