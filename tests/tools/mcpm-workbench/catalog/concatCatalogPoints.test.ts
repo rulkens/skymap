@@ -23,4 +23,22 @@ describe('concatCatalogPoints', () => {
     expect(joined.count).toBe(3);
     expect(joined.sources).toEqual(['sdss']);
   });
+
+  // A loaded file near the 400 MB cap with every built-in off would otherwise sit in memory twice.
+  it('hands the only non-empty part back without copying it, keeping every source', () => {
+    const file = {
+      positions: new Float32Array([4, 5, 6]),
+      weight: new Float32Array([0.1]),
+      count: 1,
+      sources: [],
+    };
+    const empty = { positions: new Float32Array(), weight: new Float32Array(), count: 0 };
+
+    const joined = concatCatalogPoints([{ ...empty, sources: ['sdss'] }, file]);
+
+    expect(joined.positions).toBe(file.positions);
+    expect(joined.weight).toBe(file.weight);
+    expect(joined.count).toBe(1);
+    expect(joined.sources).toEqual(['sdss']);
+  });
 });
