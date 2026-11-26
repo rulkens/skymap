@@ -1,8 +1,9 @@
 /**
  * loadVolumePyramid — a volume pyramid into one `GpuVolume`: the sidecar, one texture in the best
  * format the device takes, then the level files coarse to fine, each streamed through one reused
- * slab. It returns only once every write has passed its error check, so no frame samples a level
- * still being filled; on any error, abort included, the texture is destroyed. Spec:
+ * slab. Each level's writes pass their error checks before the next level is fetched, so a failed
+ * write stops the download and no frame samples a level still being filled; on any error, abort
+ * included, the texture is destroyed. Spec:
  * `docs/superpowers/specs/2026-11-26-volume-halfres-compressed-cubes-design.md` §6.
  */
 
@@ -39,7 +40,6 @@ export async function loadVolumePyramid(
   const [width, height, depthOrArrayLayers] = levels[0]!.dims;
   // Assigned in the scoped call's closure, which TS's narrowing cannot see; the cast keeps the union.
   let texture = undefined as GPUTexture | undefined;
-  const writeChecks: Promise<void>[] = [];
   try {
     await scopedGpuCall(device, () => {
       // Dawn clears a whole 3D level through one staging buffer before its first partial write;
@@ -67,29 +67,31 @@ export async function loadVolumePyramid(
         bytesPerRow: levelByteLength(w, blockEdge, 1, bytesPerTexel),
         rowsPerImage: h / blockEdge,
       };
+      const writeChecks: Promise<void>[] = [];
       await streamLevelSlabs(
         res.body.getReader(),
         { sliceBytes: levelByteLength(w, h, 1, bytesPerTexel), depth },
         slab,
-        (bytes, z, sliceCount) =>
-          writeChecks.push(
-            scopedGpuCall(device, () =>
-              device.queue.writeTexture(
-                { texture: target, mipLevel: mip, origin: { x: 0, y: 0, z } },
-                bytes,
-                layout,
-                { width: w, height: h, depthOrArrayLayers: sliceCount },
-              ),
+        (bytes, z, sliceCount) => {
+          const check = scopedGpuCall(device, () =>
+            device.queue.writeTexture(
+              { texture: target, mipLevel: mip, origin: { x: 0, y: 0, z } },
+              bytes,
+              layout,
+              { width: w, height: h, depthOrArrayLayers: sliceCount },
             ),
-          ),
+          );
+          // Handled now, awaited below: a rejection mid-stream must not surface as uncaught.
+          check.catch(() => {});
+          writeChecks.push(check);
+        },
         (byteCount) => onProgress((loaded += byteCount), total),
       );
+      // Before the next fetch, so a failed write stops the download.
+      await Promise.all(writeChecks);
     }
-    await Promise.all(writeChecks);
     return { texture: target, ...volumePyramidPlacement(sidecar, baseLevel) };
   } catch (error) {
-    // Checks still pending would otherwise surface later as unhandled rejections.
-    void Promise.allSettled(writeChecks);
     texture?.destroy();
     throw error;
   }

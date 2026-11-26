@@ -155,6 +155,29 @@ describe('loadVolumePyramid', () => {
     expect(device.texture.destroy).toHaveBeenCalledOnce();
   });
 
+  it('a failed write check on the coarsest level stops the load before the next fetch', async () => {
+    serve(fetch);
+    const device = mockDevice();
+    device.popErrorScope
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue({ message: 'bad copy' } as GPUError);
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      await expect(load(device).promise).rejects.toThrow(/bad copy/);
+      await new Promise((r) => setTimeout(r, 10));
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(fetch.mock.mock.calls.map(([url]) => url)).toEqual([
+      `${PREFIX}.json`,
+      `${PREFIX}.r8.L3.bin`,
+    ]);
+    expect(device.texture.destroy).toHaveBeenCalledOnce();
+  });
+
   it('a 404 sidecar throws HttpError before any texture exists', async () => {
     fetch.mock.mockResolvedValue(new Response('', { status: 404 }));
     const device = mockDevice();
