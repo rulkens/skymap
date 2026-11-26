@@ -1,8 +1,8 @@
 /**
  * packLogTraceVoxels — shared value transform for SCFD volume builders
  * whose source field is non-negative and heavy-tailed (MCPM trace
- * density; the rhizome SCFD importer reuses this so the two builders
- * cannot drift apart on normalisation).
+ * density, Edenhofer dust; the rhizome importer, the dust builder and the
+ * workbench's `.scfd` export share it so they cannot drift apart).
  *
  * Maps log(1+v)/log(1+max) → [0,1] so a heavy tail (MCPM: min=0,
  * max≈40000, mean≈16, p99≈320) spans the LUT instead of collapsing to

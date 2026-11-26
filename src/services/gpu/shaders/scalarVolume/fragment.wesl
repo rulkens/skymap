@@ -90,6 +90,12 @@ struct VolumeUniforms {
   jitterIndex: f32,
   // March steps per ray (an integer, exact in f32).
   steps: f32,
+  gain: f32,
+  _pad0: f32,
+  baseVoxelMpc: f32,
+  // The stored box inside the native grid's [0,1]³ (GpuVolume.nativeBox).
+  nativeBoxOffset: vec3<f32>,
+  nativeBoxScale: vec3<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: VolumeUniforms;
@@ -216,22 +222,22 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   let texel = vec2<u32>(fragCoord.xy) % vec2<u32>(maskDims.x);
   let maskValue = textureLoad(jitterMask, vec2<u32>(texel.x, (frame % slices) * maskDims.x + texel.y), 0).r;
   let jitter = maskValue * stepLength;
+  // The camera is the ray origin, so local distance t times |M·dir| is world distance and one
+  // pixel spans t·|M·dir| / (pxPerRad·baseVoxelMpc) base voxels: its log2 is the LOD.
+  let lodOffset = log2(length((uniforms.modelMatrix * vec4<f32>(rayDirLocal, 0.0)).xyz)
+                       / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
+  // Opacity and the envelope stay in native-grid units, so a cropped box looks like the whole grid.
+  let nativeStepLength = stepLength * length(uniforms.nativeBoxScale * rayDirLocal);
+  let maxLod = f32(textureNumLevels(volume) - 1u);
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
   for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {
+    // Local [0,1]^3 is the stored box, so 'samplePos' is directly the texture coordinate.
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
-    // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
-    // local AABB, so 'samplePos' is directly the texture coordinate.
-    //
-    // Why textureSampleLevel with explicit LOD 0 instead of textureSample:
-    // textureSample requires UNIFORM control flow (it computes implicit
-    // mipmap derivatives across a quad of fragments), but the early-out
-    // 'break' below at saturation makes the loop's iteration count vary
-    // across neighbouring fragments — non-uniform.  textureSampleLevel
-    // takes an explicit LOD instead of computing one, so it works in
-    // non-uniform control flow.  Our 3D texture has only one mip level
-    // anyway, so explicit LOD 0 is exactly what we want.
-    let sampleValue = textureSampleLevel(volume, volumeSampler, samplePos, 0.0).r;
+    // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
+    // textureSample's implicit derivatives are undefined.
+    let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
+    let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
@@ -244,31 +250,19 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the palette LUT (an N x 1 2D texture; see
-    // the binding declaration). Same uniformity constraint as the volume
-    // sample above, so explicit LOD 0.  The v-coordinate is fixed at 0.5
+    // the binding declaration), one mip, so explicit LOD 0.  The v-coordinate is fixed at 0.5
     // -- the centre of the single texel row -- so clamp-to-edge sampling
     // never bleeds in a neighbouring row.
     let lut = textureSampleLevel(palette, paletteSampler, vec2<f32>(signedT, 0.5), 0.0);
-    // Per-step alpha = density * stepLength.  This is the discrete form
+    // Per-step alpha = density * nativeStepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
     // sum(density * dx) which is path-length-correct (a longer ray
     // through the same density yields proportionally more opacity).
-    //
-    // The original (buggy) formula was 'lut.a * intensity * stepLength
-    // * steps * 0.01', which cancels the '/ steps' inside
-    // stepLength and ends up with per-step alpha ∝ total path length.
-    // That made the contribution amplitude depend on the ray's full
-    // extent, so a long ray (camera far from cube) over-saturated the
-    // first sample's RGB (alpha can exceed 1, scaling lut.rgb past
-    // unity in the pre-multiply), while a short ray (camera inside)
-    // produced smaller per-step contributions and a darker result.
-    // The visible symptom: the blob got LIGHTER as the camera entered
-    // it.  The fix below makes per-step alpha proportional to the
-    // sampled length, and the multi-step composite naturally
-    // integrates to the correct total optical depth.
+    // Per-step alpha must not scale with the ray's whole extent, or the
+    // blob gets lighter as the camera enters it.
     //
     // The DENSITY_SCALE constant tunes how aggressive the opacity is
-    // per local-space unit.  Local space spans [0,1]^3 so a full
+    // per native-grid unit.  The native grid spans [0,1]^3 so a full
     // diagonal ray has length √3 ≈ 1.73; at lut.a=0.9, intensity=0.5,
     // DENSITY_SCALE=1 we get N·(0.9·0.5·√3/N) ≈ 0.78 of opacity which
     // reads as "saturated through the dense centre" — a reasonable
@@ -282,15 +276,16 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // regime).
     //
     // Two extra multipliers on top of the canonical
-    // lut.a * intensity * densityScale * stepLength:
+    // lut.a * intensity * densityScale * nativeStepLength:
     //   - visibility from the contrast window, fading out near-mean
     //     voxels (problem 1: "contrast was amplifying noise").
     //   - sphericalEnvelope fading out the cube corners (problem 2:
     //     "the cube silhouette is visible").  Cubes that don't want
     //     this set both envelope edges past √3 and the multiplier is
     //     pinned to 1.0 — same shader path, no branching.
-    let envelope = sphericalEnvelope(samplePos, uniforms.envelopeInner, uniforms.envelopeOuter);
-    let alpha = lut.a * uniforms.intensity * uniforms.densityScale * stepLength
+    let envelope = sphericalEnvelope(uniforms.nativeBoxOffset + samplePos * uniforms.nativeBoxScale,
+                                     uniforms.envelopeInner, uniforms.envelopeOuter);
+    let alpha = lut.a * uniforms.intensity * uniforms.densityScale * nativeStepLength
               * visibility * envelope;
     // Bright-end-weighted exposure boost.  An earlier draft scaled
     // every voxel uniformly by exposure (rgb * alpha * uniforms.exposure),

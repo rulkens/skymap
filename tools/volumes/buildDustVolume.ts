@@ -8,9 +8,9 @@
  * Pure Node/TS — no Python required. The two cubes collapse to one
  * per-voxel value via `logNormalMedian` (log-normal median from mean+std,
  * de-biasing the posterior mean's void-brightening — grill Q3), then pack
- * through the *same* `packLogTraceVoxels` MCPM and the rhizome importer
- * share: dust density is non-negative and heavy-tailed exactly like the
- * MCPM slime trace, so log(1+v)/log(1+max) applies unchanged — no third
+ * through the *same* `packLogTraceVoxels` the rhizome importer uses: dust
+ * density is non-negative and heavy-tailed exactly like the MCPM slime
+ * trace, so log(1+v)/log(1+max) applies unchanged — no second
  * near-duplicate normaliser.
  *
  * CLI:

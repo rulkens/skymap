@@ -9,8 +9,8 @@ on the heavy-tailed slime trace), block-averages by factors {8, 4, 2},
 and writes the three downsampled cubes as .npy files in data/raw/mcpm/.
 
 Run once per VAC release.  The .npy outputs get uploaded to R2 (see
-tools/syncR2.ts EXTRA_FILES); contributors curl them instead of running
-this script.
+tools/deploy/r2/collectExtraFiles.ts); contributors curl them instead of
+running this script.
 
 Inputs (both required, alongside this script's RAW_DIR):
     data/raw/mcpm/trace.bin           — the uncompressed cube (~2.3 GB)
@@ -25,7 +25,7 @@ Dependencies (maintainer-only): see data/raw/mcpm/README.md for the
 project-local venv setup.
 
 Usage:
-    .venv/bin/python tools/extractMcpmCube.py
+    .venv/bin/python tools/volumes/extractMcpmCube.py
     # writes mcpm_sdss_d{8,4,2}.npy into data/raw/mcpm/
 
 Verification:
@@ -35,7 +35,7 @@ Verification:
     export_metadata.txt implies (see CF-4 commit c6024d3 for the
     precedent surprise — "transpose numpy axes 0↔2 to match WebGPU
     x-fastest layout").  If that happens, the build script in
-    tools/buildMcpmVolume.ts already does the WebGPU-axis transpose;
+    tools/volumes/buildVolumePyramid.ts already does the WebGPU-axis transpose;
     this script just needs to ensure the .npy ends up in (X, Y, Z)
     order matching export_metadata.txt's (712, 1200, 728).
 """

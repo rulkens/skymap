@@ -1,31 +1,22 @@
-/**
- * createCosmicWebDensitySlot — one density row's asset slot, construction-pure. Its commit waits
- * for the jitter mask, so no frame marches a cube with zero jitter (a visible step grid) while the
- * mask is still on its way.
- */
+/** createCosmicWebDensitySlot — one density row's asset slot, construction-pure. */
 
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
-import { cosmicWebDensityFetcher } from './cosmicWebDensityFetcher';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
-import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
-import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
+import type { GpuVolume } from '../../../../@types/rendering/GpuVolume';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
+import type { CosmicWebDensitySlotDeps } from '../../@types/CosmicWebDensitySlotDeps';
 
 export function createCosmicWebDensitySlot(
   entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number],
-  renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>,
-  jitterMaskReady: Promise<void>,
-): AssetSlot<ScalarCube, CosmicWebDensityReq> {
+  { renderer, fetch }: CosmicWebDensitySlotDeps,
+): AssetSlot<GpuVolume, CosmicWebDensityReq> {
   const id = entry.id;
-  return createAssetSlot<ScalarCube, CosmicWebDensityReq>({
+  return createAssetSlot<GpuVolume, CosmicWebDensityReq>({
     name: id,
-    fetch: cosmicWebDensityFetcher,
-    commit: async (cube) => {
-      await jitterMaskReady;
-      renderer.upload(id, cube, entry);
-    },
+    fetch,
+    commit: async (volume) => renderer.upload(id, volume, entry),
     onRelease: () => renderer.unload(id),
+    dispose: (volume) => volume.texture.destroy(),
   });
 }

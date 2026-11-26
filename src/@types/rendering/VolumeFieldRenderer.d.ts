@@ -11,7 +11,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { ScalarCube } from '../data/volume/ScalarCube';
+import type { GpuVolume } from './GpuVolume';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
@@ -24,10 +24,13 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  /** `statics` are the per-cube, non-tunable presentation facts, read once here. */
+  /**
+   * Takes ownership of `volume.texture` (destroyed on re-upload, `unload` and `destroy`).
+   * `statics` are the per-cube, non-tunable presentation facts, read once here.
+   */
   upload(
     id: Id,
-    cube: ScalarCube,
+    volume: GpuVolume,
     statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
   ): void;
   unload(id: Id): void;

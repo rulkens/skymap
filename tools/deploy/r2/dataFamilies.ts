@@ -35,8 +35,15 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     label: 'scalar-field',
     dir: null,
-    fileName:
-      /^(?:(mcpm|polyphorm-2mrs|edenhofer-dust)-(small|medium|large)\.scfd|mcpm-workbench\.scfd)$/,
+    fileName: /^(?:edenhofer-dust-(small|medium|large)\.scfd|mcpm-workbench\.scfd)$/,
+    transport: 'wrangler',
+    gzipOnWire: true,
+  },
+  {
+    // tools/volumes/buildVolumePyramid.ts; matched by folder, so the name carries no field id.
+    label: 'volume-pyramid',
+    dir: 'volume-pyramid/v1',
+    fileName: /^[a-z0-9-]+\.(?:json|(?:astc6|bc4|r8)\.L[1-3]\.bin)$/,
     transport: 'wrangler',
     gzipOnWire: true,
   },

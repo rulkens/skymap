@@ -2,12 +2,14 @@
 
 Three downsampled `.npy` tiers of the SDSS DR17 Cosmic Slime VAC
 `SDSS_z_44-476mpc` cube (Wilde et al. 2023). Used by
-`tools/buildMcpmVolume.ts` to emit `public/data/mcpm-{small,medium,large}.scfd`.
+`tools/volumes/buildVolumePyramid.ts` to emit the pyramid `public/data/volume-pyramid/v1/mcpm.*`.
 
 This directory is gitignored. Contributors download the pre-extracted
 `.npy` files from R2; only the maintainer runs the extractor.
 
 ## Contributor (every full data rebuild)
+
+`build-mcpm` needs basisu (see docs/DATA.md).
 
 ```bash
 mkdir -p data/raw/mcpm
@@ -37,13 +39,13 @@ curl -L -o data/raw/mcpm/trace.bin.bz2 \
   https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/trace.bin.bz2
 
 # 3. Extract + downsample (peak RAM ≈ 10 GB for the 712×1200×728 f32 cube)
-.venv/bin/python tools/extractMcpmCube.py
+.venv/bin/python tools/volumes/extractMcpmCube.py
 
-# 4. Build the .scfd files locally
+# 4. Build the pyramid locally (needs basisu, see docs/DATA.md)
 npm run build-mcpm
 
-# 5. Upload .npy tiers + .scfd outputs to R2 (idempotent)
-npm run sync-r2
+# 5. Upload .npy tiers + pyramid outputs to R2 (idempotent)
+npm run sync-r2-secure
 ```
 
 ### Why a project-local venv (not conda, not system pip)

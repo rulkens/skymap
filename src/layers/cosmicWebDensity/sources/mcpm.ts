@@ -8,7 +8,8 @@ export const MCPM_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'mcpm',
-  tiered: true, // small / medium / large `.scfd` variants
+  storage: 'pyramid',
+  priority: 70, // the largest single boot payload, and it only reads at the widest rung
   paletteId: 'inferno',
   contrast: 1.7,
   contrastCenter: 0.0,

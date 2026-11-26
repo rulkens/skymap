@@ -90,7 +90,7 @@ The short list is our own <Source id="seed-local-volume">local-volume distances<
 
 <Fact id="pipe-galaxy-format" />
 
-There is one file for each catalogue at each data size. Stars, structures, density fields, filaments and the <Source id="local-bubble">Local Bubble</Source> each have a format of their own, and all open the same way: a short header that names the format and its version. What follows differs. Stars and structures are records of a fixed size, a density field is a cube of numbers, the filaments are lines of varying length behind a table that says where each starts, and the Local Bubble is a mesh of points and triangles.
+There is one file for each catalogue at each data size. Stars, structures, density fields, filaments and the <Source id="local-bubble">Local Bubble</Source> each have a format of their own. All but the cosmic-web density field open the same way: a short header that names the format and its version. What follows differs. Stars and structures are records of a fixed size, a density field is a set of cubes at three sizes, the filaments are lines of varying length behind a table that says where each starts, and the Local Bubble is a mesh of points and triangles.
 
 <Fact id="pipe-manifest" />
 
@@ -128,7 +128,7 @@ Cluster and [supercluster](/docs/reference/glossary/#supercluster) markers are b
 
 <Fact id="sci-structures" />
 
-The glow of the [cosmic web](/docs/reference/glossary/#cosmic-web) is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as a cube of numbers with a header that says what the cube spans.
+The glow of the [cosmic web](/docs/reference/glossary/#cosmic-web) is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as cubes of numbers, with a note of what each cube spans.
 
 <Figure id="science-web-points" />
 

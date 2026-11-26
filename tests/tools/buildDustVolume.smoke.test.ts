@@ -1,9 +1,8 @@
 /**
- * End-to-end smoke test for tools/volumes/buildDustVolume.ts. Mirrors
- * tests/tools/buildMcpmVolume.smoke.test.ts's shape: write synthetic
- * .npy inputs, build, decode the .scfd, assert header fields — plus the
- * one thing buildDustVolume adds over buildMcpmVolume: collapsing a
- * mean+std pair via the log-normal median before packing.
+ * End-to-end smoke test for tools/volumes/buildDustVolume.ts: write
+ * synthetic .npy inputs, build, decode the .scfd, assert header fields —
+ * plus the one thing buildDustVolume adds over a plain trace import:
+ * collapsing a mean+std pair via the log-normal median before packing.
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';

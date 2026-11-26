@@ -1,0 +1,1 @@
+export const DDS_DX10_HEADER_BYTES = 148; // magic 4 + DDS_HEADER 124 + DDS_HEADER_DXT10 20

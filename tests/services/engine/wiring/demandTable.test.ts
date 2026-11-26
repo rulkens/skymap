@@ -161,7 +161,10 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   for (const entry of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
   }
-  const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
+  const densityRuntime = {
+    slots: densitySlots,
+    jitterMaskSlot: stubSlot(),
+  } as unknown as CosmicWebDensityRuntime;
 
   const state = {
     tier: 'medium',
@@ -243,9 +246,9 @@ afterEach(() => {
 describe('reevaluateDemand demand-table regression', () => {
   /** Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas enabled; DesiDeep/Wedge/Sgw not demanded. Famous is
    *  'loading' by the time famousGalaxiesMeta evaluates, so it is demanded; structureCatalog loads (every
-   *  category visible); mcpm demanded (boots true), polyphorm-2mrs not; pgcAlias not (palette closed);
-   *  `hiResFamous` demands unconditionally (its fetch is a GPU allocation). */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
+   *  category visible); mcpm demanded (boots true) and the jitter mask with it, polyphorm-2mrs not;
+   *  pgcAlias not (palette closed); `hiResFamous` demands unconditionally (its fetch is a GPU allocation). */
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm + jitter-mask (DesiDeep + DesiWedge + DesiSgw off)', async () => {
     const state = makeState();
 
     const fired = await firedKeys(state);
@@ -261,6 +264,7 @@ describe('reevaluateDemand demand-table regression', () => {
         'hiResFamous',
         'structureCatalog',
         'mcpm',
+        'jitter-mask',
       ]),
     );
   });
