@@ -260,13 +260,13 @@ createCosmicWebDensitySlot(entry, renderer, jitterMaskReady: Promise<void>)
 
 Steps:
 
-- [ ] Test `a cube commits only after the jitter mask is written`:
+- [x] Test `a cube commits only after the jitter mask is written`:
   - Run a slot whose fetch resolves while `jitterMaskReady` is still pending.
   - `renderer.upload` has not been called, and the slot's state is `committing`.
   - After resolving the promise, `upload` is called once.
-- [ ] Implement as above. `create.ts` builds the mask first, then hands `jitterMask.texture` to
+- [x] Implement as above. `create.ts` builds the mask first, then hands `jitterMask.texture` to
       the renderer bag (Task 2) and `jitterMask.ready` to each slot.
-- [ ] `npm run typecheck:fast`, `npm test -- createCosmicWebDensitySlot cosmicWebDensity`.
+- [x] `npm run typecheck:fast`, `npm test -- createCosmicWebDensitySlot cosmicWebDensity`.
 
 **Done when:** the Layer owns, fills and frees the mask, and no density cube reaches the renderer
 before the mask does.

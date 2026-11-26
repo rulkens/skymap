@@ -190,7 +190,7 @@ function makeState(
     slots: Object.fromEntries(
       COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
         entry.id,
-        createCosmicWebDensitySlot(entry, densityRenderer),
+        createCosmicWebDensitySlot(entry, densityRenderer, Promise.resolve()),
       ]),
     ),
   } as unknown as CosmicWebDensityRuntime;
