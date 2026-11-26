@@ -531,13 +531,13 @@ export function streamLevelSlabs(
 
 Steps:
 
-- [ ] Tests (slice 6 B, depth 5, so 30 B; slab 13 B, so 12 usable):
+- [x] Tests (slice 6 B, depth 5, so 30 B; slab 13 B, so 12 usable):
   - `chunks at arbitrary boundaries become whole-slice writes in z order`: chunks of 1, 7, 4, 11
     and 7 B give writes (12 B, z 0, 2 slices), (12 B, z 2, 2), (6 B, z 4, 1), with the source
     bytes in order and no write longer than 12 B.
   - `a short stream throws` (29 B); `a long stream throws` (31 B).
   - `onBytes sums to the level's length`.
-- [ ] Implement. `npm test -- streamLevelSlabs`.
+- [x] Implement. `npm test -- streamLevelSlabs`.
 
 **Commit:** `Stream a pyramid level into whole-slice texture writes through one slab`
 
