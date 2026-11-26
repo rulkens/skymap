@@ -237,6 +237,7 @@ export function createSurfaceTileRenderer(
       debugLodOverlay,
       noDisplacement,
       noSkirts,
+      noShadows,
       atlasViews,
     } = args;
     const tileCount = tiles.length;
@@ -318,7 +319,9 @@ export function createSurfaceTileRenderer(
         heightCells: (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
         // Never an ancestor's rect for 'empty': a flat tile under a hilly ancestor stays lit.
         horizonRect:
-          horizon === null || horizon === 'empty' ? NO_HORIZON_RECT : horizonPostRect(horizon),
+          noShadows || horizon === null || horizon === 'empty'
+            ? NO_HORIZON_RECT
+            : horizonPostRect(horizon),
       });
     }
 
