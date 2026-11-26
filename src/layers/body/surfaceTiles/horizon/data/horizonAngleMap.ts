@@ -5,8 +5,9 @@
  */
 export const HORIZON_ANGLE_MAP = { minDeg: -3, kneeDeg: 27, kneeByte: 204, maxDeg: 90 } as const;
 
-/** Height's 129-post lattice decimated by 4; post (0,0) is the tile's north-west corner. */
-export const HORIZON_POSTS_PER_TILE = 33;
+/** Height's own 129-post lattice at the tile's level, each post marched from heights two levels
+ *  finer; post (0,0) is the tile's north-west corner. */
+export const HORIZON_POSTS_PER_TILE = 129;
 
 /** Sector k is centred on azimuth k·360°/16, clockwise from local north. */
 export const HORIZON_SECTORS = 16;

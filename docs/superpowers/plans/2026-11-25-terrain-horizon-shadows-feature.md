@@ -31,14 +31,14 @@ The spike's runtime march, its side storage buffer and its z4 global height latt
 
 | Item | Value |
 | ---- | ----- |
-| Posts per tile | 33 × 33, height's 129-post lattice decimated by 4; post (0,0) = the tile's NW corner |
+| Posts per tile | 129 × 129 on height's own lattice, marched from heights two levels finer (Task 11); post (0,0) = the tile's NW corner |
 | Sectors | 16; sector k centred on azimuth k·22.5°, **clockwise from local north** |
 | Angle byte map | byte 0–204 ↔ −3°…27° linearly (0.147°/step); byte 204–255 ↔ 27°…90° linearly |
 | Post packing | a 2×2 RGBA8 block per post; texel `(k>>2)&1, k>>3` within the block; channel `k&3` (R,G,B,A) |
-| Tile image | 66 × 66 lossless WebP, linear (no colour conversion) |
+| Tile image | 258 × 258 lossless WebP, linear (no colour conversion) |
 | Flat tile | max horizon over all posts and sectors < 1° → zero-byte file → zero-length entry → `'empty'` |
 | No data | zero rect = no data: the lookup is skipped, sun and sky visibility 1 (tiles and globe alike; no reserved slot) |
-| Lane row | `slotSide` 66, `atlasSide` 32 × 66 = 2112, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11 |
+| Lane row | `slotSide` 258, `atlasSide` 8 × 258 = 2064, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11 |
 | Sun angular radius | `asin(SUN_RADIUS_M / sunDistanceM)` per frame; `SUN_RADIUS_M = 695_700_000` (IAU nominal) |
 | Perf budget | ≈ 1 ms GPU added at the Jezero pose, 4.4° sun (spike: +0.85–1.0 ms) |
 
@@ -304,7 +304,9 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 - [ ] Bake each body overnight on all cores: `npm run bake-horizon -- --body moon --workers <cores>`,
       then `mars`, then `earth` (≈14 CPU-hours in total; announce before starting).
 - [ ] Check sizes against spec §8 (Earth ≈111, Moon ≈129, Mars ≈100 MB of packs; flat share ≈26 %
-      on Earth, 0 % elsewhere). A total outside ±20 % stops the task: report, don't ship.
+      on Earth, 0 % elsewhere). Task 11 keeps the Moon's posts and bakes 1.3× (Mars) and 1.6×
+      (Earth) the posts around regional bands (Jezero alone: 11.2 MB, was 6.0), so judge those
+      two against that. A total outside ±20 % stops the task: report, don't ship.
 - [ ] Desktop offline inventory: confirm `tools/deploy/syncR2.ts:136-152` picks up the horizon
       archives and globe images with no edit (docs/DESKTOP.md).
 - [ ] **Owner step:** `npm run sync-r2-secure`. The plan does not run it.
@@ -342,6 +344,28 @@ a height re-bake re-bakes horizon over the area grown by the search radius), `do
 (remove nothing; the Moon polar double-shadow item stays).
 
 - [x] Write; `npm run format`. Commit.
+
+---
+
+### Task 11: four times the posts per side (owner ruling, 2026-11-26)
+
+**Why:** one 33-post tile per leaf level gave a z5 Moon leaf a post every 10.7 km (Copernicus's
+shadows were blobs), and the first cut leaves read half the posts of the globe image they replace.
+
+**Files:** `horizonAngleMap.ts` (`HORIZON_POSTS_PER_TILE` 129), `surfaceTileParams.ts` (258 px
+slots, 8 × 8 atlas); the bake: `bakeHorizonTile.ts` (the 33-post march unit, now returns
+`HorizonSubTile`), `utils/assembleHorizonTile.ts` (16 sub-tiles at z + 2 → one tile, flat rule),
+`horizonBakeWorker.ts`, `utils/horizonTilesOfBand.ts` (tiles two levels above the heights, sibling
+closed), `utils/horizonManifest.ts` (a horizon row per height band at `[min − 2, max − 2]`),
+`data/horizonSubTiles.ts`, `data/horizonGlobeLevels.ts` (z2, z3); spec §2–§5, §7, §8, §10; README,
+DATA.md, RENDERER.md.
+
+- [x] Tests first: assembly byte identity (`assembleHorizonTile.test.ts`), hand-off and z + 2
+      density through the tier, planner and resolver code (`horizonManifest.test.ts`), bake tiles
+      equal the runtime's request predicate (`horizonTilesOfBand.test.ts`).
+- [x] Implement; the march is unchanged: a sample of real Moon and Mars tiles matched the old
+      33-post tiles at z + 2 byte for byte. Commit.
+- [ ] Re-bake all three bodies (Task 8), clearing each `<prefix>/horizon/` first.
 
 ---
 

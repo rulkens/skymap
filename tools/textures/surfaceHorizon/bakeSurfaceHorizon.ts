@@ -2,10 +2,11 @@
 /**
  * bakeSurfaceHorizon — bakes a body's horizon-angle tiles from the height archives already on
  * disk: `npm run bake-horizon -- --body earth|moon|mars [--band <i>] [--workers N]`, `--band`
- * indexing `manifest.json`'s bands. Run after the height bake (see README for the order).
+ * indexing `manifest.json`'s bands with heights. Run after the height bake (README: the order).
  *
- * Tiles go to `<prefix>/horizon/<z>/<x>/<y>.webp` (zero bytes when flat), one worker-thread
- * task each; a tile already on disk is skipped, so an interrupted bake resumes. The archives,
+ * Tiles go to `<prefix>/horizon/<z>/<x>/<y>.webp` (zero bytes when flat), two levels above the
+ * heights they march, one worker-thread task each; a tile already on disk is skipped, so an
+ * interrupted bake resumes. The archives,
  * `index.txt`, the globe images and `builtFrom.horizon` are written last, only after every
  * tile of the selected bands exists, like `bakeAll`: a killed run leaves the manifest as it was.
  */
@@ -18,16 +19,15 @@ import { Worker } from 'node:worker_threads';
 
 import type { SurfaceTileBodyId } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId';
 import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { writeFileAtomic } from '../../utils/io/writeFileAtomic';
-import { mergeSurfaceTileManifest } from '../../utils/textures/mergeSurfaceTileManifest';
 import { packSurfaceTileLevels } from '../../utils/textures/packSurfaceTileLevels';
 import type { HorizonBakeReply } from './@types/HorizonBakeReply';
 import type { HorizonBakeTask } from './@types/HorizonBakeTask';
 import type { HorizonBakeWorkerData } from './@types/HorizonBakeWorkerData';
 import { HORIZON_BODY_RADIUS_M } from './data/horizonBodyRadiusM';
 import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import { horizonManifest } from './utils/horizonManifest';
 import { horizonTilesOfBand } from './utils/horizonTilesOfBand';
 import { writeGlobeHorizon } from './utils/writeGlobeHorizon';
 
@@ -106,14 +106,14 @@ async function main(): Promise<void> {
     .split('\n')
     .filter((line) => line.length > 0);
 
+  // Horizon-only rows are this tool's own output, not a source.
+  const heightBands = manifest.bands.filter((band) => band.builtFrom.height !== undefined);
   const bandFlag = flagValue(argv, '--band');
   const bands =
-    bandFlag === undefined
-      ? manifest.bands
-      : manifest.bands.filter((_, i) => i === Number(bandFlag));
+    bandFlag === undefined ? heightBands : heightBands.filter((_, i) => i === Number(bandFlag));
   if (bands.length === 0) {
     throw new Error(
-      `bakeSurfaceHorizon: no band ${bandFlag}, the manifest has ${manifest.bands.length}`,
+      `bakeSurfaceHorizon: no band ${bandFlag}, the manifest has ${heightBands.length} with heights`,
     );
   }
   const workerCount = Number(
@@ -121,9 +121,14 @@ async function main(): Promise<void> {
   );
 
   const { prefix } = manifest;
-  const tasks = bands.flatMap((band) =>
-    horizonTilesOfBand(indexLines, prefix, band, manifest.tilePx),
-  );
+  // Overlapping bands can yield one tile twice; two workers writing it would race on its .tmp.
+  const tasks = [
+    ...new Map(
+      bands
+        .flatMap((band) => horizonTilesOfBand(indexLines, prefix, band, manifest.tilePx))
+        .map((task) => [`${task.z}/${task.x}/${task.y}`, task]),
+    ).values(),
+  ];
   const pending = tasks.filter(
     ({ z, x, y }) =>
       !existsSync(join(IMAGES_DIR, surfaceTilePath({ product: 'horizon', z, x, y }, prefix))),
@@ -138,13 +143,21 @@ async function main(): Promise<void> {
   );
   process.stderr.write(`  baked ${counts.image} image + ${counts.flat} flat tiles\n`);
 
+  // A line whose tile is gone from disk (a cleared horizon folder) is dropped, not re-packed.
   const horizonLines = [
     ...new Set([
-      ...indexLines.filter((line) => line.startsWith(`${prefix}/horizon/`)),
+      ...indexLines.filter(
+        (line) => line.startsWith(`${prefix}/horizon/`) && existsSync(join(IMAGES_DIR, line)),
+      ),
       ...tasks.map(({ z, x, y }) => surfaceTilePath({ product: 'horizon', z, x, y }, prefix)),
     ]),
   ].sort();
-  const sorted = [...new Set([...indexLines, ...horizonLines])].sort();
+  const sorted = [
+    ...new Set([
+      ...indexLines.filter((line) => !line.startsWith(`${prefix}/horizon/`)),
+      ...horizonLines,
+    ]),
+  ].sort();
   writeFileAtomic(indexPath, new TextEncoder().encode(`${sorted.join('\n')}\n`));
   process.stderr.write(
     `  ${packSurfaceTileLevels(IMAGES_DIR, prefix, horizonLines)} archive files packed\n`,
@@ -154,18 +167,7 @@ async function main(): Promise<void> {
   }
 
   // Last, so an interrupted run leaves the previous manifest naming only what is whole.
-  const horizonBands: SurfaceTileManifestBand[] = bands.map((band) => ({
-    ...band,
-    builtFrom: {
-      horizon: {
-        sourceId: 'derived:height',
-        attribution: band.builtFrom.height?.attribution ?? '',
-        vintage: band.builtFrom.height?.vintage ?? '',
-      },
-    },
-  }));
-  const merged = mergeSurfaceTileManifest(manifest, { ...manifest, bands: horizonBands });
-  writeFileSync(manifestPath, `${JSON.stringify(merged, null, 2)}\n`);
+  writeFileSync(manifestPath, `${JSON.stringify(horizonManifest(manifest, bands), null, 2)}\n`);
   process.stderr.write(`done; horizon under ${join(IMAGES_DIR, prefix, 'horizon')}\n`);
 }
 

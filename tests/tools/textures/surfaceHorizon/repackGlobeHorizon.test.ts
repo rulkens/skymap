@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { HORIZON_TILE_PX } from '../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import type { HorizonTile } from '../../../../tools/textures/surfaceHorizon/@types/HorizonTile';
 import { repackGlobeHorizon } from '../../../../tools/textures/surfaceHorizon/utils/repackGlobeHorizon';
 
-const TILE_SIDE = 66;
-const TEXELS_PER_TILE = 64;
+const TILE_SIDE = HORIZON_TILE_PX;
+const TEXELS_PER_TILE = HORIZON_TILE_PX - 2;
 
-/** A 66 × 66 raster whose texel (u, v) reads `fill`, with the shared last row and column 255. */
+/** A tile raster whose texel (u, v) reads `fill`, with the shared last row and column 255. */
 function tileOf(fill: number): HorizonTile {
   const rgba = new Uint8Array(TILE_SIDE * TILE_SIDE * 4);
   for (let v = 0; v < TILE_SIDE; v++) {

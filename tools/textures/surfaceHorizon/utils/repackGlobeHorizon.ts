@@ -3,13 +3,13 @@ import type { HorizonTile } from '../@types/HorizonTile';
 
 const TILE_SIDE = 2 * HORIZON_POSTS_PER_TILE;
 // A tile's last post row and column are its neighbour's first (shared edge), so a tile
-// contributes 32 posts per axis, 64 texels.
+// contributes 128 posts per axis, 256 texels.
 const TILE_TEXELS = 2 * (HORIZON_POSTS_PER_TILE - 1);
 
 /**
  * repackGlobeHorizon — a whole level of horizon tiles as one equirect image: post (i, j) of
- * tile (x, y) lands at texel block (32x + i, 32y + j), so the image is 2^level · 64 texels
- * wide and half as tall (1024 × 512 at z4: the file is half its tier's nominal width, spec §7).
+ * tile (x, y) lands at texel block (128x + i, 128y + j), so the image is 2^level · 256 texels
+ * wide and half as tall (1024 × 512 at z2: the file is half its tier's nominal width, spec §7).
  * A flat or missing tile stays zero, byte 0 everywhere: fully lit, as the sentinel reads.
  */
 export function repackGlobeHorizon(

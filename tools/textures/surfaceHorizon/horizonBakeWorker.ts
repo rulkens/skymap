@@ -3,6 +3,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 
 import type { HorizonBakeTask } from './@types/HorizonBakeTask';
 import type { HorizonBakeWorkerData } from './@types/HorizonBakeWorkerData';
+import { assembleHorizonTile } from './utils/assembleHorizonTile';
 import { bakeHorizonTileResolved } from './utils/bakeHorizonTileResolved';
 import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { readHeightPyramid } from './utils/readHeightPyramid';
@@ -14,11 +15,16 @@ const MAX_CACHED_TILES = 1500;
 const { imagesDir, prefix, radiusM } = workerData as HorizonBakeWorkerData;
 const pyramid = readHeightPyramid(imagesDir, prefix, radiusM);
 
-/** One tile per message: bake, write, answer with the kind written (or the error). */
-parentPort!.on('message', async ({ z, x, y }: HorizonBakeTask) => {
+/** Bakes the tile's 16 sub-tiles, assembles, writes, answers with the kind written (or the error). */
+async function bakeTask({ z, x, y }: HorizonBakeTask): Promise<void> {
   try {
     pyramid.trim(MAX_CACHED_TILES);
-    const tile = await bakeHorizonTileResolved(pyramid, z, x, y);
+    const tile = await assembleHorizonTile(
+      (subZ, subX, subY) => bakeHorizonTileResolved(pyramid, subZ, subX, subY),
+      z,
+      x,
+      y,
+    );
     await writeHorizonTile(
       join(imagesDir, surfaceTilePath({ product: 'horizon', z, x, y }, prefix)),
       tile,
@@ -27,4 +33,7 @@ parentPort!.on('message', async ({ z, x, y }: HorizonBakeTask) => {
   } catch (error) {
     parentPort!.postMessage({ error: `${z}/${x}/${y}: ${(error as Error).stack}` });
   }
-});
+}
+
+// One tile per message; `bakeTask` reports its own failures, so nothing is left to await.
+parentPort!.on('message', (task: HorizonBakeTask) => void bakeTask(task));

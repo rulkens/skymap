@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import type { HorizonTile } from '../@types/HorizonTile';
 
 /** readHorizonTileFile — a baked horizon tile back from disk: a zero-byte file is flat, anything
- *  else the 66 × 66 RGBA raster; null when the file is absent. */
+ *  else the 258 × 258 RGBA raster; null when the file is absent. */
 export async function readHorizonTileFile(path: string): Promise<HorizonTile | null> {
   let size: number;
   try {

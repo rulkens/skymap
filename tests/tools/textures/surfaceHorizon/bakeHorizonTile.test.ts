@@ -40,9 +40,7 @@ function pyramid(
 }
 
 function bakedImage(source: HeightPyramid, x: number, y: number): Uint8Array {
-  const tile = bakeHorizonTile(source, Z, x, y);
-  if (tile.kind !== 'image') throw new Error('expected an image tile');
-  return tile.rgba;
+  return bakeHorizonTile(source, Z, x, y).rgba;
 }
 
 function analyticDeg(heightM: number, distanceM: number): number {
@@ -77,18 +75,12 @@ describe('bakeHorizonTile', () => {
     expect(redAt(rgba, 0, 2, SOUTH)).toBe(FLAT_BYTE);
   });
 
-  it('a flat sphere bakes as flat', () => {
-    expect(
-      bakeHorizonTile(
-        pyramid(
-          () => -1200,
-          () => -1200,
-        ),
-        Z,
-        512,
-        256,
-      ),
-    ).toEqual({ kind: 'flat' });
+  it("a flat sphere's horizon stays under the 1° flat-tile threshold", () => {
+    const flat = pyramid(
+      () => -1200,
+      () => -1200,
+    );
+    expect(bakeHorizonTile(flat, Z, 512, 256).maxDeg).toBeLessThan(1);
   });
 
   it('the march reads past the tile edge', () => {

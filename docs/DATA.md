@@ -244,14 +244,14 @@ A region adjacent to a baked one also leaves stale z8–z12 parents and z13 halo
 
 ### Surface horizon (terrain shadows)
 
-A derived product, **horizon**, sits beside height in each body's tile tree: `<prefix>/horizon/<z>/<x>/<y>.webp`, 66 x 66 lossless RGBA holding 16 horizon-angle sectors per post on height's 33 x 33 decimated lattice, a zero-byte file for a flat tile. It is baked from the height archives only (`builtFrom.horizon`, `sourceId: 'derived:height'`), so it follows height's prefix. Tool, flags and output details: [`tools/textures/surfaceHorizon/README.md`](../tools/textures/surfaceHorizon/README.md).
+A derived product, **horizon**, sits beside height in each body's tile tree: `<prefix>/horizon/<z>/<x>/<y>.webp`, 258 x 258 lossless RGBA holding 16 horizon-angle sectors per post on height's own 129 x 129 lattice, a zero-byte file for a flat tile. Each post is marched from the heights two levels finer, so a band's horizon runs two levels above its heights (`[min - 2, max - 2]`, a manifest row of its own) and a leaf reads z + 2 density up to there. It is baked from the height archives only (`builtFrom.horizon`, `sourceId: 'derived:height'`), so it follows height's prefix. Tool, flags and output details: [`tools/textures/surfaceHorizon/README.md`](../tools/textures/surfaceHorizon/README.md).
 
 ```
 npm run build-surface-tiles -- --body <b>   # height
 npm run bake-horizon -- --body earth|moon|mars
 ```
 
-**Bake order is height, then horizon, then pack**; the horizon tool packs its own archives. **Re-bake rule:** a height re-bake re-bakes horizon over the changed area grown by the march radius (about 12 degrees of arc; the march is capped at 30), since a tile's shadows come from terrain well outside it. Where a height tile is missing the read falls back to its deepest ancestor, and to 0 m where no level has it. The tool also writes the whole-globe horizon images (`public/data/images/textures/<body>-horizon-<px>.webp`), small and medium only, half the width the tier's px name says, because posts, not texels, are the resolution; the horizon kind is capped at medium (Moon: 1.4 and 6.0 MB), since surface tiles take over up close.
+**Bake order is height, then horizon, then pack**; the horizon tool packs its own archives. **Re-bake rule:** a height re-bake re-bakes horizon over the changed area grown by the march radius (about 12 degrees of arc; the march is capped at 30), since a tile's shadows come from terrain well outside it. Where a height tile is missing the read falls back to its deepest ancestor, and to 0 m where no level has it. The resume skip cannot tell an older tile format apart: clear `<prefix>/horizon/` before a re-bake that changes it. The tool also writes the whole-globe horizon images (`public/data/images/textures/<body>-horizon-<px>.webp`), small and medium only, half the width the tier's px name says, because posts, not texels, are the resolution; the horizon kind is capped at medium (Moon: 1.4 and 6.0 MB), since surface tiles take over up close.
 
 ### Mars surface sources
 

@@ -45,12 +45,12 @@ export const HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE;
  *  Mirrored into `surfaceTile/surfaceLighting.wesl`, parity-tested. */
 export const NIGHT_TILE_ATLAS_SIDE = 4096;
 
-/** A horizon tile is 33 × 33 posts of 2 × 2 texels each (`horizonAngleMap.ts`). */
+/** A horizon tile is 129 × 129 posts of 2 × 2 texels each (`horizonAngleMap.ts`). */
 export const HORIZON_TILE_PX = 2 * HORIZON_POSTS_PER_TILE;
 
-/** Physical edge of the HORIZON atlas: 32 x 32 slots of 66 px, 17.8 MB, the same slot count
- *  as height. */
-export const HORIZON_TILE_ATLAS_SIDE = 32 * HORIZON_TILE_PX;
+/** Physical edge of the HORIZON atlas: 8 x 8 slots of 258 px, 17 MB. A leaf deeper than its
+ *  band's horizon reads an ancestor, so a cut wants few slots (11 at the worst measured). */
+export const HORIZON_TILE_ATLAS_SIDE = 8 * HORIZON_TILE_PX;
 
 /** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
  *  layout: the renderer's slot→texel packing reads it. */

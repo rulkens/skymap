@@ -1,4 +1,4 @@
-import type { HorizonTile } from '../@types/HorizonTile';
+import type { HorizonSubTile } from '../@types/HorizonSubTile';
 import type { LazyHeightPyramid } from '../@types/LazyHeightPyramid';
 import { bakeHorizonTile } from '../bakeHorizonTile';
 import { marchHorizonSector } from './marchHorizonSector';
@@ -12,7 +12,7 @@ export async function bakeHorizonTileResolved(
   z: number,
   x: number,
   y: number,
-): Promise<HorizonTile> {
+): Promise<HorizonSubTile> {
   const finalDeg = new Map<number, number>(); // by the march's call index within a pass
   for (;;) {
     let call = 0;

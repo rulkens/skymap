@@ -2,7 +2,7 @@
 // surface tiles (their atlas, one slot per tile) and the whole globe (rect (0, 0, 1, 1)), so
 // both read the same values where the cut starts. Spec §5–§7. 'rect' is in POST uv:
 // (rect.xy + uv · rect.zw) · posts is the post coordinate, which 'horizonPostRect.ts' makes
-// true of a tile's corner-inclusive 33 posts; the globe's posts wrap in longitude. A zero rect
+// true of a tile's corner-inclusive 129 posts; the globe's posts wrap in longitude. A zero rect
 // means "no horizon data": the lookup skips the map and reads fully lit, the look without it.
 
 import package::lib::horizonAngleMap::horizonAnglesOfUnorm;
