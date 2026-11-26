@@ -334,12 +334,12 @@ builder's (Task 10) call the same helper, so the three read one number.
 
 Steps:
 
-- [ ] Tests, `console.warn` spied and never called:
+- [x] Tests, `console.warn` spied and never called:
   - `sizes MCPM's half-res ASTC 6×6 base and its mips exactly`: 336×576×324, `'3d'`, 3 mips,
     `astc-6x6-unorm` → 31,788,288.
   - `sizes MCPM's half-res BC4 base and its mips exactly`: same, `bc4-r-unorm` → 35,761,824.
   - Without the rows, the fallback reads 4 B/texel (MCPM showed as 257.6 MiB in the spike).
-- [ ] Implement. `npm test -- textureByteSize trackGpuMemory`.
+- [x] Implement. `npm test -- textureByteSize trackGpuMemory`.
 
 **Commit:** `GPU memory ledger sizes ASTC 6×6 and BC4 textures`
 
