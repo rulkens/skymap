@@ -99,15 +99,15 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
 }
 
 /**
- * Extract the length-68 uniform scratch from the writeBuffer mock.
+ * Extract the length-76 uniform scratch from the writeBuffer mock.
  * The fade write passes a 16-byte ArrayBuffer — we skip it and find
- * only the Float32Array(68) that packs the full per-field uniform.
+ * only the Float32Array(76) that packs the full per-field uniform.
  */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
   const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
     .calls;
   const hit = calls.find(
-    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 68,
+    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 76,
   );
   return hit?.[2] as Float32Array | undefined;
 }

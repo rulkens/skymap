@@ -843,12 +843,12 @@ let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).
 
 Steps:
 
-- [ ] Parity test: the fake volume's texture has `mipLevelCount: 4` (sentinel 3 for `maxLod`), the
+- [x] Parity test: the fake volume's texture has `mipLevelCount: 4` (sentinel 3 for `maxLod`), the
       placement's `voxelSize` 7 is `baseVoxelMpc`'s sentinel, `gain` 417, offset (411, 412, 413),
       scale (414, 415, 416); `struct.size` is 304.
-- [ ] Renderer, shader, sampler.
-- [ ] No other new test: the image checks are the controller's.
-- [ ] `npm run typecheck:fast`; `npm test -- volumeField volumeUniformsLayout`.
+- [x] Renderer, shader, sampler.
+- [x] No other new test: the image checks are the controller's.
+- [x] `npm run typecheck:fast`; `npm test -- volumeField volumeUniformsLayout`.
 - [ ] Controller, after the commit: the MCPM inside pose on today's `.scfd` matches main (RMS ≤ 0.1
       of 255), with no WGSL error in the console.
 

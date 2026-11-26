@@ -26,9 +26,9 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
-// 256 B of fields through jitterIndex, plus steps (260 B), rounded up to 16 for a uniform
-// struct. Pinned against fragment.wesl by volumeUniformsLayout.parity.test.ts.
-const UNIFORM_BYTES = 272;
+// Fields through nativeBoxScale (300 B), rounded up to 16 for a uniform struct. Pinned against
+// fragment.wesl by volumeUniformsLayout.parity.test.ts.
+const UNIFORM_BYTES = 304;
 
 // Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
 // A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
@@ -91,6 +91,7 @@ export function createVolumeFieldRenderer<Id extends string>({
   const volumeSampler = device.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
+    mipmapFilter: 'linear',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
     addressModeW: 'clamp-to-edge',
@@ -337,7 +338,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (272 bytes; mat4 alignment):
+      // Per-field uniform buffer layout (304 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)
       //  72..75   pxPerRad
@@ -355,7 +356,11 @@ export function createVolumeFieldRenderer<Id extends string>({
       // 248..251  trim             (f32; from settingsOf)
       // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
       // 256..259  steps            (f32; inputs.steps)
-      // 260..271  padding          (uniform struct rounded up to 16)
+      // 260..263  gain             (f32; from the volume)
+      // 264..267  maxLod           (f32; the volume's mipLevelCount − 1)
+      // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
+      // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
+      // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
       for (const [id, e] of fields.entries()) {
@@ -406,6 +411,11 @@ export function createVolumeFieldRenderer<Id extends string>({
         scratch[62] = s.trim;
         scratch[63] = jitterIndex;
         scratch[64] = inputs.steps;
+        scratch[65] = e.volume.gain;
+        scratch[66] = e.volume.texture.mipLevelCount - 1;
+        scratch[67] = e.volume.placement.voxelSize;
+        scratch.set(e.volume.nativeBox.offset, 68);
+        scratch.set(e.volume.nativeBox.scale, 72);
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.

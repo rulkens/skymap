@@ -20,7 +20,11 @@ const fragment = readFileSync(join(SHADERS, 'fragment.wesl'), 'utf-8');
 const vertex = readFileSync(join(SHADERS, 'vertex.wesl'), 'utf-8');
 
 const VOLUME: GpuVolume = {
-  texture: { createView: () => ({}), destroy: () => {} } as unknown as GPUTexture,
+  texture: {
+    createView: () => ({}),
+    destroy: () => {},
+    mipLevelCount: 4,
+  } as unknown as GPUTexture,
   placement: {
     dims: [4, 5, 6],
     frameKind: 'equatorial-cartesian',
@@ -28,8 +32,8 @@ const VOLUME: GpuVolume = {
     voxelSize: 7,
     rotation: [0, 0, 0, 1],
   },
-  gain: 1,
-  nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
+  gain: 417,
+  nativeBox: { offset: [411, 412, 413], scale: [414, 415, 416] },
 };
 
 function mockDevice(): GPUDevice {
@@ -113,6 +117,11 @@ describe('VolumeUniforms layout', () => {
       exposure: [408],
       jitterIndex: [409],
       steps: [410],
+      gain: [417],
+      maxLod: [3],
+      baseVoxelMpc: [7],
+      nativeBoxOffset: [411, 412, 413],
+      nativeBoxScale: [414, 415, 416],
     };
     for (const { name, type, offset } of struct.fields) {
       if (type === 'CameraUniforms') continue;
@@ -127,7 +136,7 @@ describe('VolumeUniforms layout', () => {
     // The scratch's buffer is the one draw wrote; its creation size is the binding's size.
     const buffers = vi.mocked(device.createBuffer).mock;
     const created = buffers.results.findIndex((result) => result.value === uniformWrite[0]);
-    expect(struct.size).toBe(272);
+    expect(struct.size).toBe(304);
     expect(buffers.calls[created]?.[0].size).toBe(struct.size);
     expect(scratch.byteLength).toBe(struct.size);
   });
