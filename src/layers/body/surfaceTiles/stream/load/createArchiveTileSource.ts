@@ -4,13 +4,11 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import type { TileRead } from '../@types/TileRead';
 import { decodeArchiveIndex } from '../../../../../utils/archive/decodeArchiveIndex';
 import { findArchiveEntry } from '../../../../../utils/archive/findArchiveEntry';
+import { readArchiveRange } from '../../../../../utils/archive/readArchiveRange';
+import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../../data/archive/archiveFetchDeadlineMs';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
 import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
-
-// An in-flight fetch pins a queue pipe and keeps the render-on-demand loop
-// ticking, so a promise that never settles leaks more than a socket.
-const FETCH_DEADLINE_MS = 10_000;
 
 /**
  * createArchiveTileSource — reads tiles from per-level `.idx` + `.pack`
@@ -31,7 +29,10 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
 
   async function fetchIndex(tile: SurfaceTileId): Promise<ArchiveIndex | 'missing' | 'failed'> {
     const url = dataUrl(`images/${surfaceTileArchivePath(prefix, tile.product, tile.z)}`);
-    const res = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(FETCH_DEADLINE_MS) });
+    const res = await fetch(url, {
+      mode: 'cors',
+      signal: AbortSignal.timeout(ARCHIVE_FETCH_DEADLINE_MS),
+    });
     if (res.status === 404) return 'missing';
     if (!res.ok) throw new Error(`archive index ${res.status}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
@@ -73,21 +74,13 @@ export function createArchiveTileSource(prefix: string): SurfaceTileSource {
         const url = dataUrl(
           `images/${surfaceTileArchivePath(prefix, tile.product, tile.z, entry.part)}`,
         );
-        const res = await fetch(url, {
-          mode: 'cors',
-          signal: AbortSignal.timeout(FETCH_DEADLINE_MS),
-          headers: { Range: `bytes=${entry.offset}-${entry.offset + entry.length - 1}` },
-        });
-        if (res.status !== 206) {
-          void res.body?.cancel();
-          if (res.status === 200 && !warnedNoRange) {
-            warnedNoRange = true;
-            console.warn(`surface tiles: ${url} ignored Range (200); tiles will not load`);
-          }
-          return { kind: 'failed' };
+        const read = await readArchiveRange(url, entry);
+        if (read.kind !== 'no-range') return read;
+        if (!warnedNoRange) {
+          warnedNoRange = true;
+          console.warn(`surface tiles: ${url} ignored Range (200); tiles will not load`);
         }
-        const bytes = new Uint8Array(await res.arrayBuffer());
-        return bytes.byteLength === entry.length ? { kind: 'bytes', bytes } : { kind: 'failed' };
+        return { kind: 'failed' };
       } catch {
         return { kind: 'failed' };
       }

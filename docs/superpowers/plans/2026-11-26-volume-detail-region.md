@@ -438,14 +438,14 @@ The tile source keeps its warn-once on `'no-range'`, its `'missing'` and `'empty
 
 Steps:
 
-- [ ] Move the Range-level cases out of the tile source's test into `readArchiveRange.test.ts`: `a
+- [x] Move the Range-level cases out of the tile source's test into `readArchiveRange.test.ts`: `a
       short body reads failed` (`:109`) and `cancels the body of a 200 so a whole pack is not
       downloaded` (`:135`, now `'no-range'`). Add `sends one Range header spanning exactly the
       entry` (offset 100, length 50 → `bytes=100-149`, a 206 of 50 bytes reads `'bytes'`), `a
       thrown fetch reads failed`, and `a zero-length entry throws`. The tile source keeps `reads
       failed and warns once when a part answers 200 instead of 206` (`:98`).
-- [ ] Implement; the tile source calls it.
-- [ ] `npm test -- readArchiveRange createArchiveTileSource surfaceTileStream`.
+- [x] Implement; the tile source calls it.
+- [x] `npm test -- readArchiveRange createArchiveTileSource surfaceTileStream`.
 
 **Commit:** `Prep: readArchiveRange, the Range read the surface tiles and volume bricks share`
 

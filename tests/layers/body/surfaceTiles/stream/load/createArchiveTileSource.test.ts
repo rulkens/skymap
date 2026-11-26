@@ -106,13 +106,6 @@ it('reads failed and warns once when a part answers 200 instead of 206', async (
   expect(warn).toHaveBeenCalledTimes(1);
 });
 
-it('a short body reads failed', async () => {
-  fetchMock
-    .mockResolvedValueOnce(ok(idx(entry(1, 0, 8))))
-    .mockResolvedValueOnce(ok(new Uint8Array(5), 206));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
-});
-
 it('a level whose index has a bad magic reads failed and is not refetched', async () => {
   // Bug caught: a broken deploy passing as a level with nothing baked.
   fetchMock.mockImplementation(async () => ok(new Uint8Array(64)));
@@ -130,15 +123,4 @@ it('retries the index after a 5xx', async () => {
   const source = createArchiveTileSource('p');
   expect(await source.readTile(tile(1))).toEqual(FAILED);
   expect((await source.readTile(tile(1))).kind).toBe('bytes');
-});
-
-it('cancels the body of a 200 so a whole pack is not downloaded', async () => {
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  const cancel = vi.fn();
-  const body = new ReadableStream({ cancel, pull: (c) => c.enqueue(new Uint8Array(8)) });
-  fetchMock
-    .mockResolvedValueOnce(ok(idx(entry(1, 0, 4))))
-    .mockResolvedValueOnce(new Response(body, { status: 200 }));
-  expect(await createArchiveTileSource('p').readTile(tile(1))).toEqual(FAILED);
-  await vi.waitFor(() => expect(cancel).toHaveBeenCalled());
 });
