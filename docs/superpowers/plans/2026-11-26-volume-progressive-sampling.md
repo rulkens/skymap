@@ -713,7 +713,9 @@ No commit except the ledger. Every scratch patch here is local, applied to both 
 7. **Mask layout and jitter form.** The 64 × 64 × 16 mask is stored as one 64 × 1024 `r8unorm`
    2D texture, and its dimensions are read in the shader through `textureDimensions`. The jitter
    is `fract(mask + cycle·φ)` with `cycle = jitterIndex / 16`. The spec names only the mask's
-   size.
+   size. Review fix: the cycle shift is dropped and the jitter is the mask value alone, since the
+   toroidal temporal kernel already spreads any 16 consecutive frames and the shift broke runs
+   straddling slice 0.
 8. **Names.** The tables are `DENSITY_MARCH_STEPS_BY_TIER` and `DENSITY_SAMPLE_CAP_BY_TIER`. The
    spec's names were `STEPS_BY_TIER` and `SAMPLE_CAP_BY_TIER`; the prefix keeps the existing
    `DENSITY_MARCH_STEPS` stem.

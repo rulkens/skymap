@@ -207,18 +207,15 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // vertically): each slice is spatially blue and each pixel's run through
   // the slices is spread out, so the progressive running mean of
   // consecutive frames converges in a few samples. The frame index picks
-  // the slice, so the grain still changes every frame in motion (a fixed
-  // phase per pixel was the original complaint). Each full pass through
-  // the slices shifts by a golden-ratio step (0x9E3779B9 / 2³², exact in
-  // u32 where f32(cycle) * 0.618 would lose fraction bits), so a pixel's
-  // sequence does not repeat across cycles.
+  // the slice, so the grain still changes every frame in motion. The
+  // temporal kernel is toroidal: any run of `slices` consecutive frames
+  // reads each slice once, so no per-cycle shift is needed.
   let maskDims = textureDimensions(jitterMask);
   let slices = maskDims.y / maskDims.x;
   let frame = u32(uniforms.jitterIndex);
-  let cycleShift = f32((frame / slices) * 0x9E3779B9u) / 4294967296.0;
   let texel = vec2<u32>(fragCoord.xy) % vec2<u32>(maskDims.x);
   let maskValue = textureLoad(jitterMask, vec2<u32>(texel.x, (frame % slices) * maskDims.x + texel.y), 0).r;
-  let jitter = fract(maskValue + cycleShift) * stepLength;
+  let jitter = maskValue * stepLength;
   var accum = vec4<f32>(0.0);
   var rayDistance = tMin + jitter;
   for (var stepIndex = 0; stepIndex < i32(uniforms.steps); stepIndex = stepIndex + 1) {

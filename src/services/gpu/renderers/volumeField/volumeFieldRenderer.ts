@@ -18,6 +18,7 @@ import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFie
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
 import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/VolumeFieldRendererDeps';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
+import { BLUE_NOISE_MASK_SLICES } from '../../../../data/volume/blueNoiseMask';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
 import decayVsCode from '../../shaders/scalarVolume/vertexDecay.wesl?static';
@@ -31,7 +32,8 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 const UNIFORM_BYTES = 272;
 
 // Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
-const JITTER_INDEX_WRAP = 1_000_000;
+// A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
+const JITTER_INDEX_WRAP = BLUE_NOISE_MASK_SLICES * 62_500;
 
 // Each field's march adds in scaled by the pass's blend constant (`inputs.weight`); at 1 this
 // sums exactly as ADDITIVE_BLEND. Single site, so it stays here (blendStates.ts's rule).
