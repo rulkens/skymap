@@ -66,7 +66,7 @@ export async function loadVolumePyramid(
       }
       if (!res.body) throw new Error(`loadVolumePyramid: no body streams from ${url}`);
       const [w, h, depth] = dims;
-      // A row of blocks: blockEdge texel rows, one block deep.
+      // A compressed copy counts in blocks: a row is one row of blocks, an image h / blockEdge rows.
       const layout = {
         bytesPerRow: levelByteLength(w, blockEdge, 1, bytesPerTexel),
         rowsPerImage: h / blockEdge,

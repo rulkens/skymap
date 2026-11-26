@@ -5,7 +5,6 @@ import type { ScalarFieldFrameKind } from './ScalarFieldFrameKind';
 export type VolumePyramidSidecar = {
   /** Native grid, voxels (x, y, z). Level k's voxel is 2^k native voxels on a side. */
   readonly gridDims: Vec3;
-  /** Native voxel edge, Mpc. */
   readonly voxelMpc: number;
   /** World position of native voxel (0,0,0)'s low corner, in `frame`, Mpc. */
   readonly originMpc: Vec3;
