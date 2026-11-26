@@ -5,7 +5,7 @@
  * price of no streaming code; nothing is kept after. Each write passes its error check before the
  * next fetch, so a failed write stops the load and no frame samples a level still being filled; on
  * any error, abort included, the texture is destroyed. Spec:
- * `docs/superpowers/specs/2026-11-26-volume-halfres-compressed-cubes-design.md` §6.
+ * `docs/superpowers/specs/completed/2026-11-26-volume-halfres-compressed-cubes-design.md` §6.
  */
 
 import type { VolumePyramidRequest } from '../../../@types/data/volume/VolumePyramidRequest';

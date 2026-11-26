@@ -3,7 +3,7 @@
 > **Status.** Approved 2026-11-26. Owner: Alexander Rulkens. PR 3 of the volume effort (PR 1 #1170
 > prep, PR 2 #1175 progressive sampling). Shape approved at the ground check the same day; the
 > owner's rulings are quoted in §2 and §13. Plan:
-> `docs/superpowers/plans/2026-11-26-volume-halfres-compressed-cubes.md`.
+> `docs/superpowers/plans/completed/2026-11-26-volume-halfres-compressed-cubes.md`.
 > **Written against** main at e41e5d89a, and against the post-prep shape of §3 as if it existed.
 > **Inputs.** The half-res spike (worktree `volume-progressive-octree`, `spike/` folders and
 > `tools/spike/build-scripts/{dense-mips,twomrs}/`; throwaway, not a code base) and its data in

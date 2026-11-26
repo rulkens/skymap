@@ -1,6 +1,6 @@
 # Half-res compressed volume cubes
 
-**Goal.** Ship [the spec](../specs/2026-11-26-volume-halfres-compressed-cubes-design.md): the MCPM
+**Goal.** Ship [the spec](../../specs/completed/2026-11-26-volume-halfres-compressed-cubes-design.md): the MCPM
 and Polyphorm 2MRS density volumes load from a compressed mip pyramid (`volume-pyramid/v1/`, ASTC
 6×6, BC4 or r8 by device features) instead of the six tiered 16-bit `.scfd` files. Small loads
 quarter res (L2), medium and large load half res (L1). GPU and CPU memory drop and the look stays
@@ -497,6 +497,10 @@ Steps:
 
 ## Task 8: `streamLevelSlabs` — a level into whole-slice writes through one slab
 
+> **Executed, then removed (owner ruling, 2026-11-26):** shipped in `9ca8c39b9`, deleted with
+> `VOLUME_UPLOAD_SLAB_BYTES` in `42908cc61`; each level downloads whole and goes up in one
+> `writeTexture`.
+
 **Files:**
 - `src/data/volume/volumeUploadSlabBytes.ts` (create)
 - `src/utils/volume/streamLevelSlabs.ts` (create)
@@ -570,7 +574,8 @@ export function loadVolumePyramid(
 ): Promise<GpuVolume>;
 ```
 
-Behaviour, in order:
+Behaviour, in order (steps 4 and 6 superseded by the whole-level ruling at Task 8: one
+`fetchWithProgress` and one awaited, scoped `writeTexture` per level; no slab, no `writeChecks`):
 
 1. `fetch(dataUrl(`${VOLUME_PYRAMID_DATA_PREFIX}/${binBaseName}.json`), { signal })`; a non-2xx
    throws `HttpError` (so `defaultRetryPolicy` gives up on a 404 at once, retries a 5xx twice).
@@ -807,6 +812,9 @@ runtime switch and is checked alone.
 | 288 | `nativeBoxScale` | vec3<f32> | 72–74 | `volume.nativeBox.scale` |
 | 300 | (implicit pad to 304) | | 75 | 0 |
 
+> **`maxLod` removed after review (`268c18450`):** the shader clamps to
+> `textureNumLevels(volume) − 1`; offset 264 is `_pad0` and the struct stays 304 B.
+
 No explicit pad members in WGSL: vec3 alignment puts the two vectors at 272 and 288 by itself,
 and the parity test demands a sentinel for every declared member. `vertex.wesl`'s prefix is
 unchanged.
@@ -847,7 +855,7 @@ Steps:
 - [x] Renderer, shader, sampler.
 - [x] No other new test: the image checks are the controller's.
 - [x] `npm run typecheck:fast`; `npm test -- volumeField volumeUniformsLayout`.
-- [ ] Controller, after the commit: the MCPM inside pose on today's `.scfd` matches main (RMS ≤ 0.1
+- [x] Controller, after the commit: the MCPM inside pose on today's `.scfd` matches main (RMS ≤ 0.1
       of 255), with no WGSL error in the console.
 
 **Commit:** `Volume march reads mips by pixel footprint, scales by the level gain, keeps native units`
@@ -1113,12 +1121,17 @@ and the website copy options of Task 14.
   `VOLUME_UPLOAD_SLAB_BYTES`, `DENSITY_BASE_LEVEL_BY_TIER`; `levelByteLength`,
   `pickVolumePyramidFormat`, `volumePyramidLevels`, `volumePyramidPlacement`,
   `volumePyramidLevelPath`, `streamLevelSlabs`, `scopedGpuCall`; the ledger rows for
-  `astc-6x6-unorm` and `bc4-r-unorm`.
+  `astc-6x6-unorm` and `bc4-r-unorm`. (`streamLevelSlabs` and `VOLUME_UPLOAD_SLAB_BYTES` later
+  deleted: whole-level uploads, see Task 8.)
 - Loading: `loadScfdVolume`, `loadVolumePyramid`, `createCosmicWebDensityFetcher(device)`; slots
   that dispose a dropped volume's texture; `VolumeFieldRenderer.upload(id, GpuVolume, statics)`
   creating no texture.
+  Added after review (owner ruling): the blue-noise mask is the density Layer's `jitter-mask`
+  asset slot (`createJitterMaskSlot`); `createBlueNoiseMask` and its `jitterMaskReady` promise are
+  deleted.
 - Renderer: 304 B uniforms with `gain`, `maxLod`, `baseVoxelMpc`, `nativeBoxOffset`,
-  `nativeBoxScale`; a linear mip filter; per-sample LOD in `fragment.wesl`.
+  `nativeBoxScale`; a linear mip filter; per-sample LOD in `fragment.wesl`. (`maxLod` later
+  deleted for `textureNumLevels`, see Task 11.)
 - Initialisation: `initGpu` requests the four compression features.
 - Build: `buildVolumePyramid.ts`, `encodeVolumeLevel`, `basisuEncodeLevel`, the two field rows,
   `npm run build-mcpm` (the pyramid) and `npm run build-2mrs`; the native-stats print in
@@ -1148,3 +1161,31 @@ server>`)
 format step-down after a failed file; a desktop build; mirroring the 2MRS inputs to R2; pruning the
 old files; the dust volume, the flow field, `mcpm-workbench.scfd` and the SCFD test fixture (all
 SCFD v3, untouched); the large-tier headless switch bug; any spike panel row or URL knob.
+
+## Results (Task 15)
+
+From the ledger ([`2026-11-26-volume-halfres-compressed-cubes.ledger.md`](2026-11-26-volume-halfres-compressed-cubes.ledger.md)). The "before"
+shots are main at a real large tier, asserted per shot (the spike's `?tier=large` silently served
+medium).
+
+- [x] 1 GPU bytes: ledger rows equal §4 to the byte for ASTC, BC4 and r8 at both base levels.
+- [x] 2 Payload: r8 matches the spike on the overlap except 2MRS voxels at the clamp boundary
+      (spike 48 → 0); the faithful rule, passed with a note.
+- [x] 3 Image vs main's large: MCPM inside 0.74 / knot 2.29 RMS pass the bar; 2MRS inside
+      (4.26, shift −1.38) and dense (5.28, −2.57) miss it, inherited from half res. The owner
+      passed all nine pairs by eye.
+- [x] 4 Image vs the spike: the branch equals the spike's half-res path (2MRS inside 5.05 / +0.05).
+- [x] 5 Crop: replaced by a data check: outside the box holds 0.3% of the summed value; inside,
+      r8 L1 × gain equals today's large (RMS 0.0015).
+- [x] 6 Far brightness: MCPM 0.83 @ 600, 0.43 @ 2000; 2MRS 0.96 / 0.41; owner passed by eye.
+- [ ] 7 Per-draw cost: open. K-draw bench paused part-way (2 branch rounds, 1 main round);
+      preliminary ms per extra draw of both volumes in the PR body.
+- [ ] 8 Medium and small vs today: open. Mac medium is in the partial bench; the phone check at
+      small has not run (no phone attached).
+- [ ] 9 Load time: open. The loadtime tool has no volume milestone; first-frame 6.8 vs 6.5 s on
+      slow 4G is noise.
+- [x] 10 CPU: the 10.5 MB bar is void after the whole-level ruling; re-measured JS heap peak
+      52.6 MB on a cold load of both volumes, 46.4 MB settled, nothing kept.
+- [x] 11 Fallback: BC4, r8 and a missing level file each give one warning; the other field draws.
+- [x] 12 Headless: SwiftShader on the Mac exposes all four features and picks ASTC.
+- [x] 13 Tier switch: no flash, no leaked texture, medium ↔ large fetches nothing.
