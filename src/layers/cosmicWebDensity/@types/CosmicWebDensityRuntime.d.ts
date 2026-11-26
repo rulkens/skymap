@@ -1,8 +1,7 @@
 /**
- * The density family's whole runtime: one renderer holding every cube, its
- * additive upsample, the march's jitter mask and its slot, and one slot per
- * source row committing into the renderer.
- * Non-null throughout — `create` builds all of it before returning.
+ * The density family's whole runtime: one renderer holding every cube, its additive upsample, the
+ * march's jitter mask and its slot, and one slot per source row. Non-null throughout: `create`
+ * builds all of it before returning.
  */
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';

@@ -79,7 +79,7 @@ const UNTRACKED = [
   'desi-wedge-large.bin',
   'desi-sgw-large.bin',
   'stars-huge.bin',
-  // The tiered volume files the pyramid replaced.
+  // Retired tiered volume files.
   'mcpm-small.scfd',
   'polyphorm-2mrs-medium.a3f19c2e.scfd',
   // A pyramid level outside its folder.

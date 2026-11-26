@@ -34,7 +34,7 @@ export const VOLUME_PYRAMID_FIELDS: Readonly<
     npy: { dir: 'polyphorm.dir', stem: 'polyphorm_2mrs' },
     nativePeak: 11272,
     gridDims: TWOMRS_GRID,
-    // The per-axis edges differ in the seventh digit; one cubic voxel, as the old import collapsed them.
+    // The per-axis edges differ in the seventh digit, so one cubic voxel: their mean.
     voxelMpc:
       (TWOMRS_SIZE_MPC[0] / TWOMRS_GRID[0] +
         TWOMRS_SIZE_MPC[1] / TWOMRS_GRID[1] +
