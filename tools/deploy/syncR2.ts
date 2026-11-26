@@ -27,8 +27,16 @@ import { DATA_FAMILIES } from './r2/dataFamilies';
 import { groupByDataFamily } from './r2/groupByDataFamily';
 import { formatDryRunListing } from './r2/formatDryRunListing';
 import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
-import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
+import {
+  MISSING_CREDENTIALS_HELP,
+  readRcloneCredentials,
+  type RcloneCredentials,
+} from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
+import { immutableKeyClashReport } from './r2/immutableKeyClashReport';
+import { listRemoteHashes } from './r2/listRemoteHashes';
+import { localUploadHash } from './r2/localUploadHash';
+import { refusesOverwrite } from './r2/refusesOverwrite';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
@@ -201,10 +209,44 @@ function buildGroups(): R2SyncGroup[] {
   ];
 }
 
+/** Exits before any byte moves when a published immutable key would change. */
+function refuseChangedImmutableKeys(
+  groups: readonly R2SyncGroup[],
+  creds: RcloneCredentials,
+): void {
+  const guarded = groups.filter(refusesOverwrite);
+  const remote = listRemoteHashes(
+    guarded.flatMap((g) => g.files.map((f) => f.r2Key)),
+    BUCKET,
+    creds,
+  );
+  // Only a key already on R2 can clash, so a fresh prefix hashes nothing.
+  const local = new Map(
+    guarded.flatMap((g) =>
+      g.files
+        .filter((f) => remote.has(f.r2Key))
+        .map((f) => [f.r2Key, localUploadHash(f, g.gzipOnWire)] as const),
+    ),
+  );
+  const report = immutableKeyClashReport(guarded, local, remote);
+  if (report.length === 0) return;
+  for (const line of report) console.error(line);
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
   const groups = buildGroups();
+  const rcloneCredentials = readRcloneCredentials();
   if (process.argv.includes('--dry-run')) {
     for (const line of formatDryRunListing(groups)) console.log(line);
+    // stderr, so the listing on stdout stays byte-stable (see formatDryRunListing).
+    if (rcloneCredentials === null) {
+      console.error(
+        'Immutable-key preflight skipped: no R2 S3 credentials (sync-r2-secure loads them).',
+      );
+    } else {
+      refuseChangedImmutableKeys(groups, rcloneCredentials);
+    }
     return;
   }
   const total = groups.reduce((n, g) => n + g.files.length, 0);
@@ -213,12 +255,12 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const rcloneCredentials = readRcloneCredentials();
   const needsRclone = groups.some((g) => g.transport.kind === 'bulk' && g.files.length > 0);
   if (needsRclone && rcloneCredentials === null) {
     console.error(MISSING_CREDENTIALS_HELP);
     process.exit(1);
   }
+  if (rcloneCredentials !== null) refuseChangedImmutableKeys(groups, rcloneCredentials);
 
   console.log(
     `Syncing ${total} file(s) to r2://${BUCKET}/data/\n` +
