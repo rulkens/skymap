@@ -7,10 +7,10 @@ import { viewUsed } from '../../../session/state/studioSlice';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import type { RowRef } from '../../../@types/rows/RowRef';
 
-type Props = { readonly rowRef: RowRef };
+type CurrentViewButtonProps = { readonly rowRef: RowRef };
 
 /** Writes the drawn camera into the step (one Undo); the tip says how to free a following camera. */
-function CurrentViewButton({ rowRef }: Props) {
+function CurrentViewButton({ rowRef }: CurrentViewButtonProps) {
   const dispatch = useAppDispatch();
   const transport = useAppSelector(selectTransport);
   const free = transport.kind === 'paused' && transport.camera === 'free';
