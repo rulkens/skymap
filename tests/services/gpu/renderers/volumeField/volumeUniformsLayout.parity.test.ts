@@ -28,6 +28,8 @@ const VOLUME: GpuVolume = {
     voxelSize: 7,
     rotation: [0, 0, 0, 1],
   },
+  gain: 1,
+  nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
 };
 
 function mockDevice(): GPUDevice {

@@ -178,7 +178,12 @@ function makeState(
         createCosmicWebDensitySlot(entry, {
           renderer: densityRenderer,
           jitterMaskReady: Promise.resolve(),
-          fetch: async () => ({ texture: { destroy: vi.fn() } }) as never,
+          fetch: async () =>
+            ({
+              texture: { destroy: vi.fn() },
+              gain: 1,
+              nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
+            }) as never,
         }),
       ]),
     ),

@@ -470,7 +470,7 @@ export function volumePyramidPlacement(
 
 Steps:
 
-- [ ] `volumePyramidLevels.test.ts`, on the MCPM sidecar of spec §4 (gridDims 712×1200×728, box
+- [x] `volumePyramidLevels.test.ts`, on the MCPM sidecar of spec §4 (gridDims 712×1200×728, box
       origin 40,40,40, dims 672×1152×648); hand values:
 
   | Level | Dims | `astc-6x6-unorm` | `bc4-r-unorm` | `r8unorm` |
@@ -481,7 +481,7 @@ Steps:
 
   - `MCPM at base 1: three levels, mips 0–2, dims and bytes per format as built`.
   - `base 2 starts at L2 as mip 0` (two levels).
-- [ ] `volumePyramidPlacement.test.ts`, hand values (`toBeCloseTo`, 4 decimals for the gain):
+- [x] `volumePyramidPlacement.test.ts`, hand values (`toBeCloseTo`, 4 decimals for the gain):
   - `gain restores today's per-tier stretch`: MCPM 1.0440 at base 1, 1.1131 at base 2 (levelMax
     134143.296875, 81543.546875, 40429.76953125, 12616.5263671875); 2MRS 1.0706, 1.1807 (11272,
     6090, 2702.28, 1187.88).
@@ -490,8 +490,8 @@ Steps:
     at base 1 and 3.12524 at base 2; dims 336×576×324 and 168×288×162.
   - `the native box is the stored box over the grid`: MCPM offset (40/712, 40/1200, 40/728), scale
     (672/712, 1152/1200, 648/728).
-- [ ] Implement; grow `GpuVolume`; SCFD fills the identity; fixtures gain the two members.
-- [ ] `npm run typecheck:fast`; `npm test -- volumePyramid volumeField cosmicWebDensity`.
+- [x] Implement; grow `GpuVolume`; SCFD fills the identity; fixtures gain the two members.
+- [x] `npm run typecheck:fast`; `npm test -- volumePyramid volumeField cosmicWebDensity`.
 
 **Commit:** `Volume pyramid sidecar: derived levels, placement and brightness gain`
 

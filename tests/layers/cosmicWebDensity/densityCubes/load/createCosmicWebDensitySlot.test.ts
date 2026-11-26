@@ -16,7 +16,11 @@ function fakeRenderer(): VolumeFieldRenderer<CosmicWebDensityFieldId> {
 }
 
 function fakeVolume(): GpuVolume {
-  return { texture: { destroy: vi.fn() } } as unknown as GpuVolume;
+  return {
+    texture: { destroy: vi.fn() },
+    gain: 1,
+    nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
+  } as unknown as GpuVolume;
 }
 
 const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[1];

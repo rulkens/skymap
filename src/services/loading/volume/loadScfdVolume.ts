@@ -42,5 +42,10 @@ export async function loadScfdVolume(
   );
   // A ScalarCube satisfies CubePlacement, but handing it over would keep its voxels alive.
   const { frameKind, rotation, origin, voxelSize, dims } = cube;
-  return { texture, placement: { frameKind, rotation, origin, voxelSize, dims } };
+  return {
+    texture,
+    placement: { frameKind, rotation, origin, voxelSize, dims },
+    gain: 1,
+    nativeBox: { offset: [0, 0, 0], scale: [1, 1, 1] },
+  };
 }
