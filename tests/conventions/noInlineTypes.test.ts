@@ -30,6 +30,7 @@ function sourceFilesUnder(root: string): string[] {
 
 const files = [
   ...sourceFilesUnder('src'),
+  ...sourceFilesUnder('packages/shared/src'),
   ...sourceFilesUnder('tools'),
   ...sourceFilesUnder('packages/website/src'),
   ...sourceFilesUnder('packages/desktop/src'),

@@ -29,6 +29,7 @@ const SCOPES: readonly Scope[] = [
       'src/components/containers/TourDebugPillContainer.tsx',
     ],
   },
+  { name: 'shared components', roots: ['packages/shared/src/components'], allowed: [] },
 ];
 
 // `{ … }`, also inside `A & { … }` or `Readonly<{ … }>`: the props' shape written where it is used.

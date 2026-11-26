@@ -19,6 +19,7 @@ const CONCERN_ROOTS = [
   'src/utils/camera',
   'src/@types/camera',
   'src/data/camera',
+  'packages/shared/src/@types/camera',
   // The desktop app follows the same concern-module shape (docs/DESKTOP.md).
   'packages/desktop/src',
 ];

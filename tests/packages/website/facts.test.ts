@@ -44,13 +44,11 @@ describe('website facts', () => {
         .filter((name) => /\.(tsx?|astro|mdx)$/.test(name) && !name.startsWith('dev/'))
         .filter((name) => pattern.test(readFileSync(join(SITE, name), 'utf8')))
         .sort();
-    // heroVideoUrl and pressKitUrl take one function with no imports of its own: the address of the data host.
+    // packages/shared is a leaf (ADR 0017), so a site file importing it loads no app module.
     expect(importers(/from '(\.\.\/)+src\//)).toEqual([
       // Two tables of ids, for the lists of body and site names.
       'content/docs/reference/url-parameters.mdx',
       'data/objectCatalogue.ts',
-      'utils/heroVideoUrl.ts',
-      'utils/pressKitUrl.ts',
       // These import only the app's pure link codec.
       'utils/shotHash.ts',
       'utils/shotLayerSwitches.ts',
