@@ -1,8 +1,8 @@
 import { statSync } from 'node:fs';
 import type { R2SyncGroup } from '../@types/R2SyncGroup';
 import type { R2Upload } from '../@types/R2Upload';
+import type { RemoteHashes } from '../@types/RemoteHashes';
 import { etagMatches } from './etagMatches';
-import { localUploadHash } from './localUploadHash';
 import { remoteEtag } from './remoteEtag';
 import { uploadViaRclone } from './uploadViaRclone';
 import { uploadViaWrangler } from './uploadViaWrangler';
@@ -13,6 +13,10 @@ export type R2SyncContext = {
   readonly publicUrl: string;
   /** Absent when no bulk group has files — see the preflight in syncR2.ts. */
   readonly rcloneCredentials: RcloneCredentials | null;
+  /** The run's one R2 listing; null without S3 credentials, which falls back to a HEAD per file. */
+  readonly remoteHashes: RemoteHashes | null;
+  /** From `hashLocalFiles`: every wrangler file, or with a listing only those already on R2. */
+  readonly localHashes: ReadonlyMap<string, string>;
 };
 
 /**
@@ -64,8 +68,11 @@ async function uploadIfChanged(
   ctx: R2SyncContext,
   touchedKeys: string[],
 ): Promise<boolean> {
-  const remote = await remoteEtag(`${ctx.publicUrl}/${file.r2Key}`);
-  if (remote && etagMatches(localUploadHash(file, group.gzipOnWire), remote)) {
+  const local = ctx.localHashes.get(file.r2Key);
+  const remote = ctx.remoteHashes
+    ? (ctx.remoteHashes.get(file.r2Key) ?? null)
+    : await remoteEtag(`${ctx.publicUrl}/${file.r2Key}`);
+  if (local !== undefined && etagMatches(local, remote)) {
     const sizeMB = (statSync(file.localPath).size / 1024 / 1024).toFixed(1);
     console.log(`= ${file.localPath} (${sizeMB} MB) unchanged — skip`);
     return false;

@@ -38,8 +38,9 @@ import { MARS_VIKING_DELIGHT, MARS_VIKING_GRADE } from './marsAlbedoRecipe';
 const TILE_ROOT = SURFACE_TILE_REGISTRY.mars.manifestKey;
 
 /** Bump on any re-bake that changes pixels (see `earthSurfaceBake`). v2: the
- *  tuned de-light + grade recipe (`marsAlbedoRecipe.ts`). */
-const TILE_PREFIX = `${TILE_ROOT}/v2`;
+ *  tuned de-light + grade recipe (`marsAlbedoRecipe.ts`). v3: horizon tiles moved
+ *  to 129 posts (#1179) after older horizon bytes were already on R2 under v2. */
+const TILE_PREFIX = `${TILE_ROOT}/v3`;
 
 /** The compiled `reliefM` `heliocentricPlanet` gave Mars — read here so
  *  `assertInsideReliefM` catches a site's real DTM range landing outside it. */

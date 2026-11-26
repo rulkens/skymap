@@ -1,9 +1,9 @@
 # Terrain horizon shadows, PR B: the feature
 
-> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../specs/2026-11-25-terrain-horizon-shadows-design.md)
+> **Spec.** [`2026-11-25-terrain-horizon-shadows-design.md`](../../specs/completed/2026-11-25-terrain-horizon-shadows-design.md)
 > §3–§8, §10, §11.
-> **Base.** Main **after** PR A ([`…-prep.md`](2026-11-25-terrain-horizon-shadows-prep.md)) merges. This plan
-> is written against that tree: `TileRead`, `SurfaceTileResidency.isEmpty`, lane rows with
+> **Base.** Main after PR A ([`…-prep.md`](completed/2026-11-25-terrain-horizon-shadows-prep.md)) merged
+> as #1171. This plan is written against that tree: `TileRead`, `SurfaceTileResidency.isEmpty`, lane rows with
 > `role`/`binding`/`reservedSlots?`, `SurfaceTileDrawArgs.atlasViews`, `resolveStandaloneRect` with
 > `SurfaceCutTile.standalone`, and `composeSurfaceLight` all exist.
 > **Branch.** a fresh `feat/terrain-horizon-shadows` from main once PR A is in.
@@ -31,14 +31,14 @@ The spike's runtime march, its side storage buffer and its z4 global height latt
 
 | Item | Value |
 | ---- | ----- |
-| Posts per tile | 33 × 33, height's 129-post lattice decimated by 4; post (0,0) = the tile's NW corner |
+| Posts per tile | 129 × 129 on height's own lattice, marched from heights two levels finer (Task 11); post (0,0) = the tile's NW corner |
 | Sectors | 16; sector k centred on azimuth k·22.5°, **clockwise from local north** |
 | Angle byte map | byte 0–204 ↔ −3°…27° linearly (0.147°/step); byte 204–255 ↔ 27°…90° linearly |
 | Post packing | a 2×2 RGBA8 block per post; texel `(k>>2)&1, k>>3` within the block; channel `k&3` (R,G,B,A) |
-| Tile image | 66 × 66 lossless WebP, linear (no colour conversion) |
+| Tile image | 258 × 258 lossless WebP, linear (no colour conversion) |
 | Flat tile | max horizon over all posts and sectors < 1° → zero-byte file → zero-length entry → `'empty'` |
-| Sentinel | atlas slot 0 reserved (`reservedSlots: 1`), filled with byte 0 (−3°) = fully lit, whole sky |
-| Lane row | `slotSide` 66, `atlasSide` 32 × 66 = 2112, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11, `reservedSlots` 1 |
+| No data | zero rect = no data: the lookup is skipped, sun and sky visibility 1 (tiles and globe alike; no reserved slot) |
+| Lane row | `slotSide` 258, `atlasSide` 8 × 258 = 2064, `format` `'rgba8unorm'`, `role` `'standalone'`, `binding` 11 |
 | Sun angular radius | `asin(SUN_RADIUS_M / sunDistanceM)` per frame; `SUN_RADIUS_M = 695_700_000` (IAU nominal) |
 | Perf budget | ≈ 1 ms GPU added at the Jezero pose, 4.4° sun (spike: +0.85–1.0 ms) |
 
@@ -49,12 +49,14 @@ The spike's runtime march, its side storage buffer and its z4 global height latt
 `review: yes` (TS↔WGSL contract)
 
 **Files:**
-- Create: `src/layers/body/surfaceTiles/format/data/horizonAngleMap.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonByteOfAngle.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonAngleOfByte.ts`,
-  `src/layers/body/surfaceTiles/format/utils/horizonTexelOf.ts`,
-  `src/services/gpu/shaders/lib/horizonAngleMap.wesl`
-- Test: `tests/layers/body/surfaceTiles/format/utils/horizonAngleMap.test.ts`,
+- Create: `src/layers/body/surfaceTiles/horizon/data/horizonAngleMap.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonByteOfAngle.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonAngleOfByte.ts`,
+  `src/layers/body/surfaceTiles/horizon/utils/horizonTexelOf.ts`,
+  `src/layers/body/surfaceTiles/horizon/@types/HorizonTexel.d.ts`,
+  `src/services/gpu/shaders/lib/horizonAngleMap.wesl` (a `horizon/` concern module, not
+  `format/`: `format/utils/` would pass `concernFolderShape`'s 15-file cap)
+- Test: `tests/layers/body/surfaceTiles/horizon/utils/horizonAngleMap.test.ts`,
   `tests/services/gpu/shaders/horizonAngleMap.parity.test.ts` (pattern: `constants.parity.test.ts`)
 
 **Interfaces (produces):**
@@ -73,11 +75,11 @@ export function horizonTexelOf(sector: number): { readonly dx: 0 | 1; readonly d
 fn horizonAngleOfUnorm(v: f32) -> f32 // radians, from a texel channel read as unorm
 ```
 
-- [ ] Tests: `the byte map round-trips every byte within half a step`; `−3° → 0, 27° → 204, 90° → 255`;
+- [x] Tests: `the byte map round-trips every byte within half a step`; `−3° → 0, 27° → 204, 90° → 255`;
       `angles below −3° clamp to 0`; `sector 13 lives in texel (1,1), channel G`.
-- [ ] Parity test: the WGSL constants equal `HORIZON_ANGLE_MAP` (parse the `.wesl` as the existing
+- [x] Parity test: the WGSL constants equal `HORIZON_ANGLE_MAP` (parse the `.wesl` as the existing
       parity tests do).
-- [ ] Implement; tests pass. Commit.
+- [x] Implement; tests pass. Commit.
 
 ---
 
@@ -100,7 +102,6 @@ fn horizonAngleOfUnorm(v: f32) -> f32 // radians, from a texel channel read as u
  *  ancestor; `subtreeMaxM` from the height header bounds the march's early exit. */
 export type HeightPyramid = {
   readonly radiusM: number;
-  readonly maxLevel: number;
   heightAt(z: number, lonRad: number, latRad: number): number;
   subtreeMaxM(z: number, x: number, y: number): number;
 };
@@ -114,15 +115,20 @@ March rules (spec §4): per post and sector, step outward; each step reads the f
 still resolves it (step length ≥ that level's post spacing), so the far field reads coarser
 ancestors; subtract curvature `d²/2R`; stop once `subtreeMaxM` of the z3 ancestor cannot rise
 above the running maximum. Mars's missing z8–9 make the far field step from z10 to z7: deliberate.
+As built (`marchCeilingM`): the ceiling is the max over the z3 ancestor **and its neighbours**
+(every column of a polar row), since a march crosses z3 edges; the ancestor alone missed a ridge
+just across one. Pole convention (`marchHorizonSector`, Task 6 copies it): the local frame comes
+from the post's own λ, φ, east = (−sin λ, cos λ, 0), north = (−sin φ cos λ, −sin φ sin λ, cos φ),
+no special case; at a pole it is the limit along meridian λ.
 
-- [ ] Test `a ridge on a sphere shades its anti-sun side at the analytic angle`: a synthetic
+- [x] Test `a ridge on a sphere shades its anti-sun side at the analytic angle`: a synthetic
       `HeightPyramid` (a single north–south ridge of height H at distance D east of a post);
       assert the post's east sector decodes to `atan2(H − D²/2R, D)` within one byte and its west
       sector to the flat-sphere value.
-- [ ] Test `a flat sphere bakes as flat`: constant height → `{ kind: 'flat' }`.
-- [ ] Test `the march reads past the tile edge`: the ridge sits in the neighbouring tile; the
+- [x] Test `a flat sphere bakes as flat`: constant height → `{ kind: 'flat' }`.
+- [x] Test `the march reads past the tile edge`: the ridge sits in the neighbouring tile; the
       post still sees it.
-- [ ] Implement; tests pass. Commit.
+- [x] Implement; tests pass. Commit.
 
 ---
 
@@ -166,9 +172,9 @@ Rules:
   is half that width (1024/2048/4096); say so in the README, don't rename the scheme.
 - Test: `the globe repack places each tile's posts at their equirect position and writes flat
   tiles as byte 0` (a 2 × 1 tile fake at z1).
-- [ ] Implement; test passes; run once on a small band (`--body mars --band <Jezero's index>`) and
-      `npm run shot` the deep link from Task 9 against a dev server to see bytes land. Commit (code
-      only; baked outputs are data, gitignored).
+- [x] Implement; test passes; run once on a small band (`--body mars --band 1`, Jezero: 716 tiles,
+      0 flat, 6.0 MB of packs) and check the archive and index decode back to sane angles (the shot
+      can't show shadows before Task 6). Commit (code only; baked outputs are data, gitignored).
 
 ---
 
@@ -189,8 +195,10 @@ Rules:
 Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `getImageData`);
 `'empty'` reads come from PR A's path untouched.
 
-- [ ] Test `the horizon lane's slot 0 holds the lit sentinel and is never allocated`.
-- [ ] Implement; targeted tests and typecheck pass. Commit.
+- [x] Test `the horizon lane's slot 0 holds the lit sentinel and is never allocated`.
+  (Superseded in the review fix: the zero rect replaced the sentinel, and slot 0, `reservedSlots`
+  and this test were removed.)
+- [x] Implement; targeted tests and typecheck pass. Commit.
 
 ---
 
@@ -210,11 +218,11 @@ Rules: upload through `copyExternalImageToTexture` only (RENDERER.md:69, never `
 | 0–95 | unchanged | |
 | 96–111 | `horizonRect` | `vec4<f32>`: atlas-UV origin.xy, scale.xy |
 
-`standalone.horizon` maps: a rect → itself; `'empty'` or `null` → slot 0's rect (the sentinel).
+`standalone.horizon` maps: a rect → itself (in post uv); `'empty'` or `null` → the zero rect (no data, lit).
 The vertex stage forwards it as one more `@interpolate(flat)` varying at the next free location.
 
-- [ ] Layout test: stride 112, `horizonRect` at 96, the existing per-field offsets unchanged.
-- [ ] Implement; tests and typecheck pass; neutrality: a shot of `copernicus` with the horizon lane
+- [x] Layout test: stride 112, `horizonRect` at 96, the existing per-field offsets unchanged.
+- [x] Implement; tests and typecheck pass; neutrality: a shot of `copernicus` with the horizon lane
       disengaged (no `builtFrom.horizon`) matches main. Commit.
 
 ---
@@ -256,7 +264,7 @@ Rules:
   undefined, use the same convention as the bake (`marchHorizonSector`): name it in both places.
 - Into `composeSurfaceLight(direct, ambient, horizonSunVisibility(..) , horizonSkyVisibility(..))`;
   Earth's cloud shadow still dims `direct` first; night lights untouched.
-- [ ] Implement; typecheck and variant tests pass. Shots of `copernicus`, `valles`, `jezero` at the
+- [x] Implement; typecheck and variant tests pass. Shots of `copernicus`, `valles`, `jezero` at the
       Task 9 poses: shadows fall away from the sun, no speckle at tile edges. Commit.
 
 ---
@@ -282,8 +290,10 @@ v from the north pole). Byte-0 placeholder → an uncommitted map draws as today
 ring visibility multiplies into the sun visibility. Bodies without a horizon tier (every other
 `texturedBody`) bind the placeholder.
 
-- [ ] Implement; typecheck and layout tests pass. Shot of `moon-orbit`: long crater shadows along
+- [x] Implement; typecheck and layout tests pass. Shot of `moon-orbit`: long crater shadows along
       the terminator; Saturn and a planet without a map unchanged against main. Commit.
+      (Moon shadows wait on Task 8's bake: the Moon's one band is 10,912 tiles; the placeholder
+      path shot unchanged at `moon-orbit`, Saturn and Mercury.)
 
 ---
 
@@ -291,13 +301,15 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 
 **Files:** none in git beyond the manifest merges the tool writes under `public/data` (gitignored).
 
-- [ ] Bake each body overnight on all cores: `npm run bake-horizon -- --body moon --workers <cores>`,
+- [x] Bake each body overnight on all cores: `npm run bake-horizon -- --body moon --workers <cores>`,
       then `mars`, then `earth` (≈14 CPU-hours in total; announce before starting).
-- [ ] Check sizes against spec §8 (Earth ≈111, Moon ≈129, Mars ≈100 MB of packs; flat share ≈26 %
-      on Earth, 0 % elsewhere). A total outside ±20 % stops the task: report, don't ship.
-- [ ] Desktop offline inventory: confirm `tools/deploy/syncR2.ts:136-152` picks up the horizon
+- [x] Check sizes against spec §8 (Earth ≈111, Moon ≈129, Mars ≈100 MB of packs; flat share ≈26 %
+      on Earth, 0 % elsewhere). Task 11 keeps the Moon's posts and bakes 1.3× (Mars) and 1.6×
+      (Earth) the posts around regional bands (Jezero alone: 11.2 MB, was 6.0), so judge those
+      two against that. A total outside ±20 % stops the task: report, don't ship.
+- [x] Desktop offline inventory: confirm `tools/deploy/syncR2.ts:136-152` picks up the horizon
       archives and globe images with no edit (docs/DESKTOP.md).
-- [ ] **Owner step:** `npm run sync-r2-secure`. The plan does not run it.
+- [x] **Owner step:** `npm run sync-r2-secure`. The plan does not run it.
 
 ---
 
@@ -305,9 +317,9 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 
 **Files:** none (results in the PR description).
 
-- [ ] `npm run perf -- --url http://localhost:<port>` at `mars-jezero-146km` with the Jezero time
+- [x] `npm run perf -- --url http://localhost:<port>` at `mars-jezero-146km` with the Jezero time
       below, horizon present vs main: added GPU ≤ ≈1 ms. Over budget stops the PR.
-- [ ] Shots (`npm run shot -- '<url>' --url …`) at the six poses, compared side by side with the
+- [x] Shots (`npm run shot -- '<url>' --url …`) at the six poses, compared side by side with the
       spike's `.claude/desk/bake-spike/*-bakeC4.jpg` (spike worktree); the owner gives the verdict.
 
 | Name | Hash |
@@ -320,25 +332,52 @@ ring visibility multiplies into the sun visibility. Bodies without a horizon tie
 | `jezero` | `#t=2026-11-20T16:21:00Z&pose=b,mars,691403.5436897384,3139457.9759868933,1068139.0390700782,13398.757351951235,34480.79569896407,48551.77155165493,0.9746901454013925,-0.16237362891140072,-0.15366823058639975,0.042348923322054366,0.809025631138166,-0.5862457648929799,-0.21951238951566024,-0.5649002857103499,-0.795425658407805` |
 | `grand-canyon` | author at a low sun with the app's share link; the spike has none |
 
-- [ ] Everest (spec §11, left open): the owner decides from the `everest` pair whether it ships as is.
+- [x] Everest (spec §11, left open): the owner decides from the `everest` pair whether it ships as is.
 
 ---
 
 ### Task 10: docs
 
-**Files:** `docs/RENDERER.md` (the horizon lane, sentinel, `horizonLookup`, `composeSurfaceLight`),
+**Files:** `docs/RENDERER.md` (the horizon lane, the zero rect, `horizonLookup`, `composeSurfaceLight`),
 `docs/DATA.md` (the horizon product, the bake order: height → horizon → pack, the re-bake rule:
 a height re-bake re-bakes horizon over the area grown by the search radius), `docs/BACKLOG.md`
 (remove nothing; the Moon polar double-shadow item stays).
 
-- [ ] Write; `npm run format`. Commit.
+- [x] Write; `npm run format`. Commit.
+
+---
+
+### Task 11: four times the posts per side (owner ruling, 2026-11-26)
+
+**Why:** one 33-post tile per leaf level gave a z5 Moon leaf a post every 10.7 km (Copernicus's
+shadows were blobs), and the first cut leaves read half the posts of the globe image they replace.
+
+**Files:** `horizonAngleMap.ts` (`HORIZON_POSTS_PER_TILE` 129), `surfaceTileParams.ts` (258 px
+slots, 8 × 8 atlas); the bake: `bakeHorizonSubTile.ts` (the 33-post march unit, renamed from `bakeHorizonTile`, returns
+`HorizonSubTile`), `utils/assembleHorizonTile.ts` (16 sub-tiles at z + 2 → one tile; a flat
+sub-tile writes byte 0, a tile with all 16 flat is flat),
+`horizonBakeWorker.ts`, `utils/horizonTilesOfBand.ts` (tiles two levels above the heights; only tiles with at
+least one own-height sub-tile are baked, and the runtime skips tiles its level index lacks), `utils/horizonManifest.ts` (a horizon row per height band at `[min − 2, max − 2]`),
+`data/horizonSubTiles.ts`, `data/horizonGlobeLevels.ts` (z2, z3); spec §2–§5, §7, §8, §10; README,
+DATA.md, RENDERER.md.
+
+- [x] Tests first: assembly byte identity (`assembleHorizonTile.test.ts`), hand-off and z + 2
+      density through the tier, planner and resolver code (`horizonManifest.test.ts`), bake tiles
+      match the own-heights rule (`horizonTilesOfBand.test.ts`).
+- [x] Implement; the march is unchanged: a sample of real Moon and Mars tiles matched the old
+      33-post tiles at z + 2 byte for byte. Commit.
+- [x] Review fixes: a flat sub-tile stores byte 0 (Earth's globe images stay identical); horizon
+      levels stop at z2, the small globe's source (`utils/horizonLevelsOfBand.ts`); a wrong-sized
+      tile on disk throws in `readHorizonTileFile`; `bakeHorizonSubTile` /
+      `bakeHorizonSubTileResolved` renamed. Commit.
+- [x] Re-bake all three bodies (Task 8), clearing each `<prefix>/horizon/` first.
 
 ---
 
 ## Review Focus
 
 - **A flat tile under a hilly ancestor must read lit.** `resolveStandaloneRect` stops at `'empty'`
-  (PR A); Task 5 maps it to the sentinel. A reviewer checks no path maps `'empty'` to the ancestor.
+  (PR A); Task 5 maps it to the zero rect. A reviewer checks no path maps `'empty'` to the ancestor.
 - **Post-to-texel order.** A wrong order gives plausible, wrong shadows. Task 1's `horizonTexelOf`
   test and parity test pin it; the shader must read through the same rule, not a re-derivation.
 - **Azimuth convention.** Clockwise from north in bake and shader; a mirrored convention puts

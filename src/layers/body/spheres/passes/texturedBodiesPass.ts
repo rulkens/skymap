@@ -24,6 +24,8 @@ import { composeBodySlabCamRelVp } from '../../slabs/present/composeBodySlabCamR
 import { bodySlabCamAltitudeSq } from '../../slabs/present/bodySlabCamAltitudeSq';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
+import { sunAngularRadiusRad } from '../../../../utils/camera/bodyCompose/sunAngularRadiusRad';
+import { NO_HORIZON_RECT, WHOLE_GLOBE_HORIZON_RECT } from '../../textures/data/horizonRects';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { packTexturedBodyUniforms } from '../render/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -82,6 +84,10 @@ export function texturedBodiesPass(runtime: BodyRuntime): ContentPass {
         cam,
         bodySlabCamAltitudeSq(pose.eyeRelBodyM, radiusM),
         narrowMat4(composeBodySlabCamRelVp(view.slab.vp, radiusM)),
+        sunAngularRadiusRad(bodyState.positionMpc, RENDER_ORIGIN_MPC),
+        runtime.texturedBodyRenderer.hasMap(body.id as BodyTextureId, 'horizon')
+          ? WHOLE_GLOBE_HORIZON_RECT
+          : NO_HORIZON_RECT,
       );
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into `textured`.
       runtime.texturedBodyRenderer.draw(pass, body.id as BodyTextureId, uniforms);

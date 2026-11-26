@@ -10,7 +10,7 @@
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'EarthSurfaceUniforms' (112 bytes: the
+// '@group(0) @binding(0)' holds 'EarthSurfaceUniforms' (144 bytes: the
 // mat4x4<f32> MVP, the local sun direction, and the PBR shading params), visible
 // in BOTH stages: the vertex reads only 'uniforms.mvp', the fragment reads the sun
 // direction, camera position, and material knobs. The fragment stage also binds

@@ -59,7 +59,7 @@ function mockDevice(recorders?: {
 
 describe('createEarthRenderer', () => {
   it('setMap and draw are callable with the right arity', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
+    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false, {});
 
     expect(typeof renderer.setMap).toBe('function');
     expect(renderer.setMap.length).toBe(2);
@@ -71,7 +71,7 @@ describe('createEarthRenderer', () => {
 
     expect(() => renderer.setMap('material', bitmap)).not.toThrow();
 
-    // draw writes the 112-byte EarthSurfaceUniforms record (28 f32) and records
+    // draw writes the EarthSurfaceUniforms record and records
     // the indexed draw against a stub pass.
     const pass = {
       setPipeline: vi.fn(),
@@ -86,11 +86,25 @@ describe('createEarthRenderer', () => {
 
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
+    createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false, {});
     // The pair differs only in cull mode: back, and front for a mirrored capture face.
     expect(renderPipelines.map((d) => d.primitive!.cullMode)).toEqual(['back', 'front']);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
+  });
+
+  // An unpassed override silently gives phones the 16-load horizon lookup.
+  it('passes the horizon constants to both pipelines', () => {
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    const constants = { HORIZON_SKY: 0 };
+    createEarthRenderer(
+      mockDevice({ renderPipelines }),
+      'rgba16float',
+      'depth32float',
+      false,
+      constants,
+    );
+    expect(renderPipelines.map((d) => d.fragment!.constants)).toEqual([constants, constants]);
   });
 
   it('setMap sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
@@ -100,7 +114,7 @@ describe('createEarthRenderer', () => {
     const textures: GPUTextureDescriptor[] = [];
     const encoderCount = { n: 0 };
     const device = mockDevice({ textures, encoderCount });
-    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false);
+    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false, {});
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('surface', bitmap);
     const earthTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 8);
@@ -127,7 +141,7 @@ describe('createEarthRenderer', () => {
         return texture;
       },
     );
-    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false);
+    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false, {});
     renderer.setMap('surface', { width: 4, height: 2 } as unknown as ImageBitmap);
 
     renderer.clearMap('surface');

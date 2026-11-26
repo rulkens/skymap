@@ -1,17 +1,18 @@
 /**
- * packEarthSurfaceUniforms: packer for the 128-byte `EarthSurfaceUniforms` struct
+ * packEarthSurfaceUniforms: packer for the 144-byte `EarthSurfaceUniforms` struct
  * (`shaders/lib/sphere.wesl` holds the layout table; drift is silent on the GPU).
  * Reuses `packLitBodyUniforms` for f32 0..19, then overwrites the lit pad at 19
  * with `roughnessBase`. `ambientLight` and `oceanRoughness` are Earth-scoped
- * overrides of the `AMBIENT` and `OCEAN_ROUGHNESS` consts. Indices 29..31 are
- * zeroed padding.
+ * overrides of the `AMBIENT` and `OCEAN_ROUGHNESS` consts. Indices 30..31 are
+ * zeroed padding before `horizonRect`'s vec4.
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec4 } from '../../../../@types/math/Vec4';
 import { packLitBodyUniforms } from '../../spheres/render/packLitBodyUniforms';
 
 /** f32 count of the uniform struct. */
-export const EARTH_SURFACE_UNIFORM_FLOATS = 32;
+export const EARTH_SURFACE_UNIFORM_FLOATS = 36;
 
 export function packEarthSurfaceUniforms(
   mvp: Float32Array,
@@ -24,6 +25,8 @@ export function packEarthSurfaceUniforms(
   cloudShellRadius: number,
   ambientLight: number,
   oceanRoughness: number,
+  sunAngularRadiusRad: number,
+  horizonRect: Readonly<Vec4>,
 ): Float32Array {
   const out = new Float32Array(EARTH_SURFACE_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // f32 0..19
@@ -37,6 +40,8 @@ export function packEarthSurfaceUniforms(
   out[26] = cloudShellRadius; // byte 104 — the shadow shell's local radius
   out[27] = ambientLight; // byte 108 — night-side floor, fills the former pad
   out[28] = oceanRoughness; // byte 112 — open-water GGX roughness, new 16-byte row
-  // Indices 29..31 stay the Float32Array's zero fill (true padding).
+  out[29] = sunAngularRadiusRad; // byte 116 — the horizon shadow's penumbra
+  // Indices 30..31 stay the Float32Array's zero fill (true padding).
+  out.set(horizonRect, 32); // bytes 128..143
   return out;
 }

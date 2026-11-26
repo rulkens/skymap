@@ -1,6 +1,6 @@
 /**
  * TexturedBodyRenderer: the shared textured-sphere renderer for every textured
- * body EXCEPT Earth. One mesh, one pipeline, one five-binding layout; each
+ * body EXCEPT Earth. One mesh, one pipeline, one six-binding layout; each
  * `BodyTextureId` owns its own uniform buffer and bind group, so a later body's
  * `draw` in the same frame never races a `queue.writeBuffer` against the pending
  * `queue.submit`. Bindings start as 1x1 placeholders; the ring binding is a real
@@ -17,7 +17,8 @@ export type TexturedBodyRenderer = Renderer & {
   /**
    * Replace a body's map for one `TextureKind` with the supplied equirectangular
    * bitmap: fresh texture in the kind's configured format with a full mip chain,
-   * level 0 uploaded with `flipY`, bind group rebuilt.
+   * level 0 uploaded with `flipY`, bind group rebuilt. `horizon` is the exception:
+   * one level, unflipped, since its posts are read in their baked row order.
    */
   setMap(bodyId: BodyTextureId, kind: TextureKind, bitmap: ImageBitmap): void;
   /**

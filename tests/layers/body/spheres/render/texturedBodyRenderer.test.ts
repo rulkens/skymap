@@ -77,11 +77,26 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     expect(renderPipelines).toHaveLength(1);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
     expect(renderPipelines[0]!.depthStencil!.format).toBe('depth32float');
+  });
+
+  // An unpassed override silently gives phones the 16-load horizon lookup.
+  it('passes the horizon constants to the pipeline', () => {
+    const renderPipelines: GPURenderPipelineDescriptor[] = [];
+    const constants = { HORIZON_SKY: 0 };
+    createTexturedBodyRenderer(
+      mockDevice({ renderPipelines }),
+      'rgba16float',
+      'depth32float',
+      false,
+      constants,
+    );
+    expect(renderPipelines[0]!.fragment!.constants).toBe(constants);
   });
 
   it('declares an explicit five-binding layout: uniform, sampler, surface + ring + normal textures', () => {
@@ -91,6 +106,7 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     const entries = Array.from(bindGroupLayouts[0]!.entries);
     const byBinding = new Map(entries.map((e) => [e.binding, e]));
@@ -104,7 +120,7 @@ describe('createTexturedBodyRenderer', () => {
 
   it('uses a mip-consuming sampler (mipmapFilter linear, repeat-U / clamp-V)', () => {
     const device = mockDevice();
-    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
+    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false, {});
     const samplerCalls = (device.createSampler as unknown as { mock: { calls: unknown[][] } }).mock
       .calls;
     const bodySampler = samplerCalls
@@ -122,6 +138,7 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     const pass = stubPass();
     const uniforms = new Float32Array(24);
@@ -134,7 +151,7 @@ describe('createTexturedBodyRenderer', () => {
 
   it('draw writes that body uniform buffer and records one indexed draw', () => {
     const device = mockDevice();
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false, {});
     const pass = stubPass();
     renderer.draw(pass, 'saturn', new Float32Array(24));
     expect(device.queue.writeBuffer).toHaveBeenCalled();
@@ -149,6 +166,7 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
@@ -167,6 +185,7 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     const bitmap = { width: 16, height: 8 } as unknown as ImageBitmap;
     renderer.setMap('moon', 'normal', bitmap);
@@ -184,7 +203,7 @@ describe('createTexturedBodyRenderer', () => {
     // `perturbNormal` identity, so a body without a normal map shades as before; an sRGB format would
     // corrupt that.
     const device = mockDevice();
-    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
+    createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false, {});
     const writeCalls = (device.queue.writeTexture as unknown as { mock: { calls: unknown[][] } })
       .mock.calls;
     const flatNormalWrite = writeCalls.find((c) => {
@@ -203,7 +222,13 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('setRingTexture does not throw and rebuilds that body bind group', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
+    const renderer = createTexturedBodyRenderer(
+      mockDevice(),
+      'rgba16float',
+      'depth32float',
+      false,
+      {},
+    );
     const strip = { width: 512, height: 1 } as unknown as ImageBitmap;
     expect(() => renderer.setRingTexture('saturn', strip)).not.toThrow();
   });
@@ -218,6 +243,7 @@ describe('createTexturedBodyRenderer', () => {
       'rgba16float',
       'depth32float',
       false,
+      {},
     );
     renderer.setRingTexture('saturn', { width: 512, height: 1 } as unknown as ImageBitmap);
     const stripTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 512);
@@ -228,7 +254,13 @@ describe('createTexturedBodyRenderer', () => {
   it('clearMap frees a body kind and reverts it to the placeholder', () => {
     // clearMap must actually free the (up to ~135 MB) GPU texture, not leak it: after setMap the body
     // owns a real texture whose `.destroy()` clearMap calls, and the bind group is rebuilt.
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
+    const renderer = createTexturedBodyRenderer(
+      mockDevice(),
+      'rgba16float',
+      'depth32float',
+      false,
+      {},
+    );
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
     expect(() => renderer.clearMap('mars', 'surface')).not.toThrow();
@@ -267,7 +299,7 @@ describe('createTexturedBodyRenderer', () => {
         return {};
       }),
     } as unknown as GPUDevice;
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false, {});
     renderer.setMap('mars', 'surface', { width: 8, height: 4 } as unknown as ImageBitmap);
     renderer.setMap('mars', 'normal', { width: 16, height: 8 } as unknown as ImageBitmap);
     const surface = textures.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
@@ -301,7 +333,7 @@ describe('createTexturedBodyRenderer', () => {
         };
       }),
     } as unknown as GPUDevice;
-    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
+    const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false, {});
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
     const surface = created.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;

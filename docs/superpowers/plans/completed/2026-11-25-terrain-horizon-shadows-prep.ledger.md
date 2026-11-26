@@ -1,6 +1,6 @@
 # SDD ledger — plan: docs/superpowers/plans/2026-11-25-terrain-horizon-shadows-prep.md
 
-Spec: docs/superpowers/specs/2026-11-25-terrain-horizon-shadows-design.md
+Spec: docs/superpowers/specs/completed/2026-11-25-terrain-horizon-shadows-design.md
 Branch: feat/terrain-horizon-shadows-prep (base 9e7b682c2)
 
 Pre-flight: parallelism = prep only, serial; perf gate = skipped (shots-unchanged is the gate). Owner, 2026-11-25.

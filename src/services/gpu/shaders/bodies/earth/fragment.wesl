@@ -68,6 +68,8 @@ import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::nightLights::nightLights;
 import package::lib::normalMap::perturbNormal;
+import package::lib::horizonLookup::horizonVisibility;
+import package::lib::horizonLookup::localSunAngles;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
 import package::lib::math::TAU;
@@ -79,6 +81,8 @@ import package::lib::math::TAU;
 @group(0) @binding(4) var nightTexture: texture_2d<f32>;
 @group(0) @binding(5) var normalTexture: texture_2d<f32>;
 @group(0) @binding(6) var cloudTexture: texture_2d<f32>;
+// The whole-globe horizon map (or its lit 1 × 1 placeholder), read by 'lib/horizonLookup.wesl'.
+@group(0) @binding(7) var horizonTexture: texture_2d<f32>;
 
 // dirToEquirectUv -- maps a unit direction to the mesh's equirectangular uv (the
 // same convention 'cubeSphereMesh' bakes and the flipY:true bitmaps expect), for
@@ -134,7 +138,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let shadowCoverage = textureSample(cloudTexture, earthSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  let colour = composeSurfaceLight(direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, 1.0, 1.0);
+  // The horizon map's posts run from −180° and from the north pole: the tiles' scheme, so
+  // globe and tiles read the same values at the hand-off. A zero rect (no map) reads lit.
+  let equirectUv = dirToEquirectUv(surfacePos);
+  let horizonUv = vec2<f32>(equirectUv.x, 1.0 - equirectUv.y);
+  let sunAngles = localSunAngles(surfacePos, sunDir);
+  let horizon = horizonVisibility(
+    horizonTexture, uniforms.horizonRect, horizonUv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
+  );
+  let colour = composeSurfaceLight(
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * albedo, horizon.x, horizon.y,
+  );
 
   // City lights are EMISSIVE -- added to the lit colour, never multiplied through
   // Lambert (see 'lib/nightLights.wesl'). 'NoL' is the RAW clamped term;

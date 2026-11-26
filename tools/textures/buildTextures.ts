@@ -554,10 +554,10 @@ async function writeRingTier(srcPath: string, widthPx: number, outPath: string):
  */
 export function textureBuildEntries(): readonly { bodyId: BodyTextureId; kind: TextureKind }[] {
   return (Object.keys(BODY_TEXTURE_REGISTRY) as BodyTextureId[]).flatMap((bodyId) =>
-    (Object.keys(BODY_TEXTURE_REGISTRY[bodyId].kinds) as TextureKind[]).map((kind) => ({
-      bodyId,
-      kind,
-    })),
+    (Object.keys(BODY_TEXTURE_REGISTRY[bodyId].kinds) as TextureKind[])
+      // `bake-horizon` repacks the horizon tiles; no raw source feeds that map.
+      .filter((kind) => kind !== 'horizon')
+      .map((kind) => ({ bodyId, kind })),
   );
 }
 

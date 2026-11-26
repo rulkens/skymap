@@ -12,11 +12,12 @@
 // patch with no compiler signal.
 //
 // The three vec4s (32..79) must stay BEFORE 'heightSlotOrigin': a
-// vec2<u32> declared earlier pads the record past its 96-byte stride (spec
+// vec2<u32> declared earlier pads the record past its 112-byte stride (spec
 // section 7's field-order note). Reordering the five scalars keeps the
 // stride but re-maps offsets 12..31 with no compiler signal -- the layout
 // test's per-field assertions are the only guard. 'heightSlotOrigin' (80),
-// 'edgeCoarser' (88) and 'heightCells' (92) fill the last 16 bytes exactly.
+// 'edgeCoarser' (88) and 'heightCells' (92) fill 80..95 exactly, and
+// 'horizonRect' (96..111) starts on the next 16-byte boundary.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -65,8 +66,12 @@ struct PatchInstance {
   // bit -- no stride meets it, and the skirt (on every edge, R15) hides it.
   edgeCoarser: u32,
   // Cells across the sub-rect above: 128 >> levelDelta, so 128 on a leaf
-  // drawing its own tile. Fills what was the record's trailing pad.
+  // drawing its own tile.
   heightCells: u32,
+  // The leaf's sub-rect of its horizon tile ('SurfaceCutTile.standalone.horizon') in
+  // POST uv ('horizonPostRect.ts'), not slot uv like the rects above. All zero for
+  // 'empty' or "none resident": the lookup then reads fully lit.
+  horizonRect: vec4<f32>,
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an
@@ -99,6 +104,8 @@ struct VSOut {
   @location(8) @interpolate(flat) fadeWeight: f32,
   // PatchInstance's 'nightRect', forwarded whole: (origin.xy, scale.xy).
   @location(9) @interpolate(flat) nightRect: vec4<f32>,
+  // PatchInstance's 'horizonRect', forwarded whole like 'nightRect'.
+  @location(10) @interpolate(flat) horizonRect: vec4<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance
@@ -149,14 +156,12 @@ struct VSOut {
 //   offset 160..163: debugLodOverlay     f32
 //   offset 164..167: noDisplacement      f32
 //   offset 168..171: noSkirts            f32
-//   offset 172..175: padding (true padding -- struct rounds to the mat4x4's
-//                     16-byte alignment; nothing writes these bytes)
+//   offset 172..175: sunAngularRadiusRad f32
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'meshResolution', word 23, is written as a u32; word 43
-// is left as the scratch ArrayBuffer's zero fill). The single source of
-// truth for that packing is 'writeSurfaceTileUniforms' in
+// DataView (only 'meshResolution', word 23, is written as a u32). The single
+// source of truth for that packing is 'writeSurfaceTileUniforms' in
 // 'surfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
@@ -185,4 +190,6 @@ struct SurfaceTileUniforms {
   // multiplying: 0 * NaN is NaN, so a scale could never rule the height out.
   noDisplacement: f32,
   noSkirts: f32,
+  // The sun disc's angular radius from this body: the horizon shadow's penumbra.
+  sunAngularRadiusRad: f32,
 };
