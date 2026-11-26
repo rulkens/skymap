@@ -75,6 +75,9 @@ three products.
   holds the posts of its 16 descendants at z + 2, which the bake marches as 33-post units (§4).
   So a leaf at or above its band's horizon max reads its own tile at z + 2 density, and a deeper
   leaf reads a sub-rect of the max level, at the heights' own density, never finer.
+- **Tile set.** A tile exists only where at least one of its 16 sub-tiles has a height tile of
+  its own. One without would be marched entirely on coarser fallback heights, which its ancestor
+  tile already carries, so the leaf reads the ancestor's sub-rect instead (§5).
 - **Value.** The horizon elevation angle per post in 16 sectors, sector k centred on azimuth
   k·22.5° clockwise from local north. Each angle is one byte on a piecewise map: −3…27° over
   bytes 0–204 (0.147° steps, under the Mars sun radius), 27…90° over 205–255. The map lives in
@@ -91,7 +94,7 @@ three products.
   re-bakes horizon over the changed area, grown by the bake's search radius (§4).
 - **Manifest.** `builtFrom.horizon` on a row of its own per height band, at the band's bounds and
   its horizon levels (above), with the `sourceId` `derived:height`. The planner
-  requests horizon by those rows, so it asks only for tiles that exist.
+  requests horizon by those rows, and never again for a tile its level's index lacks (§5).
 
 ## 4. The bake
 
@@ -114,12 +117,13 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
     deliberate.
 - **March unit:** a 33-post sub-tile at z + 2, on height's lattice decimated by 4. A tile at z is
   its 4 × 4 sub-tiles assembled into 129 posts; neighbouring sub-tiles share an edge post, which
-  the east or south one supplies; a flat sub-tile supplies byte 0 (§3). A sub-tile whose own
-  heights are missing (around a regional band) is still marched: its reads fall back to coarser
-  levels, so every post has a value.
-- **Tiles:** for each height tile of a band, its ancestor two levels up and that ancestor's
-  siblings, where `surfaceTileInBand` holds over the band's horizon levels: the same predicate
-  the runtime requests by.
+  the east or south one supplies; a flat sub-tile supplies byte 0 (§3). In a tile that has
+  heights under it, a sub-tile whose own heights are missing (around a regional band) is still
+  marched: its reads fall back to coarser levels, so every post has a value.
+- **Tiles:** for each height tile of a band, its ancestor two levels up, where
+  `surfaceTileInBand` holds over the band's horizon levels (the predicate the runtime requests
+  by). The ancestor's siblings are not closed over: a sibling with no height tile under it is
+  absent, and the runtime reads its ancestor (§3, §5).
 - **Parallelism:** `worker_threads`, one tile per task. A tile's result depends only on the height
   archives, so the bake resumes by skipping tiles already written.
 - **Output:** `horizon/<z>/<x>/<y>.webp`, or a zero-byte file for a flat tile. The packer
@@ -149,6 +153,11 @@ npm run bake-horizon -- --body moon [--band <i>] [--workers N]
   - own tile resident → its own rect;
   - otherwise the deepest resident ancestor's sub-rect, flattened like night's. An ancestor that
     is `'empty'` → zero rect.
+  - Own tile absent from its level's archive index (§3 tile set) → the same climb, never the
+    zero rect. Once that index has landed the planner neither requests nor touches the tile
+    (`SurfaceTileResidency.isMissing`, every product), so it costs no atlas slot, fetch or wake
+    frame; only a request sent before the level's index landed reads `'missing'` and is held
+    failed.
   - Nothing resident, or the body has no `builtFrom.horizon` → zero rect.
   - Horizon never gates the cut, and it never steers refinement.
 - **Instance record.** `PatchInstance` gains `horizonRect: vec4<f32>` (origin.xy, scale.xy in
@@ -223,11 +232,14 @@ fn composeSurfaceLight(directLit: vec3<f32>, ambientLit: vec3<f32>,
 
 ## 8. Deploy and size
 
-- **R2:** about 340 MB (Earth 111, Moon 129, Mars 100) plus the globe images: the Moon's small and
-  medium measure 1.4 and 6.0 MB. The Moon's posts are exactly the 33-post rollout's; Mars and
-  Earth bake 1.3× and 1.6× the posts, for the sub-tiles around their regional bands (levels
-  min − 2 and min − 1 are 7% and 14% of those). Large is capped at medium (a large request reads
-  the medium image), because surface tiles take over up close.
+- **R2:** about 360 MB (Moon 130.8 measured, Earth ≈ 130 and Mars ≈ 100 estimated) plus the
+  globe images: the Moon's small and medium measure 1.4 and 6.0 MB. The estimate (2026-11-26)
+  re-encoded every Earth and Mars tile whose 16 sub-tiles all have heights (1210 and 795 tiles)
+  and priced a fallback sub-tile per level from 94 and 44 baked samples (90% range: Earth 128–132,
+  Mars 99.7–100.7). With the ancestors' siblings closed over it put Earth at ≈ 194 MB and Mars at
+  ≈ 109: 631 and 187 of those tiles had no heights of their own, 468 of Earth's on its 30 small
+  regional bands, and the tile-set rule (§3) drops them. Large is capped at medium (a large
+  request reads the medium image), because surface tiles take over up close.
 - **Upload:** `collectSurfaceTiles.ts:26` reads products from `builtFrom`, and the offline
   inventory and cache rules (`tools/deploy/syncR2.ts:136-152`) need no edit. Sync with
   `npm run sync-r2-secure`.
@@ -274,8 +286,9 @@ Per `testing.md`, only what can fail on a real bug:
   is flat.
 - **Density:** through the real tier, planner and resolver code, a first-level cut leaf reads
   at least the globe image's post density on every tier, and a leaf reads z + 2 density up to
-  its band's horizon max, the heights' own density past it. The bake's tiles are exactly the
-  ones the runtime requests.
+  its band's horizon max, the heights' own density past it. The bake's tiles are the requestable
+  ones with a height tile under them; one the index lacks is never requested once that index has
+  landed, and its leaf reads the ancestor's sub-rect, not the zero rect.
 - **TileRead:** zero-length entry → `'empty'`; not in index → `'missing'`; a 404 or abort →
   `'failed'`. `'failed'` keeps today's session-long `failedKeys` rule. `'empty'` counts as
   resident, not failed, and never refetches.
