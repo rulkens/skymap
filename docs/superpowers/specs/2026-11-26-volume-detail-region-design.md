@@ -902,8 +902,10 @@ one pass. A breach halts and goes to the owner.
    skipped by the manifest pass): `npm run build-mcpm-bricks`, then `npm run build-2mrs-bricks`
    (owner's machine: the d1 inputs are only there), each ending in `build-data-manifest`.
 2. `npm run sync-r2-secure`, **before the merge**: a merge to main is the app deploy (Workers
-   Assets builds on push). The syncing machine must have built the bricks, or the offline inventory
-   build throws for the empty `volume-bricks` group (DEPLOY.md:49).
+   Assets builds on push). The syncing machine must have built the bricks: on any other machine
+   `buildGroups()` returns no `volume-bricks` group, so the sync does not throw but quietly
+   publishes a data manifest and offline inventory with no bricks. The proof is a 206 to a Range
+   request for one hashed `.L0.p0.pack` path from `manifest.json` (DEPLOY.md, "Volume bricks").
 3. Then merge.
 
 **Gap: none.** The files are additive. The sidecars and L1–L3 files keep their bytes and hashed

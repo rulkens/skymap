@@ -1345,8 +1345,9 @@ git checkout main
   main checkout (spec §14). The sync must run clean: on 2026-11-26 it aborted at the Mars tiles, and
   #1180 re-baked them to v3 for that; if any group aborts, the data manifest is not up and the merge
   waits.
-- The syncing machine must have built the bricks, or the offline inventory throws for an empty
-  `volume-bricks` group (DEPLOY.md:49).
+- The syncing machine must have built the bricks. Anywhere else the sync does not throw:
+  `buildGroups()` returns no group for a family with no files, so it quietly publishes a data
+  manifest and offline inventory with no bricks. The 206 check below is the proof.
 - **Check:** `curl -s -o /dev/null -w '%{http_code}' -H 'Range: bytes=0-15'
   https://skymap-data.rulkens.com/data/<a hashed .L0.p0.pack path from manifest.json>` prints 206.
 - Back on `main`, the checkout's `manifest.json` names files main's code does not request; that is
@@ -1445,7 +1446,9 @@ no re-review. If the fix touches the builder's output, Task 7.2 runs again.
 
 ## Landing and deploy notes (also in the PR body)
 
-- Data first: Task 7.2's sync lands before the merge; the merge is the app deploy.
+- Data first: Task 7.2's sync lands before the merge; the merge is the app deploy. It runs from
+  the machine that built the bricks: anywhere else it publishes a manifest with no bricks, without
+  an error, so the 206 Range check is the proof.
 - Gap: none. The files are additive: an old app ignores the new manifest entries, and a new app
   without them (only if the merge ran first) draws the base with one warning per field.
 - The kiosk mirrors the new packs (about 264 MB, estimate); its local server answers Range. No
