@@ -1123,10 +1123,10 @@ planners: (runtime) => [cosmicWebDensityAccumulationPlanner(runtime), detailRegi
 
 Steps:
 
-- [ ] Test `a busy region holds loading only at rest`: `stillFrames` 0 → `loading` false, `awake`
+- [x] Test `a busy region holds loading only at rest`: `stillFrames` 0 → `loading` false, `awake`
       true; `stillFrames` 3 → both true. Guards a shot or `settled()` hanging while the camera moves.
-- [ ] Implement and wire.
-- [ ] `npm run typecheck:fast`; `npm test -- cosmicWebDensity frameSections`.
+- [x] Implement and wire.
+- [x] `npm run typecheck:fast`; `npm test -- cosmicWebDensity frameSections`.
 
 **Commit:** `Detail-region planner: once per frame in PRELUDE, its value read by the key and the march`
 
