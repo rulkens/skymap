@@ -25,6 +25,12 @@
       "suffixes": [".test.ts", ".test.tsx"]
     },
     {
+      "from": "packages/mcpm-workbench/",
+      "to": "packages/mcpm-workbench/tests/",
+      "sources": [".ts", ".tsx"],
+      "suffixes": [".test.ts", ".test.tsx"]
+    },
+    {
       "from": "packages/desktop/src/",
       "to": "packages/desktop/tests/",
       "sources": [".ts", ".tsx", ".cts"],
