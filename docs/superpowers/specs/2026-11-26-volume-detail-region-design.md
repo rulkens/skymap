@@ -345,8 +345,8 @@ gains factor 1:
 Neither d1 file fits wrangler's 300 MiB cap, so neither is mirrored to R2. The L0 build runs on the
 owner's machine for both fields; BACKLOG.md:174 widens to name MCPM's d1 too.
 
-**The brick builder.** `tools/volumes/buildVolumeBricks.ts <field>`, script `npm run
-build-volume-bricks -- mcpm|polyphorm-2mrs`, ending in `build-data-manifest`. It reads the same
+**The brick builder.** `tools/volumes/buildVolumeBricks.ts <field>`, scripts `npm run
+build-mcpm-bricks` and `build-2mrs-bricks`, each ending in `build-data-manifest`. It reads the same
 `VOLUME_PYRAMID_FIELDS` row as the pyramid builder; the pyramid builder is untouched (its
 `readLevel` reads whole files, and `readFileSync` refuses files over 2 GiB).
 
@@ -895,9 +895,8 @@ one pass. A breach halts and goes to the owner.
 ## 14. Deploy
 
 1. On the PR branch, checked out in the **main checkout** (a worktree's linked `public/data` is
-   skipped by the manifest pass): `npm run build-volume-bricks -- mcpm`, then
-   `-- polyphorm-2mrs` (owner's machine: the d1 inputs are only there), which ends in
-   `build-data-manifest`.
+   skipped by the manifest pass): `npm run build-mcpm-bricks`, then `npm run build-2mrs-bricks`
+   (owner's machine: the d1 inputs are only there), each ending in `build-data-manifest`.
 2. `npm run sync-r2-secure`, **before the merge**: a merge to main is the app deploy (Workers
    Assets builds on push). The syncing machine must have built the bricks, or the offline inventory
    build throws for the empty `volume-bricks` group (DEPLOY.md:49).
@@ -915,7 +914,7 @@ answers Range. A kiosk on an older desktop build ignores them.
 ## 15. Docs to update
 
 - `docs/DATA.md`: `volume-pyramid/v1/` layout gains the L0 index and packs (line 48); the Cosmic-web
-  volumes section (line 195) gains the brick grid, the d1 inputs and `build-volume-bricks`.
+  volumes section (line 195) gains the brick grid, the d1 inputs and `build-mcpm-bricks` / `build-2mrs-bricks`.
 - `docs/RENDERER.md`: the density-volume bullet (line 53) gains the region (once planner, borrowed
   texture, group 2, gate distance); landmines: the ASTC zero block, the placeholder group 2, region
   samples at gain 1.

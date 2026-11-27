@@ -1,11 +1,13 @@
 # `data/raw/mcpm/` — MCPM Cosmic Web ingest
 
-Three downsampled `.npy` tiers of the SDSS DR17 Cosmic Slime VAC
-`SDSS_z_44-476mpc` cube (Wilde et al. 2023). Used by
-`tools/volumes/buildVolumePyramid.ts` to emit the pyramid `public/data/volume-pyramid/v1/mcpm.*`.
+The SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` cube (Wilde et al. 2023) as
+`.npy` tiers: three downsampled ones (`_d2`, `_d4`, `_d8`), which
+`tools/volumes/buildVolumePyramid.ts` turns into the pyramid `public/data/volume-pyramid/v1/mcpm.*`,
+and the native `_d1`, which `tools/volumes/buildVolumeBricks.ts` cuts into its level-0 bricks.
 
-This directory is gitignored. Contributors download the pre-extracted
-`.npy` files from R2; only the maintainer runs the extractor.
+This directory is gitignored. Contributors download the three downsampled
+tiers from R2; only the maintainer runs the extractor, and only their machine
+holds `_d1` (2.49 GB, not mirrored).
 
 ## Contributor (every full data rebuild)
 
