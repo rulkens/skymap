@@ -5,8 +5,8 @@
 // plus a site shot's extra.
 //
 // LANDMINE -- no shadow map, no self-shadowing. The sun is dimmed by the host ('sunVisibleFraction',
-// CPU-side) and, on the ground, by the baked terrain horizon at the anchor: one rect + uv + up per
-// body (host axes, as 'sunDirLocal'), so mast and deck dim together with the tile under them.
+// CPU-side) and, for every surface-site mesh body, by the baked terrain horizon at its anchor: one
+// rect + uv + up per body (host axes, as 'sunDirLocal'), so mast and deck dim with the tile under them.
 //
 // The metal blend is built HERE and handed to 'lib/pbr.wesl' as 'f0'.
 
@@ -60,10 +60,14 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let diffuseAlbedo = albedo * (1.0 - metallic);
 
   let viewDir = normalize(uniforms.camPosLocal - in.localPos);
-  let sunAngles = localSunAngles(uniforms.horizonUp, uniforms.sunDirLocal);
-  let terrainSun = horizonVisibility(
-    horizonAtlas, uniforms.horizonRect, uniforms.horizonUv, sunAngles.x, sunAngles.y, asin(uniforms.sinSunAngularRadius),
-  ).x;
+  // A uniform branch: bodies off the ground (zero rect) skip the lookup's loads entirely.
+  var terrainSun = 1.0;
+  if (uniforms.horizonRect.z > 0.0) {
+    let sunAngles = localSunAngles(uniforms.horizonUp, uniforms.sunDirLocal);
+    terrainSun = horizonVisibility(
+      horizonAtlas, uniforms.horizonRect, uniforms.horizonUv, sunAngles.x, sunAngles.y, asin(uniforms.sinSunAngularRadius),
+    ).x;
+  }
   let direct =
     pbrDirectSphere(shadingNormal, viewDir, uniforms.sunDirLocal, diffuseAlbedo, roughness, specularF0, uniforms.sinSunAngularRadius) *
     SUN_IRRADIANCE * uniforms.sunVisibleFraction * terrainSun;

@@ -103,7 +103,8 @@ export function drawMeshBodiesOnRow(
         ),
         horizon: {
           rect: horizon?.rect ?? NO_HORIZON_RECT,
-          up,
+          // Any unit vector off the ground: the shader skips the lookup on a zero rect.
+          up: horizon === null ? [0, 0, 1] : up,
           uv: horizon?.uv ?? [0, 0],
         },
       }),

@@ -45,6 +45,7 @@ import { terrainHeightM } from './terrainHeightM';
 import { resolveStandaloneRect } from '../../plan/subsystems/resolveStandaloneRect';
 import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
 import { surfaceTilePointAt } from '../../format/utils/surfaceTilePointAt';
+import { deepestBandMax } from '../../plan/utils/deepestBandMax';
 import { SURFACE_TILE_CONCURRENCY } from '../../format/data/surfaceTileParams';
 import { SURFACE_TILE_LANE_SPECS } from '../data/surfaceTileLaneSpecs';
 
@@ -302,15 +303,13 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     const z = deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel;
     const point = surfaceTilePointAt(dirBodyFixed, z, tilePx);
     if (point === null) return null;
-    let maxLevel = -1;
-    for (const band of params.requestBands.horizon) if (band.max > maxLevel) maxLevel = band.max;
     const rect = horizonRectOf(
       resolveStandaloneRect({
         product: 'horizon',
         z,
         x: point.x,
         y: point.y,
-        maxLevel,
+        maxLevel: deepestBandMax(params.requestBands.horizon),
         baseLevel,
         residentSlot,
         isEmpty: residency.isEmpty,
