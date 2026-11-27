@@ -11,6 +11,7 @@ import type { DetailRegionFade } from '../@types/DetailRegionFade';
 import type { DetailRegionPlan } from '../@types/DetailRegionPlan';
 import type { DetailRegionPlanInput } from '../@types/DetailRegionPlanInput';
 import type { DetailRegionState } from '../@types/DetailRegionState';
+import { bricksOf } from '../utils/bricksOf';
 
 export function planDetailRegion(
   prev: DetailRegionState,
@@ -68,14 +69,6 @@ export function planDetailRegion(
     shown,
     busy: ranked.length > 0 || fade !== null,
   };
-}
-
-function bricksOf(box: BrickBox): Vec3[] {
-  const coords: Vec3[] = [];
-  for (let z = box.lo[2]; z < box.hi[2]; z++)
-    for (let y = box.lo[1]; y < box.hi[1]; y++)
-      for (let x = box.lo[0]; x < box.hi[0]; x++) coords.push([x, y, z]);
-  return coords;
 }
 
 function clip(box: BrickBox, to: BrickBox): BrickBox | null {
