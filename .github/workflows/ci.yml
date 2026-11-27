@@ -1,6 +1,7 @@
 name: CI
 
-# Runs on every push to main and every pull request targeting main.
+# Runs on every push to main and every pull request targeting main, except
+# pull requests that only touch docs/.
 # The README's CONTRIBUTING.md asks contributors to keep the test suite
 # green; this workflow enforces it.
 
@@ -9,6 +10,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # A docs-only PR skips CI. The two docs paths listed after the exclusion are
+    # read by tests/packages/website/roadmap.test.ts, so they still trigger it.
+    paths:
+      - '**'
+      - '!docs/**'
+      - 'docs/BACKLOG.md'
+      - 'docs/superpowers/specs/**'
 
 jobs:
   ci:
