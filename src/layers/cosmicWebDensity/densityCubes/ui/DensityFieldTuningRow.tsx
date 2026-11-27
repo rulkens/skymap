@@ -8,6 +8,7 @@ import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityField
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
+import DensityLevelsRow from './DensityLevelsRow';
 import { PaletteSelect } from '../../../../components/common/PaletteSelect/PaletteSelect';
 import styles from './DensityFieldTuningRow.module.css';
 
@@ -93,6 +94,10 @@ function DensityFieldTuningRow({
           onChange={(paletteId) => onChange(entry.id, { paletteId })}
         />
       </div>
+      <DensityLevelsRow
+        checked={settings.showLevels}
+        onChange={(showLevels) => onChange(entry.id, { showLevels })}
+      />
     </div>
   );
 }

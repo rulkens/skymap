@@ -9,10 +9,8 @@
  */
 
 import type { VolumePyramidRequest } from '../../../@types/data/volume/VolumePyramidRequest';
-import type { VolumePyramidSidecar } from '../../../@types/data/volume/VolumePyramidSidecar';
 import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../data/gpu/textureBytesPerTexel';
-import { VOLUME_PYRAMID_DATA_PREFIX } from '../../../data/volume/volumePyramidDataPrefix';
 import { levelByteLength } from '../../../utils/gpu/memory/levelByteLength';
 import { scopedGpuCall } from '../../../utils/gpu/scopedGpuCall';
 import { pickVolumePyramidFormat } from '../../../utils/volume/pickVolumePyramidFormat';
@@ -22,8 +20,8 @@ import { volumePyramidPlacement } from '../../../utils/volume/volumePyramidPlace
 import {
   dataUrl,
   fetchWithProgress,
-  HttpError,
 } from '../../../../packages/shared/src/services/loading/fetchWithProgress';
+import { fetchVolumePyramidSidecar } from './fetchVolumePyramidSidecar';
 
 export async function loadVolumePyramid(
   device: GPUDevice,
@@ -32,10 +30,7 @@ export async function loadVolumePyramid(
   onProgress: (loaded: number, total: number) => void,
 ): Promise<GpuVolume> {
   const { binBaseName, baseLevel } = req;
-  const sidecarUrl = dataUrl(`${VOLUME_PYRAMID_DATA_PREFIX}/${binBaseName}.json`);
-  const sidecarRes = await fetch(sidecarUrl, { signal });
-  if (!sidecarRes.ok) throw new HttpError(sidecarRes.status, sidecarUrl);
-  const sidecar = (await sidecarRes.json()) as VolumePyramidSidecar;
+  const sidecar = await fetchVolumePyramidSidecar(binBaseName, signal);
 
   const { format, gpuFormat, blockEdge } = pickVolumePyramidFormat(device.features);
   const levels = volumePyramidLevels(sidecar, baseLevel, gpuFormat);

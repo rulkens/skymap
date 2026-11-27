@@ -38,6 +38,8 @@ const LEADER_MIN_QUAD_PX: f32 = 2.0;
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 
 @group(0) @binding(0) var<uniform> recordUniforms: RecordUniforms;
+// Helpers take a record's index and read it here themselves: passed by value, a
+// LabelRecord reaches the callee with alpha 0 on Adreno (Android), hiding every label.
 @group(0) @binding(1) var<storage, read> records: array<LabelRecord>;
 @group(0) @binding(4) var<storage, read> styles: array<LabelStyle>;
 
@@ -52,11 +54,13 @@ struct PlacedRecord {
   drawn: bool,
 };
 
-fn styleOf(record: LabelRecord) -> LabelStyle {
+fn styleOf(recordIndex: u32) -> LabelStyle {
+  let record = records[recordIndex];
   return styles[record.style & STYLE_INDEX_MASK];
 }
 
-fn placeRecord(record: LabelRecord, style: LabelStyle) -> PlacedRecord {
+fn placeRecord(recordIndex: u32, style: LabelStyle) -> PlacedRecord {
+  let record = records[recordIndex];
   let projection = recordUniforms.out;
   let viewVec = projection.viewFromWorld
     * ((record.atHi - projection.camHi) + (record.atLo - projection.camLo));
@@ -114,7 +118,8 @@ fn leaderDirection(placed: PlacedRecord) -> vec2<f32> {
   return select(placed.subject.up, toAnchor / lengthPx, lengthPx > 0.0);
 }
 
-fn expandRecordLeader(corner: vec2<f32>, record: LabelRecord, style: LabelStyle, placed: PlacedRecord, occludeWeight: f32) -> LeaderVsOut {
+fn expandRecordLeader(corner: vec2<f32>, recordIndex: u32, style: LabelStyle, placed: PlacedRecord, occludeWeight: f32) -> LeaderVsOut {
+  let record = records[recordIndex];
   let span = leaderSpanPx(style, placed);
   let drawn = placed.drawn && style.leaderWidthPx > 0.0 && span.y > span.x;
   let along = leaderDirection(placed);
@@ -133,7 +138,8 @@ fn expandRecordLeader(corner: vec2<f32>, record: LabelRecord, style: LabelStyle,
 
 // One glyph corner, grown outward by the outline fringe so the outline doesn't clip
 // at the glyph's box; the UV extrapolates past the atlas rect into the SDF tail.
-fn expandRecordGlyph(input: VsIn, record: LabelRecord, style: LabelStyle, placed: PlacedRecord, occludeWeight: f32) -> VsOut {
+fn expandRecordGlyph(input: VsIn, recordIndex: u32, style: LabelStyle, placed: PlacedRecord, occludeWeight: f32) -> VsOut {
+  let record = records[recordIndex];
   let anchor = placed.anchor;
   let atlasToPx = placed.textPx / ATLAS_EM_PX;
   let fringeAtlasPx = style.outlineEmFrac * ATLAS_EM_PX;
@@ -160,15 +166,14 @@ fn expandRecordGlyph(input: VsIn, record: LabelRecord, style: LabelStyle, placed
 
 @vertex
 fn vs(input: VsIn) -> VsOut {
-  let record = records[input.labelIndex];
-  let style = styleOf(record);
-  return expandRecordGlyph(input, record, style, placeRecord(record, style), 0.0);
+  let recordIndex = input.labelIndex;
+  let style = styleOf(recordIndex);
+  return expandRecordGlyph(input, recordIndex, style, placeRecord(recordIndex, style), 0.0);
 }
 
 // One leader per record, instanced over the record buffer.
 @vertex
 fn vsLeader(@location(0) corner: vec2<f32>, @builtin(instance_index) recordIndex: u32) -> LeaderVsOut {
-  let record = records[recordIndex];
-  let style = styleOf(record);
-  return expandRecordLeader(corner, record, style, placeRecord(record, style), 0.0);
+  let style = styleOf(recordIndex);
+  return expandRecordLeader(corner, recordIndex, style, placeRecord(recordIndex, style), 0.0);
 }

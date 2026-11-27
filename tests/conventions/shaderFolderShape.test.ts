@@ -29,7 +29,6 @@ const ALLOWED: readonly string[] = [
   'milkyWay/sprites',
   'prefilterCube',
   'satellites/points',
-  'scalarVolume',
   'structureMarker',
 ];
 

@@ -1,11 +1,5 @@
-/**
- * FieldEntry — internal per-registered-field record kept by the
- * `VolumeFieldRenderer`'s `fields` map: GPU resources, the cube's
- * matrices, per-cube STATIC presentation config from `upload`'s
- * `statics` argument, and a `residentPaletteId` GPU-residency fact.
- * User-tunable knobs live in the caller's settings store, read per
- * frame in `draw` via `settingsOf` — not mirrored here.
- */
+/** FieldEntry — the `VolumeFieldRenderer`'s record per uploaded field. Tunables are read per frame
+ *  through `settingsOf`, never mirrored here. */
 
 import type { Mat4 } from 'wgpu-matrix';
 
@@ -13,55 +7,19 @@ import type { ScalarFieldPaletteId } from '../../../packages/shared/src/@types/d
 import type { GpuVolume } from './GpuVolume';
 
 export type FieldEntry = {
-  /**
-   * Per-cube center of the contrast windowing transform, in LUT
-   * coordinate space [0, 1].  Divergent palettes (coolwarm)
-   * want 0.5 so the deadband suppresses the cosmic-mean midpoint
-   * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
-   * the deadband suppresses the void floor (LUT t=0) and the stretch
-   * pushes mid-density values toward the bright end.  Per-cube
-   * static — read once at registration time from `upload`'s `statics`
-   * argument, not user-tunable.  See `applyContrastWindow` in
-   * `fragment.wesl` for the math.
-   */
+  /** From `upload`'s statics; see `VolumeFieldDefaults`. */
   contrastCenter: number;
-  /**
-   * Spatial envelope (smoothstep edges in normalised local-space
-   * distance from cube center, where the inscribed sphere = 1.0).
-   * Voxels at distance < `envelopeInner` get full alpha; voxels past
-   * `envelopeOuter` are fully suppressed; values in between cross-fade.
-   * Setting both to a value ≥ √3 (the cube-corner distance) disables
-   * the envelope.  Per-cube static — read once at registration from
-   * `upload`'s `statics` argument.
-   */
   envelopeInner: number;
   envelopeOuter: number;
-  /**
-   * GPU-RESIDENCY fact: the palette id currently uploaded into
-   * `paletteTexture`.  NOT a user setting (that's owned by the caller's
-   * settings store, keyed by field id); this just tracks
-   * what's resident on the GPU.  `draw` compares it against the field's
-   * live setting and re-uploads the LUT in place when they differ —
-   * palette is the one knob with a GPU side effect, so it's the one knob
-   * that needs a residency mirror to know when a re-upload is due.
-   */
+  /** What `paletteTexture` holds, not the setting: `draw` re-uploads the LUT when they differ. */
   residentPaletteId: ScalarFieldPaletteId;
   modelMatrix: Mat4;
   invModelMatrix: Mat4;
-  /** The uploaded volume; its texture is the renderer's to destroy. */
   volume: GpuVolume;
   paletteTexture: GPUTexture;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
-  /**
-   * Per-field FadeUniforms GPU buffer (16 bytes — opacity f32 + 12
-   * bytes pad). Written each frame in `draw` from the registry-read
-   * opacity for this field's id.
-   */
+  /** FadeUniforms, 16 bytes: opacity f32 + 12 bytes pad. */
   fadeBuffer: GPUBuffer;
-  /**
-   * Bind group binding `fadeBuffer` at @group(1) @binding(0) using
-   * the canonical fadeBgl.
-   */
   fadeBindGroup: GPUBindGroup;
 };

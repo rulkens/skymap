@@ -204,7 +204,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'tools/parsers/hyperledaMeandata.ts',
   'tools/parsers/milliquas.ts',
   'tools/parsers/ndskl.ts',
-  'tools/parsers/npyReader.ts',
   'tools/parsers/parseFitsBinTable.ts',
   'tools/parsers/parseMcxc.ts',
   'tools/parsers/parseMscc.ts',

@@ -110,6 +110,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['build-mcpm-bricks', 'build-2mrs-bricks'],
+        does: 'Cut the two density fields at full resolution into the bricks the app streams in close up, from native grids that only the maintainer’s machine holds.',
+        manual: DATA,
+      },
+      {
         scripts: ['build-stellar-streams'],
         does: 'Write the particles of the stellar streams around the Milky Way: Sagittarius from an N-body model, the others from the galstreams tracks that fetch-vasiliev2021 and fetch-galstreams downloaded.',
         manual: 'tools/streams/README.md',

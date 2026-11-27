@@ -7,7 +7,6 @@
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
 import package::labels::io::LeaderVsOut;
-import package::labels::io::LabelRecord;
 import package::labels::io::RECORD_GROUNDED;
 import package::labels::vertex::recordUniforms;
 import package::labels::vertex::records;
@@ -21,7 +20,8 @@ import package::labels::vertex::expandRecordLeader;
 import package::labels::vertexOcclude::MPC_TO_KM;
 import package::lib::occlusionMask::maskOccludes;
 
-fn maskVerdictAt(atPx: vec2<f32>, record: LabelRecord, placed: PlacedRecord) -> f32 {
+fn maskVerdictAt(atPx: vec2<f32>, recordIndex: u32, placed: PlacedRecord) -> f32 {
+  let record = records[recordIndex];
   if (!placed.subject.visible || (record.style & RECORD_GROUNDED) != 0u) {
     return 0.0;
   }
@@ -34,17 +34,16 @@ fn maskVerdictAt(atPx: vec2<f32>, record: LabelRecord, placed: PlacedRecord) -> 
 
 @vertex
 fn vsOccludeMask(input: VsIn) -> VsOut {
-  let record = records[input.labelIndex];
-  let style = styleOf(record);
-  let placed = placeRecord(record, style);
-  return expandRecordGlyph(input, record, style, placed, maskVerdictAt(placed.subject.px, record, placed));
+  let recordIndex = input.labelIndex;
+  let style = styleOf(recordIndex);
+  let placed = placeRecord(recordIndex, style);
+  return expandRecordGlyph(input, recordIndex, style, placed, maskVerdictAt(placed.subject.px, recordIndex, placed));
 }
 
 @vertex
 fn vsLeaderOccludeMask(@location(0) corner: vec2<f32>, @builtin(instance_index) recordIndex: u32) -> LeaderVsOut {
-  let record = records[recordIndex];
-  let style = styleOf(record);
-  let placed = placeRecord(record, style);
+  let style = styleOf(recordIndex);
+  let placed = placeRecord(recordIndex, style);
   let bottomPx = placed.subject.px + leaderDirection(placed) * leaderSpanPx(style, placed).x;
-  return expandRecordLeader(corner, record, style, placed, maskVerdictAt(bottomPx, record, placed));
+  return expandRecordLeader(corner, recordIndex, style, placed, maskVerdictAt(bottomPx, recordIndex, placed));
 }

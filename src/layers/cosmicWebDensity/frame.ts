@@ -30,6 +30,7 @@ export function cosmicWebDensityAccumulationPlanner(
               live.settingsOf,
               live.fadeOpacityOf,
               (id) => runtime.slots[id].committed()?.loadedAtMs ?? null,
+              live.regionOf,
               state.tier,
             );
       return planVolumeAccumulation(prev, view, state, inputsKey);

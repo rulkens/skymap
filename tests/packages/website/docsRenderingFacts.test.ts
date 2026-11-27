@@ -37,7 +37,12 @@ describe('rendering rows and the constants behind them', () => {
 
   it('the two reduced images whose divisor is a named scale', () => {
     const row = text('render-reduced-targets');
-    expect(one('src/layers/cosmicWebDensity/layer.ts', 'scale')).toBe(3);
+    expect(
+      one(
+        'src/layers/cosmicWebDensity/densityCubes/data/cosmicWebDensityTargetScale.ts',
+        'COSMIC_WEB_DENSITY_TARGET_SCALE',
+      ),
+    ).toBe(3);
     expect(row).toContain('the cosmic web at a third');
     expect(one('src/layers/zoneOfAvoidance/layer.ts', 'scale')).toBe(5);
     expect(row).toContain('the Zone of Avoidance band at a fifth');

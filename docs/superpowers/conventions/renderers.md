@@ -150,9 +150,9 @@ renderer satisfies Renderer;
 return renderer;
 ```
 
-`flowFieldRenderer` and `volumeFieldRenderer` still define their methods inline in the return
-literal. Normalize them to named functions when you next touch them — not as a standalone
-sweep, which would be a large diff with zero behavioural payload.
+`flowFieldRenderer` still defines its methods inline in the return literal. Normalize it to
+named functions when you next touch it — not as a standalone sweep, which would be a large diff
+with zero behavioural payload.
 
 ## Factory shape
 
@@ -418,6 +418,6 @@ when you're already editing the file.
   `createVolumeFieldRenderer` take `(device, format, …)` instead of a context bag. Convert
   when you next need to add a constructor arg — that's the occasion the conversion pays for
   itself, and `createGalaxyPointRenderer`'s named-bag conversion is the worked precedent.
-- **Methods inline in the return literal.** `flowFieldRenderer` and `volumeFieldRenderer`
-  define their public methods inside the returned object rather than as named functions
-  above it. Normalize on next touch (see "File anatomy").
+- **Methods inline in the return literal.** `flowFieldRenderer` defines its public methods
+  inside the returned object rather than as named functions above it. Normalize on next touch
+  (see "File anatomy").

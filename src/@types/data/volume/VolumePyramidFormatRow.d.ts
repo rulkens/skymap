@@ -7,4 +7,6 @@ export type VolumePyramidFormatRow = {
   readonly blockEdge: 1 | 4 | 6;
   /** All required before a 3D texture of this format may be created. */
   readonly features: readonly GPUFeatureName[];
+  /** One block that decodes to 0. An all-zero ASTC block is an error block, not zero. */
+  readonly zeroBlock: Uint8Array;
 };

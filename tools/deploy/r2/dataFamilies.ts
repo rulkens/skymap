@@ -43,9 +43,18 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     // tools/volumes/buildVolumePyramid.ts; matched by folder, so the name carries no field id.
     label: 'volume-pyramid',
     dir: 'volume-pyramid/v1',
-    fileName: /^[a-z0-9-]+\.(?:json|(?:astc6|bc4|r8)\.L[1-3]\.bin)$/,
+    fileName: /^[a-z0-9-]+\.(?:json|(?:astc6|bc4|r8)\.(?:L[1-3]\.bin|L0\.idx))$/,
     transport: 'wrangler',
     gzipOnWire: true,
+  },
+  {
+    // tools/volumes/buildVolumeBricks.ts; the L0 index rides the row above.
+    label: 'volume-bricks',
+    dir: 'volume-pyramid/v1',
+    fileName: /^[a-z0-9-]+\.(?:astc6|bc4|r8)\.L0\.p\d+\.pack$/,
+    transport: 'wrangler',
+    // Range-read: Content-Encoding would break the byte offsets, and each brick is already a gzip member.
+    gzipOnWire: false,
   },
   {
     label: 'flowfield',

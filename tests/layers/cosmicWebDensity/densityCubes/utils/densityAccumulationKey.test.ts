@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
+import type { DetailRegionDraw } from '../../../../../src/@types/rendering/DetailRegionDraw';
 import { densityAccumulationKey } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/densityAccumulationKey';
 
 type Id = 'a' | 'b';
@@ -14,6 +15,21 @@ const settings = (): VolumeFieldSettings => ({
   paletteId: 'magma',
   trim: 0.3,
   exposure: 4,
+  showLevels: false,
+});
+
+const region = (): DetailRegionDraw => ({
+  settledLo: [0.2, 0.2, 0.2],
+  settledHi: [0.6, 0.6, 0.6],
+  texScale: [1.25, 1.25, 0.9],
+  voxelMpc: 0.78,
+  fade: {
+    intoLo: [0.25, 0.2, 0.2],
+    intoHi: [0.65, 0.6, 0.6],
+    outLo: [0.2, 0.2, 0.2],
+    outHi: [0.6, 0.6, 0.6],
+    w: 0.25,
+  },
 });
 
 const keyOf = (
@@ -21,6 +37,7 @@ const keyOf = (
     a?: VolumeFieldSettings;
     opacity?: number;
     stamp?: number | null;
+    region?: DetailRegionDraw | null;
     tier?: Tier;
   } = {},
 ): string => {
@@ -31,6 +48,7 @@ const keyOf = (
     (id) => (id === 'a' ? a : b),
     (id) => (id === 'a' ? (over.opacity ?? 1) : 1),
     (id) => (id === 'a' ? (over.stamp === undefined ? 1000 : over.stamp) : 2000),
+    (id) => (id === 'a' ? (over.region ?? null) : null),
     over.tier ?? 'medium',
   );
 };
@@ -61,5 +79,18 @@ describe('densityAccumulationKey', () => {
     expect(keyOf({ stamp: 1001 })).not.toBe(base);
     expect(keyOf({ stamp: null })).not.toBe(base);
     expect(keyOf({ tier: 'large' })).not.toBe(base);
+  });
+
+  it('structurally equal region values give the same key', () => {
+    // An identity compare would restart the mean every frame and never converge.
+    expect(keyOf({ region: region() })).toBe(keyOf({ region: region() }));
+  });
+
+  it('a fade step or a moved settled box gives a new key', () => {
+    // A region change the key missed would keep the old box's converged image at rest.
+    const base = keyOf({ region: region() });
+    const fade = region().fade!;
+    expect(keyOf({ region: { ...region(), fade: { ...fade, w: 0.5 } } })).not.toBe(base);
+    expect(keyOf({ region: { ...region(), settledHi: [0.7, 0.6, 0.6] } })).not.toBe(base);
   });
 });

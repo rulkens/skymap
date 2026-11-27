@@ -1,7 +1,7 @@
 /**
  * The cosmicWebDensity Layer: the Physarum density cubes (MCPM, Polyphorm
  * 2MRS, the MCPM workbench export) — one renderer holding every cube, its
- * additive upsample, the accumulation planner, both passes, the retained
+ * additive upsample, the accumulation and detail-region planners, both passes, the retained
  * `cosmic-web-density` render target, one
  * slot and asset row per source row, its one show entry, and
  * both its SettingsPanel and DebugPanel sections.
@@ -15,6 +15,8 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySource
 import { create } from './create';
 import { destroy } from './destroy';
 import { cosmicWebDensityAccumulationPlanner } from './frame';
+import { detailRegionPlanner } from './detailRegion/plan/detailRegionPlanner';
+import { COSMIC_WEB_DENSITY_TARGET_SCALE } from './densityCubes/data/cosmicWebDensityTargetScale';
 import { cosmicWebDensityPass } from './densityCubes/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from './densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './densityCubes/load/cosmicWebDensityAssetRows';
@@ -31,9 +33,8 @@ export const cosmicWebDensityLayer = defineLayer({
       id: 'cosmic-web-density',
       format: HDR_TARGET_FORMAT,
       depth: null,
-      // 1/9th the fragments (3² downsample) of the heaviest per-pixel raymarch:
-      // the cubes are bandlimited and dithered, so the upsample loses nothing.
-      scale: 3,
+      // The cubes are bandlimited and dithered, so the upsample loses nothing.
+      scale: COSMIC_WEB_DENSITY_TARGET_SCALE,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       // The running mean lives in the target across frames, one texture per view.
       retained: true,
@@ -41,9 +42,11 @@ export const cosmicWebDensityLayer = defineLayer({
   ],
   create,
   destroy,
-  planners: (runtime) => [cosmicWebDensityAccumulationPlanner(runtime)],
-  // The second planner instance is only a typed handle: the result store keys by
-  // planner name, so it reads the one above's value.
+  planners: (runtime) => [
+    cosmicWebDensityAccumulationPlanner(runtime),
+    detailRegionPlanner(runtime),
+  ],
+  // A typed handle onto the accumulation planner's result above (the store keys by planner name).
   passes: (runtime) => [
     cosmicWebDensityPass(runtime, cosmicWebDensityAccumulationPlanner(runtime)),
     cosmicWebDensityUpsamplePass(runtime),

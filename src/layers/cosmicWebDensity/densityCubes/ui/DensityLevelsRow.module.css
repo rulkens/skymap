@@ -1,0 +1,32 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.toggle {
+  composes: checkRow from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
+}
+
+.infoIcon {
+  composes: infoIcon from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider.module.css';
+}
+
+.legend {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.swatch {
+  width: 1em;
+  height: 1em;
+  border-radius: var(--radius-sm);
+}

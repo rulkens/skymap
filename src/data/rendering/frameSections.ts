@@ -23,6 +23,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
+    // Once for every view: a dome's faces share one detail region, keyed by the anchor eye.
+    { kind: 'plan', name: 'cosmic-web-density-region' },
     // Every view's body slabs, so the once `sky-view` bake covers exactly what any view draws.
     { kind: 'plan', name: 'atmosphere-roster' },
     // `sky-view` re-bakes its LUT whenever camera altitude or sun direction moves, unlike

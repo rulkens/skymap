@@ -48,6 +48,7 @@ function makeRenderer(
     label: 'stub',
     upload: () => {},
     unload: () => {},
+    attachRegion: () => {},
     hasActiveFields: () => true,
     draw: drawSpy,
     destroy: () => {},
@@ -75,11 +76,13 @@ const SETTINGS_STUB: VolumeFieldSettings = {
   paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
   trim: 0,
   exposure: 1,
+  showLevels: false,
 };
 
 const LIVENESS_STUB: VolumeFieldLiveness<FieldId> = {
   settingsOf: () => SETTINGS_STUB,
   fadeOpacityOf: () => 1,
+  regionOf: () => null,
 };
 
 describe('createScalarVolumePass', () => {

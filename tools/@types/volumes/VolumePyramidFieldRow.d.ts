@@ -6,7 +6,7 @@ import type { RawDataKey } from '../../utils/io/rawDataRegistry';
 export type VolumePyramidFieldRow = {
   /** The source row's `binBaseName`, read from it (MCPM_ENTRY.binBaseName), never retyped. */
   readonly id: string;
-  /** `<rawDataPath(dir)>/<stem>_d{2,4,8}.npy`, C-order (x slowest). */
+  /** `<rawDataPath(dir)>/<stem>_d{2,4,8}.npy` for the pyramid, `_d1.npy` for the bricks; C-order (x slowest). */
   readonly npy: { readonly dir: RawDataKey; readonly stem: string };
   /** levelMax[0]: the d2 file cannot know the native peak. */
   readonly nativePeak: number;

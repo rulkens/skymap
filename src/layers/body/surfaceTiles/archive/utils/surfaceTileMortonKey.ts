@@ -1,4 +1,4 @@
-import { SURFACE_TILE_ARCHIVE_MAX_LEVEL } from '../data/surfaceTileArchiveFormat';
+import { SURFACE_TILE_ARCHIVE_MAX_LEVEL } from '../data/surfaceTileArchiveMaxLevel';
 
 /**
  * surfaceTileMortonKey — bit 2i is x bit i, bit 2i+1 is y bit i. Keys pass 32

@@ -29,6 +29,7 @@ describe('cosmicWebDensity destroy', () => {
       jitterMask,
       jitterMaskSlot,
       slots: {},
+      regions: { destroy: vi.fn() },
     } as unknown as CosmicWebDensityRuntime);
     respond(new Response(new Uint8Array(1), { status: 200 }));
     await loaded;
@@ -58,6 +59,7 @@ describe('cosmicWebDensity destroy', () => {
       jitterMask: { destroy: vi.fn() },
       jitterMaskSlot: { release: vi.fn() },
       slots: { [entry.id]: slot },
+      regions: { destroy: vi.fn() },
     } as unknown as CosmicWebDensityRuntime);
     arrive(volume);
     await loaded;
