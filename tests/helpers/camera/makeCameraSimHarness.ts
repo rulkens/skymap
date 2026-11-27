@@ -134,6 +134,8 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       getCameraRuntime: () => state.cameraRuntime,
       extractFocusRow: () => ({ row: null, id: null }),
       syncVisibility: () => {},
+      visibilityTargets: () => [],
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
     });
   }
 

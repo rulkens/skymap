@@ -31,6 +31,7 @@ import { LABEL_DIRECTORS } from '../../data/labels/labelDirectors';
 import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { syncVisibilityTargets } from './wiring/syncVisibilityTargets';
+import { visibilityTargetTable } from './wiring/visibilityTargetTable';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { FRAME_ORDER } from './frame/frameOrder';
@@ -112,6 +113,8 @@ export function createEngine(
         },
         overMs,
       ),
+    visibilityTargets: (settings) => visibilityTargetTable(state, settings),
+    getFades: () => state.subsystems.fades,
   });
 
   // The engine's only read of the root (enforced by `engineRootRead.test.ts`): intent with a
@@ -363,6 +366,7 @@ export function createEngine(
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
             aspect: state.cameraRuntime.outputs.projection.aspect,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
+            clipAt: clipPlayer.clipAt(),
           }
         : null,
     sceneSettled: () => isSceneSettled(state),

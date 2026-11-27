@@ -47,6 +47,7 @@ describe('watchZoomLimitSaga', () => {
       frame: 'galactic',
       by: 'skyLift',
       atEnd: 'revert',
+      transport: null,
     });
   });
 

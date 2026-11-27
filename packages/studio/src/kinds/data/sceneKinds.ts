@@ -25,6 +25,7 @@ export const sceneKinds: Pick<
   show: {
     glyph: 'show',
     mark: 'cue',
+    fromView: null,
     writes: () => ['layers'],
     label: (s) => ({ name: 'Show', op: '', value: formatAddresses(s.args) }),
     fields: [LAYER_ITEMS_FIELD, overField('Fade in', { fallback: 0 })],
@@ -32,6 +33,7 @@ export const sceneKinds: Pick<
   hide: {
     glyph: 'hide',
     mark: 'cue',
+    fromView: null,
     writes: () => ['layers'],
     label: (s) => ({ name: 'Hide', op: '', value: formatAddresses(s.args) }),
     fields: [LAYER_ITEMS_FIELD, overField('Fade out', { fallback: 0 })],
@@ -39,6 +41,7 @@ export const sceneKinds: Pick<
   fade: {
     glyph: 'fade',
     mark: 'bar',
+    fromView: null,
     writes: () => ['layers'],
     label: (s) => ({
       name: 'Fade',
@@ -55,6 +58,7 @@ export const sceneKinds: Pick<
   scene: {
     glyph: 'set',
     mark: 'cue',
+    fromView: null,
     writes: () => ['settings'],
     label: (s) => ({ name: 'Set', op: '', value: describeSettingsAction(s.action) }),
     fields: [{ key: 'action', param: 'action', label: 'Setting', control: 'settingsAction' }],
@@ -62,6 +66,7 @@ export const sceneKinds: Pick<
   focus: {
     glyph: 'focus',
     mark: 'cue',
+    fromView: null,
     writes: () => ['settings'],
     label: (s) =>
       s.ref === null
@@ -72,6 +77,7 @@ export const sceneKinds: Pick<
   frameTo: {
     glyph: 'frame',
     mark: 'bar',
+    fromView: null,
     writes: () => ['settings'],
     label: (s) => ({ name: 'Frame', op: '→', value: s.frame }),
     fields: [readoutField('frame', 'Frame'), overField(), easeField()],

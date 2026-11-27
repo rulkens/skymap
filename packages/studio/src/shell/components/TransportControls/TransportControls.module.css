@@ -1,0 +1,17 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.free {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-3);
+  padding-left: var(--space-4);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  font-size: var(--font-size-sm);
+}

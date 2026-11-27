@@ -19,6 +19,7 @@ import type { MemorySnapshot } from '../../../@types/perf/MemorySnapshot';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import type { Tier } from '../../../@types/data/Tier';
+import type { ClipId } from '../../../@types/animation/ClipId';
 
 export type SkymapPerfHook = {
   readonly setPose: (pose: PerfPose) => Promise<void>;
@@ -26,6 +27,8 @@ export type SkymapPerfHook = {
   readonly collectTimings: (frames: number) => Promise<PerfSample[]>;
   /** Main-thread ms per `cpuSpans` row, one record per frame, over `frames` frames. */
   readonly collectCpu: (frames: number) => Promise<Record<string, number>[]>;
+  /** `collectCpu`'s rows while a registry clip, paused, seeks to a new t every frame across its length. */
+  readonly scrubClip: (id: ClipId, frames: number) => Promise<Record<string, number>[]>;
   /**
    * Hot-swap the catalog tier and resolve only once the new tier's bins are
    * loaded and committed. Promise-shaped like `setPose`: it dispatches the

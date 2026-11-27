@@ -24,6 +24,7 @@ import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
 import { zoomLimitPressStep } from './utils/zoomLimitPressStep';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
+import { clipOwnsCamera } from '../../../../utils/camera/clipOwnsCamera';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
 import cameraIntentReducer, {
@@ -150,7 +151,7 @@ export function replayInput(
     // its hand-off frame: its end pose rides the register until this frame's edge
     // bakes it, so a step from the stale `base` would be baked in its place.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
-    const clipOwns = camera.clip !== null || winnerLastFrame === 'clip';
+    const clipOwns = clipOwnsCamera(camera) || winnerLastFrame === 'clip';
     if (moves && (clipOwns || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
@@ -225,7 +226,11 @@ export function replayInput(
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped while a navigator row authors the release: its edge commit bakes
         // the nudged register, once.
-        if (camera.clip === null && !navAuthors && sameFrame(register.frame, camera.base.frame)) {
+        if (
+          !clipOwnsCamera(camera) &&
+          !navAuthors &&
+          sameFrame(register.frame, camera.base.frame)
+        ) {
           emit(commitCameraPose(register));
         }
         navAuthors = false;

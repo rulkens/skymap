@@ -1,6 +1,6 @@
 /**
  * resolveDraftSaga — keeps the slice's resolution cache on the current draft revision: on open and
- * on every edit, start switch, undo and redo, wait for the draft's foci, resolve it against the
+ * on every edit, start switch, re-pin, undo and redo, wait for the draft's foci, resolve it against the
  * pinned preview and land it tagged with its revision (A6), and name its Focus steps. The latest
  * revision wins: a newer one cancels work still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
  */
@@ -12,7 +12,9 @@ import {
   draftResolved,
   paramEdited,
   redone,
+  rowReplaced,
   startModeSet,
+  startPinned,
   studioOpened,
   undone,
 } from '../state/studioSlice';
@@ -25,7 +27,15 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import type { SagaContext } from '../../../../../src/store/types';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
 
-const REVISION_ACTIONS = [studioOpened, paramEdited, startModeSet, undone, redone];
+const REVISION_ACTIONS = [
+  studioOpened,
+  paramEdited,
+  startModeSet,
+  startPinned,
+  rowReplaced,
+  undone,
+  redone,
+];
 
 function* resolveRevisionSaga(selection: SagaContext['selection']): Generator {
   const { draft, preview, revision } = yield* select(selectStudioState);

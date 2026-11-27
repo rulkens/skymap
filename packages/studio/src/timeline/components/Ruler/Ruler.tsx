@@ -14,18 +14,22 @@ import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { ChannelFamily } from '../../../@types/rows/ChannelFamily';
 import type { Timeline } from '../../../@types/rows/Timeline';
+import type { ClipSpan } from '../../../../../../src/@types/animation/ClipSpan';
+import type { RulerScrub } from '../../@types/RulerScrub';
 import s from './Ruler.module.css';
 
 type RulerProps = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
   readonly playheadSec: number;
-  readonly onSeek: (sec: number) => void;
+  /** The span Loop tints; null while Loop is off. */
+  readonly looped: ClipSpan | null;
+  readonly scrub: RulerScrub;
 };
 
-/** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window, playheadSec, onSeek }: RulerProps) {
-  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs, onSeek);
+/** The time axis: ticks, a notch per cue in its channel's tint, the looped span, the End flag and the playhead's readout. Click or drag to seek. */
+function Ruler({ timeline, window, playheadSec, looped, scrub }: RulerProps) {
+  const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs, scrub);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;
   const { major, minor } = rulerSteps(span, trackPx);
@@ -50,6 +54,15 @@ function Ruler({ timeline, window, playheadSec, onSeek }: RulerProps) {
 
   return (
     <div ref={ref} className={s.root} {...handlers} aria-label="Timeline ruler">
+      {looped !== null && (
+        <span
+          className={s.loop}
+          style={{
+            ...at(looped.startSec),
+            width: `${timeToPercent(looped.endSec, window) - timeToPercent(looped.startSec, window)}%`,
+          }}
+        />
+      )}
       {ticks.map((sec) => {
         const isMajor = Math.abs(sec / major - Math.round(sec / major)) < EPSILON;
         const tickPx = timeToPercent(sec, window) * (trackPx / 100);

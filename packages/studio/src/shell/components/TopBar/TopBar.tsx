@@ -1,12 +1,11 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import ClipPickerContainer from '../../../containers/shell/ClipPickerContainer';
+import TransportControlsContainer from '../../../containers/shell/TransportControlsContainer';
 import ZoomControlsContainer from '../../../containers/timeline/ZoomControlsContainer';
 import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
-import { compileErrorLine } from '../../utils/compileErrorLine';
 import type { ClipId } from '../../../../../../src/@types/animation/ClipId';
-import type { Timeline } from '../../../@types/rows/Timeline';
 import type { StudioResolution } from '../../../@types/session/StudioResolution';
 import s from './TopBar.module.css';
 
@@ -14,9 +13,9 @@ type TopBarProps = {
   readonly keysOpen: boolean;
   readonly onToggleKeys: () => void;
   readonly clipId: ClipId | null;
-  /** The full tree: a culprit folded inside a group still names itself here. */
-  readonly timeline: Timeline | null;
   readonly resolution: StudioResolution | null;
+  /** Why the current revision cannot play; null while it resolves or once it compiles. */
+  readonly failure: string | null;
   readonly dirty: boolean;
   readonly undoLabel: string | null;
   readonly redoLabel: string | null;
@@ -25,13 +24,13 @@ type TopBarProps = {
   readonly onClose: () => void;
 };
 
-/** Three groups aligned with the dock's columns below: the clip and its state | zoom | undo, keys, close. */
+/** Three groups aligned with the dock's columns below: the clip and its state | transport, zoom | undo, keys, close. */
 function TopBar({
   keysOpen,
   onToggleKeys,
   clipId,
-  timeline,
   resolution,
+  failure,
   dirty,
   undoLabel,
   redoLabel,
@@ -39,12 +38,6 @@ function TopBar({
   onRedo,
   onClose,
 }: TopBarProps) {
-  const failure =
-    timeline?.error != null
-      ? compileErrorLine(timeline.error, timeline.rows)
-      : resolution !== null && 'message' in resolution
-        ? resolution.message
-        : null;
   const resolving = failure === null && resolution === null;
 
   return (
@@ -73,6 +66,7 @@ function TopBar({
         )}
       </div>
       <div className={s.centre}>
+        <TransportControlsContainer />
         <ZoomControlsContainer />
       </div>
       <div className={s.right}>

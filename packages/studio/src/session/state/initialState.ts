@@ -12,7 +12,9 @@ export const initialState: StudioState = {
   pick: null,
   selection: null,
   collapsed: [],
-  playheadSec: 0,
+  transport: { kind: 'paused', atSec: 0, camera: 'clip' },
+  followedSec: 0,
+  loop: false,
   viewport: null,
   history: { past: [], future: [] },
 };

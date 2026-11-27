@@ -27,6 +27,7 @@ export function createStructureKinds(
     hold: {
       glyph: 'hold',
       mark: 'gap',
+      fromView: null,
       writes: () => [],
       label: () => ({ name: 'Hold', op: '', value: '' }),
       fields: [{ key: 'sec', param: 'sec', label: 'Duration', control: 'seconds' }],
@@ -34,6 +35,7 @@ export function createStructureKinds(
     wait: {
       glyph: 'wait',
       mark: 'gap',
+      fromView: null,
       writes: () => [],
       label: () => ({ name: 'Wait', op: '', value: '' }),
       fields: [{ key: 'sec', param: 'sec', label: 'Duration', control: 'seconds' }],
@@ -41,6 +43,7 @@ export function createStructureKinds(
     seq: {
       glyph: 'seq',
       mark: 'group',
+      fromView: null,
       writes: (s) => union(s.children),
       label: (s) => {
         const blend = blendOf(s.overlap);
@@ -64,6 +67,7 @@ export function createStructureKinds(
     all: {
       glyph: 'all',
       mark: 'group',
+      fromView: null,
       writes: (s) => union(s.children),
       label: () => ({ name: 'All', op: '', value: '' }),
       fields: [],
@@ -71,6 +75,7 @@ export function createStructureKinds(
     fork: {
       glyph: 'fork',
       mark: 'group',
+      fromView: null,
       writes: (s) => union([s.child]),
       label: () => ({ name: 'Fork', op: '', value: '' }),
       fields: [],

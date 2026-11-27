@@ -9,7 +9,7 @@ import {
   selectStudioClipId,
   selectUndoLabel,
 } from '../../session/state/selectors';
-import { selectFullTimeline } from '../../timeline/state/selectFullTimeline';
+import { selectFailureLine } from '../../shell/state/selectFailureLine';
 
 type TopBarContainerProps = {
   readonly keysOpen: boolean;
@@ -23,8 +23,8 @@ function TopBarContainer({ keysOpen, onToggleKeys }: TopBarContainerProps) {
       keysOpen={keysOpen}
       onToggleKeys={onToggleKeys}
       clipId={useAppSelector(selectStudioClipId)}
-      timeline={useAppSelector(selectFullTimeline)}
       resolution={useAppSelector(selectCurrentResolution)}
+      failure={useAppSelector(selectFailureLine)}
       dirty={useAppSelector(selectIsDirty)}
       undoLabel={useAppSelector(selectUndoLabel)}
       redoLabel={useAppSelector(selectRedoLabel)}

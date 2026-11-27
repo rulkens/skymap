@@ -11,7 +11,12 @@ import {
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import {
   draftResolved,
+  freeLookStarted,
   paramEdited,
+  paused,
+  played,
+  playheadFollowed,
+  playheadSet,
   rowSelected,
   rowToggled,
   startModeSet,
@@ -25,7 +30,9 @@ import {
   selectIsDirty,
   selectRedoLabel,
   selectRevision,
+  selectPlayheadSec,
   selectStudioState,
+  selectTransport,
   selectUndoLabel,
 } from '../../../src/session/state/selectors';
 import { HISTORY_LIMIT } from '../../../src/session/data/studioLimits';
@@ -201,5 +208,73 @@ describe('studioSlice', () => {
 
     store.dispatch(edit(960, null));
     expect(selectCurrentResolution(store.getState())).toBeNull();
+  });
+
+  it('a seek while playing re-anchors the play at the seek', () => {
+    const store = open();
+    const loop = { startSec: 1, endSec: 3 };
+    store.dispatch(played({ fromSec: 1, loop }));
+    const before = selectTransport(store.getState());
+
+    store.dispatch(playheadSet(2));
+    const after = selectTransport(store.getState());
+    expect(after).not.toBe(before);
+    expect(after).toEqual({ kind: 'running', fromSec: 2, loop });
+    expect(selectPlayheadSec(store.getState())).toBe(2);
+  });
+
+  it('pause lands on the followed t', () => {
+    const store = open();
+    store.dispatch(played({ fromSec: 0, loop: null }));
+    store.dispatch(playheadFollowed({ sec: 3.2, held: false }));
+    store.dispatch(paused());
+    expect(selectTransport(store.getState())).toEqual({
+      kind: 'paused',
+      atSec: 3.2,
+      camera: 'clip',
+    });
+  });
+
+  it('a held follow pauses at the end; a follow after pausing is ignored', () => {
+    const store = open();
+    store.dispatch(played({ fromSec: 4, loop: null }));
+    store.dispatch(playheadFollowed({ sec: 5, held: true }));
+    expect(selectTransport(store.getState())).toEqual({ kind: 'paused', atSec: 5, camera: 'clip' });
+
+    store.dispatch(playheadFollowed({ sec: 5.1, held: false }));
+    expect(selectPlayheadSec(store.getState())).toBe(5);
+  });
+
+  it('free look pauses at the shown head and a seek re-attaches', () => {
+    const store = open();
+    store.dispatch(played({ fromSec: 0, loop: null }));
+    store.dispatch(playheadFollowed({ sec: 1.5, held: false }));
+    store.dispatch(freeLookStarted());
+    expect(selectTransport(store.getState())).toEqual({
+      kind: 'paused',
+      atSec: 1.5,
+      camera: 'free',
+    });
+
+    store.dispatch(playheadSet(2));
+    expect(selectTransport(store.getState())).toEqual({ kind: 'paused', atSec: 2, camera: 'clip' });
+  });
+
+  it('reopening a kept draft keeps its head but never resumes playing', () => {
+    const store = open();
+    store.dispatch(
+      paramEdited({
+        ref: DISTANCE,
+        param: 'distance',
+        value: 500,
+        label: 'Distance',
+        gesture: null,
+      }),
+    );
+    store.dispatch(played({ fromSec: 2, loop: null }));
+    store.dispatch(
+      studioOpened({ clipId: 'cosmicFlows', draft: { timeline: [] }, preview: PREVIEW }),
+    );
+    expect(selectTransport(store.getState())).toEqual({ kind: 'paused', atSec: 2, camera: 'clip' });
   });
 });

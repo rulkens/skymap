@@ -7,6 +7,8 @@ export type StudioKey = {
   readonly label: string;
   /** The keycaps, in press order: `['⇧', '⌘', 'Z']`. */
   readonly chips: readonly string[];
+  /** A toggle: acts on the press only, so a held key cannot flicker it. */
+  readonly once?: true;
   readonly matches: (
     event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey'>,
   ) => boolean;

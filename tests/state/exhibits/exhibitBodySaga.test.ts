@@ -180,6 +180,7 @@ describe('exhibitBodySaga', () => {
       fovYRad: (Math.PI / 180) * 60,
       aspect: 16 / 9,
       upBasisQuat: [0, 0, 0, 1],
+      clipAt: null,
     });
     const { sagaMiddleware } = buildStore(playClip, cameraRuntime);
 

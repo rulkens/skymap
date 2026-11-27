@@ -10,6 +10,7 @@ import { resolvedText } from '../../utils/resolvedText';
 import { rowWhere } from '../../utils/rowWhere';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
+import CurrentViewButtonContainer from '../../../containers/inspector/CurrentViewButtonContainer';
 import FieldRowContainer from '../../../containers/inspector/FieldRowContainer';
 import StartModeFieldContainer from '../../../containers/inspector/StartModeFieldContainer';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
@@ -48,6 +49,9 @@ function RowInspector({ row, rows, draft, resolution, objects }: RowInspectorPro
         fields.map((field) => (
           <FieldRowContainer key={field.key} spec={field} subject={subject} rowRef={row.ref} />
         ))}
+      {(row.ref.kind === 'start' || spec.fromView !== null) && (
+        <CurrentViewButtonContainer rowRef={row.ref} />
+      )}
       {resolved !== '' && (
         <InspectorRow label="Resolved">
           <ReadoutField>{resolved}</ReadoutField>

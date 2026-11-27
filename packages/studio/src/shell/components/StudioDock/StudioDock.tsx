@@ -19,17 +19,17 @@ import s from './StudioDock.module.css';
 
 type StudioDockProps = {
   readonly clipId: ClipId;
-  /** A studio key's store side: false when it had nothing to do. */
-  readonly runKey: (id: StudioKeyId) => boolean;
+  /** Runs a key's command: false when it had nothing to do. */
+  readonly runCommand: (id: StudioKeyId) => boolean;
 };
 
 /** The studio's bottom dock: top bar, timeline, legend. Opaque, so the renderer never shows through. */
-function StudioDock({ clipId, runKey }: StudioDockProps) {
+function StudioDock({ clipId, runCommand }: StudioDockProps) {
   const narrow = useIsMobile();
   const root = useRef<HTMLElement>(null);
   const [fraction, setFraction] = useDockHeight();
   const keys = useKeysOverlay(root);
-  const onKeyDown = useStudioKeys(keys.toggle, runKey);
+  const onKeyDown = useStudioKeys(keys.toggle, runCommand);
   useFocusRescue(root);
   useNoSwipeBack(root);
   // Focus lives in the dock so its keys work at once, and a click on a row (not focusable) lands here.

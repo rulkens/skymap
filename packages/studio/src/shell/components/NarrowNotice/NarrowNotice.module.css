@@ -12,3 +12,8 @@
   font-size: var(--font-size-input);
   color: var(--color-fg);
 }
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

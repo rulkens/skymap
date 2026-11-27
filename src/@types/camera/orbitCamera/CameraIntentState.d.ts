@@ -18,13 +18,21 @@ import type { ClipOwner } from '../../animation/ClipOwner';
 import type { FrameTween } from '../focusMotion/FrameTween';
 import type { OrientationFrameId } from '../orientation/OrientationFrameId';
 import type { ClipSceneEnd } from '../../animation/ClipSceneEnd';
+import type { ClipTransport } from '../../animation/ClipTransport';
 
 export type CameraIntentState = {
   /** The committed pose AND the frame it lives in — the regime itself (spec §4). */
   base: FramedCameraPose;
   tween: CameraTweenDescriptor | null;
   autoRotate: { active: boolean; rate: number };
-  clip: { data: ClipData; frame: OrientationFrameId; by: ClipOwner; atEnd: ClipSceneEnd } | null;
+  /** `transport: null` plays straight through from its start; otherwise the transport owns the clock. */
+  clip: {
+    data: ClipData;
+    frame: OrientationFrameId;
+    by: ClipOwner;
+    atEnd: ClipSceneEnd;
+    transport: ClipTransport | null;
+  } | null;
   frameTween: FrameTween | null;
   /** The last re-aim an exhibit's hold asked for; null before any. */
   aim: CameraAim | null;

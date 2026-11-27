@@ -4,8 +4,8 @@ import Glyph from '../../../primitives/components/Glyph/Glyph';
 import OutlineRow from '../OutlineRow/OutlineRow';
 import TrackLane from '../TrackLane/TrackLane';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
-import Playhead from '../Playhead/Playhead';
-import Ruler from '../Ruler/Ruler';
+import PlayheadContainer from '../../../containers/timeline/PlayheadContainer';
+import RulerContainer from '../../../containers/timeline/RulerContainer';
 import { timeToPercent } from '../../utils/window/timeToPercent';
 import { ancestorChains } from '../../utils/ancestorChains';
 import { selectionRelation } from '../../utils/selectionRelation';
@@ -23,14 +23,12 @@ type TimelinePaneProps = {
   readonly standIn: string | null;
   /** Null = fit. */
   readonly viewport: TimeWindow | null;
-  readonly playheadSec: number;
   readonly objects: ObjectIndex;
   /** The wheel listens here; the track gives it the time axis. */
   readonly rootRef: RefObject<HTMLDivElement | null>;
   readonly trackRef: RefObject<HTMLDivElement | null>;
   readonly onSelectRow: (ref: RowRef) => void;
   readonly onToggleRow: (id: string) => void;
-  readonly onSeek: (sec: number) => void;
 };
 
 /** The outline beside its tracks: a header, then one row per visible step, each an outline cell and a lane. */
@@ -38,13 +36,11 @@ function TimelinePane({
   timeline,
   standIn,
   viewport,
-  playheadSec,
   objects,
   rootRef,
   trackRef,
   onSelectRow,
   onToggleRow,
-  onSeek,
 }: TimelinePaneProps) {
   const chains = useMemo(() => ancestorChains(timeline.rows), [timeline]);
   const window = viewWindow(viewport, timeline);
@@ -66,7 +62,7 @@ function TimelinePane({
             ))}
           </span>
         </div>
-        <Ruler timeline={timeline} window={window} playheadSec={playheadSec} onSeek={onSeek} />
+        <RulerContainer timeline={timeline} window={window} />
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
         {timeline.rows.map((row, index) => {
@@ -103,7 +99,7 @@ function TimelinePane({
             <span className={s.endLine} style={{ left: `${end}%` }} />
           </>
         )}
-        <Playhead playheadSec={playheadSec} window={window} />
+        <PlayheadContainer window={window} />
       </div>
     </div>
   );
