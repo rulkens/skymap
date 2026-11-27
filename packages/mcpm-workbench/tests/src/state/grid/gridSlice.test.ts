@@ -15,10 +15,7 @@ import type { SimLaneCounts } from '../../../../@types/sim/SimLaneCounts';
 import { deriveGridBox } from '../../../../src/grid/deriveGridBox';
 import { estimateBoxGpuBytes } from '../../../../src/sim/memory/estimateBoxGpuBytes';
 import { GPU_BUFFER_ZONE_FROM } from '../../../../src/sim/memory/gpuBufferZoneFrom.constant';
-import {
-  defaultGridSlice,
-  gridSlice,
-} from '../../../../src/state/grid/gridSlice';
+import { defaultGridSlice, gridSlice } from '../../../../src/state/grid/gridSlice';
 import { voxelSizeSliderFor } from '../../../../src/ui/grid/SelectionControls/utils/voxelSizeSliderFor';
 
 const { actions, reducer } = gridSlice;

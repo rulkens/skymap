@@ -4,10 +4,7 @@
  * it's exercised here directly rather than through a saga.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  catalogSlice,
-  defaultCatalogSlice,
-} from '../../../../src/state/catalog/catalogSlice';
+import { catalogSlice, defaultCatalogSlice } from '../../../../src/state/catalog/catalogSlice';
 import type { CatalogPoints } from '../../../../@types/catalog/CatalogPoints';
 import type { UserCatalog } from '../../../../@types/catalog/UserCatalog';
 

@@ -23,28 +23,20 @@ import DataPanelContainer from '../../../../../src/ui/containers/sidebars/DataPa
 import LoadCatalogDialogContainer from '../../../../../src/ui/containers/catalog/LoadCatalogDialogContainer';
 
 // The worker's handler runs in-process; only the disk read is faked, so a test decides when it lands.
-vi.mock(
-  '../../../../../src/catalog/worker/createCatalogWorkerTransport',
-  async () => ({
-    createCatalogWorkerTransport: (
-      await import('../../../../../../../tests/fixtures/inProcessCatalogWorkerTransport')
-    ).inProcessCatalogWorkerTransport,
-  }),
-);
+vi.mock('../../../../../src/catalog/worker/createCatalogWorkerTransport', async () => ({
+  createCatalogWorkerTransport: (
+    await import('../../../../../../../tests/fixtures/inProcessCatalogWorkerTransport')
+  ).inProcessCatalogWorkerTransport,
+}));
 vi.mock('../../../../../src/catalog/worker/readCatalogSource', () => ({
   readCatalogSource: vi.fn(),
 }));
 // The real derive, watched: a load must not derive again.
-vi.mock(
-  '../../../../../src/catalog/worker/previewCatalog',
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import('../../../../../src/catalog/worker/previewCatalog')
-      >();
-    return { previewCatalog: vi.fn(actual.previewCatalog) };
-  },
-);
+vi.mock('../../../../../src/catalog/worker/previewCatalog', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../../../../src/catalog/worker/previewCatalog')>();
+  return { previewCatalog: vi.fn(actual.previewCatalog) };
+});
 const read = vi.mocked(readCatalogSource);
 const parse = vi.mocked(previewCatalog);
 

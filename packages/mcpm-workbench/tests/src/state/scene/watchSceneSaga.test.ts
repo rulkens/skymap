@@ -9,18 +9,9 @@ import { describe, expect, it } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
 import type { GridBox } from '../../../../@types/grid/GridBox';
 import { gridShapeOf } from '../../../../src/state/grid/gridShapeOf';
-import {
-  catalogLoaded,
-  setWeightMode,
-} from '../../../../src/state/catalog/catalogSlice';
-import {
-  defaultGridSlice,
-  gridSlice,
-} from '../../../../src/state/grid/gridSlice';
-import {
-  defaultSimSlice,
-  simSlice,
-} from '../../../../src/state/sim/simSlice';
+import { catalogLoaded, setWeightMode } from '../../../../src/state/catalog/catalogSlice';
+import { defaultGridSlice, gridSlice } from '../../../../src/state/grid/gridSlice';
+import { defaultSimSlice, simSlice } from '../../../../src/state/sim/simSlice';
 import { SCENE_REBUILD_TRIGGERS } from '../../../../src/state/scene/watchSceneSaga';
 
 const TRIGGER_TYPES: Set<string> = new Set(SCENE_REBUILD_TRIGGERS.map((action) => action.type));

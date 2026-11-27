@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  defaultViewSlice,
-  viewSlice,
-} from '../../../../src/state/view/viewSlice';
+import { defaultViewSlice, viewSlice } from '../../../../src/state/view/viewSlice';
 
 const PITCH_LIMIT = 1.5;
 

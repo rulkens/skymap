@@ -10,10 +10,7 @@ import type { Tier } from '../../../shared/src/@types/data/Tier';
 import type { GalaxyCatalog } from '../../../shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
 import { loadDataManifest } from '../../../shared/src/services/loading/dataManifest';
-import {
-  dataUrl,
-  fetchWithProgress,
-} from '../../../shared/src/services/loading/fetchWithProgress';
+import { dataUrl, fetchWithProgress } from '../../../shared/src/services/loading/fetchWithProgress';
 import {
   tierTarget,
   tierFilenameForSource,

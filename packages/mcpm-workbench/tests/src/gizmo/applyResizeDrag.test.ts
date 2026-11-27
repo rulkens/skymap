@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../@types/grid/GridBox';
-import {
-  applyResizeDrag,
-  MIN_SIZE_MPC,
-} from '../../../src/gizmo/applyResizeDrag';
+import { applyResizeDrag, MIN_SIZE_MPC } from '../../../src/gizmo/applyResizeDrag';
 
 // centerMpc=[1,2,3], sizeMpc=[8,8,8] ⇒ halfExtentMpc=[4,4,4] — same fixture as
 // gizmoHandleGeometry.test.ts.

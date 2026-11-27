@@ -8,10 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../../../../shared/src/@types/math/Vec3';
 import type { GridSlice } from '../../../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../../../src/grid/deriveGridBox';
-import {
-  defaultGridSlice,
-  gridSlice,
-} from '../../../../../../src/state/grid/gridSlice';
+import { defaultGridSlice, gridSlice } from '../../../../../../src/state/grid/gridSlice';
 import { sizeAfterSliderEdit } from '../../../../../../src/ui/grid/SelectionControls/utils/sizeAfterSliderEdit';
 import { sizeSliderFor } from '../../../../../../src/ui/grid/SelectionControls/utils/sizeSliderFor';
 
