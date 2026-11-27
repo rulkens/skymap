@@ -9,7 +9,15 @@
  * `build-2mrs-bricks`. Runs on the owner's machine: the d1 inputs are only there.
  */
 
-import { closeSync, mkdirSync, openSync, readSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpyHeader } from '../parsers/readNpyHeader';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -17,12 +25,14 @@ import { encodeArchiveIndex } from '../utils/archive/encodeArchiveIndex';
 import { planArchiveParts } from '../utils/archive/planArchiveParts';
 import { basisuEncodeLevel } from './utils/basisuEncodeLevel';
 import { brickEntryBytes } from './utils/brickEntryBytes';
+import { brickPartFiles } from './utils/brickPartFiles';
 import { cutBrick } from './utils/cutBrick';
 import { encodeVolumeLevel } from './utils/encodeVolumeLevel';
 import { npyPeak } from './utils/npyPeak';
 import { readNpySlab } from './utils/readNpySlab';
 import { VOLUME_PYRAMID_FIELDS } from './data/volumePyramidFields';
 import { ARCHIVE_MAX_PART_BYTES } from '../../src/data/archive/archiveFormat';
+import { VOLUME_PYRAMID_DATA_PREFIX } from '../../src/data/volume/volumePyramidDataPrefix';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../src/data/gpu/textureBytesPerTexel';
 import { VOLUME_BRICK_EDGE as E } from '../../src/data/volume/volumeBrickEdge';
 import { VOLUME_PYRAMID_FORMATS } from '../../src/data/volume/volumePyramidFormats';
@@ -116,6 +126,9 @@ async function buildVolumeBricks(row: VolumePyramidFieldRow): Promise<void> {
         sorted.map(([key, bytes]) => ({ key, length: bytes.length })),
         ARCHIVE_MAX_PART_BYTES,
       );
+      const dir = `public/data/${VOLUME_PYRAMID_DATA_PREFIX}`;
+      mkdirSync(dir, { recursive: true });
+      for (const name of brickPartFiles(readdirSync(dir), row.id, format)) rmSync(join(dir, name));
       for (let part = 0; part < partCount; part++) {
         const members = sorted.filter((_, i) => entries[i]!.part === part).map(([, b]) => b);
         writeOut(volumeBrickArchivePath(row.id, format, part), Buffer.concat(members));
