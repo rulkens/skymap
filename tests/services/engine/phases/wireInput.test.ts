@@ -65,9 +65,11 @@ function makeState(): EngineState {
 }
 
 function makeDeps(): BootstrapDeps {
+  const store = configureStore({ reducer: rootReducer });
   return {
     canvas: { width: 800, height: 600 },
-    cb: { store: configureStore({ reducer: rootReducer }) },
+    cb: { store },
+    readRoot: () => store.getState(),
     composition: { layers: [], home: APP_HOME },
     selection: { resolvePick: () => null },
     phaseLocals: { device: {} },
