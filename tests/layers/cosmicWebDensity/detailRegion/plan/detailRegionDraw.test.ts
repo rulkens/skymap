@@ -34,11 +34,10 @@ describe('detailRegionDraw', () => {
     expect(detailRegionDraw({ ...STATE, settled: null }, MCPM)).toBeNull();
   });
 
-  it('a first fill draws its fade around an empty settled box, no box inverted by the inset', () => {
+  it('a first fill draws its fade with the missing boxes zero-sized, not inverted by the inset', () => {
     const into = box([1, 1, 1], [3, 3, 3]);
-    const empty = box([0, 0, 0], [0, 0, 0]);
     const draw = detailRegionDraw(
-      { ...STATE, settled: null, fade: { into, out: empty, w: 0.25 } },
+      { ...STATE, settled: null, fade: { into, out: null, w: 0.25 } },
       MCPM,
     )!;
     expect(draw.settledLo).toEqual(draw.settledHi);

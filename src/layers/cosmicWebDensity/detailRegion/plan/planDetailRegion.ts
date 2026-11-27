@@ -11,9 +11,6 @@ import type { DetailRegionFade } from '../@types/DetailRegionFade';
 import type { DetailRegionPlan } from '../@types/DetailRegionPlan';
 import type { DetailRegionPlanInput } from '../@types/DetailRegionPlanInput';
 import type { DetailRegionState } from '../@types/DetailRegionState';
-import { isEmptyBrickBox } from '../utils/isEmptyBrickBox';
-
-const EMPTY: BrickBox = { lo: [0, 0, 0], hi: [0, 0, 0] };
 
 export function planDetailRegion(
   prev: DetailRegionState,
@@ -44,7 +41,7 @@ export function planDetailRegion(
   if (prev.fade) {
     const w = Math.min(1, prev.fade.w + input.rampStep);
     if (w < 1) fade = { ...prev.fade, w };
-    else settled = isEmptyBrickBox(prev.fade.into) ? null : prev.fade.into;
+    else settled = prev.fade.into;
   }
   if (!fade) {
     // Clip, not regrow from the centre: regrowing stalls in a half-written entering layer and
@@ -55,7 +52,7 @@ export function planDetailRegion(
     const next = start && grow(start, target, usable);
     if (!sameBox(next, settled)) {
       // `next` contains `kept` and lies in the target, so `into` and `out` meet only in `kept`.
-      fade = { into: next ?? EMPTY, out: settled ?? EMPTY, w: 0 };
+      fade = { into: next, out: settled, w: 0 };
       settled = kept;
     }
   }
@@ -67,9 +64,7 @@ export function planDetailRegion(
     return [{ b, shell: Math.max(...d.map(Math.abs)), d2: d[0]! ** 2 + d[1]! ** 2 + d[2]! ** 2 }];
   });
   ranked.sort((p, q) => p.shell - q.shell || p.d2 - q.d2);
-  const shown = [settled, fade?.into, fade?.out].filter(
-    (box): box is BrickBox => !!box && !isEmptyBrickBox(box),
-  );
+  const shown = [settled, fade?.into, fade?.out].filter((box): box is BrickBox => !!box);
   return {
     state: { target, settled, fade, inReach: true },
     wanted: ranked.map((r) => r.b),
@@ -91,7 +86,7 @@ function clip(box: BrickBox, to: BrickBox): BrickBox | null {
     lo: box.lo.map((v, a) => Math.max(v, to.lo[a]!)) as Vec3,
     hi: box.hi.map((v, a) => Math.min(v, to.hi[a]!)) as Vec3,
   };
-  return isEmptyBrickBox(clipped) ? null : clipped;
+  return clipped.hi.some((hi, a) => hi <= clipped.lo[a]!) ? null : clipped;
 }
 
 /** Adds whole layers, each face independently, while the next layer is usable. */
