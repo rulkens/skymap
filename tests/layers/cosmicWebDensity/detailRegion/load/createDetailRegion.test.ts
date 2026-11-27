@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { VolumePyramidSidecar } from '../../../../../src/@types/data/volume/VolumePyramidSidecar';
 import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
 import type { CosmicWebDensityFieldId } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId';
+import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../../src/data/archive/archiveFetchDeadlineMs';
 import { VOLUME_PYRAMID_FORMATS } from '../../../../../src/data/volume/volumePyramidFormats';
 import { encodeArchiveIndex } from '../../../../../tools/utils/archive/encodeArchiveIndex';
 import { useFetchMock } from '../../../../setup/fetchMock';
@@ -29,13 +30,21 @@ const emptyIndex = (count: number) =>
     0,
   );
 
-function setup(fetch: { mock: ReturnType<typeof vi.fn> }, index: Uint8Array) {
+// Like the real fetch: never answers, rejects when its signal aborts.
+const stalledFetch = (_url: string, init: RequestInit) =>
+  new Promise((_, reject) =>
+    init.signal!.addEventListener('abort', () => reject(init.signal!.reason)),
+  );
+
+function setup(fetch: { mock: ReturnType<typeof vi.fn> }, index: Uint8Array | 'stalled') {
   const routes: Record<string, () => BodyInit> = {
     '/data/volume-pyramid/v1/mcpm.json': () => JSON.stringify(SIDECAR),
     '/data/volume-pyramid/v1/mcpm.astc6.L0.idx': () => index as Uint8Array<ArrayBuffer>,
   };
-  fetch.mock.mockImplementation((url: string) =>
-    Promise.resolve(new Response(routes[url]!(), { status: 200 })),
+  fetch.mock.mockImplementation(
+    index === 'stalled'
+      ? stalledFetch
+      : (url: string) => Promise.resolve(new Response(routes[url]!(), { status: 200 })),
   );
   const texture = { destroy: vi.fn() };
   const device = {
@@ -84,6 +93,27 @@ describe('createDetailRegion', () => {
     expect(bytes.byteLength).toBe(49_152);
     expect(bytes.subarray(16, 32)).toEqual(ASTC.zeroBlock);
     expect(bytes.subarray(49_136)).toEqual(ASTC.zeroBlock);
+  });
+
+  // A stalled load left `busy` true forever: the planner voted awake and `settled()` hung.
+  it('a stalled load gives up at the archive deadline with one warning; a teardown stays silent', async () => {
+    vi.useFakeTimers();
+    // Node's own AbortSignal.timeout ignores fake timers; this one rides setTimeout.
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms) => {
+      const c = new AbortController();
+      setTimeout(() => c.abort(new DOMException('timed out', 'TimeoutError')), ms);
+      return c.signal;
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const torn = setup(fetch, 'stalled');
+    const stalled = setup(fetch, 'stalled');
+    torn.region.destroy();
+    await vi.advanceTimersByTimeAsync(ARCHIVE_FETCH_DEADLINE_MS);
+    expect(stalled.region.frame([48, 48, 48], 1000, 1, 0)).toEqual({ draw: null, busy: false });
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+    timeout.mockRestore();
+    vi.useRealTimers();
   });
 
   it('teardown detaches the texture before destroying it', async () => {

@@ -10,6 +10,7 @@ import type { VolumePyramidFormatRow } from '../../../../@types/data/volume/Volu
 import type { VolumePyramidSidecar } from '../../../../@types/data/volume/VolumePyramidSidecar';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { mat4, vec3 } from 'wgpu-matrix';
+import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../data/archive/archiveFetchDeadlineMs';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../../data/gpu/textureBytesPerTexel';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
 import { createTileStreamSubsystem } from '../../../../services/engine/subsystems/tileStreamSubsystem';
@@ -42,11 +43,13 @@ export function createDetailRegion(deps: DetailRegionDeps): DetailRegion {
   let loading = true;
 
   void (async () => {
+    // A stalled request would hold `busy`, and so the planner's wake vote, forever.
+    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(ARCHIVE_FETCH_DEADLINE_MS)]);
     try {
-      const sidecar = await fetchVolumePyramidSidecar(deps.binBaseName, abort.signal);
+      const sidecar = await fetchVolumePyramidSidecar(deps.binBaseName, signal);
       const format = pickVolumePyramidFormat(deps.device.features);
       const url = dataUrl(volumeBrickArchivePath(deps.binBaseName, format.format));
-      const res = await fetch(url, { signal: abort.signal });
+      const res = await fetch(url, { signal });
       if (!res.ok) throw new HttpError(res.status, url);
       const index = decodeArchiveIndex(new Uint8Array(await res.arrayBuffer()));
       const grid = sidecar.dataBox.dims.map((d) => Math.ceil(d / VOLUME_BRICK_EDGE)) as Vec3;
