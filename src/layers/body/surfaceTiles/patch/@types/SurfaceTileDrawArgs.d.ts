@@ -4,6 +4,7 @@ import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct'
 import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileShading } from '../../format/@types/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
+import type { MeshGroundCaster } from '../../../../../@types/rendering/MeshGroundCaster';
 
 /**
  * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is the already-culled,
@@ -43,6 +44,12 @@ export type SurfaceTileDrawArgs = {
   /** `terrain-no-shadows` debug toggle: every patch gets `NO_HORIZON_RECT`, so the
    *  fragment skips the horizon lookup and draws lit. */
   readonly noShadows: boolean;
+  /** The mesh bodies' shadow array and the site bodies casting onto these tiles
+   *  (`meshBodyRenderer.groundCasters`); null binds a stand-in with no casters. */
+  readonly meshShadows: {
+    readonly view: GPUTextureView;
+    readonly casters: readonly MeshGroundCaster[];
+  } | null;
   /** Each product's atlas view, bound at its lane row's `binding`: albedo's resident patches
    *  sampled at each tile's resolved rect, height's Terrain-RGB codes `textureLoad`ed at the
    *  patch's own slot (every vertex position reads it, so a cut is never drawn without it),

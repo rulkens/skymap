@@ -5,6 +5,6 @@
  * `shaders/bodies/meshBody/io.wesl`'s header.
  */
 
-export const MESH_BODY_UNIFORM_FLOATS = 56;
+export const MESH_BODY_UNIFORM_FLOATS = 72;
 
 export const MESH_BODY_UNIFORM_BYTES = MESH_BODY_UNIFORM_FLOATS * 4;

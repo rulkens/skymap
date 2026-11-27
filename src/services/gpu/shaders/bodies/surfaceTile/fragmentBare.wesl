@@ -13,12 +13,18 @@ import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
+import package::lib::meshShadow::MeshShadowCasters;
+import package::lib::meshShadow::meshShadowVisibility;
 
 @group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
 // Horizon angles per post, read by lib/horizonLookup.wesl (a zero rect skips it).
 @group(0) @binding(11) var horizonAtlas: texture_2d<f32>;
+// The site bodies' sun shadows on this ground (lib/meshShadow.wesl; count 0 reads lit).
+@group(1) @binding(0) var<uniform> meshCasters: MeshShadowCasters;
+@group(1) @binding(1) var meshShadowMap: texture_depth_2d_array;
+@group(1) @binding(2) var meshShadowSampler: sampler_comparison;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -44,8 +50,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let horizon = horizonVisibility(
     horizonAtlas, in.horizonRect, in.uv, sunAngles.x, sunAngles.y, uniforms.sunAngularRadiusRad,
   );
+  // Eye-relative metres, precise at a rover's scale (never 'normalLocal': 0.25 m steps at Mars radius).
+  let eyeRelPosM = -in.viewDirLocal * uniforms.radiusM;
+  var meshSun = 1.0;
+  for (var caster = 0; caster < meshCasters.count; caster++) {
+    let lightClip = meshCasters.lightFromEye[caster] * vec4<f32>(eyeRelPosM, 1.0);
+    meshSun *= meshShadowVisibility(meshShadowMap, meshShadowSampler, meshCasters.slots[caster], lightClip.xyz);
+  }
   let colour = composeSurfaceLight(
-    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, horizon.x, horizon.y,
+    direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, horizon.x * meshSun, horizon.y,
   );
 
   return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, uniforms.debugLodOverlay), 1.0);

@@ -45,6 +45,7 @@ import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
+import { CORE_COMPUTES } from '../frame/computes';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -156,11 +157,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
   ]).map((pass) => gatePassByFade(pass, state));
-  state.computes = concatUniqueRows(
-    'createLayers: compute rows',
-    (compute) => compute.name,
-    instances.map((instance) => instance.computes),
-  ).map((compute) => gateComputeByFade(compute, state));
+  state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
+    CORE_COMPUTES,
+    ...instances.map((instance) => instance.computes),
+  ]).map((compute) => gateComputeByFade(compute, state));
   state.planners = concatUniqueRows(
     'createLayers: planner rows',
     (planner) => planner.name,

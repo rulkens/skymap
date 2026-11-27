@@ -39,6 +39,9 @@ import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
 import { NO_HORIZON_RECT } from '../../../../../data/gpu/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
+import { MESH_SHADOW_SAMPLER } from '../../../../../data/mesh/meshShadowMap';
+import { MESH_SHADOW_CASTERS_BYTES } from '../../../../../data/mesh/meshShadowCastersLayout';
+import { packMeshShadowCasters } from '../../../../../utils/gpu/packMeshShadowCasters';
 
 /** A leaf with no resident night tile: zero scale tells the fragment to read the global map. */
 const NO_NIGHT_RECT: Readonly<Vec4> = [0, 0, 0, 0];
@@ -87,6 +90,57 @@ export function createSurfaceTileRenderer(
     usage: GPUTextureUsage.TEXTURE_BINDING,
   });
   const horizonStandInView = horizonStandIn.createView();
+
+  // Group 1: the site bodies' sun shadows on this ground (`lib/meshShadow.wesl`).
+  const meshShadowBindGroupLayout = device.createBindGroupLayout({
+    label: 'surface-tile-mesh-shadow-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform', minBindingSize: MESH_SHADOW_CASTERS_BYTES },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'depth', viewDimension: '2d-array' },
+      },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+    ],
+  });
+  const meshShadowSampler = device.createSampler(MESH_SHADOW_SAMPLER);
+  const meshShadowBuffer = device.createBuffer({
+    label: 'surface-tile-mesh-shadow-casters',
+    size: MESH_SHADOW_CASTERS_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  // Bound while no mesh renderer exists; the count is then 0, so it is never read.
+  const meshShadowStandIn = device.createTexture({
+    label: 'surface-tile-mesh-shadow-stand-in',
+    size: [1, 1, 1],
+    format: 'depth16unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const meshShadowStandInView = meshShadowStandIn.createView({ dimension: '2d-array' });
+  // Cached on the array view's identity: the core's view lives as long as the engine.
+  let meshShadowBinding: { view: GPUTextureView; bindGroup: GPUBindGroup } | null = null;
+  function meshShadowBindGroup(view: GPUTextureView): GPUBindGroup {
+    if (meshShadowBinding?.view !== view) {
+      meshShadowBinding = {
+        view,
+        bindGroup: device.createBindGroup({
+          label: 'surface-tile-mesh-shadow-bg',
+          layout: meshShadowBindGroupLayout,
+          entries: [
+            { binding: 0, resource: { buffer: meshShadowBuffer } },
+            { binding: 1, resource: view },
+            { binding: 2, resource: meshShadowSampler },
+          ],
+        }),
+      };
+    }
+    return meshShadowBinding.bindGroup;
+  }
 
   const indices = surfacePatchIndices(resolution);
   const indexCount = indices.length;
@@ -162,7 +216,7 @@ export function createSurfaceTileRenderer(
         label: `surface-tile-pipeline[${key}]-cull-${cullMode}`,
         layout: device.createPipelineLayout({
           label: `surface-tile-pipeline-layout[${key}]`,
-          bindGroupLayouts: [bindGroupLayout],
+          bindGroupLayouts: [bindGroupLayout, meshShadowBindGroupLayout],
         }),
         vertex: { module: vsModule, entryPoint: 'vs' },
         fragment: {
@@ -238,6 +292,7 @@ export function createSurfaceTileRenderer(
       noDisplacement,
       noSkirts,
       noShadows,
+      meshShadows,
       atlasViews,
     } = args;
     const tileCount = tiles.length;
@@ -344,6 +399,11 @@ export function createSurfaceTileRenderer(
       sunAngularRadiusRad,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
+    device.queue.writeBuffer(
+      meshShadowBuffer,
+      0,
+      packMeshShadowCasters(meshShadows?.casters ?? []),
+    );
 
     // Rebuilt every draw: the storage buffer may have grown and views arrive per call.
     const fragmentResources: Readonly<Record<number, GPUBindingResource | undefined>> = {
@@ -377,6 +437,7 @@ export function createSurfaceTileRenderer(
 
     pass.setPipeline(args.mirrored ? variant.mirroredPipeline : variant.pipeline);
     pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(1, meshShadowBindGroup(meshShadows?.view ?? meshShadowStandInView));
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, tileCount);
   }
@@ -384,6 +445,9 @@ export function createSurfaceTileRenderer(
   function destroy(): void {
     patchBuffer?.destroy();
     horizonStandIn.destroy();
+    meshShadowStandIn.destroy();
+    meshShadowBuffer.destroy();
+    meshShadowBinding = null;
     indexBuffer.destroy();
     uniformBuffer.destroy();
   }

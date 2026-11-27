@@ -15,6 +15,7 @@ import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { bodyLayer } from '../../../../src/layers/body/layer';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
@@ -38,7 +39,7 @@ describe('checkFrameOrder — boot', () => {
       checkFrameOrder(
         Object.values(VIEW_RIGS).map((rig) => rig.program),
         CONTENT_PASSES,
-        bodyLayer.computes!({} as BodyRuntime),
+        [...CORE_COMPUTES, ...bodyLayer.computes!({} as BodyRuntime)],
         LAYER_PLANNER_STUBS,
         targets,
       ),

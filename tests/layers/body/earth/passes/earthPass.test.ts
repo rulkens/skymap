@@ -191,7 +191,7 @@ function makeRuntime(
 
 function makeState(): EngineState {
   return {
-    gpu: {},
+    gpu: { meshBodyRenderer: null },
     // Seeded from EARTH_SURFACE_PARAMS so the packed tail slots equal the authored defaults.
     settings: {
       earth: {

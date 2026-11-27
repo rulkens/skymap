@@ -16,7 +16,7 @@
 // '@builtin(position)'-bearing struct -- a second one links fine and is rejected
 // at 'createShaderModule' (the runtime-only landmine).
 //
-// ## Byte layout (uniform address space) -- 224 bytes, 56 f32
+// ## Byte layout (uniform address space) -- 288 bytes, 72 words
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major)
 //   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned)
@@ -38,7 +38,9 @@
 //   offset 192..203: horizonUp           (vec3<f32> -- the anchor's up, host axes)
 //   offset 204..207: padding to horizonUv's 8-byte alignment
 //   offset 208..215: horizonUv           (vec2<f32> -- the anchor's uv in that tile)
-//   offset 216..223: struct padding to a 16-byte multiple
+//   offset 216..219: shadowSlot          (i32 -- the body's sun shadow layer; -1 reads lit)
+//   offset 220..223: shadowNormalOffsetM (f32 -- the receiver's step off its surface, metres)
+//   offset 224..287: lightFromLocal      (mat4x4<f32> -- 'localPos' to that layer's clip)
 //
 // The first 80 bytes match 'LitBodyUniforms' byte-for-byte, but
 // 'packLitBodyUniforms' can NOT be reused: it zeroes byte 76 that
@@ -58,6 +60,9 @@ struct MeshBodyUniforms {
   horizonRect: vec4<f32>,
   horizonUp: vec3<f32>,
   horizonUv: vec2<f32>,
+  shadowSlot: i32,
+  shadowNormalOffsetM: f32,
+  lightFromLocal: mat4x4<f32>,
 };
 
 struct MeshBodyVSOut {

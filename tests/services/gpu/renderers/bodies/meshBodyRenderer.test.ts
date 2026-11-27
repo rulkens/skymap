@@ -4,7 +4,7 @@
  * Vitest runs in Node without a WebGPU surface, so every `create*` call returns
  * a plausibly-shaped stand-in (the `texturedBodyRenderer.test.ts` pattern).
  * What's pinned here is the group SPLIT — per-body resources at group 0, the
- * renderer-wide sampler + env-BRDF LUT at group 1, the host's horizon atlas at 2 — because a layout that
+ * renderer-wide sampler + env-BRDF LUT at group 1, the host's horizon atlas and the sun shadow array at 2 — because a layout that
  * drifts from the shader's `@group`/`@binding` decorations only fails at
  * device-validation time in the browser, which no other check here reaches.
  */
@@ -133,7 +133,12 @@ describe('createMeshBodyRenderer', () => {
       'meshBody-global-bgl',
       'meshBody-horizon-bgl',
       'meshBody-contact-bgl',
+      'meshBody-shadow-bgl',
     ]);
+    // `lib/meshShadow.wesl` reads a texture_depth_2d_array through a sampler_comparison.
+    const [, shadowMap, shadowSampler] = Array.from(bindGroupLayouts[2]!.entries);
+    expect(shadowMap!.texture).toEqual({ sampleType: 'depth', viewDimension: '2d-array' });
+    expect(shadowSampler!.sampler).toEqual({ type: 'comparison' });
 
     // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);
