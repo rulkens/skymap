@@ -1519,3 +1519,24 @@ frozen regions; debug panel rows; the dust volume and the workbench cube; a fine
 mirroring the d1 inputs to R2; aborting in-flight fetches; a volume-arrival milestone in
 `tools/loadtime`; switching brick reads to `no-store` (the owner's call on check 6); deleting any
 spike code.
+
+---
+
+## Results (Task 7.3, 2026-11-27)
+
+**Owner ruling: the 14 acceptance checks are cut; only basic phone checks run.** Checks 1, 2, 6
+and 8–14 were not run. What stands in for checks 4, 5 and 7 is the first look below.
+
+- **First look (Mac, medium tier, main against branch):** the owner passed MCPM knot, MCPM inside
+  and 2MRS dense. Mean of 255 at the MCPM knot: main 33.05, region at gain 1 30.87, region at the
+  tier gain 40.46. The owner kept the tier gain. With "Colour by level" on, the region covers 99%
+  of the lit pixels at the knot and no box face shows.
+- **Fade wait:** not carried over from the spike. Check 8, which was to decide it, was cut; no
+  pop was measured.
+- **Phone (OnePlus 7T, Chrome 158, production build, small tier, MCPM inside):** the region draws;
+  125 Range reads (206) under `volume-pyramid/v1/`, no failed fetch, no console message. The
+  picked format was not read. Dragging for 8.5 s, one run each: main 551 frames (median interval
+  14.7 ms, p95 19.3), branch 577 frames (median 16.3 ms, p95 18.9); rAF callback median 4.7 ms on
+  both. No cost shows within one run's noise; that the drags moved the camera was not confirmed.
+- **Never run in a browser:** the fading pipeline (`REGION` 2) and the base-only pipeline's pixel
+  comparison against main; the level tint's `REGION` 0 and 2 variants.
