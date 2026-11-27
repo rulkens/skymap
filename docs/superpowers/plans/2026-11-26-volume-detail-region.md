@@ -1248,8 +1248,9 @@ length `fragment.wesl:227-228` already computes for the LOD. Beyond `tGate` a pi
 one native voxel, so the base serves it.
 
 **Per step:** one interval test on `rayDistance`; inside, `textureSampleLevel(regionTex,
-regionSampler, samplePos * region.texScale, 0.0).r` at gain 1, no clamp; outside, today's base read
-(`:239-240`). Exactly one volume read either way. The comments this touches come under budget.
+regionSampler, samplePos * region.texScale, 0.0).r`; outside, today's base read (`:239-240`).
+Exactly one volume read either way; either then takes the base's `gain` and clamp to 1 (owner ruling
+2026-11-27: at gain 1, no clamp, the region read dimmer than main). The comments this touches come under budget.
 
 Steps:
 
@@ -1315,8 +1316,8 @@ any extra read sends the change back to D6 before acceptance.
   PRELUDE, a borrowed texture through `attachRegion`, group 2, the gate distance, the box clamped
   against the nearest face from outside); landmines beside `:101`: the ASTC zero block is a
   void-extent block (all-zero is an error block); the placeholder group 2 (WGSL counts a binding as
-  used whatever an override's value); region samples are at gain 1; the repeat sampler and the
-  half-voxel inset.
+  used whatever an override's value); region samples take the base's gain (owner ruling
+  2026-11-27); the repeat sampler and the half-voxel inset.
 - **DEPLOY.md:** beside "Edge caching" (`:171`): volume bricks are Range-read raw (`gzipOnWire:
   false`) and immutable by content hash.
 - **`data/raw/mcpm/README.md`:** already carries d1 from Task 4.1; check the wording only.

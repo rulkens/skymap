@@ -280,7 +280,9 @@ readonly zeroBlock: Uint8Array;
 ```
 
 The encoding is the pyramid's (`log1p(v) / log1p(levelMax[0])`, 8 bit, the field's clamp
-`zeroBelowRaw` first), so a region sample is on the native scale and reads with gain 1.
+`zeroBelowRaw` first), so a region sample is on the native scale. It still takes the base level's
+gain and clamp (owner ruling 2026-11-27): at gain 1 the region measured dimmer than main, whose look
+is tuned with the gain.
 
 **Empty** means every r8 code in the brick is 0 after the clamp. It is not a contrast threshold:
 the spike's deadband rule (2181 MCPM bricks occupied) would show holes when a viewer lowers the
@@ -622,9 +624,9 @@ always finds this frame's value.
 export const DENSITY_REGION_BRICKS_BY_TIER = { small: 5, medium: 5, large: 8 } as const satisfies Record<Tier, number>;
 ```
 
-Small ↔ medium keeps the region (same K; only the base level changes, and the region reads at gain
-1 with no tie to the base). Medium ↔ large rebuilds it at the new K and reads its bricks again,
-from the HTTP cache where they were read before.
+Small ↔ medium keeps the region (same K; only the base level changes, and with it the gain the
+shader applies, which the region's texels do not depend on). Medium ↔ large rebuilds it at the new
+K and reads its bricks again, from the HTTP cache where they were read before.
 
 ## 7. Shader and renderer
 
@@ -679,9 +681,9 @@ already computed for the LOD (`fragment.wesl:227-228`). Variant 2 adds the same 
 `into` and `out`.
 
 **Per step, steady.** One interval test on `rayDistance`, then exactly one volume read: inside, the
-region at level 0, `textureSampleLevel(regionTex, regionSampler, samplePos · texScale, 0)`, at gain
-1 and with no clamp to 1; outside, today's base read (`fragment.wesl:239-240`). The spike tested the
-box per step in voxel space. The ray-interval form reads the same texels with less arithmetic; its
+region at level 0, `textureSampleLevel(regionTex, regionSampler, samplePos · texScale, 0)`; outside,
+today's base read (`fragment.wesl:239-240`); either then takes the base's gain and clamp to 1 (owner
+ruling 2026-11-27). The spike tested the box per step in voxel space. The ray-interval form reads the same texels with less arithmetic; its
 cost is covered by §13 check 2.
 
 | Variant | Where in the ray | Volume reads | Palette reads | Volume texel taps | Extra ALU per step |
@@ -923,7 +925,7 @@ answers Range. A kiosk on an older desktop build ignores them.
   volumes section (line 195) gains the brick grid, the d1 inputs and `build-mcpm-bricks` / `build-2mrs-bricks`.
 - `docs/RENDERER.md`: the density-volume bullet (line 53) gains the region (once planner, borrowed
   texture, group 2, gate distance); landmines: the ASTC zero block, the placeholder group 2, region
-  samples at gain 1.
+  samples take the base's gain (owner ruling 2026-11-27).
 - `docs/DEPLOY.md`: one line that volume bricks are Range-read raw and immutable by content hash.
 - `data/raw/mcpm/README.md`: the d1 output and its size.
 

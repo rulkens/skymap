@@ -270,13 +270,13 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
     // textureSample's implicit derivatives are undefined. One volume read, two only in a fading
-    // shell: the region is native-scale (gain 1, unclamped), its texels valid only inside its boxes.
+    // shell; the region's texels are valid only inside its boxes.
     var sampleValue: f32;
     if (REGION != 0u && rayDistance >= settledSpan.x && rayDistance < settledSpan.y) {
       sampleValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
     } else {
       let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
-      sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
+      sampleValue = textureSampleLevel(volume, volumeSampler, samplePos, lod).r;
       // The fading shells: the region at fadeW in `into`, 1 − fadeW in `out`. Both contain the
       // settled box and meet only in it, so a sample here lies in at most one.
       if (REGION == 2u) {
@@ -288,6 +288,8 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
         }
       }
     }
+    // The region takes the base tier's gain too (owner ruling 2026-11-27): the look is tuned to it.
+    sampleValue = min(sampleValue * uniforms.gain, 1.0);
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,

@@ -1,7 +1,7 @@
 /**
  * createDetailRegionHost — at most one detail region per pyramid field (spec §6.4, §6.6). A field
  * that leaves `wanted` or changes K (medium ↔ large) is torn down; small ↔ medium keeps its region,
- * since the region reads at gain 1 with no tie to the base level.
+ * since only the base's gain changes there and the shader applies it, not the region's texels.
  */
 import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
