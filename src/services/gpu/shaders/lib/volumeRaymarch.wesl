@@ -32,15 +32,15 @@ fn localRayFromWorld(invModel: mat4x4<f32>, cameraPosWorld: vec3<f32>, worldPos:
   return LocalRay(origin, dir);
 }
 
-// Ray-vs-axis-aligned-unit-AABB intersection in the cube's LOCAL space
-// (the cube spans [0, 1]^3 in local coords).  Returns the (tMin, tMax)
+// Ray-vs-axis-aligned-AABB intersection in the cube's LOCAL space (the
+// cube itself spans [0, 1]^3 in local coords).  Returns the (tMin, tMax)
 // range along the ray, with tMin clamped to 0 so a ray origin inside
-// the cube starts marching from the origin.  If the ray misses the cube
+// the box starts marching from the origin.  If the ray misses the box
 // entirely, returns tMax < tMin and the caller discards.
-fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
+fn intersectAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>, boxLo: vec3<f32>, boxHi: vec3<f32>) -> vec2<f32> {
   let invDir = 1.0 / rayDir;
-  let tLowSlab = -rayOrigin * invDir;
-  let tHighSlab = (vec3<f32>(1.0) - rayOrigin) * invDir;
+  let tLowSlab = (boxLo - rayOrigin) * invDir;
+  let tHighSlab = (boxHi - rayOrigin) * invDir;
   let tMinV = min(tLowSlab, tHighSlab);
   let tMaxV = max(tLowSlab, tHighSlab);
   let tMin = max(max(tMinV.x, tMinV.y), tMinV.z);

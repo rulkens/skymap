@@ -1234,8 +1234,8 @@ regionSampler, samplePos * region.texScale, 0.0).r` at gain 1, no clamp; outside
 
 Steps:
 
-- [ ] Implement. No new test: the image checks are the controller's (no GPU in CI).
-- [ ] `npm test -- volumeUniformsLayout volumeField`.
+- [x] Implement. No new test: the image checks are the controller's (no GPU in CI).
+- [x] `npm test -- volumeUniformsLayout volumeField`.
 - [ ] Controller, after the commit: MCPM inside at large, converged, visibly sharper than main
       inside the box and identical outside it (one look, no bar yet); at the just-outside pose
       `a,-239.45,-16.5,201.3,0.5,0.3,350,0` the box shows against the near face; no WGSL error.

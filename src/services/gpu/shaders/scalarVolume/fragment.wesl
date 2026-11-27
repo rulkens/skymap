@@ -26,7 +26,7 @@
 import package::lib::camera::CameraUniforms;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::volumeRaymarch::localRayFromWorld;
-import package::lib::volumeRaymarch::intersectUnitAabb;
+import package::lib::volumeRaymarch::intersectAabb;
 import package::lib::volumeRaymarch::sphericalEnvelope;
 
 struct VolumeUniforms {
@@ -182,6 +182,13 @@ struct FsIn {
 // midpoint stretch toward t=1, voxels below stretch toward t=0; at
 // center=0 every voxel is above the center so they all stretch
 // monotonically toward t=1.
+// A box's span along the ray, ended at tGate: past it a pixel spans more than one native voxel,
+// so the base serves it. A zero-sized box gives an empty span, never a match (tests are half-open).
+fn regionSpan(origin: vec3<f32>, dir: vec3<f32>, boxLo: vec3<f32>, boxHi: vec3<f32>, tGate: f32) -> vec2<f32> {
+  let hit = intersectAabb(origin, dir, boxLo, boxHi);
+  return vec2<f32>(hit.x, min(hit.y, tGate));
+}
+
 fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
@@ -209,7 +216,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   let rayOriginLocal = ray.origin;
   let rayDirLocal = ray.dir;
 
-  let tRange = intersectUnitAabb(rayOriginLocal, rayDirLocal);
+  let tRange = intersectAabb(rayOriginLocal, rayDirLocal, vec3<f32>(0.0), vec3<f32>(1.0));
   let tMin = tRange.x;
   let tMax = tRange.y;
   if (tMax <= tMin) {
@@ -240,8 +247,13 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   let jitter = maskValue * stepLength;
   // The camera is the ray origin, so local distance t times |M·dir| is world distance and one
   // pixel spans t·|M·dir| / (pxPerRad·baseVoxelMpc) base voxels: its log2 is the LOD.
-  let lodOffset = log2(length((uniforms.modelMatrix * vec4<f32>(rayDirLocal, 0.0)).xyz)
-                       / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
+  let mpcPerT = length((uniforms.modelMatrix * vec4<f32>(rayDirLocal, 0.0)).xyz);
+  let lodOffset = log2(mpcPerT / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
+  var settledSpan = vec2<f32>(0.0);
+  if (REGION != 0u) {
+    let tGate = uniforms.cam.pxPerRad * region.voxelMpc / mpcPerT;
+    settledSpan = regionSpan(rayOriginLocal, rayDirLocal, region.settledLo, region.settledHi, tGate);
+  }
   // Opacity and the envelope stay in native-grid units, so a cropped box looks like the whole grid.
   let nativeStepLength = stepLength * length(uniforms.nativeBoxScale * rayDirLocal);
   let maxLod = f32(textureNumLevels(volume) - 1u);
@@ -251,9 +263,15 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // Local [0,1]^3 is the stored box, so 'samplePos' is directly the texture coordinate.
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
-    // textureSample's implicit derivatives are undefined.
-    let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
-    let sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
+    // textureSample's implicit derivatives are undefined. One volume read either way: the region
+    // is native-scale (gain 1, unclamped) and holds valid texels only inside its boxes.
+    var sampleValue: f32;
+    if (REGION != 0u && rayDistance >= settledSpan.x && rayDistance < settledSpan.y) {
+      sampleValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
+    } else {
+      let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
+      sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
+    }
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
