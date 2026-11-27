@@ -6,9 +6,8 @@
  *
  * `source`: `'committed'` = in git, so a missing file means a broken repo;
  * `'gitignored'` = fetcher output, so a missing file means "run the fetcher".
- * `kind: 'directory'` covers dynamic filenames (chunks, tier variants) —
- * consumers `join()`. Build artefacts are outputs; they are not registered.
- */
+ * `kind: 'directory'` covers dynamic filenames (chunks, tier variants): consumers
+ * `join()`. Build artefacts are outputs, not registered. */
 
 import { resolve } from 'node:path';
 

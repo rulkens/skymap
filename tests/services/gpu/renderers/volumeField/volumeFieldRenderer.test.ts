@@ -23,18 +23,8 @@ function fixture(): GpuVolume {
   };
 }
 
-/**
- * Minimal GPUDevice mock for renderer construction and draw tests.
- *
- * Vitest runs in Node without a real WebGPU surface; every device call
- * the renderer makes during construction + upload must return a
- * plausibly-shaped stand-in.  Draw tests assert on recorded
- * `device.queue.writeBuffer` / `device.queue.writeTexture` mock calls
- * — the uniform scratch the renderer packs per field, and the palette
- * LUT re-uploads it issues when `settingsOf` returns a changed
- * `paletteId`.  Modelled after the mock-device pattern in
- * `tests/services/gpu/renderTargets.test.ts`.
- */
+/** Enough GPUDevice for construction and draw; draw tests assert on the recorded `writeBuffer` and
+ *  `writeTexture` calls. */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   const makeTexture = () => ({
     createView: vi.fn(() => ({})),
@@ -51,9 +41,6 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
     createPipelineLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       renderPipelines?.push(desc);
-      // The renderer derives its bind-group layout from the pipeline (it
-      // uses `layout: 'auto'`); mock returns an empty layout the test
-      // never inspects.
       return { getBindGroupLayout: vi.fn(() => ({})) };
     }),
     createBindGroup: vi.fn(() => ({})),
@@ -69,8 +56,6 @@ function deps(device: GPUDevice): VolumeFieldRendererDeps {
     jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
   };
 }
-
-// ── Draw-path helpers ────────────────────────────────────────────────
 
 function makeFakePass() {
   return {
@@ -99,11 +84,7 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
   } as VolumeFieldSettings;
 }
 
-/**
- * Extract the length-76 uniform scratch from the writeBuffer mock.
- * The fade write passes a 16-byte ArrayBuffer — we skip it and find
- * only the Float32Array(76) that packs the full per-field uniform.
- */
+/** The per-field uniform scratch (76 floats); the fade write is a 16-byte ArrayBuffer instead. */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
   const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
     .calls;
@@ -139,12 +120,7 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 
   it('upload seeds contrastCenter / envelope from statics, for an id no registry row names', () => {
-    // Per-cube static config taken from `upload`'s `statics` argument;
-    // user-tunable knobs are absent from it and arrive per draw via
-    // settingsOf. The renderer names no registry — any id is valid as long
-    // as the caller supplies statics, which is what makes a second caller
-    // (a future dust volume on its own ids) possible without widening this
-    // renderer's id union.
+    // The renderer names no registry, so a second caller on its own ids needs no wider id union.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const statics = {
@@ -171,11 +147,6 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 
   it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
-    // First draw with the statics-seeded default palette — no extra upload
-    // (the LUT was already seeded in upload).  Second draw with a
-    // different palette — exactly one writeTexture.  Third draw with
-    // the same changed palette — no further writeTexture (resident
-    // now tracks the new id).
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
@@ -230,8 +201,7 @@ describe('createVolumeFieldRenderer draw', () => {
 
   it('draw skips an ENABLED field whose resolved opacity is 0', () => {
     // Opacity is the sole visibility truth: an enabled field spatially faded
-    // to 0 (the deep-zoom band) must not burn a raymarch. The old rule let
-    // `enabled` override a zero opacity and drew anyway.
+    // to 0 (the deep-zoom band) must not burn a raymarch.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
@@ -269,9 +239,9 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(uniformScratch(device)?.[63]).toBe(5);
   });
 
-  // The spike decayed the target once per field, so every field faded the ones before it (MCPM
-  // −65% with 2MRS on). One decay, then every field adds at w: dst·(1−w) + w·Σ fields. The blend
-  // constant must be set too: WebGPU's default of 0 erases the volume.
+  // A decay per field would fade every field drawn before it (MCPM −65% with 2MRS on). One decay,
+  // then every field adds at w: dst·(1−w) + w·Σ fields. The blend constant must be set too:
+  // WebGPU's default of 0 erases the volume.
   it('below weight 1, one decay draw precedes every field', () => {
     const pipelines: GPURenderPipelineDescriptor[] = [];
     const device = mockDevice(pipelines);
@@ -349,13 +319,8 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 });
 
-/**
- * Recovers the actual mock instances `device.createTexture` /
- * `device.createBuffer` returned, in call order — each call in
- * `mockDevice` returns a fresh object with its own `destroy: vi.fn()`,
- * so a snapshot taken right after `upload()` lets a test assert
- * `destroy` on the SPECIFIC resource rather than on any texture/buffer.
- */
+/** The mocks `createTexture` (below: `createBuffer`) returned, in call order, so a test asserts
+ *  `destroy` on a specific one. */
 function createdTextures(device: GPUDevice): { destroy: () => void }[] {
   return (
     device.createTexture as unknown as { mock: { results: { value: { destroy: () => void } }[] } }

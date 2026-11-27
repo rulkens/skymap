@@ -100,7 +100,7 @@ describe('createDetailRegion', () => {
     expect(bytes.subarray(49_136)).toEqual(ASTC.zeroBlock);
   });
 
-  // A stalled load left `busy` true forever: the planner voted awake and `settled()` hung.
+  // Bug caught: a stalled load holding `busy` forever, so the planner voted awake and `settled()` hung.
   it('a stalled load gives up at the archive deadline with one warning; a teardown stays silent', async () => {
     vi.useFakeTimers();
     // Node's own AbortSignal.timeout ignores fake timers; this one rides setTimeout.
@@ -121,7 +121,7 @@ describe('createDetailRegion', () => {
     vi.useRealTimers();
   });
 
-  // Built outside the try, a throwing signal left `loading`, and so the planner's wake vote, set.
+  // Bug caught: a throwing signal leaving `loading`, and so the planner's wake vote, set.
   it('a signal that cannot be built ends the load with one warning', async () => {
     const any = vi.spyOn(AbortSignal, 'any').mockImplementation(() => {
       throw new TypeError('AbortSignal.any is not a function');
@@ -135,8 +135,8 @@ describe('createDetailRegion', () => {
     any.mockRestore();
   });
 
-  // Touch before allocate is the fade's slot lock (spec §6.4): allocating first evicted a brick
-  // still drawn in the box fading out, and the entering brick overwrote its slot.
+  // Touch before allocate is the fade's slot lock (spec §6.4): allocating first evicts a brick
+  // still drawn in the box fading out, and the entering brick overwrites its slot.
   it('a brick in the box fading out keeps its slot against a wanted brick of the same residue', async () => {
     // 144 × 48 × 48 voxels: a row of three bricks, K = 2, so bricks 0 and 2 share slot 0.
     const row: VolumePyramidSidecar = {

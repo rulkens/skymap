@@ -1,9 +1,8 @@
 import type { ArchiveEntry } from '../../../../@types/archive/ArchiveEntry';
 import { readArchiveRange } from '../../../../utils/archive/readArchiveRange';
 
-/** One brick: `readArchiveRange` (HTTP cache, ruling 10), `DecompressionStream('gzip')` (precedent
- *  `src/data/starCatalog/starBinCodec.ts`), then a length check. null = failed; 'no-range' is
- *  reported once per field by the caller. Never called for a zero-length entry. */
+/** One brick: `readArchiveRange` (HTTP cache, ruling 10), gunzip, then a length check. null =
+ *  failed; 'no-range' is reported once per field by the caller. Never called for a zero-length entry. */
 export async function fetchVolumeBrick(
   url: string,
   entry: Pick<ArchiveEntry, 'offset' | 'length'>,

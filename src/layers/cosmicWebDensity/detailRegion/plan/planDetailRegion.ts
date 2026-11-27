@@ -46,8 +46,8 @@ export function planDetailRegion(
     else settled = prev.fade.into;
   }
   if (!fade) {
-    // Clip, not regrow from the centre: regrowing stalls in a half-written entering layer and
-    // collapsed the spike's region to 36–50% for 3–6 frames after a shift.
+    // Clip, not regrow from the centre: regrowing stalls in a half-written entering layer, which
+    // collapses the region to 36–50% for 3–6 frames after a shift.
     const kept = settled && clip(settled, target);
     const unit: BrickBox = { lo: seed, hi: seed.map((s) => s + 1) as Vec3 };
     const start = kept ?? (usable(unit) ? unit : null);

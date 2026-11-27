@@ -1,14 +1,5 @@
-/**
- * VolumeFieldRenderer — public handle for the multi-field 3D scalar-
- * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
- * and the per-field registry; consumers upload / unload cubes (keyed by
- * an id generic over the caller), and the renderer READS per-field
- * settings each frame via `draw(settingsOf)`. The user-tunable knobs
- * (enabled, intensity, palette, contrast, densityScale, trim, exposure)
- * are not set through this handle — the caller's settings store owns
- * them.  See `volumeFieldRenderer.ts` for the full pipeline + ray-march
- * details.
- */
+/** VolumeFieldRenderer — the multi-field scalar-volume raymarcher's handle. Cubes upload per id; the
+ *  tunables are never set here, `draw` reads them each frame through `settingsOf`. */
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { GpuVolume } from './GpuVolume';
@@ -20,43 +11,24 @@ import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
 import type { DetailRegionDraw } from './DetailRegionDraw';
 
 export type VolumeFieldRenderer<Id extends string = string> = {
-  /**
-   * Human-readable identifier (`'volumeFieldRenderer'`).  Part of the
-   * shared `Renderer` contract — see `Renderer.d.ts`.
-   */
   readonly label: string;
-  /**
-   * Takes ownership of `volume.texture` (destroyed on re-upload, `unload` and `destroy`).
-   * `statics` are the per-cube, non-tunable presentation facts, read once here.
-   */
+  /** Takes ownership of `volume.texture` (destroyed on re-upload, `unload` and `destroy`). */
   upload(
     id: Id,
     volume: GpuVolume,
     statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
   ): void;
-  /**
-   * Binds `texture` as `id`'s detail region; null drops the binding. Borrowed, not owned: the region
-   * host is the one caller, and it passes null before it destroys the texture. Kept across `upload`
-   * of a new base volume.
-   */
+  /** Binds `texture` as `id`'s detail region, kept across `upload`; null drops it. Borrowed: the
+   *  region host, the one caller, passes null before it destroys the texture. */
   attachRegion(id: Id, texture: GPUTexture | null): void;
   unload(id: Id): void;
-  /**
-   * True iff any field's resolved opacity (`fadeOpacityOf`, which covers
-   * the fade-out tail) is non-zero for a field with `settingsOf` intensity > 0.
-   */
+  /** True iff a field with intensity > 0 has a non-zero `fadeOpacityOf` (fade-out tail included). */
   hasActiveFields(
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
   ): boolean;
-  /**
-   * Dispatch one raymarch per active field, additively blended.  The
-   * per-field tunables are read each frame from `settingsOf`.
-   * `fadeOpacityOf` supplies the fade-out opacity per id, `regionOf` its detail region.  The palette
-   * is re-uploaded in place when `settingsOf(id).paletteId` diverges
-   * from what's resident. `inputs` (jitter index, step count, blend
-   * weight) holds for every field of this call.
-   */
+  /** One additive raymarch per active field. A changed `settingsOf(id).paletteId` re-uploads the LUT
+   *  in place; `inputs` holds for every field of the call. */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,

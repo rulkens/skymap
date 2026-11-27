@@ -1,7 +1,6 @@
 /**
  * tileStreamSubsystem — fetch queue streaming payload `T` into the slot store
- * `S` it is handed. Store-agnostic: the galaxy and surface streams pass a
- * `TextureAtlas`; see `TileStreamDeps<T, S>` for the upload/release seam.
+ * `S` it is handed; see `TileStreamDeps<T, S>` for the upload/release seam.
  *
  * `isLoaded`/`isFailed` mean "payload is in the store" / "fetch permanently
  * failed", not "the fetch resolved": a key can be evicted mid-fetch, so

@@ -1,10 +1,7 @@
 /**
- * deriveVolumeLiveness — the pure core every scalar-volume liveness wrapper
- * delegates to: clamps raw settings at the read edge and asks the renderer
- * whether anything survives. No state, settings or fade read happens here — the
- * caller (a Layer's `present/deriveXLiveness.ts`) supplies the raw rows and
- * each field's value (switches, fade, clip and its emphasis folded in), so
- * this stays a projection of its four arguments only.
+ * deriveVolumeLiveness — the pure core of every scalar-volume liveness wrapper: clamps raw
+ * settings at the read edge and asks the renderer whether anything survives. It reads no state;
+ * the caller (a Layer's `present/deriveXLiveness.ts`) folds switches, fade, clip and emphasis in.
  */
 
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';

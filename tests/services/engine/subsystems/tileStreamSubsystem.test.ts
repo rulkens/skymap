@@ -1,21 +1,7 @@
 /**
- * tileStreamSubsystem — unit tests for the shared atlas + queue
- * infrastructure, exercised here with a bitmap-shaped payload (`T =
- * ImageBitmap`) so the assertions read like the real galaxy/surface-tile
- * callers while staying agnostic to the generic machinery.
- *
- * Coverage focus:
- *   - enqueueFetch() is idempotent for an in-flight key
- *   - setEvictHandler fires on LRU eviction with the ousted key
- *   - inFlightCount() tracks pending fetches
- *   - destroy() clears the eviction handler
- *   - upload() resolves the key's CURRENT slot, and is the only thing
- *     that makes a key "loaded" (the recycled-slot describe block), calling
- *     `release` for a payload that has nowhere to go
- *
- * Atlas geometry here (32×32 texture, 8×8 slots → 16 total) is an
- * arbitrary test config, not a real consumer's — this file exercises the
- * generic machinery in isolation from any one atlas's real dimensions.
+ * tileStreamSubsystem — the shared queue over a slot store, with a bitmap payload (`T =
+ * ImageBitmap`) so assertions read like the galaxy and surface-tile callers. The atlas geometry
+ * (32×32 texture, 8×8 slots → 16) is arbitrary, no real consumer's.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -360,8 +346,8 @@ describe('createTileStreamSubsystem', () => {
     expect(destroySlots).toHaveBeenCalledOnce();
   });
 
-  // A torn-down detail region left ~500 queued brick fetches behind: each in-flight
-  // settle started the next, with every result thrown away.
+  // Bug caught: a torn-down detail region's ~500 queued brick fetches each started as an
+  // in-flight one settled, every result thrown away.
   it('destroy drops queued fetches: an in-flight settle starts none of them', async () => {
     const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
       slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),

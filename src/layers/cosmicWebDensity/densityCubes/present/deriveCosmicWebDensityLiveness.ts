@@ -4,8 +4,7 @@
  * producer and consumer of the offscreen cannot disagree. Each field's handed value
  * already folds the section switch, its own switch and clip; its focus emphasis is
  * composed by `densityFadeOpacityOf`, which the region planner reads too. Nothing is
- * live until the jitter mask's slot settles. The clamp and
- * `hasActiveFields` check are `deriveVolumeLiveness`'s pure core.
+ * live until the jitter mask's slot settles.
  */
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';

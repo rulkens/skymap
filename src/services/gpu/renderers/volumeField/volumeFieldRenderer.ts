@@ -2,12 +2,10 @@
  * VolumeFieldRenderer — multi-field, palette-driven, additive 3D scalar-field raymarch (spec:
  * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). `upload` takes a finished
  * `GpuVolume` and owns it from then on (AssetSlot's rule: a committed payload belongs to the
- * consumer); each field adds its palette LUT, bind groups, uniforms, matrices and statics. User
- * knobs are read per frame through `settingsOf`, never mirrored. The jitter index, step count and
- * blend weight `w` arrive per draw as `inputs`: this renderer holds no frame counter. Below w = 1
- * one decay triangle scales the target by (1 − w), then every field adds at w, so the target holds
- * a running mean. The march's three `REGION` variants share one layout, so field bind groups are
- * interchangeable. A palette change rewrites the field's LUT in place (views stay valid).
+ * consumer). User knobs are read per frame through `settingsOf`, never mirrored. The jitter index,
+ * step count and blend weight `w` arrive per draw as `inputs`: this renderer holds no frame
+ * counter. Below w = 1 one decay triangle scales the target by (1 − w), then every field adds at w,
+ * so the target holds a running mean.
  */
 
 import { mat4, type Mat4 } from 'wgpu-matrix';
@@ -77,8 +75,6 @@ const CUBE_INDICES = new Uint16Array([
   // +x face
   1, 3, 5, 3, 7, 5,
 ]);
-
-// ── Factory ─────────────────────────────────────────────────────────
 
 export function createVolumeFieldRenderer<Id extends string>({
   device,
@@ -226,16 +222,11 @@ export function createVolumeFieldRenderer<Id extends string>({
     },
   });
 
-  // Fade scratch buffer hoisted to factory scope to avoid per-frame
-  // ArrayBuffer allocation. One 16-byte buffer shared across all fields
-  // per draw call (values are written and consumed synchronously within
-  // one field's iteration step). Matches the closure-captured pattern
-  // in galaxyPointRenderer and filamentRenderer.
+  // Shared by every field: `writeBuffer` copies it at call time.
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<Id, FieldEntry>();
-  // Apart from `fields`, so a base re-upload leaves the region bound. Its texture is borrowed.
   const regions = new Map<Id, RegionEntry>();
   // Both scratches are reused across fields and draws, so each is zero-filled before a write.
   const scratch = new Float32Array(UNIFORM_BYTES / 4);
@@ -275,18 +266,9 @@ export function createVolumeFieldRenderer<Id extends string>({
     REGION_PLACEHOLDER_LABEL,
   );
 
-  // Per-field palette texture — created in `upload`, re-uploaded in
-  // `draw` via the shared `writePaletteLut` helper when the live palette
-  // setting diverges from `residentPaletteId`.  A single
-  // PALETTE_LUT_SIZE x 1 2D texture per field is the natural cost since
-  // each field uses its own colour ramp; bind groups reference the
-  // texture's view, which stays valid across `writeTexture` calls.
-  //
-  // Stored as an N x 1 2D texture rather than a texture_1d: WGSL has no
-  // textureSampleLevel overload for 1D textures, so the shader's
-  // explicit-LOD palette lookup only compiles portably (iOS WebKit
-  // included) against a 2D sampler. See the fragment shader's palette
-  // binding for the full rationale.
+  // N × 1 2D, not texture_1d: WGSL has no 1D textureSampleLevel overload, and the explicit-LOD
+  // palette lookup must compile on iOS WebKit too. Rewritten in place on a palette change, so the
+  // bind group's view stays valid.
   function createPaletteTexture(): GPUTexture {
     return device.createTexture({
       size: { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
@@ -318,17 +300,9 @@ export function createVolumeFieldRenderer<Id extends string>({
       existing.fadeBuffer.destroy();
       fields.delete(id);
     }
-    // Per-cube STATIC presentation config is the caller's to supply —
-    // this renderer names no registry, so it can't look defaults up
-    // itself.  The user-tunable knobs (enabled, intensity, contrast,
-    // densityScale, palette, trim, exposure) are NOT seeded here —
-    // they live in the caller's settings and are read per frame in `draw`.
     const modelMatrix = buildCubeModelMatrix(volume.placement);
     const invModelMatrix = mat4.inverse(modelMatrix);
     const paletteTexture = createPaletteTexture();
-    // Seed the resident LUT from the caller's static default so it
-    // matches `residentPaletteId`; `draw` re-uploads in place if the
-    // live setting later diverges.
     writePaletteLut(paletteTexture, statics.paletteId);
     const uniformBuffer = device.createBuffer({
       size: UNIFORM_BYTES,
@@ -356,13 +330,9 @@ export function createVolumeFieldRenderer<Id extends string>({
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
     fields.set(id, {
-      // Per-cube static config, taken from the caller's `statics` above.
       contrastCenter: statics.contrastCenter,
       envelopeInner: statics.envelope.inner,
       envelopeOuter: statics.envelope.outer,
-      // GPU-residency fact: the palette id just written into
-      // `paletteTexture`.  `draw` re-uploads the LUT when the live
-      // setting diverges from this.
       residentPaletteId: statics.paletteId,
       modelMatrix,
       invModelMatrix,
@@ -396,10 +366,7 @@ export function createVolumeFieldRenderer<Id extends string>({
   function unload(id: Id): void {
     const entry = fields.get(id);
     if (!entry) return;
-    // The renderer is FadeRegistry-agnostic: it neither registers nor
-    // unregisters fade identities. Core seeds every visibility identity at
-    // boot, so a field's identity stays registered across upload/unload —
-    // `unload` just releases this field's GPU resources.
+    // Fade identities are core's, seeded at boot and kept across unload: only GPU resources go.
     entry.volume.texture.destroy();
     entry.paletteTexture.destroy();
     entry.uniformBuffer.destroy();
@@ -414,13 +381,8 @@ export function createVolumeFieldRenderer<Id extends string>({
     for (const id of fields.keys()) {
       const s = settingsOf(id);
       if (s.intensity <= 0) continue;
-      // Opacity is the SOLE visibility truth: a field is active iff its
-      // resolved opacity is non-zero. The enabled toggle doesn't override
-      // a zero — it only SEEDS the fade target through the visibility sync,
-      // so an enabled field spatially faded to 0 (deep zoom) must not
-      // burn a full raymarch. This one test also covers the fade-out
-      // tail (toggle off, opacity still ramping down) for free: the tail
-      // IS a non-zero opacity.
+      // Opacity is the sole visibility truth: `enabled` only seeds the fade target, so an enabled
+      // field faded to 0 (deep zoom) costs no raymarch, and a fade-out tail still counts.
       if (fadeOpacityOf(id) > 0) return true;
     }
     return false;
@@ -473,31 +435,14 @@ export function createVolumeFieldRenderer<Id extends string>({
     const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
     for (const [id, e] of fields.entries()) {
       const s = settingsOf(id);
-      // Reactive palette: re-upload the LUT in place when the live
-      // setting diverges from what's resident (the bind group
-      // references the texture view, which stays valid across
-      // writeTexture).  Palette is the one knob with a GPU side
-      // effect, so it's handled here rather than packed into the
-      // uniform.  This check runs BEFORE the skip gate below so that
-      // residency stays in sync even for a disabled or zero-intensity
-      // field whose palette changed while it was off — ensuring the
-      // correct LUT is showing the moment the field is re-enabled.
-      // Moving this block into the skip branch would introduce a
-      // stale-LUT-on-re-enable bug.
+      // Before the skip gate: a palette changed while the field was off must show the moment it
+      // is back on.
       if (s.paletteId !== e.residentPaletteId) {
         writePaletteLut(e.paletteTexture, s.paletteId);
         e.residentPaletteId = s.paletteId;
       }
-      // Skip iff the field resolves invisible: opacity is the sole
-      // visibility truth (the enabled toggle only seeds the fade target via
-      // the visibility sync — it never overrides a zero, so an enabled
-      // field spatially faded to 0 at deep zoom skips its raymarch).
-      // While opacity > 0 we keep drawing so the ~100 ms fade-out tail is
-      // visible. A just-enabled field is skipped only for its first tick
-      // (opacity still 0) — the in-flight fade wakes the loop, so the
-      // fade-in proceeds without a stall. s.intensity is the user's
-      // intensity slider; 0 there means "fully transparent regardless of
-      // fade", so we skip the GPU work entirely.
+      // As `hasActiveFields`. A just-enabled field skips only its first tick at opacity 0: the
+      // in-flight fade wakes the loop.
       const opacity = fadeOpacityOf(id);
       if (opacity <= 0 || s.intensity <= 0) continue;
       scratch.fill(0);
@@ -522,8 +467,6 @@ export function createVolumeFieldRenderer<Id extends string>({
       scratch.set(e.volume.nativeBox.offset, 68);
       scratch.set(e.volume.nativeBox.scale, 72);
       device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
-      // Per-field fade.opacity write: the resolved opacity from the skip
-      // gate above, written into the 16-byte fadeBuffer.
       fadeScratchF32[0] = opacity;
       device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
       // RegionUniforms: settledLo 0, voxelMpc 12, settledHi 16, fadeW 28, texScale 32, intoLo 48,
