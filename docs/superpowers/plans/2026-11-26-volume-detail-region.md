@@ -636,7 +636,7 @@ untouched:
 
 Steps:
 
-- [ ] Tests (no basisu, no GPU):
+- [x] Tests (no basisu, no GPU):
   - `readNpySlab reads x-rows [x0, x0 + count) of a C-order file`: a `[5, 3, 2]` `<f4` file written
     by `writeNpy` into a temp folder, slab `x0 = 2, count = 2`, equals values `2·6 … 4·6 − 1`.
   - `cutBrick takes each slice's run of the brick's block rows`: a slab whose every byte names its
@@ -644,8 +644,8 @@ Steps:
     exactly the bytes of slices 48–95, rows 8–15.
   - `an all-zero brick stores nothing; any other is one gzip member`: zero r8 → length 0;
     a brick with one code 1 → `gunzipSync` gives the format bytes back.
-- [ ] Implement.
-- [ ] `npm test -- readNpySlab cutBrick brickEntryBytes encodeVolumeLevel`.
+- [x] Implement.
+- [x] `npm test -- readNpySlab cutBrick brickEntryBytes encodeVolumeLevel`.
 
 **Commit:** `buildVolumeBricks: level-0 bricks from the native grid, read in slabs`
 
