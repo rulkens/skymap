@@ -24,6 +24,7 @@
  * the order of async operations or browser-detection boilerplate.
  */
 
+import { domeTestCpuPresent } from './domeTestCpuPresent';
 import type { GpuContext } from '../../@types/rendering/GpuContext';
 
 /** Extra device-request hints beyond the `timestamp-query` mirror — see Step 2 below. */
@@ -75,8 +76,17 @@ export async function initGpu(
   // (e.g. headless test environments, or a machine whose GPU is blocked by
   // a corporate driver policy). We treat that as a hard stop.
   // See: https://www.w3.org/TR/webgpu/#dom-gpu-requestadapter
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  // DOME-TEST (temporary, never commit): ?gpu=low-power|default, ?alpha=opaque.
+  const domeTestQuery = new URLSearchParams(window.location.search);
+  const domeTestGpu = domeTestQuery.get('gpu');
+  const domeTestAlpha = domeTestQuery.get('alpha') === 'opaque' ? 'opaque' : 'premultiplied';
+  const adapter = await navigator.gpu.requestAdapter(
+    domeTestGpu === 'default'
+      ? {}
+      : { powerPreference: domeTestGpu === 'low-power' ? 'low-power' : 'high-performance' },
+  );
   if (!adapter) throw new Error('No WebGPU adapter available.');
+  console.warn('DOME-TEST adapter', domeTestGpu ?? 'high-performance', domeTestAlpha, adapter.info);
 
   // Step 2 — Request a device. `requestDevice` throws on a feature the
   // adapter lacks or a limit above its max, so we drop-and-clamp against
@@ -111,7 +121,12 @@ export async function initGpu(
   // `getContext('webgpu')` returns null if the canvas already has a different
   // context type (e.g. '2d'). In practice this only happens if the same
   // canvas is used elsewhere — still worth guarding.
-  const context = canvas.getContext('webgpu');
+  // DOME-TEST (temporary, never commit): ?present=cpu draws off-page and shows
+  // each frame through the CPU and WebGL — see domeTestCpuPresent.ts.
+  const domeTestCpu = domeTestQuery.get('present') === 'cpu';
+  const context = domeTestCpu
+    ? domeTestCpuPresent.install(canvas, device, navigator.gpu.getPreferredCanvasFormat())
+    : canvas.getContext('webgpu');
   if (!context) throw new Error('Could not get webgpu context.');
 
   // Boot always configures the browser's preferred 8-bit format — see
@@ -159,7 +174,10 @@ export async function initGpu(
   context.configure({
     device,
     format,
-    alphaMode: 'premultiplied',
+    alphaMode: domeTestAlpha,
+    ...(domeTestCpu
+      ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC }
+      : {}),
   });
 
   return { device, context, format, canvas, hdrCapable };
@@ -228,7 +246,9 @@ export function resizeCanvasToDisplay(canvas: HTMLCanvasElement): boolean {
   // Clamp DPR to 2 — see doc-comment above for rationale.
   // `|| 1` guards the rare case where `devicePixelRatio` is 0 or NaN
   // (seen in some jsdom test environments).
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // DOME-TEST (temporary, never commit): ?dpr=<n> overrides the backing scale.
+  const domeTestDpr = Number(new URLSearchParams(window.location.search).get('dpr'));
+  const dpr = domeTestDpr > 0 ? domeTestDpr : Math.min(window.devicePixelRatio || 1, 2);
 
   // `Math.floor` ensures we never request a sub-pixel fraction from the GPU.
   // `Math.max(1, …)` prevents a zero-dimension canvas when the element is

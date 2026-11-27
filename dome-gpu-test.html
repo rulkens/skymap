@@ -1,0 +1,306 @@
+<!doctype html>
+<!-- DOME-TEST (temporary, never commit): cycles full-window canvases, one per
+     GPU presentation variant, so an operator can see which ones reach every projector. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dome GPU test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font: 600 28px/1.3 system-ui, sans-serif;
+        color: #fff;
+      }
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+      }
+      #labels {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        grid-auto-rows: 180px;
+        z-index: 2;
+        pointer-events: none;
+      }
+      #labels div {
+        padding: 12px;
+        text-shadow:
+          0 0 4px #000,
+          0 0 4px #000,
+          0 0 8px #000;
+      }
+      #labels small {
+        display: block;
+        font-size: 15px;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="labels"></div>
+    <div id="fpsBox" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; background: #000; padding: 8px 16px"></div>
+    <script type="module">
+      // ?hold=<n> freezes on variant n (1-based); ?secs=<s> sets the dwell (default 6).
+      const query = new URLSearchParams(location.search);
+      const hold = Number(query.get('hold') ?? 0);
+      const dwellMs = Number(query.get('secs') ?? 6) * 1000;
+
+      const makeCanvas = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(innerWidth, 4096);
+        canvas.height = Math.min(innerHeight, 4096);
+        canvas.hidden = true;
+        document.body.append(canvas);
+        return canvas;
+      };
+
+      // `via`: 'direct' shows the WebGPU canvas itself; '2d' and 'bitmap' render
+      // WebGPU off-page and copy each frame into a canvas of another kind.
+      const webgpuVariant = async (name, colour, rgb, adapterOptions, alphaMode, via = 'direct') => {
+        const adapter = await navigator.gpu?.requestAdapter(adapterOptions);
+        if (!adapter) return { name, colour, info: 'NO ADAPTER', draw: null, canvas: makeCanvas() };
+        const device = await adapter.requestDevice();
+        const canvas = makeCanvas();
+        const source =
+          via === 'direct'
+            ? canvas
+            : via === '2d' || via === 'cpu2d'
+              ? Object.assign(document.createElement('canvas'), { width: canvas.width, height: canvas.height })
+              : new OffscreenCanvas(canvas.width, canvas.height);
+        const context = source.getContext('webgpu');
+        context.configure({ device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode });
+        const info = `${adapter.info.vendor} ${adapter.info.architecture} ${adapter.info.device} ${adapter.info.description}`;
+        const target = via === '2d' ? canvas.getContext('2d') : via === 'cpu2d' ? canvas.getContext('2d', { willReadFrequently: true }) : via === 'bitmap' ? canvas.getContext('bitmaprenderer') : null;
+        const copyOut = () => {
+          if (via === '2d' || via === 'cpu2d') target.drawImage(source, 0, 0);
+          if (via === 'bitmap') target.transferFromImageBitmap(source.transferToImageBitmap());
+        };
+        const draw = (pulse) => {
+          const encoder = device.createCommandEncoder();
+          encoder
+            .beginRenderPass({
+              colorAttachments: [
+                {
+                  view: context.getCurrentTexture().createView(),
+                  clearValue: { r: rgb[0] * pulse, g: rgb[1] * pulse, b: rgb[2] * pulse, a: 1 },
+                  loadOp: 'clear',
+                  storeOp: 'store',
+                },
+              ],
+            })
+            .end();
+          device.queue.submit([encoder.finish()]);
+          copyOut();
+        };
+        return { name, colour, info, draw, canvas };
+      };
+
+      // WebGPU renders to a texture, the pixels come back to the CPU, and a 2D
+      // canvas shows them: nothing GPU-side is shared with the page.
+      const readbackVariant = async (name, colour, rgb) => {
+        const adapter = await navigator.gpu?.requestAdapter(HIGH);
+        const canvas = makeCanvas();
+        if (!adapter) return { name, colour, info: 'NO ADAPTER', draw: null, canvas };
+        const device = await adapter.requestDevice();
+        // ?size=<n> sets the read-back square (default 1024) to price a real dome frame.
+        const width = Number(query.get('size') ?? 1024);
+        const height = width;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const texture = device.createTexture({
+          size: [width, height],
+          format: 'rgba8unorm',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+        const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
+        const buffer = device.createBuffer({
+          size: bytesPerRow * height,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        let busy = false;
+        let frames = 0;
+        let since = performance.now();
+        const draw = async (pulse) => {
+          if (busy) return;
+          busy = true;
+          const encoder = device.createCommandEncoder();
+          encoder
+            .beginRenderPass({
+              colorAttachments: [
+                {
+                  view: texture.createView(),
+                  clearValue: { r: rgb[0] * pulse, g: rgb[1] * pulse, b: rgb[2] * pulse, a: 1 },
+                  loadOp: 'clear',
+                  storeOp: 'store',
+                },
+              ],
+            })
+            .end();
+          encoder.copyTextureToBuffer({ texture }, { buffer, bytesPerRow }, [width, height]);
+          device.queue.submit([encoder.finish()]);
+          await buffer.mapAsync(GPUMapMode.READ);
+          const mapped = new Uint8Array(buffer.getMappedRange());
+          const pixels = new Uint8ClampedArray(width * height * 4);
+          for (let row = 0; row < height; row++) {
+            pixels.set(mapped.subarray(row * bytesPerRow, row * bytesPerRow + width * 4), row * width * 4);
+          }
+          buffer.unmap();
+          ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
+          busy = false;
+          frames += 1;
+          if (performance.now() - since > 2000) {
+            document.title = fpsBox.textContent = `${width} px square: ${(frames / ((performance.now() - since) / 1000)).toFixed(1)} frames/s through the CPU`;
+            frames = 0;
+            since = performance.now();
+          }
+        };
+        return { name, colour, info: 'pixels through the CPU', draw, canvas };
+      };
+
+      // The CPU path tuned: several read-backs in flight, no per-row copy (the
+      // size must be a multiple of 64), and WebGL uploads the mapped bytes directly.
+      const readbackGlVariant = async (name, colour, rgb) => {
+        const adapter = await navigator.gpu?.requestAdapter(HIGH);
+        const canvas = makeCanvas();
+        if (!adapter) return { name, colour, info: 'NO ADAPTER', draw: null, canvas };
+        const device = await adapter.requestDevice();
+        const size = Math.ceil(Number(query.get('size') ?? 1024) / 64) * 64;
+        const inFlight = Number(query.get('inflight') ?? 3);
+        canvas.width = size;
+        canvas.height = size;
+        const gl = canvas.getContext('webgl2');
+        const compile = (type, source) => {
+          const shader = gl.createShader(type);
+          gl.shaderSource(shader, source);
+          gl.compileShader(shader);
+          return shader;
+        };
+        const program = gl.createProgram();
+        gl.attachShader(program, compile(gl.VERTEX_SHADER, `#version 300 es
+          out vec2 uv;
+          void main() { uv = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0); }`));
+        gl.attachShader(program, compile(gl.FRAGMENT_SHADER, `#version 300 es
+          precision mediump float; in vec2 uv; uniform sampler2D frame; out vec4 colour;
+          void main() { colour = texture(frame, uv); }`));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+        gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, size, size);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        const texture = device.createTexture({
+          size: [size, size],
+          format: 'rgba8unorm',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+        const free = Array.from({ length: inFlight }, () =>
+          device.createBuffer({ size: size * size * 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }),
+        );
+        let frames = 0;
+        let since = performance.now();
+        const draw = (pulse) => {
+          const buffer = free.pop();
+          if (!buffer) return;
+          const encoder = device.createCommandEncoder();
+          encoder
+            .beginRenderPass({
+              colorAttachments: [
+                {
+                  view: texture.createView(),
+                  clearValue: { r: rgb[0] * pulse, g: rgb[1] * pulse, b: rgb[2] * pulse, a: 1 },
+                  loadOp: 'clear',
+                  storeOp: 'store',
+                },
+              ],
+            })
+            .end();
+          encoder.copyTextureToBuffer({ texture }, { buffer, bytesPerRow: size * 4 }, [size, size]);
+          device.queue.submit([encoder.finish()]);
+          buffer.mapAsync(GPUMapMode.READ).then(() => {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, size, size, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(buffer.getMappedRange()));
+            buffer.unmap();
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            free.push(buffer);
+            frames += 1;
+            if (performance.now() - since > 2000) {
+              document.title = fpsBox.textContent = `${size} px square, ${inFlight} in flight: ${(frames / ((performance.now() - since) / 1000)).toFixed(1)} frames/s through the CPU (tuned)`;
+              frames = 0;
+              since = performance.now();
+            }
+          });
+        };
+        return { name, colour, info: 'pixels through the CPU, tuned', draw, canvas };
+      };
+
+      const webglVariant = () => {
+        const canvas = makeCanvas();
+        const gl = canvas.getContext('webgl2');
+        const draw = (pulse) => {
+          gl.clearColor(0, 0.6 * pulse, 0.6 * pulse, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        };
+        return { name: 'WebGL (control)', colour: 'TEAL', info: 'like the aquarium', draw, canvas };
+      };
+
+      const canvas2dVariant = () => {
+        const canvas = makeCanvas();
+        const ctx = canvas.getContext('2d');
+        const draw = (pulse) => {
+          ctx.fillStyle = `rgb(${200 * pulse}, ${200 * pulse}, ${200 * pulse})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        };
+        return { name: '2D canvas (control)', colour: 'GREY', info: 'no GPU API', draw, canvas };
+      };
+
+      const HIGH = { powerPreference: 'high-performance' };
+      const LOW = { powerPreference: 'low-power' };
+      const variants = [
+        await webgpuVariant('WebGPU high-performance, premultiplied (Skymap today)', 'RED', [0.8, 0, 0], HIGH, 'premultiplied'),
+        await webgpuVariant('WebGPU high-performance, opaque', 'ORANGE', [0.9, 0.45, 0], HIGH, 'opaque'),
+        await webgpuVariant('WebGPU low-power, premultiplied', 'GREEN', [0, 0.7, 0], LOW, 'premultiplied'),
+        await webgpuVariant('WebGPU low-power, opaque', 'BLUE', [0, 0.2, 0.9], LOW, 'opaque'),
+        await webgpuVariant('WebGPU default card, premultiplied', 'PURPLE', [0.6, 0, 0.8], {}, 'premultiplied'),
+        webglVariant(),
+        canvas2dVariant(),
+        await webgpuVariant('WebGPU copied into a 2D canvas', 'YELLOW', [0.8, 0.8, 0], HIGH, 'premultiplied', '2d'),
+        await webgpuVariant('WebGPU handed to a bitmap canvas', 'PINK', [0.9, 0.3, 0.6], HIGH, 'premultiplied', 'bitmap'),
+        await webgpuVariant('WebGPU drawn into a software 2D canvas', 'WHITE', [0.9, 0.9, 0.9], HIGH, 'premultiplied', 'cpu2d'),
+        await readbackVariant('WebGPU read back to the CPU, shown by a 2D canvas', 'CYAN', [0, 0.8, 0.9]),
+        await readbackGlVariant('WebGPU read back to the CPU, shown by WebGL (tuned)', 'LIME', [0.5, 0.9, 0]),
+      ];
+      console.table(variants.map(({ name, info }) => ({ name, info })));
+
+      const labels = document.getElementById('labels');
+      const show = (index) => {
+        variants.forEach((variant, i) => (variant.canvas.hidden = i !== index));
+        const { name, colour, info } = variants[index];
+        const cells = Math.ceil(innerWidth / 420) * Math.ceil(innerHeight / 180);
+        labels.innerHTML = `<div>${index + 1}/${variants.length} ${name}<br>should be ${colour}<small>${info}</small></div>`.repeat(cells);
+      };
+
+      let current = hold > 0 ? hold - 1 : 0;
+      show(current);
+      if (hold === 0) {
+        setInterval(() => {
+          current = (current + 1) % variants.length;
+          show(current);
+        }, dwellMs);
+      }
+      const frame = (now) => {
+        variants[current].draw?.(0.75 + 0.25 * Math.sin(now / 300));
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    </script>
+    <!-- DOME-TEST (temporary, never commit) -->
+    <script type="module" src="/dome-drive-client.js"></script>
+  </body>
+</html>

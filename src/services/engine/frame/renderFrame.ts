@@ -22,6 +22,7 @@ import { bodyRowSlabs } from './bodyRowSlabs';
 import { runPlanSteps } from './runPlanSteps';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
+import { domeTestCpuPresent } from '../../gpu/domeTestCpuPresent';
 
 export function renderFrame(input: RenderFrameInput): void {
   const { canvas, views, state, device, context, timingService, renderedTargets } = input;
@@ -31,6 +32,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
   state.gpu.focusUniform?.write(canvas.snapshot.focus);
 
+  domeTestCpuPresent.beforeFrame(); // DOME-TEST (temporary, never commit)
   const swapView = context.getCurrentTexture().createView();
 
   // One timing window spans every submit below: the query set is shared and
@@ -163,4 +165,5 @@ export function renderFrame(input: RenderFrameInput): void {
   }
 
   flush(true);
+  domeTestCpuPresent.afterFrame(); // DOME-TEST (temporary, never commit)
 }

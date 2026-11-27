@@ -13,8 +13,13 @@ function wire(server: ViteDevServer | PreviewServer, options: CommonServerOption
   const exposed =
     options.host !== undefined && options.host !== false && options.host !== 'localhost';
   // Never empty: localhost is always last.
+  // DOME-TEST (temporary, never commit): the venue Wi-Fi keeps its devices apart, so phones
+  // reach this server through a public tunnel named in DOME_REMOTE_ORIGIN.
   const firstOrigin = (): string =>
-    listRemoteOrigins((http.address() as AddressInfo).port, exposed, Boolean(options.https))[0]!;
+    process.env.DOME_REMOTE_ORIGIN ??
+    'https://velvet-twenty-fool-parks.trycloudflare.com';
+  void listRemoteOrigins;
+  void exposed;
   attachRemoteRelay(http, {
     codeFor: (last) => last ?? newLocalRoomCode(),
     lanOrigin: firstOrigin,

@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- DOME-TEST (temporary, never commit): shows whatever page dome-drive-next.txt
+     names, so the dome's Chrome can be steered from the dev machine. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dome drive</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      iframe {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        border: 0;
+      }
+      #note {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        z-index: 2;
+        padding: 6px 14px;
+        background: #000c;
+        color: #fff;
+        font: 16px system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe id="view" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+    <div id="note">Dome drive: waiting for the first page</div>
+    <script type="module">
+      // dome-drive-next.txt holds "<counter> <url>"; any change loads the url.
+      const view = document.getElementById('view');
+      const note = document.getElementById('note');
+      let shown = '';
+      // Tells the dev machine what the page ended up showing (title, first label, speed readout).
+      const report = async (loaded) => {
+        if (loaded !== shown) return;
+        const doc = view.contentDocument;
+        const adapter = await navigator.gpu?.requestAdapter().catch(() => null);
+        const body = [
+          `secure=${isSecureContext} gpu=${'gpu' in navigator} adapter=${Boolean(adapter)}`,
+          loaded,
+          doc?.title,
+          doc?.querySelector('#labels div')?.textContent,
+          doc?.getElementById('fpsBox')?.textContent,
+        ].join(' | ');
+        fetch(`https://${location.hostname}:5190/report`, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
+      };
+      const poll = async () => {
+        try {
+          const next = (await (await fetch(`/dome-drive-next.txt?t=${Date.now()}`, { cache: 'no-store' })).text()).trim();
+          if (next && next !== shown) {
+            shown = next;
+            const url = next.slice(next.indexOf(' ') + 1);
+            view.src = 'about:blank';
+            setTimeout(() => (view.src = url), 50);
+            note.textContent = url;
+            note.hidden = false;
+            setTimeout(() => (note.hidden = true), 4000);
+            for (const delay of [4000, 10000]) setTimeout(() => report(next), delay);
+          }
+        } catch (error) {
+          note.textContent = 'Dome drive: dev machine not reachable';
+          note.hidden = false;
+        }
+      };
+      setInterval(poll, 1000);
+      poll();
+    </script>
+  </body>
+</html>

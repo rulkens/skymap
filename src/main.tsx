@@ -70,6 +70,7 @@ import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
 // and the page-level reset.  Loaded once at app boot so every CSS module
 // can reference `var(--token-name)`.
+import { setAutoRotate } from './state/camera/cameraIntentSlice';
 import './styles/global.css';
 
 const root = document.getElementById('root');
@@ -101,6 +102,12 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
     [settingsRoute]: INITIAL_SETTINGS,
     [uiRoute]: buildInitialUiState(),
   });
+  // DOME-TEST (temporary, never commit): ?spin=<deg per second> keeps the home view turning.
+  const domeTestSpin = Number(new URLSearchParams(window.location.search).get('spin'));
+  if (domeTestSpin !== 0 && !Number.isNaN(domeTestSpin)) {
+    const rate = ((domeTestSpin * Math.PI) / 180) / 60;
+    window.setInterval(() => store.dispatch(setAutoRotate({ active: true, rate })), 3000);
+  }
   // `?remote` puts this page's pairing and command receiver on the local relay.
   if (hasUrlGate('remote')) {
     runSaga(() =>
