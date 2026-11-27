@@ -950,11 +950,11 @@ export function fetchVolumeBrick(
 
 Steps:
 
-- [ ] Tests, a stubbed `fetch`:
+- [x] Tests, a stubbed `fetch`:
   - `a 206 gzip member yields the brick's bytes`.
   - `a 200 reads no-range`.
   - `a wrong inflated length or a corrupt member fails`.
-- [ ] `npm test -- fetchVolumeBrick`.
+- [x] `npm test -- fetchVolumeBrick`.
 
 **Commit:** `fetchVolumeBrick: one Range read, gunzipped and length-checked`
 
