@@ -36,6 +36,7 @@ import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import { hostFacingPose } from '../../services/engine/camera/framing/hostFacingPose';
 import { homePose } from '../../services/engine/camera/framing/homePose';
+import { isTakeoverView } from '../../utils/url/isTakeoverView';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -149,8 +150,7 @@ export function* navigateSaga(
   // supersede, which would overwrite the link's settings; ending it first lands
   // them after that restore. A hash change has already ended it
   // (`applyNavigation`); this serves an arrival during which a remote started one.
-  const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
-  if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
+  if (isTakeoverView(view) && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
   yield* call(applyLinkSettingsSaga, intent);
