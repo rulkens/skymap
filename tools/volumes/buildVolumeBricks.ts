@@ -24,6 +24,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { encodeArchiveIndex } from '../utils/archive/encodeArchiveIndex';
 import { planArchiveParts } from '../utils/archive/planArchiveParts';
 import { basisuEncodeLevel } from './utils/basisuEncodeLevel';
+import { basisuVersionLine } from './utils/basisuVersionLine';
 import { brickEntryBytes } from './utils/brickEntryBytes';
 import { brickPartFiles } from './utils/brickPartFiles';
 import { cutBrick } from './utils/cutBrick';
@@ -152,6 +153,7 @@ async function main(): Promise<void> {
     console.error('usage: tsx tools/volumes/buildVolumeBricks.ts mcpm|polyphorm-2mrs');
     process.exit(1);
   }
+  console.log(`[buildVolumeBricks] ${basisuVersionLine()}`);
   await buildVolumeBricks(VOLUME_PYRAMID_FIELDS[field]);
 }
 
