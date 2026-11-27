@@ -6,11 +6,13 @@ Reads the SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` cube via pyslime
 into a 712 x 1200 x 728 array (loaded as f16 from disk, immediately
 upcast to f32 so the block-averaging downstream doesn't lose precision
 on the heavy-tailed slime trace), block-averages by factors {8, 4, 2},
-and writes the three downsampled cubes as .npy files in data/raw/mcpm/.
+and writes those three cubes plus the native one (d1) as .npy files in
+data/raw/mcpm/.
 
-Run once per VAC release.  The .npy outputs get uploaded to R2 (see
+Run once per VAC release.  The d2/d4/d8 outputs get uploaded to R2 (see
 tools/deploy/r2/collectExtraFiles.ts); contributors curl them instead of
-running this script.
+running this script.  d1 (2.49 GB, for the volume bricks) is over
+wrangler's cap and stays on the maintainer's machine.
 
 Inputs (both required, alongside this script's RAW_DIR):
     data/raw/mcpm/trace.bin           — the uncompressed cube (~2.3 GB)
@@ -26,7 +28,7 @@ project-local venv setup.
 
 Usage:
     .venv/bin/python tools/volumes/extractMcpmCube.py
-    # writes mcpm_sdss_d{8,4,2}.npy into data/raw/mcpm/
+    # writes mcpm_sdss_d{8,4,2,1}.npy into data/raw/mcpm/
 
 Verification:
     Prints (min, max, mean, p99) of the trace values and the sample at
@@ -54,7 +56,7 @@ META_FILE = os.path.join(RAW_DIR, "export_metadata.txt")
 EXPECTED_SHAPE = (712, 1200, 728)
 GRID_CENTER_MPC = np.array([-239.469, -16.5618, 201.275])
 BASE_VOXEL_EDGE_MPC = 0.78131  # 556.288 / 712 (matches export_metadata.txt)
-FACTORS = (8, 4, 2)
+FACTORS = (8, 4, 2, 1)
 
 
 def ensure_uncompressed_trace() -> None:

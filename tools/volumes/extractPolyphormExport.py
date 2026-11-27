@@ -10,7 +10,7 @@ exact, since block-mean over equal-sized partitions is associative.
 
 Usage:
     python3 tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>
-    # writes <out-prefix>_d8.npy/.json, _d4.npy/.json, _d2.npy/.json
+    # writes <out-prefix>_d1.npy/.json (native), _d2, _d4, _d8
 """
 import json
 import os
@@ -151,6 +151,7 @@ def main() -> None:
         f"min={current.min():.6g}, max={current.max():.6g}, mean={current.mean():.4g}"
     )
 
+    write_tier(current, 1, meta, export_dir, out_prefix)
     cumulative = 1
     for step in CASCADE_STEPS:
         current = block_mean(current, step)

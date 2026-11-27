@@ -38,7 +38,9 @@ mkdir -p data/raw/mcpm
 curl -L -o data/raw/mcpm/trace.bin.bz2 \
   https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/trace.bin.bz2
 
-# 3. Extract + downsample (peak RAM ≈ 10 GB for the 712×1200×728 f32 cube)
+# 3. Extract + downsample (peak RAM ≈ 10 GB for the 712×1200×728 f32 cube).
+#    Also writes the native mcpm_sdss_d1.npy (712 × 1200 × 728 f32, 2.49 GB)
+#    for the volume bricks; it is not mirrored to R2.
 .venv/bin/python tools/volumes/extractMcpmCube.py
 
 # 4. Build the pyramid locally (needs basisu, see docs/DATA.md)
