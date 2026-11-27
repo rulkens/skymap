@@ -39,6 +39,7 @@ const initialState: DebugSettings = {
   matteWhite: false,
   meshAmbient: 0,
   meshSelfBounce: MESH_SELF_BOUNCE,
+  meshNoShadows: false,
   // 'auto' reproduces the old timing-derived pass shape, so production +
   // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
   renderStrategy: 'auto',
@@ -91,6 +92,9 @@ export const debugSlice = createSlice({
     },
     setMeshSelfBounce: (debug, action: PayloadAction<number>) => {
       debug.meshSelfBounce = action.payload;
+    },
+    setMeshNoShadows: (debug, action: PayloadAction<boolean>) => {
+      debug.meshNoShadows = action.payload;
     },
     // Override the frame's render-pass shape independently of GPU timing (Joint 1;
     // see `resolveStrategy`). 'auto' restores the timing-derived default.
@@ -192,6 +196,7 @@ export const {
   setMatteWhite,
   setMeshAmbient,
   setMeshSelfBounce,
+  setMeshNoShadows,
   setRenderStrategy,
   inspectClipPath,
   recalcClipPath,

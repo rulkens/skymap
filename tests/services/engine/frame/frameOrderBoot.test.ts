@@ -15,7 +15,7 @@ import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { bodyLayer } from '../../../../src/layers/body/layer';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes/coreComputes';
 import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';

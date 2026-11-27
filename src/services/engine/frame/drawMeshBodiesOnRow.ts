@@ -58,7 +58,7 @@ export function drawMeshBodiesOnRow(
   const hostPose = ctx.bodyPose(hostId);
   if (hostPose === null) return;
   const sunRadiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
-  const noMeshShadows = state.settings.debug.overlays['mesh-no-shadows'];
+  const noMeshShadows = state.settings.debug.meshNoShadows;
 
   for (const body of bodies) {
     const bodyState = bodyStates.get(body.id)!;

@@ -9,6 +9,7 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import { cross3 } from '../math/cross3';
 import { normalize3 } from '../math/normalize3';
+import { MESH_SHADOW_SPHERE_PAD } from '../../data/mesh/meshShadowMap';
 
 export function meshShadowLightFromMesh(sunDirMesh: Readonly<Vec3>, radiusM: number): Float64Array {
   const s = sunDirMesh;
@@ -16,8 +17,10 @@ export function meshShadowLightFromMesh(sunDirMesh: Readonly<Vec3>, radiusM: num
   const reference: Vec3 = Math.abs(s[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
   const a = normalize3(cross3(reference, s));
   const b = cross3(s, a);
-  const xy = 1 / radiusM;
-  const z = -1 / (2 * radiusM);
+  // Padded so an f32 or quantised vertex at the bounding radius never clips at the poles.
+  const paddedM = radiusM * MESH_SHADOW_SPHERE_PAD;
+  const xy = 1 / paddedM;
+  const z = -1 / (2 * paddedM);
   // Column-major: row 0 is a/R, row 1 b/R, row 2 −s/2R + 0.5.
   // prettier-ignore
   return new Float64Array([

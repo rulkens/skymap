@@ -176,6 +176,7 @@ export function makeSettingsFixture(
       matteWhite: false,
       meshAmbient: 0,
       meshSelfBounce: 0,
+      meshNoShadows: false,
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

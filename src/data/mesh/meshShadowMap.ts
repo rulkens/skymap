@@ -6,6 +6,9 @@
 
 export const MESH_SHADOW_MAP_PX = 1024;
 
+/** The light camera fits the bounding sphere grown by this factor (0.5%). */
+export const MESH_SHADOW_SPHERE_PAD = 1.005;
+
 /** Bodies shadowed at once, nearest the camera first; one beyond them reads unshadowed. */
 export const MESH_SHADOW_SLOTS = 8;
 

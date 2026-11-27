@@ -1,5 +1,5 @@
 /**
- * computes/index — CORE's half of the compute registry, as `passes/index.ts` is of the passes;
+ * coreComputes — CORE's half of the compute registry, as `passes/index.ts` is of the passes;
  * `createLayers` appends each Layer's own rows onto `state.computes`. `FRAME_ORDER` places them.
  */
 

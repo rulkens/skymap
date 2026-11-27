@@ -350,8 +350,8 @@ export function createMeshBodyRenderer(init: {
 
   // A reloaded or cleared mesh drops its layer, so the next `renderShadows` redraws or frees it.
   function dropShadowLayer(id: string): void {
-    shadowLayers = shadowLayers.map((layer) => (layer?.id === id ? null : layer));
-    rankedLayers = rankedLayers.filter((layer) => layer.id !== id);
+    shadowLayers = shadowLayers.map((layer) => (layer?.caster.id === id ? null : layer));
+    rankedLayers = rankedLayers.filter((layer) => layer.caster.id !== id);
   }
 
   const meshes = new Map<string, MeshResources>();
@@ -601,7 +601,7 @@ export function createMeshBodyRenderer(init: {
       .slice(0, MESH_SHADOW_SLOTS);
     const casterOf = new Map(ranked.map((caster) => [caster.id, caster]));
     const owners = assignMeshShadowSlots(
-      shadowLayers.map((layer) => layer?.id ?? null),
+      shadowLayers.map((layer) => layer?.caster.id ?? null),
       ranked.map((caster) => caster.id),
     );
     const dirty: number[] = [];
@@ -609,15 +609,14 @@ export function createMeshBodyRenderer(init: {
       if (id === null) return null;
       const caster = casterOf.get(id)!;
       const held = shadowLayers[slot];
-      if (held?.id === id && !meshShadowNeedsRender(held.rendered, caster.sunDirMesh)) {
+      if (held?.caster.id === id && !meshShadowNeedsRender(held.rendered, caster.sunDirMesh)) {
         return { ...held, caster };
       }
       dirty.push(slot);
       const radiusM = meshes.get(id)!.boundingRadiusM;
       return {
-        id,
         rendered: caster.sunDirMesh,
-        slot: {
+        shadow: {
           slot,
           lightFromMesh: meshShadowLightFromMesh(caster.sunDirMesh, radiusM),
           normalOffsetM: (MESH_SHADOW_NORMAL_OFFSET_TEXELS * 2 * radiusM) / MESH_SHADOW_MAP_PX,
@@ -625,16 +624,18 @@ export function createMeshBodyRenderer(init: {
         caster,
       };
     });
-    rankedLayers = ranked.map((caster) => shadowLayers.find((layer) => layer?.id === caster.id)!);
+    rankedLayers = ranked.map(
+      (caster) => shadowLayers.find((layer) => layer?.caster.id === caster.id)!,
+    );
     if (dirty.length === 0) return;
 
     // One timing slot spans every layer drawn: it opens on the first pass, closes on the last.
     const timestampWrites = claimTimestampWrites().timestampWrites;
     dirty.forEach((slot, i) => {
       const layer = shadowLayers[slot]!;
-      const res = meshes.get(layer.id)!;
+      const res = meshes.get(layer.caster.id)!;
       const uniform = shadowUniforms[slot]!;
-      device.queue.writeBuffer(uniform.buffer, 0, narrowMat4(layer.slot.lightFromMesh));
+      device.queue.writeBuffer(uniform.buffer, 0, narrowMat4(layer.shadow.lightFromMesh));
       const pass = encoder.beginRenderPass({
         label: `meshBody-shadow-pass-${slot}`,
         colorAttachments: [],
@@ -668,18 +669,18 @@ export function createMeshBodyRenderer(init: {
   }
 
   function shadowOf(id: string): MeshShadowSlot | null {
-    return rankedLayers.find((layer) => layer.id === id)?.slot ?? null;
+    return rankedLayers.find((layer) => layer.caster.id === id)?.shadow ?? null;
   }
 
   function groundCasters(hostId: string, eyeRelBodyM: Readonly<Vec3>): readonly MeshGroundCaster[] {
     return rankedLayers
       .filter((layer) => layer.caster.groundHostId === hostId)
       .slice(0, MESH_SHADOW_GROUND_CASTERS)
-      .map(({ slot, caster }) => ({
-        slot: slot.slot,
+      .map(({ shadow, caster }) => ({
+        slot: shadow.slot,
         lightFromEye: narrowMat4(
           meshShadowLightFromEye(
-            meshShadowLightFromLocal(slot.lightFromMesh, caster.rotM),
+            meshShadowLightFromLocal(shadow.lightFromMesh, caster.rotM),
             eyeRelBodyM,
             caster.posM,
           ),

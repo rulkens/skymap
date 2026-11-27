@@ -124,7 +124,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         noShadows,
         // Either toggle takes the rover's shadow off the ground.
         meshShadows:
-          meshBodies === null || noShadows || state.settings.debug.overlays['mesh-no-shadows']
+          meshBodies === null || noShadows || state.settings.debug.meshNoShadows
             ? null
             : {
                 view: meshBodies.shadowMapView,

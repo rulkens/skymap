@@ -31,6 +31,8 @@ export type DebugSettings = {
   meshAmbient: number;
   /** The mesh bodies' self-bounce fill (`MESH_SELF_BOUNCE` its default), live-tunable. */
   meshSelfBounce: number;
+  /** Mesh bodies draw without their sun shadow maps, on themselves and on the ground. */
+  meshNoShadows: boolean;
   /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.
