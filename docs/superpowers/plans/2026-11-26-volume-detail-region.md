@@ -556,12 +556,12 @@ give 49,152 / 128 / 8 (ASTC), 55,296 / 96 / 12 (BC4), 110,592 / 48 / 48 (r8).
 
 Steps:
 
-- [ ] Test `brick ids are x-fastest and round-trip`: MCPM's grid `[14, 24, 14]`, `(13, 23, 13)` →
+- [x] Test `brick ids are x-fastest and round-trip`: MCPM's grid `[14, 24, 14]`, `(13, 23, 13)` →
       4703 and `(1, 2, 3)` → `1 + 14·(2 + 24·3)` = 1037, worked by hand; `brickCoordsOf` inverts
       both. The ids are keys in files on R2.
-- [ ] No test for the path or the zero block: the path is one template both sides share; the zero
+- [x] No test for the path or the zero block: the path is one template both sides share; the zero
       block decodes only on a GPU (acceptance check 13).
-- [ ] `npm run typecheck:fast`; `npm test -- brickId pickVolumePyramidFormat`.
+- [x] `npm run typecheck:fast`; `npm test -- brickId pickVolumePyramidFormat`.
 
 **Commit:** `Volume brick facts: edge, ids, archive path and each format's zero block`
 
