@@ -23,12 +23,13 @@ config.
 The workbenches and much of `tools/` import straight from `src/` (renderer,
 formats, `@types/`). The shared-code package now exists: `packages/shared`, a
 leaf holding what the app and the MCPM workbench both use (ADR 0017). The MCPM
-workbench moved with its `src/` and `tools/` imports frozen as a shrink-only
-list (`tests/conventions/mcpmWorkbenchBoundary.test.ts`): 12 MCPM shaders on
-the single WESL root, 4 galaxy-catalog Layer and composition files, 19
-workbench-only helpers that stayed in `src/`, and 12 `tools/` modules. The
-other workbenches' closures reach into Layers and the engine and have not been
-sorted; follow the same shape (package, root-suite tests, boundary list).
+workbench moved with its imports from outside itself and `packages/shared`
+frozen as a shrink-only list (`tests/conventions/mcpmWorkbenchBoundary.test.ts`):
+12 MCPM shaders on the single WESL root, 4 galaxy-catalog Layer and composition
+files, 19 workbench-only helpers that stayed in `src/`, 12 `tools/` modules and
+`public/favicon.svg`. The other workbenches' closures reach into Layers and the
+engine and have not been sorted; follow the same shape (package, root-suite
+tests, boundary list).
 
 ## Blast radius to plan for
 

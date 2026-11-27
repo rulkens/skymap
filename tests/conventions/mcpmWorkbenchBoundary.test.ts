@@ -1,8 +1,9 @@
 /**
- * packages/mcpm-workbench may import packages/shared freely, but a file of the app's `src/` or of
- * `tools/` only from the list below: the files it imported when it moved (ADR 0017). The list only
- * shrinks. A new import of an unlisted file fails, and so does a listed file nothing imports any
- * more, so the list stays exact. The package's own tests are not swept.
+ * packages/mcpm-workbench may import itself and packages/shared freely, but any other repo file
+ * (the app's `src/`, `tools/`, `public/`) only from the list below: the files it imported when it
+ * moved (ADR 0017). The list only shrinks. A new import of an unlisted file fails, and so does a
+ * listed file nothing imports any more, so the list stays exact. Bare specifiers (npm packages)
+ * are not checked; neither are the package's own tests.
  */
 import { existsSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -12,7 +13,7 @@ import { tsSpecifiers } from '../helpers/conventions/tsSpecifiers';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const PACKAGE = 'packages/mcpm-workbench';
-const GUARDED = ['src/', 'tools/'];
+const FREE = [`${PACKAGE}/`, 'packages/shared/'];
 
 const ALLOWED: ReadonlySet<string> = new Set([
   // Workbench-only helpers that stayed in src/.
@@ -66,6 +67,8 @@ const ALLOWED: ReadonlySet<string> = new Set([
   'tools/utils/io/toolPages.ts',
   'tools/utils/math/f16BitsToFloat.ts',
   'tools/utils/vite/weslStaticPlugin.ts',
+  // Skymap's own icon, drawn in the Data panel.
+  'public/favicon.svg',
 ]);
 
 const isFile = (path: string) => existsSync(path) && statSync(path).isFile();
@@ -77,24 +80,24 @@ function targetOf(file: string, spec: string): string {
   return (path ?? base).replace(/\\/g, '/');
 }
 
-function guardedTargets(file: string): string[] {
+function outsideTargets(file: string): string[] {
   return (file.endsWith('.css') ? cssSpecifiers(file) : tsSpecifiers(file))
     .filter((spec) => spec.startsWith('.'))
     .map((spec) => targetOf(file, spec))
-    .filter((target) => GUARDED.some((root) => target.startsWith(root)));
+    .filter((target) => !FREE.some((root) => target.startsWith(root)));
 }
 
 const files = walkFiles(PACKAGE, ['.ts', '.tsx', '.css']).filter(
   (file) => !file.startsWith(`${PACKAGE}/tests/`),
 );
-const imported = new Set(files.flatMap(guardedTargets));
+const imported = new Set(files.flatMap(outsideTargets));
 
-describe('packages/mcpm-workbench imports from src/ and tools/ only what is listed', () => {
+describe('packages/mcpm-workbench imports from outside itself and packages/shared only what is listed', () => {
   expect(files.length).toBeGreaterThan(0);
 
   it.each(files)('%s', (file) => {
     expect(
-      guardedTargets(file).filter((target) => !ALLOWED.has(target)),
+      outsideTargets(file).filter((target) => !ALLOWED.has(target)),
       'Import it from packages/shared (move it there with its own imports), or move it into the ' +
         'workbench if only the workbench uses it.',
     ).toEqual([]);
