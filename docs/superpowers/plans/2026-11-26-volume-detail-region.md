@@ -1303,6 +1303,13 @@ any extra read sends the change back to D6 before acceptance.
 - **`data/raw/mcpm/README.md`:** already carries d1 from Task 4.1; check the wording only.
 - Plain sentences, the files' own density.
 
+- [x] **Written (2026-11-27)**, checked against the code at 9e4f02881: DATA.md (layout line, the brick
+      grid and format, the d1 inputs and both brick builds, the refresh rows), RENDERER.md (the region
+      bullet, the tile stream's `destroy`, the key, seven landmines; the old "never hand-fill a block"
+      line now names the one hand-written block), DEPLOY.md (one paragraph beside "Edge caching"),
+      `data/raw/mcpm/README.md` (the maintainer steps gain `build-mcpm-bricks`), and the two
+      `rawDataRegistry` descriptions. Costs are stated only as the spec's estimates: no brick is built.
+
 **Commit:** `Docs: the detail region, its bricks and its landmines`
 
 ---

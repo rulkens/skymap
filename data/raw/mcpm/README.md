@@ -45,10 +45,11 @@ curl -L -o data/raw/mcpm/trace.bin.bz2 \
 #    for the volume bricks; it is not mirrored to R2.
 .venv/bin/python tools/volumes/extractMcpmCube.py
 
-# 4. Build the pyramid locally (needs basisu, see docs/DATA.md)
+# 4. Build the pyramid and the level-0 bricks locally (needs basisu, see docs/DATA.md)
 npm run build-mcpm
+npm run build-mcpm-bricks
 
-# 5. Upload .npy tiers + pyramid outputs to R2 (idempotent)
+# 5. Upload the d2/d4/d8 tiers + pyramid and brick outputs to R2 (idempotent; d1 stays local)
 npm run sync-r2-secure
 ```
 
