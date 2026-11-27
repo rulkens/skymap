@@ -25,7 +25,7 @@ import LoadCatalogDialogContainer from '../../../../../src/ui/containers/catalog
 // The worker's handler runs in-process; only the disk read is faked, so a test decides when it lands.
 vi.mock('../../../../../src/catalog/worker/createCatalogWorkerTransport', async () => ({
   createCatalogWorkerTransport: (
-    await import('../../../../../../../tests/fixtures/inProcessCatalogWorkerTransport')
+    await import('../../../../fixtures/inProcessCatalogWorkerTransport')
   ).inProcessCatalogWorkerTransport,
 }));
 vi.mock('../../../../../src/catalog/worker/readCatalogSource', () => ({

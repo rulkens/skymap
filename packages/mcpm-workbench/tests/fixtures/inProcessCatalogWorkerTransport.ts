@@ -1,5 +1,5 @@
-import type { CatalogWorkerTransport } from '../../packages/mcpm-workbench/@types/catalog/worker/CatalogWorkerTransport';
-import { createCatalogWorkerHandler } from '../../packages/mcpm-workbench/src/catalog/worker/createCatalogWorkerHandler';
+import type { CatalogWorkerTransport } from '../../@types/catalog/worker/CatalogWorkerTransport';
+import { createCatalogWorkerHandler } from '../../src/catalog/worker/createCatalogWorkerHandler';
 
 /**
  * The catalog worker's handler run in-process, both directions a microtask

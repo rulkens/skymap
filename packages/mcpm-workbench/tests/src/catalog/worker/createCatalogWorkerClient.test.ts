@@ -3,7 +3,7 @@ import type { CatalogImportSettings } from '../../../../@types/catalog/import/Ca
 import type { CatalogPreview } from '../../../../@types/catalog/import/CatalogPreview';
 import { createCatalogWorkerClient } from '../../../../src/catalog/worker/createCatalogWorkerClient';
 import { createCatalogWorkerHandler } from '../../../../src/catalog/worker/createCatalogWorkerHandler';
-import { inProcessCatalogWorkerTransport } from '../../../../../../tests/fixtures/inProcessCatalogWorkerTransport';
+import { inProcessCatalogWorkerTransport } from '../../../fixtures/inProcessCatalogWorkerTransport';
 
 const XYZ: CatalogImportSettings = {
   format: { kind: 'cartesianMpc' },
