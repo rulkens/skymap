@@ -3,8 +3,8 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { decodeSurfaceTileArchiveIndex } from '../../../../src/layers/body/surfaceTiles/archive/utils/decodeSurfaceTileArchiveIndex';
-import { findSurfaceTileArchiveEntry } from '../../../../src/layers/body/surfaceTiles/archive/utils/findSurfaceTileArchiveEntry';
+import { decodeArchiveIndex } from '../../../../src/utils/archive/decodeArchiveIndex';
+import { findArchiveEntry } from '../../../../src/utils/archive/findArchiveEntry';
 import { surfaceTileArchivePath } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import {
@@ -59,9 +59,7 @@ export function readHeightPyramid(
       const path = join(imagesDir, surfaceTileArchivePath(prefix, 'height', z));
       levels.set(
         z,
-        existsSync(path)
-          ? { index: decodeSurfaceTileArchiveIndex(readFileSync(path)), fds: new Map() }
-          : null,
+        existsSync(path) ? { index: decodeArchiveIndex(readFileSync(path)), fds: new Map() } : null,
       );
     }
     return levels.get(z)!;
@@ -71,7 +69,7 @@ export function readHeightPyramid(
   const bytesOf = (z: number, x: number, y: number): Buffer | null => {
     const level = levelOf(z);
     if (level === null) return null;
-    const entry = findSurfaceTileArchiveEntry(level.index, surfaceTileMortonKey(x, y));
+    const entry = findArchiveEntry(level.index, surfaceTileMortonKey(x, y));
     if (entry === null || entry.length === 0) return null;
     let fd = level.fds.get(entry.part);
     if (fd === undefined) {
@@ -89,9 +87,7 @@ export function readHeightPyramid(
     if (has === undefined) {
       const level = levelOf(z);
       const entry =
-        level === null
-          ? null
-          : findSurfaceTileArchiveEntry(level.index, surfaceTileMortonKey(x, y));
+        level === null ? null : findArchiveEntry(level.index, surfaceTileMortonKey(x, y));
       has = entry !== null && entry.length > 0;
       inArchive.set(key, has);
     }

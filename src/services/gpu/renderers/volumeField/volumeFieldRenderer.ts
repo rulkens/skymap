@@ -2,20 +2,26 @@
  * VolumeFieldRenderer — multi-field, palette-driven, additive 3D scalar-field raymarch (spec:
  * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'). `upload` takes a finished
  * `GpuVolume` and owns it from then on (AssetSlot's rule: a committed payload belongs to the
- * consumer); each field adds its palette LUT, bind groups, uniforms, matrices and statics. User
- * knobs are read per frame through `settingsOf`, never mirrored. The jitter index, step count and
- * blend weight `w` arrive per draw as `inputs`: this renderer holds no frame counter. Below w = 1
- * one decay triangle scales the target by (1 − w), then every field adds at w, so the target holds
- * a running mean. One shared march pipeline means one bind-group layout, so field bind groups are
- * interchangeable. A palette change rewrites the field's LUT in place (views stay valid).
+ * consumer). User knobs are read per frame through `settingsOf`, never mirrored. The jitter index,
+ * step count and blend weight `w` arrive per draw as `inputs`: this renderer holds no frame
+ * counter. Below w = 1 one decay triangle scales the target by (1 − w), then every field adds at w,
+ * so the target holds a running mean.
  */
 
-import { mat4 } from 'wgpu-matrix';
+import { mat4, type Mat4 } from 'wgpu-matrix';
 import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/ScalarFieldPaletteId';
+import type { VolumeFieldDefaults } from '../../../../@types/data/volume/VolumeFieldDefaults';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { DetailRegionDraw } from '../../../../@types/rendering/DetailRegionDraw';
+import type { GpuVolume } from '../../../../@types/rendering/GpuVolume';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { VolumeFieldDrawInputs } from '../../../../@types/rendering/VolumeFieldDrawInputs';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
+import type { RegionEntry } from '../../../../@types/rendering/RegionEntry';
 import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/VolumeFieldRendererDeps';
+import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import { BLUE_NOISE_MASK_SLICES } from '../../../../data/volume/blueNoiseMask';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
@@ -27,8 +33,11 @@ import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatri
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
 // Fields through nativeBoxScale (300 B), rounded up to 16 for a uniform struct. Pinned against
-// fragment.wesl by volumeUniformsLayout.parity.test.ts.
+// io.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 304;
+// RegionUniforms, pinned the same way.
+const REGION_UNIFORM_BYTES = 112;
+const REGION_PLACEHOLDER_LABEL = 'density-region-placeholder';
 
 // Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
 // A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
@@ -67,8 +76,6 @@ const CUBE_INDICES = new Uint16Array([
   1, 3, 5, 3, 7, 5,
 ]);
 
-// ── Factory ─────────────────────────────────────────────────────────
-
 export function createVolumeFieldRenderer<Id extends string>({
   device,
   targetFormat,
@@ -97,15 +104,22 @@ export function createVolumeFieldRenderer<Id extends string>({
     addressModeW: 'clamp-to-edge',
   });
   const paletteSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+  // The region texture is toroidal (a brick's slot is its coordinates mod K), hence repeat.
+  const regionSampler = device.createSampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+  });
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scalarVolume.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
 
-  // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
-  // + palette LUT 2D texture + sampler + jitter mask). Built from a manual BindGroupLayout
-  // descriptor so the pipeline layout below can list it alongside the
-  // canonical fadeBgl. The palette is an N x 1 2D texture rather than a
-  // texture_1d — see createPaletteTexture and the shader binding for why.
+  // Explicit layouts, not 'auto': every march variant shares one pipeline layout (field group 0,
+  // core's fadeBgl at 1, region at 2), so any field's bind groups fit any variant. Group 0 holds the
+  // uniforms, the volume and its sampler, the palette LUT (2D, see createPaletteTexture) and its
+  // sampler, and the jitter mask.
   const group0Bgl = device.createBindGroupLayout({
     label: 'scalarVolume-bgl-group0',
     entries: [
@@ -134,39 +148,61 @@ export function createVolumeFieldRenderer<Id extends string>({
     ],
   });
 
-  const pipelineLayout = device.createPipelineLayout({
-    label: 'scalarVolume-pipeline-layout',
-    bindGroupLayouts: [group0Bgl, fadeBgl],
+  const group2Bgl = device.createBindGroupLayout({
+    label: 'scalarVolume-bgl-region',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '3d' },
+      },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
   });
 
-  const pipeline = device.createRenderPipeline({
-    label: 'scalarVolume-pipeline',
-    layout: pipelineLayout,
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs_main',
-      buffers: [
-        {
-          arrayStride: 12,
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs_main',
-      targets: [
-        {
-          format: targetFormat,
-          blend: WEIGHTED_ADDITIVE_BLEND,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-      cullMode: 'front', // ← back faces only; see fragment.wesl module header
-    },
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'scalarVolume-pipeline-layout',
+    bindGroupLayouts: [group0Bgl, fadeBgl, group2Bgl],
   });
+
+  // Indexed by REGION: 0 compiles the region code out (the spike measured an empty region branch
+  // at +0.1 ms), 1 the steady march, 2 the fading one. All three are built here, so a WGSL error in
+  // any of them shows at creation, region or not. The LEVELS (debug view) variants are built on
+  // first use: nobody else pays for them.
+  function createMarchPipeline(variant: number, levels: boolean): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label: `scalarVolume-pipeline-region${variant}${levels ? '-levels' : ''}`,
+      layout: pipelineLayout,
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs_main',
+        buffers: [
+          {
+            arrayStride: 12,
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+          },
+        ],
+      },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs_main',
+        constants: { REGION: variant, LEVELS: Number(levels) },
+        targets: [
+          {
+            format: targetFormat,
+            blend: WEIGHTED_ADDITIVE_BLEND,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+        cullMode: 'front', // ← back faces only; see fragment.wesl module header
+      },
+    });
+  }
+  const marchPipelines = [0, 1, 2].map((variant) => createMarchPipeline(variant, false));
+  const levelPipelines: GPURenderPipeline[] = [];
   const decayPipeline = device.createRenderPipeline({
     label: 'scalarVolume-decay-pipeline',
     layout: device.createPipelineLayout({
@@ -185,34 +221,54 @@ export function createVolumeFieldRenderer<Id extends string>({
       ],
     },
   });
-  // The bind-group layout for @group(0). Derived from `group0Bgl` (the
-  // manually-created layout) rather than `pipeline.getBindGroupLayout(0)` so
-  // the layout identity is consistent: the same object used to build the
-  // pipeline is the one passed to `createBindGroup` in `upload`.
-  const bindGroupLayout = group0Bgl;
 
-  // Fade scratch buffer hoisted to factory scope to avoid per-frame
-  // ArrayBuffer allocation. One 16-byte buffer shared across all fields
-  // per draw call (values are written and consumed synchronously within
-  // one field's iteration step). Matches the closure-captured pattern
-  // in galaxyPointRenderer and filamentRenderer.
+  // Shared by every field: `writeBuffer` copies it at call time.
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<Id, FieldEntry>();
+  const regions = new Map<Id, RegionEntry>();
+  // Both scratches are reused across fields and draws, so each is zero-filled before a write.
+  const scratch = new Float32Array(UNIFORM_BYTES / 4);
+  const regionScratch = new Float32Array(REGION_UNIFORM_BYTES / 4);
 
-  // Per-field palette texture — created in `upload`, re-uploaded in
-  // `draw` via the shared `writePaletteLut` helper when the live palette
-  // setting diverges from `residentPaletteId`.  A single
-  // PALETTE_LUT_SIZE x 1 2D texture per field is the natural cost since
-  // each field uses its own colour ramp; bind groups reference the
-  // texture's view, which stays valid across `writeTexture` calls.
-  //
-  // Stored as an N x 1 2D texture rather than a texture_1d: WGSL has no
-  // textureSampleLevel overload for 1D textures, so the shader's
-  // explicit-LOD palette lookup only compiles portably (iOS WebKit
-  // included) against a 2D sampler. See the fragment shader's palette
-  // binding for the full rationale.
+  function createRegionBindGroup(
+    buffer: GPUBuffer,
+    texture: GPUTexture,
+    label: string,
+  ): GPUBindGroup {
+    return device.createBindGroup({
+      label,
+      layout: group2Bgl,
+      entries: [
+        { binding: 0, resource: { buffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: regionSampler },
+      ],
+    });
+  }
+  // Bound for every field drawn without a region: the layout is shared, so group 2 must be set.
+  const placeholderTexture = device.createTexture({
+    label: REGION_PLACEHOLDER_LABEL,
+    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+    format: 'r8unorm',
+    dimension: '3d',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const placeholderBuffer = device.createBuffer({
+    label: REGION_PLACEHOLDER_LABEL,
+    size: REGION_UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM,
+  });
+  const placeholderBindGroup = createRegionBindGroup(
+    placeholderBuffer,
+    placeholderTexture,
+    REGION_PLACEHOLDER_LABEL,
+  );
+
+  // N × 1 2D, not texture_1d: WGSL has no 1D textureSampleLevel overload, and the explicit-LOD
+  // palette lookup must compile on iOS WebKit too. Rewritten in place on a palette change, so the
+  // bind group's view stays valid.
   function createPaletteTexture(): GPUTexture {
     return device.createTexture({
       size: { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
@@ -231,214 +287,245 @@ export function createVolumeFieldRenderer<Id extends string>({
     );
   }
 
+  function upload(
+    id: Id,
+    volume: GpuVolume,
+    statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
+  ): void {
+    const existing = fields.get(id);
+    if (existing) {
+      existing.volume.texture.destroy();
+      existing.paletteTexture.destroy();
+      existing.uniformBuffer.destroy();
+      existing.fadeBuffer.destroy();
+      fields.delete(id);
+    }
+    const modelMatrix = buildCubeModelMatrix(volume.placement);
+    const invModelMatrix = mat4.inverse(modelMatrix);
+    const paletteTexture = createPaletteTexture();
+    writePaletteLut(paletteTexture, statics.paletteId);
+    const uniformBuffer = device.createBuffer({
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const bindGroup = device.createBindGroup({
+      layout: group0Bgl,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: volume.texture.createView() },
+        { binding: 2, resource: volumeSampler },
+        { binding: 3, resource: paletteTexture.createView() },
+        { binding: 4, resource: paletteSampler },
+        { binding: 5, resource: jitterMaskView },
+      ],
+    });
+    const fadeBuffer = device.createBuffer({
+      label: `scalarVolume-fade-uniform-${id}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const fadeBindGroup = device.createBindGroup({
+      label: `scalarVolume-fade-bg-${id}`,
+      layout: fadeBgl,
+      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+    });
+    fields.set(id, {
+      contrastCenter: statics.contrastCenter,
+      envelopeInner: statics.envelope.inner,
+      envelopeOuter: statics.envelope.outer,
+      residentPaletteId: statics.paletteId,
+      modelMatrix,
+      invModelMatrix,
+      volume,
+      paletteTexture,
+      uniformBuffer,
+      bindGroup,
+      fadeBuffer,
+      fadeBindGroup,
+    });
+  }
+
+  function attachRegion(id: Id, texture: GPUTexture | null): void {
+    const existing = regions.get(id);
+    if (texture === null) {
+      existing?.uniformBuffer.destroy();
+      regions.delete(id);
+      return;
+    }
+    const uniformBuffer =
+      existing?.uniformBuffer ??
+      device.createBuffer({
+        label: `density-region-uniform-${id}`,
+        size: REGION_UNIFORM_BYTES,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+    const bindGroup = createRegionBindGroup(uniformBuffer, texture, `density-region-bg-${id}`);
+    regions.set(id, { uniformBuffer, bindGroup });
+  }
+
+  function unload(id: Id): void {
+    const entry = fields.get(id);
+    if (!entry) return;
+    // Fade identities are core's, seeded at boot and kept across unload: only GPU resources go.
+    entry.volume.texture.destroy();
+    entry.paletteTexture.destroy();
+    entry.uniformBuffer.destroy();
+    entry.fadeBuffer.destroy();
+    fields.delete(id);
+  }
+
+  function hasActiveFields(
+    settingsOf: (id: Id) => VolumeFieldSettings,
+    fadeOpacityOf: (id: Id) => number,
+  ): boolean {
+    for (const id of fields.keys()) {
+      const s = settingsOf(id);
+      if (s.intensity <= 0) continue;
+      // Opacity is the sole visibility truth: `enabled` only seeds the fade target, so an enabled
+      // field faded to 0 (deep zoom) costs no raymarch, and a fade-out tail still counts.
+      if (fadeOpacityOf(id) > 0) return true;
+    }
+    return false;
+  }
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Mat4,
+    viewportPx: Vec2,
+    pxPerRad: number,
+    cameraPosWorld: Readonly<Vec3>,
+    settingsOf: (id: Id) => VolumeFieldSettings,
+    fadeOpacityOf: (id: Id) => number,
+    regionOf: (id: Id) => DetailRegionDraw | null,
+    inputs: VolumeFieldDrawInputs,
+  ): void {
+    // WebGPU's default blend constant is 0, which would erase every field.
+    const w = inputs.weight;
+    pass.setBlendConstant({ r: w, g: w, b: w, a: w });
+    // At w = 1 (a restart) the executor has just cleared the target, so the decay is skipped.
+    if (w < 1) {
+      pass.setPipeline(decayPipeline);
+      pass.draw(3);
+    }
+    pass.setVertexBuffer(0, cornerBuffer);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    // Per-field uniform buffer layout (304 bytes; mat4 alignment):
+    //   0..63   viewProj         (mat4x4 column-major, 16 floats)
+    //  64..71   viewportPx       (vec2)
+    //  72..75   pxPerRad
+    //  76..79   _pad0
+    //  80..143  modelMatrix      (mat4x4)
+    // 144..207  invModelMatrix   (mat4x4)
+    // 208..219  cameraPosWorld   (vec3)
+    // 220..223  intensity        (f32; from settingsOf)
+    // 224..227  densityScale     (f32; from settingsOf)
+    // 228..231  contrast         (f32; from settingsOf)
+    // 232..235  contrastCenter   (f32; per-cube static, from the entry)
+    // 236..239  envelopeInner    (f32; per-cube static, from the entry)
+    // 240..243  envelopeOuter    (f32; per-cube static, from the entry)
+    // 244..247  exposure         (f32; from settingsOf)
+    // 248..251  trim             (f32; from settingsOf)
+    // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
+    // 256..259  steps            (f32; inputs.steps)
+    // 260..263  gain             (f32; from the volume)
+    // 264..267  _pad0
+    // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
+    // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
+    // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
+    const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
+    for (const [id, e] of fields.entries()) {
+      const s = settingsOf(id);
+      // Before the skip gate: a palette changed while the field was off must show the moment it
+      // is back on.
+      if (s.paletteId !== e.residentPaletteId) {
+        writePaletteLut(e.paletteTexture, s.paletteId);
+        e.residentPaletteId = s.paletteId;
+      }
+      // As `hasActiveFields`. A just-enabled field skips only its first tick at opacity 0: the
+      // in-flight fade wakes the loop.
+      const opacity = fadeOpacityOf(id);
+      if (opacity <= 0 || s.intensity <= 0) continue;
+      scratch.fill(0);
+      writeCameraPrefix(scratch, viewProj, viewportPx, pxPerRad);
+      for (let i = 0; i < 16; i++) scratch[20 + i] = e.modelMatrix[i] ?? 0;
+      for (let i = 0; i < 16; i++) scratch[36 + i] = e.invModelMatrix[i] ?? 0;
+      scratch[52] = cameraPosWorld[0];
+      scratch[53] = cameraPosWorld[1];
+      scratch[54] = cameraPosWorld[2];
+      scratch[55] = s.intensity;
+      scratch[56] = s.densityScale;
+      scratch[57] = s.contrast;
+      scratch[58] = e.contrastCenter;
+      scratch[59] = e.envelopeInner;
+      scratch[60] = e.envelopeOuter;
+      scratch[61] = s.exposure;
+      scratch[62] = s.trim;
+      scratch[63] = jitterIndex;
+      scratch[64] = inputs.steps;
+      scratch[65] = e.volume.gain;
+      scratch[67] = e.volume.placement.voxelSize;
+      scratch.set(e.volume.nativeBox.offset, 68);
+      scratch.set(e.volume.nativeBox.scale, 72);
+      device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
+      fadeScratchF32[0] = opacity;
+      device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
+      // RegionUniforms: settledLo 0, voxelMpc 12, settledHi 16, fadeW 28, texScale 32, intoLo 48,
+      // intoHi 64, outLo 80, outHi 96; the fade members stay 0 while steady.
+      const region = regionOf(id);
+      const bound = region ? regions.get(id) : undefined;
+      if (region && bound) {
+        regionScratch.fill(0);
+        regionScratch.set(region.settledLo, 0);
+        regionScratch[3] = region.voxelMpc;
+        regionScratch.set(region.settledHi, 4);
+        regionScratch.set(region.texScale, 8);
+        if (region.fade) {
+          regionScratch[7] = region.fade.w;
+          regionScratch.set(region.fade.intoLo, 12);
+          regionScratch.set(region.fade.intoHi, 16);
+          regionScratch.set(region.fade.outLo, 20);
+          regionScratch.set(region.fade.outHi, 24);
+        }
+        device.queue.writeBuffer(bound.uniformBuffer, 0, regionScratch);
+      }
+      const variant = !bound ? 0 : region?.fade ? 2 : 1;
+      pass.setPipeline(
+        s.showLevels
+          ? (levelPipelines[variant] ??= createMarchPipeline(variant, true))
+          : marchPipelines[variant]!,
+      );
+      pass.setBindGroup(0, e.bindGroup);
+      pass.setBindGroup(1, e.fadeBindGroup);
+      pass.setBindGroup(2, bound ? bound.bindGroup : placeholderBindGroup);
+      pass.drawIndexed(CUBE_INDICES.length);
+    }
+  }
+
+  function destroy(): void {
+    for (const e of fields.values()) {
+      e.volume.texture.destroy();
+      e.paletteTexture.destroy();
+      e.uniformBuffer.destroy();
+      e.fadeBuffer.destroy();
+    }
+    fields.clear();
+    for (const r of regions.values()) r.uniformBuffer.destroy();
+    regions.clear();
+    placeholderTexture.destroy();
+    placeholderBuffer.destroy();
+    cornerBuffer.destroy();
+    indexBuffer.destroy();
+  }
+
   const renderer: VolumeFieldRenderer<Id> = {
     label: 'volumeFieldRenderer',
-    upload(id, volume, statics) {
-      const existing = fields.get(id);
-      if (existing) {
-        existing.volume.texture.destroy();
-        existing.paletteTexture.destroy();
-        existing.uniformBuffer.destroy();
-        existing.fadeBuffer.destroy();
-        fields.delete(id);
-      }
-      // Per-cube STATIC presentation config is the caller's to supply —
-      // this renderer names no registry, so it can't look defaults up
-      // itself.  The user-tunable knobs (enabled, intensity, contrast,
-      // densityScale, palette, trim, exposure) are NOT seeded here —
-      // they live in the caller's settings and are read per frame in `draw`.
-      const modelMatrix = buildCubeModelMatrix(volume.placement);
-      const invModelMatrix = mat4.inverse(modelMatrix);
-      const paletteTexture = createPaletteTexture();
-      // Seed the resident LUT from the caller's static default so it
-      // matches `residentPaletteId`; `draw` re-uploads in place if the
-      // live setting later diverges.
-      writePaletteLut(paletteTexture, statics.paletteId);
-      const uniformBuffer = device.createBuffer({
-        size: UNIFORM_BYTES,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      const bindGroup = device.createBindGroup({
-        layout: bindGroupLayout,
-        entries: [
-          { binding: 0, resource: { buffer: uniformBuffer } },
-          { binding: 1, resource: volume.texture.createView() },
-          { binding: 2, resource: volumeSampler },
-          { binding: 3, resource: paletteTexture.createView() },
-          { binding: 4, resource: paletteSampler },
-          { binding: 5, resource: jitterMaskView },
-        ],
-      });
-      const fadeBuffer = device.createBuffer({
-        label: `scalarVolume-fade-uniform-${id}`,
-        size: 16,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      const fadeBindGroup = device.createBindGroup({
-        label: `scalarVolume-fade-bg-${id}`,
-        layout: fadeBgl,
-        entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
-      });
-      fields.set(id, {
-        // Per-cube static config, taken from the caller's `statics` above.
-        contrastCenter: statics.contrastCenter,
-        envelopeInner: statics.envelope.inner,
-        envelopeOuter: statics.envelope.outer,
-        // GPU-residency fact: the palette id just written into
-        // `paletteTexture`.  `draw` re-uploads the LUT when the live
-        // setting diverges from this.
-        residentPaletteId: statics.paletteId,
-        modelMatrix,
-        invModelMatrix,
-        volume,
-        paletteTexture,
-        uniformBuffer,
-        bindGroup,
-        fadeBuffer,
-        fadeBindGroup,
-      });
-    },
-    unload(id) {
-      const entry = fields.get(id);
-      if (!entry) return;
-      // The renderer is FadeRegistry-agnostic: it neither registers nor
-      // unregisters fade identities. Core seeds every visibility identity at
-      // boot, so a field's identity stays registered across upload/unload —
-      // `unload` just releases this field's GPU resources.
-      entry.volume.texture.destroy();
-      entry.paletteTexture.destroy();
-      entry.uniformBuffer.destroy();
-      entry.fadeBuffer.destroy();
-      fields.delete(id);
-    },
-    hasActiveFields(settingsOf, fadeOpacityOf) {
-      for (const id of fields.keys()) {
-        const s = settingsOf(id);
-        if (s.intensity <= 0) continue;
-        // Opacity is the SOLE visibility truth: a field is active iff its
-        // resolved opacity is non-zero. The enabled toggle doesn't override
-        // a zero — it only SEEDS the fade target through the visibility sync,
-        // so an enabled field spatially faded to 0 (deep zoom) must not
-        // burn a full raymarch. This one test also covers the fade-out
-        // tail (toggle off, opacity still ramping down) for free: the tail
-        // IS a non-zero opacity.
-        if (fadeOpacityOf(id) > 0) return true;
-      }
-      return false;
-    },
-    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf, inputs) {
-      // WebGPU's default blend constant is 0, which would erase every field.
-      const w = inputs.weight;
-      pass.setBlendConstant({ r: w, g: w, b: w, a: w });
-      // At w = 1 (a restart) the executor has just cleared the target, so the decay is skipped.
-      if (w < 1) {
-        pass.setPipeline(decayPipeline);
-        pass.draw(3);
-      }
-      pass.setPipeline(pipeline);
-      pass.setVertexBuffer(0, cornerBuffer);
-      pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (304 bytes; mat4 alignment):
-      //   0..63   viewProj         (mat4x4 column-major, 16 floats)
-      //  64..71   viewportPx       (vec2)
-      //  72..75   pxPerRad
-      //  76..79   _pad0
-      //  80..143  modelMatrix      (mat4x4)
-      // 144..207  invModelMatrix   (mat4x4)
-      // 208..219  cameraPosWorld   (vec3)
-      // 220..223  intensity        (f32; from settingsOf)
-      // 224..227  densityScale     (f32; from settingsOf)
-      // 228..231  contrast         (f32; from settingsOf)
-      // 232..235  contrastCenter   (f32; per-cube static, from the entry)
-      // 236..239  envelopeInner    (f32; per-cube static, from the entry)
-      // 240..243  envelopeOuter    (f32; per-cube static, from the entry)
-      // 244..247  exposure         (f32; from settingsOf)
-      // 248..251  trim             (f32; from settingsOf)
-      // 252..255  jitterIndex      (f32; inputs.jitterIndex, wrapped)
-      // 256..259  steps            (f32; inputs.steps)
-      // 260..263  gain             (f32; from the volume)
-      // 264..267  _pad0
-      // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
-      // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
-      // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
-      const scratch = new Float32Array(UNIFORM_BYTES / 4);
-      const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
-      for (const [id, e] of fields.entries()) {
-        const s = settingsOf(id);
-        // Reactive palette: re-upload the LUT in place when the live
-        // setting diverges from what's resident (the bind group
-        // references the texture view, which stays valid across
-        // writeTexture).  Palette is the one knob with a GPU side
-        // effect, so it's handled here rather than packed into the
-        // uniform.  This check runs BEFORE the skip gate below so that
-        // residency stays in sync even for a disabled or zero-intensity
-        // field whose palette changed while it was off — ensuring the
-        // correct LUT is showing the moment the field is re-enabled.
-        // Moving this block into the skip branch would introduce a
-        // stale-LUT-on-re-enable bug.
-        if (s.paletteId !== e.residentPaletteId) {
-          writePaletteLut(e.paletteTexture, s.paletteId);
-          e.residentPaletteId = s.paletteId;
-        }
-        // Skip iff the field resolves invisible: opacity is the sole
-        // visibility truth (the enabled toggle only seeds the fade target via
-        // the visibility sync — it never overrides a zero, so an enabled
-        // field spatially faded to 0 at deep zoom skips its raymarch).
-        // While opacity > 0 we keep drawing so the ~100 ms fade-out tail is
-        // visible. A just-enabled field is skipped only for its first tick
-        // (opacity still 0) — the in-flight fade wakes the loop, so the
-        // fade-in proceeds without a stall. s.intensity is the user's
-        // intensity slider; 0 there means "fully transparent regardless of
-        // fade", so we skip the GPU work entirely.
-        const opacity = fadeOpacityOf(id);
-        if (opacity <= 0 || s.intensity <= 0) continue;
-        writeCameraPrefix(scratch, viewProj, viewportPx, pxPerRad);
-        // Explicit pad zeroing — the scratch is reused across the field
-        // loop, so the pad can't rely on Float32Array zero-init.
-        scratch[19] = 0;
-        for (let i = 0; i < 16; i++) scratch[20 + i] = e.modelMatrix[i] ?? 0;
-        for (let i = 0; i < 16; i++) scratch[36 + i] = e.invModelMatrix[i] ?? 0;
-        scratch[52] = cameraPosWorld[0];
-        scratch[53] = cameraPosWorld[1];
-        scratch[54] = cameraPosWorld[2];
-        scratch[55] = s.intensity;
-        scratch[56] = s.densityScale;
-        scratch[57] = s.contrast;
-        scratch[58] = e.contrastCenter;
-        scratch[59] = e.envelopeInner;
-        scratch[60] = e.envelopeOuter;
-        scratch[61] = s.exposure;
-        scratch[62] = s.trim;
-        scratch[63] = jitterIndex;
-        scratch[64] = inputs.steps;
-        scratch[65] = e.volume.gain;
-        scratch[67] = e.volume.placement.voxelSize;
-        scratch.set(e.volume.nativeBox.offset, 68);
-        scratch.set(e.volume.nativeBox.scale, 72);
-        device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
-        // Per-field fade.opacity write: the resolved opacity from the skip
-        // gate above, written into the 16-byte fadeBuffer.
-        fadeScratchF32[0] = opacity;
-        device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
-        pass.setBindGroup(0, e.bindGroup);
-        pass.setBindGroup(1, e.fadeBindGroup);
-        pass.drawIndexed(CUBE_INDICES.length);
-      }
-    },
-    destroy() {
-      for (const e of fields.values()) {
-        e.volume.texture.destroy();
-        e.paletteTexture.destroy();
-        e.uniformBuffer.destroy();
-        e.fadeBuffer.destroy();
-      }
-      fields.clear();
-      cornerBuffer.destroy();
-      indexBuffer.destroy();
-    },
+    upload,
+    attachRegion,
+    unload,
+    hasActiveFields,
+    draw,
+    destroy,
   };
-  // `satisfies Renderer` confirms the shared label+destroy contract at
-  // compile time without widening the static type seen by consumers.
   renderer satisfies Renderer;
   return renderer;
 }

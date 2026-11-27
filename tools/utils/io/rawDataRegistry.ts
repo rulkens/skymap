@@ -6,9 +6,8 @@
  *
  * `source`: `'committed'` = in git, so a missing file means a broken repo;
  * `'gitignored'` = fetcher output, so a missing file means "run the fetcher".
- * `kind: 'directory'` covers dynamic filenames (chunks, tier variants) —
- * consumers `join()`. Build artefacts are outputs; they are not registered.
- */
+ * `kind: 'directory'` covers dynamic filenames (chunks, tier variants): consumers
+ * `join()`. Build artefacts are outputs, not registered. */
 
 import { resolve } from 'node:path';
 
@@ -307,7 +306,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy`. Produced once per VAC release by the Python extractor; mirrored to R2.',
+      'MCPM-extracted SDSS Cosmic Web tiers — `mcpm_sdss_d{2,4,8}.npy` (mirrored to R2) and the native `mcpm_sdss_d1.npy` (2.49 GB, maintainer only) for buildVolumeBricks.ts. Produced once per VAC release by the Python extractor.',
   },
 
   // ─── Edenhofer local dust volume ───────────────────────────────────────
@@ -393,7 +392,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py; `polyphorm_2mrs_d{2,4,8}.npy` feed buildVolumePyramid.ts (`npm run build-2mrs`).',
+      'Polyphorm MCPM simulation export cubes converted to polyphy-trace .npy+.json pairs by tools/volumes/extractPolyphormExport.py; `polyphorm_2mrs_d{2,4,8}.npy` feed buildVolumePyramid.ts (`npm run build-2mrs`), the native `polyphorm_2mrs_d1.npy` buildVolumeBricks.ts (`npm run build-2mrs-bricks`).',
   },
 
   // ─── MCPM workbench (promoted dev-tool exports) ───────────────────────

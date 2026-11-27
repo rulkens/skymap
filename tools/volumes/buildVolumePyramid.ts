@@ -7,13 +7,13 @@
  * Needs basisu v2.50.0 (`brew install basis_universal`). CLI: `npm run build-mcpm` / `build-2mrs`.
  */
 
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { encodeVolumeLevel } from './utils/encodeVolumeLevel';
 import { basisuEncodeLevel } from './utils/basisuEncodeLevel';
+import { basisuVersionLine } from './utils/basisuVersionLine';
 import { VOLUME_PYRAMID_FIELDS } from './data/volumePyramidFields';
 import { MAX_CROP_LOSS } from './data/maxCropLoss';
 import { PYRAMID_LEVELS } from './data/pyramidLevels';
@@ -130,15 +130,6 @@ async function buildVolumePyramid(row: VolumePyramidFieldRow): Promise<void> {
   );
   console.table(rows);
   console.log(`[buildVolumePyramid] ${row.id}: levelMax ${sidecar.levelMax.join(', ')}`);
-}
-
-function basisuVersionLine(): string {
-  try {
-    return execFileSync('basisu', ['-version'], { encoding: 'utf8' }).split('\n')[0]!;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-    throw new Error('basisu not found: install with `brew install basis_universal` (v2.50.0)');
-  }
 }
 
 async function main(): Promise<void> {

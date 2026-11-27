@@ -10,7 +10,7 @@ exact, since block-mean over equal-sized partitions is associative.
 
 Usage:
     python3 tools/volumes/extractPolyphormExport.py <export-dir> <out-prefix>
-    # writes <out-prefix>_d8.npy/.json, _d4.npy/.json, _d2.npy/.json
+    # writes <out-prefix>_d1.npy/.json (native), _d2, _d4, _d8
 """
 import json
 import os
@@ -67,10 +67,11 @@ def write_tier(
     center_w, center_h, center_d = meta["center_whd_mpc"]
     Dd, Hd, Wd = small.shape
 
+    # No p99 for the native tier: a percentile copies the 3.5 GB grid.
+    p99 = "" if factor == 1 else f", p99={np.percentile(small, 99):.4g}"
     print(
         f"trace stats (d{factor}, shape=(D,H,W)=({Dd},{Hd},{Wd})): "
-        f"min={small.min():.4g}, max={small.max():.4g}, mean={small.mean():.4g}, "
-        f"p99={np.percentile(small, 99):.4g}"
+        f"min={small.min():.4g}, max={small.max():.4g}, mean={small.mean():.4g}{p99}"
     )
 
     # buildRhizomeVolume/packLogTraceVoxels expect C-order (X, Y, Z) with X
@@ -145,12 +146,13 @@ def main() -> None:
     current = raw.astype(np.float32)
     del raw
     # The native peak is buildVolumePyramid's encoding scale (its field row's nativePeak), which no
-    # tier can recover. No p99 here: a percentile copies the 3.5 GB grid.
+    # tier can recover.
     print(
         f"native stats (shape=(D,H,W)=({D},{H},{W})): "
         f"min={current.min():.6g}, max={current.max():.6g}, mean={current.mean():.4g}"
     )
 
+    write_tier(current, 1, meta, export_dir, out_prefix)
     cumulative = 1
     for step in CASCADE_STEPS:
         current = block_mean(current, step)

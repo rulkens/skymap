@@ -25,6 +25,7 @@ function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettin
     paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
     trim: 0,
     exposure: 1,
+    showLevels: false,
     ...over,
   };
 }
@@ -36,6 +37,7 @@ function stubRenderer(
     label: 'stub',
     upload: () => {},
     unload: () => {},
+    attachRegion: () => {},
     hasActiveFields,
     draw: () => {},
     destroy: () => {},
@@ -50,6 +52,7 @@ describe('deriveVolumeLiveness (pure core)', () => {
         renderer,
         () => rawSettings(),
         () => 1,
+        () => null,
       ),
     ).toBeNull();
   });
@@ -60,6 +63,7 @@ describe('deriveVolumeLiveness (pure core)', () => {
       renderer,
       () => rawSettings({ intensity: 5 }),
       () => 1,
+      () => null,
     )!;
     const clamped = liveness.settingsOf(FIELD_ID);
     // The raw intensity 5 is clamped through clampVolumeIntensity.

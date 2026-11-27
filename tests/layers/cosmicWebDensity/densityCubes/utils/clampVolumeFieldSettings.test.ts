@@ -21,6 +21,7 @@ const rawHigh: VolumeFieldSettings = {
   densityScale: -1,
   trim: 2,
   exposure: 100,
+  showLevels: false,
 };
 
 describe('clampVolumeFieldSettings — input object is not mutated', () => {

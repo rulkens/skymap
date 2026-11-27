@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
-import { decodeSurfaceTileArchiveIndex } from '../../../src/layers/body/surfaceTiles/archive/utils/decodeSurfaceTileArchiveIndex';
+import { decodeArchiveIndex } from '../../../src/utils/archive/decodeArchiveIndex';
 import { surfaceTileArchivePath } from '../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileArchivePath';
 import type { R2Upload } from '../@types/R2Upload';
 
@@ -32,7 +32,7 @@ export function collectSurfaceTiles(imagesDir: string, manifestKey: string): R2U
       const idxPath = surfaceTileArchivePath(prefix, product, z);
       if (!existsSync(join(imagesDir, idxPath))) continue;
       add(idxPath);
-      const { partCount } = decodeSurfaceTileArchiveIndex(readFileSync(join(imagesDir, idxPath)));
+      const { partCount } = decodeArchiveIndex(readFileSync(join(imagesDir, idxPath)));
       for (let part = 0; part < partCount; part++) {
         const partPath = surfaceTileArchivePath(prefix, product, z, part);
         if (!existsSync(join(imagesDir, partPath))) {

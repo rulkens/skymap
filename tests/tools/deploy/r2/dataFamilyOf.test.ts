@@ -15,6 +15,7 @@ const STARS_V2_INDEX = { label: 'star-catalog-v2-index', transport: 'wrangler', 
 const STARS_V2_CHUNKS = { label: 'star-catalog-v2-chunks', transport: 'bulk', gzipOnWire: true };
 const SCALAR = { label: 'scalar-field', transport: 'wrangler', gzipOnWire: true };
 const PYRAMID = { label: 'volume-pyramid', transport: 'wrangler', gzipOnWire: true };
+const BRICKS = { label: 'volume-bricks', transport: 'wrangler', gzipOnWire: false };
 const FLOW = { label: 'flowfield', transport: 'wrangler', gzipOnWire: false };
 const FILAMENT = { label: 'filament', transport: 'wrangler', gzipOnWire: true };
 const STRUCTURE = { label: 'structure-catalog', transport: 'wrangler', gzipOnWire: true };
@@ -42,6 +43,8 @@ const TRACKED: [string, typeof GALAXY][] = [
   ['mcpm-workbench.scfd', SCALAR],
   ['volume-pyramid/v1/mcpm.astc6.L1.1a2b3c4d.bin', PYRAMID],
   ['volume-pyramid/v1/polyphorm-2mrs.json', PYRAMID],
+  ['volume-pyramid/v1/mcpm.astc6.L0.1a2b3c4d.idx', PYRAMID],
+  ['volume-pyramid/v1/polyphorm-2mrs.r8.L0.p0.1a2b3c4d.pack', BRICKS],
   ['flowfield.scfd', FLOW],
   ['flowfield.a3f19c2e.scfd', FLOW],
   ['scalar-field/v3/flowfield.scfd', FLOW],

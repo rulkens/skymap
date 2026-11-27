@@ -44,7 +44,7 @@ import { flattenAtlasRect } from '../../../../../../src/layers/body/surfaceTiles
 import { horizonRectOf } from '../../../../../../src/layers/body/surfaceTiles/horizon/utils/horizonRectOf';
 import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
-import { encodeSurfaceTileArchiveIndex } from '../../../../../../tools/utils/textures/encodeSurfaceTileArchiveIndex';
+import { encodeArchiveIndex } from '../../../../../../tools/utils/archive/encodeArchiveIndex';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
@@ -548,7 +548,7 @@ describe('surfaceTileStream absent tiles', () => {
       'fetch',
       vi.fn(async (url: string) =>
         url.endsWith('.idx')
-          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          ? new Response(encodeArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
           : new Response(new Uint8Array(4), { status: 206 }),
       ),
     );
@@ -607,7 +607,7 @@ describe('surfaceTileStream horizonAt', () => {
       'fetch',
       vi.fn(async (url: string) =>
         url.endsWith('.idx')
-          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          ? new Response(encodeArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
           : new Response(new Uint8Array(4), { status: 206 }),
       ),
     );

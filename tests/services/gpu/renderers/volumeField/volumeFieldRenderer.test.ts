@@ -6,6 +6,7 @@ import type { GpuVolume } from '../../../../../src/@types/rendering/GpuVolume';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { VolumeFieldDrawInputs } from '../../../../../src/@types/rendering/VolumeFieldDrawInputs';
 import type { VolumeFieldRendererDeps } from '../../../../../src/@types/rendering/VolumeFieldRendererDeps';
+import type { DetailRegionDraw } from '../../../../../src/@types/rendering/DetailRegionDraw';
 
 function fixture(): GpuVolume {
   return {
@@ -22,18 +23,8 @@ function fixture(): GpuVolume {
   };
 }
 
-/**
- * Minimal GPUDevice mock for renderer construction and draw tests.
- *
- * Vitest runs in Node without a real WebGPU surface; every device call
- * the renderer makes during construction + upload must return a
- * plausibly-shaped stand-in.  Draw tests assert on recorded
- * `device.queue.writeBuffer` / `device.queue.writeTexture` mock calls
- * — the uniform scratch the renderer packs per field, and the palette
- * LUT re-uploads it issues when `settingsOf` returns a changed
- * `paletteId`.  Modelled after the mock-device pattern in
- * `tests/services/gpu/renderTargets.test.ts`.
- */
+/** Enough GPUDevice for construction and draw; draw tests assert on the recorded `writeBuffer` and
+ *  `writeTexture` calls. */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   const makeTexture = () => ({
     createView: vi.fn(() => ({})),
@@ -50,10 +41,7 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
     createPipelineLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       renderPipelines?.push(desc);
-      // The renderer derives its bind-group layout from the pipeline (it
-      // uses `layout: 'auto'`); mock returns an empty layout the test
-      // never inspects.
-      return { getBindGroupLayout: vi.fn(() => ({})) };
+      return {};
     }),
     createBindGroup: vi.fn(() => ({})),
     queue: { writeBuffer: vi.fn(), writeTexture: vi.fn() },
@@ -68,8 +56,6 @@ function deps(device: GPUDevice): VolumeFieldRendererDeps {
     jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
   };
 }
-
-// ── Draw-path helpers ────────────────────────────────────────────────
 
 function makeFakePass() {
   return {
@@ -98,11 +84,7 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
   } as VolumeFieldSettings;
 }
 
-/**
- * Extract the length-76 uniform scratch from the writeBuffer mock.
- * The fade write passes a 16-byte ArrayBuffer — we skip it and find
- * only the Float32Array(76) that packs the full per-field uniform.
- */
+/** The per-field uniform scratch (76 floats); the fade write is a 16-byte ArrayBuffer instead. */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
   const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
     .calls;
@@ -126,6 +108,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       INPUTS,
     );
     const s = uniformScratch(device);
@@ -137,12 +120,7 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 
   it('upload seeds contrastCenter / envelope from statics, for an id no registry row names', () => {
-    // Per-cube static config taken from `upload`'s `statics` argument;
-    // user-tunable knobs are absent from it and arrive per draw via
-    // settingsOf. The renderer names no registry — any id is valid as long
-    // as the caller supplies statics, which is what makes a second caller
-    // (a future dust volume on its own ids) possible without widening this
-    // renderer's id union.
+    // The renderer names no registry, so a second caller on its own ids needs no wider id union.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const statics = {
@@ -159,6 +137,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: statics.paletteId }),
       () => 1,
+      () => null,
       INPUTS,
     );
     const s = uniformScratch(device);
@@ -168,11 +147,6 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 
   it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
-    // First draw with the statics-seeded default palette — no extra upload
-    // (the LUT was already seeded in upload).  Second draw with a
-    // different palette — exactly one writeTexture.  Third draw with
-    // the same changed palette — no further writeTexture (resident
-    // now tracks the new id).
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
@@ -187,6 +161,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: MCPM_ENTRY.paletteId }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -201,6 +176,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -215,6 +191,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(
@@ -224,8 +201,7 @@ describe('createVolumeFieldRenderer draw', () => {
 
   it('draw skips an ENABLED field whose resolved opacity is 0', () => {
     // Opacity is the sole visibility truth: an enabled field spatially faded
-    // to 0 (the deep-zoom band) must not burn a raymarch. The old rule let
-    // `enabled` override a zero opacity and drew anyway.
+    // to 0 (the deep-zoom band) must not burn a raymarch.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
@@ -238,6 +214,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings({ enabled: true }),
       () => 0,
+      () => null,
       INPUTS,
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
@@ -256,14 +233,15 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       { ...INPUTS, jitterIndex: 1_000_005 },
     );
     expect(uniformScratch(device)?.[63]).toBe(5);
   });
 
-  // The spike decayed the target once per field, so every field faded the ones before it (MCPM
-  // −65% with 2MRS on). One decay, then every field adds at w: dst·(1−w) + w·Σ fields. The blend
-  // constant must be set too: WebGPU's default of 0 erases the volume.
+  // A decay per field would fade every field drawn before it (MCPM −65% with 2MRS on). One decay,
+  // then every field adds at w: dst·(1−w) + w·Σ fields. The blend constant must be set too:
+  // WebGPU's default of 0 erases the volume.
   it('below weight 1, one decay draw precedes every field', () => {
     const pipelines: GPURenderPipelineDescriptor[] = [];
     const device = mockDevice(pipelines);
@@ -292,6 +270,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       { ...INPUTS, weight: 0.25 },
     );
 
@@ -311,6 +290,7 @@ describe('createVolumeFieldRenderer draw', () => {
       'draw',
       'setPipeline',
       'drawIndexed',
+      'setPipeline',
       'drawIndexed',
     ]);
     expect(log[0]).toEqual(['setBlendConstant', { r: 0.25, g: 0.25, b: 0.25, a: 0.25 }]);
@@ -331,6 +311,7 @@ describe('createVolumeFieldRenderer draw', () => {
       [0, 0, 5],
       () => fullSettings(),
       () => 1,
+      () => null,
       INPUTS,
     );
     expect(pass.draw).not.toHaveBeenCalled();
@@ -338,13 +319,8 @@ describe('createVolumeFieldRenderer draw', () => {
   });
 });
 
-/**
- * Recovers the actual mock instances `device.createTexture` /
- * `device.createBuffer` returned, in call order — each call in
- * `mockDevice` returns a fresh object with its own `destroy: vi.fn()`,
- * so a snapshot taken right after `upload()` lets a test assert
- * `destroy` on the SPECIFIC resource rather than on any texture/buffer.
- */
+/** The mocks `createTexture` (below: `createBuffer`) returned, in call order, so a test asserts
+ *  `destroy` on a specific one. */
 function createdTextures(device: GPUDevice): { destroy: () => void }[] {
   return (
     device.createTexture as unknown as { mock: { results: { value: { destroy: () => void } }[] } }
@@ -367,6 +343,7 @@ function fieldsDrawn(r: ReturnType<typeof createVolumeFieldRenderer>): number {
     [0, 0, 5],
     () => fullSettings(),
     () => 1,
+    () => null,
     INPUTS,
   );
   return (pass.drawIndexed as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
@@ -377,10 +354,11 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const volume = fixture();
+    const before = createdTextures(device).length;
     r.upload('mcpm', volume, MCPM_ENTRY);
     // upload() creates one texture (the palette; the volume arrives finished) and, last among
-    // buffers, [uniformBuffer, fadeBuffer]: the factory already made cornerBuffer/indexBuffer.
-    const textures = createdTextures(device);
+    // buffers, [uniformBuffer, fadeBuffer]: the factory already made its own.
+    const textures = createdTextures(device).slice(before);
     expect(textures).toHaveLength(1);
     const [paletteTexture] = textures;
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
@@ -397,7 +375,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     const r = createVolumeFieldRenderer(deps(device));
     const first = fixture();
     r.upload('mcpm', first, MCPM_ENTRY);
-    const [paletteTexture] = createdTextures(device);
+    const paletteTexture = createdTextures(device).at(-1);
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
     const second = fixture();
     r.upload('mcpm', second, MCPM_ENTRY);
@@ -431,5 +409,128 @@ describe('createVolumeFieldRenderer hasActiveFields', () => {
         () => 0.5,
       ),
     ).toBe(true);
+  });
+});
+
+const STEADY: DetailRegionDraw = {
+  settledLo: [0.2, 0.2, 0.2],
+  settledHi: [0.6, 0.6, 0.6],
+  texScale: [1, 1, 1],
+  voxelMpc: 1,
+  fade: null,
+};
+const FADING: DetailRegionDraw = {
+  ...STEADY,
+  fade: { intoLo: [0, 0, 0], intoHi: [0, 0, 0], outLo: [0, 0, 0], outHi: [0, 0, 0], w: 0.5 },
+};
+
+// The march pipeline built with `REGION` = `variant` (and `LEVELS`), and the group 2 each draw bound.
+function marchPipeline(device: GPUDevice, variant: number, levels = 0): unknown {
+  const { calls, results } = vi.mocked(device.createRenderPipeline).mock;
+  const at = calls.findIndex(
+    ([desc]) =>
+      desc.fragment?.constants?.REGION === variant && desc.fragment.constants.LEVELS === levels,
+  );
+  return results[at]?.value;
+}
+function placeholderGroup(device: GPUDevice): unknown {
+  const { calls, results } = vi.mocked(device.createBindGroup).mock;
+  return results[calls.findIndex(([desc]) => desc.label === 'density-region-placeholder')]?.value;
+}
+function drawWith(
+  r: ReturnType<typeof createVolumeFieldRenderer>,
+  region: DetailRegionDraw | null,
+  showLevels = false,
+): { pipeline: unknown; group2: unknown } {
+  const pass = makeFakePass();
+  r.draw(
+    pass,
+    new Float32Array(16) as unknown as Mat4,
+    [320, 180],
+    1000,
+    [0, 0, 5],
+    () => fullSettings({ showLevels }),
+    () => 1,
+    () => region,
+    INPUTS,
+  );
+  const group2 = vi.mocked(pass.setBindGroup).mock.calls.find(([index]) => index === 2)?.[1];
+  return { pipeline: vi.mocked(pass.setPipeline).mock.calls.at(-1)?.[0], group2 };
+}
+
+describe('createVolumeFieldRenderer detail regions', () => {
+  const regionTexture = () =>
+    ({ createView: vi.fn(() => ({})), destroy: vi.fn() }) as unknown as GPUTexture;
+
+  it('a field with no region draws the base pipeline with the placeholder group 2', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const drawn = drawWith(r, null);
+    expect(drawn.pipeline).toBe(marchPipeline(device, 0));
+    expect(drawn.group2).toBe(placeholderGroup(device));
+  });
+
+  it('a region without a fade picks the steady pipeline; with a fade, the fading one', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const regionGroup = vi.mocked(device.createBindGroup).mock.results.at(-1)?.value;
+    expect(drawWith(r, STEADY)).toEqual({
+      pipeline: marchPipeline(device, 1),
+      group2: regionGroup,
+    });
+    expect(drawWith(r, FADING)).toEqual({
+      pipeline: marchPipeline(device, 2),
+      group2: regionGroup,
+    });
+    expect(regionGroup).not.toBe(placeholderGroup(device));
+  });
+
+  // The debug view must cost nothing until it is turned on, and then pick the same REGION variant.
+  it('showLevels draws the LEVELS twin of the chosen variant, built on first use only', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    const levelsBuilt = () =>
+      vi
+        .mocked(device.createRenderPipeline)
+        .mock.calls.filter(([desc]) => desc.fragment?.constants?.LEVELS === 1).length;
+    expect(levelsBuilt()).toBe(0);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const fading = drawWith(r, FADING, true).pipeline;
+    expect(fading).toBe(marchPipeline(device, 2, 1));
+    expect(drawWith(r, FADING, true).pipeline).toBe(fading);
+    expect(levelsBuilt()).toBe(1);
+    expect(drawWith(r, STEADY, true).pipeline).toBe(marchPipeline(device, 1, 1));
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 1));
+  });
+
+  it('a region value with no attached texture draws the base pipeline', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    expect(drawWith(r, FADING)).toEqual({
+      pipeline: marchPipeline(device, 0),
+      group2: placeholderGroup(device),
+    });
+  });
+
+  it('attachRegion(id, null) drops the binding; a base re-upload keeps it; destroy never destroys a region texture', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    const texture = regionTexture();
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', texture);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 1));
+    r.attachRegion('mcpm', null);
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 0));
+    r.attachRegion('mcpm', texture);
+    r.unload('mcpm');
+    r.destroy();
+    expect(texture.destroy).not.toHaveBeenCalled();
   });
 });

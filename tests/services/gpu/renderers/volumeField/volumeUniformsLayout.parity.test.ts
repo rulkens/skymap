@@ -1,6 +1,6 @@
 /**
  * VolumeUniforms WESL↔renderer parity: `volumeFieldRenderer.ts` packs the struct by hand-literal
- * float index, so a field added or reordered in `fragment.wesl` would shift every later field
+ * float index, so a field added or reordered in `io.wesl` would shift every later field
  * silently. This lays out the struct from the shader, drives the REAL `draw` with a distinct
  * sentinel per field, and asserts each lands where the struct says. The `cam` prefix is opaque here
  * (its own parity lives in `cameraUniforms.test.ts`).
@@ -13,11 +13,11 @@ import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/rende
 import { buildCubeModelMatrix } from '../../../../../src/utils/math/buildCubeModelMatrix';
 import type { GpuVolume } from '../../../../../src/@types/rendering/GpuVolume';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
+import type { DetailRegionDraw } from '../../../../../src/@types/rendering/DetailRegionDraw';
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
 const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/scalarVolume');
-const fragment = readFileSync(join(SHADERS, 'fragment.wesl'), 'utf-8');
-const vertex = readFileSync(join(SHADERS, 'vertex.wesl'), 'utf-8');
+const io = readFileSync(join(SHADERS, 'io.wesl'), 'utf-8');
 
 const VOLUME: GpuVolume = {
   texture: {
@@ -52,7 +52,7 @@ function mockDevice(): GPUDevice {
 }
 
 describe('VolumeUniforms layout', () => {
-  const struct = weslStructLayout(fragment, 'VolumeUniforms', 'uniform');
+  const struct = weslStructLayout(io, 'VolumeUniforms', 'uniform');
 
   it('every field the WGSL struct declares lands at its offset', () => {
     const device = mockDevice();
@@ -94,6 +94,7 @@ describe('VolumeUniforms layout', () => {
       [301, 302, 303],
       () => settings,
       () => 1,
+      () => null,
       { jitterIndex: 409, steps: 410, weight: 1 },
     );
 
@@ -139,9 +140,95 @@ describe('VolumeUniforms layout', () => {
     expect(scratch.byteLength).toBe(struct.size);
   });
 
-  it("vertex.wesl's VolumeUniforms is a prefix of fragment.wesl's", () => {
-    const prefix = weslStructLayout(vertex, 'VolumeUniforms', 'uniform').fields;
-    expect(prefix.length).toBeGreaterThan(0);
-    expect(prefix).toEqual(struct.fields.slice(0, prefix.length));
+  // A stage declaring its own copy would drift from the struct this test lays out.
+  it.each(['vertex.wesl', 'fragment.wesl'])('%s takes VolumeUniforms from io.wesl', (file) => {
+    const stage = readFileSync(join(SHADERS, file), 'utf-8');
+    expect(stage).toMatch(/^import package::scalarVolume::io::VolumeUniforms;$/m);
+    expect(stage).not.toMatch(/struct\s+VolumeUniforms\b/);
+  });
+});
+
+describe('RegionUniforms layout', () => {
+  const struct = weslStructLayout(io, 'RegionUniforms', 'uniform');
+
+  it('every RegionUniforms field lands at its offset', () => {
+    const device = mockDevice();
+    const renderer = createVolumeFieldRenderer({
+      device,
+      targetFormat: 'rgba16float',
+      fadeBgl: {} as never,
+      jitterMask: { createView: () => ({}) } as unknown as GPUTexture,
+    });
+    renderer.upload('field', VOLUME, {
+      paletteId: 'viridis',
+      contrastCenter: 0,
+      envelope: { inner: 2, outer: 2 },
+    });
+    renderer.attachRegion('field', {
+      createView: () => ({}),
+      destroy: () => {},
+    } as unknown as GPUTexture);
+    const regionBuffer = vi.mocked(device.createBuffer).mock.results.at(-1)?.value;
+    const region: DetailRegionDraw = {
+      settledLo: [501, 502, 503],
+      settledHi: [504, 505, 506],
+      texScale: [507, 508, 509],
+      voxelMpc: 510,
+      fade: {
+        intoLo: [511, 512, 513],
+        intoHi: [514, 515, 516],
+        outLo: [517, 518, 519],
+        outHi: [520, 521, 522],
+        w: 523,
+      },
+    };
+    renderer.draw(
+      {
+        setPipeline: vi.fn(),
+        setVertexBuffer: vi.fn(),
+        setIndexBuffer: vi.fn(),
+        setBindGroup: vi.fn(),
+        setBlendConstant: vi.fn(),
+        drawIndexed: vi.fn(),
+      } as unknown as GPURenderPassEncoder,
+      new Float32Array(16) as unknown as Mat4,
+      [320, 180],
+      1000,
+      [0, 0, 0],
+      () => ({ enabled: true, intensity: 1, paletteId: 'viridis' }) as VolumeFieldSettings,
+      () => 1,
+      () => region,
+      { jitterIndex: 0, steps: 1, weight: 1 },
+    );
+
+    const write = vi.mocked(device.queue.writeBuffer).mock.calls.find((c) => c[0] === regionBuffer);
+    if (!write) throw new Error('draw wrote no region block');
+    const scratch = write[2] as Float32Array;
+    const fade = region.fade!;
+    const sentinels: Record<string, ArrayLike<number>> = {
+      settledLo: region.settledLo,
+      voxelMpc: [region.voxelMpc],
+      settledHi: region.settledHi,
+      fadeW: [fade.w],
+      texScale: region.texScale,
+      intoLo: fade.intoLo,
+      intoHi: fade.intoHi,
+      outLo: fade.outLo,
+      outHi: fade.outHi,
+    };
+    expect(struct.fields.map((f) => f.name)).toEqual(Object.keys(sentinels));
+    for (const { name, offset } of struct.fields) {
+      const expected = sentinels[name]!;
+      const at = offset / 4;
+      expect(Array.from(scratch.subarray(at, at + expected.length)), name).toEqual(
+        Array.from(expected),
+      );
+    }
+
+    const buffers = vi.mocked(device.createBuffer).mock;
+    const created = buffers.results.findIndex((result) => result.value === regionBuffer);
+    expect(struct.size).toBe(112);
+    expect(buffers.calls[created]?.[0].size).toBe(struct.size);
+    expect(scratch.byteLength).toBe(struct.size);
   });
 });
