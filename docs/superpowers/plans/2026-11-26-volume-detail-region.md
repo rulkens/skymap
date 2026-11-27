@@ -681,9 +681,9 @@ manifest pass adds makes the packs immutable by name.
 
 Steps:
 
-- [ ] Tests: `a hashed .L0.idx is a volume-pyramid file` (`mcpm.astc6.L0.1a2b3c4d.idx`) and `a hashed
+- [x] Tests: `a hashed .L0.idx is a volume-pyramid file` (`mcpm.astc6.L0.1a2b3c4d.idx`) and `a hashed
       .L0.p0.pack is a volume-bricks file, not gzipped on the wire` (`polyphorm-2mrs.r8.L0.p0.1a2b3c4d.pack`).
-- [ ] `npm test -- dataFamilyOf allowDataFile`.
+- [x] `npm test -- dataFamilyOf allowDataFile`.
 
 **Commit:** `Deploy: volume brick packs ride raw, their index with the pyramid`
 
