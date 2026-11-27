@@ -1,12 +1,13 @@
 /**
  * clipPlayer — the impure shell around the pure clip evaluators. Per tick it advances the clip
  * clock, evaluates the scene at t, and hands each change to the subsystem that animates it (the
- * fade registry, the frame roll). It never dispatches the scene: the engine reads it through
- * `view`, an overlay on intent. At the end the play's `atEnd` reverts or commits it (spec S3 §2).
- * A play under transport (S4) takes its clock from `camera.intent.clip.transport` and publishes a jump
- * (a new transport, new data, a wrap) by seeding the registry at t instead of by crossings.
- * Everything happens inside `tick`; nothing is deferred to a later frame. The epoch comes in
- * through `tick` and goes back out, rebased on a loop lap or to a transport's t.
+ * fade registry, the frame roll). It never dispatches the scene's settings: the engine reads them
+ * through `view`, an overlay on intent; only a crossed `clockTo` is dispatched. At the end the
+ * play's `atEnd` reverts or commits the overlay (spec S3 §2). A play under transport (S4) takes
+ * its clock from `camera.intent.clip.transport` and publishes a jump (a new transport, new data, a
+ * wrap) by seeding the registry at t instead of by crossings. Everything happens inside `tick`;
+ * nothing is deferred to a later frame. The epoch comes in through `tick` and goes back out,
+ * rebased on a loop lap or to a transport's t.
  */
 
 import { compileClip } from '../animation/compileClip';
@@ -29,6 +30,7 @@ import { mergeSnapshot } from '../../../state/settings/mergeSnapshotAction';
 import { setOrientation } from '../../../state/settings/core/orientationSlice';
 import { updateSelectionFocus } from '../../../state/selection/selectionSlice';
 import { captureSettings } from '../../../state/scene/captureSettings';
+import { clockTo } from '../../../state/tour/clockTo';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { ClipPlayerDeps } from '../../../@types/engine/subsystems/ClipPlayerDeps';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
@@ -136,6 +138,12 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     const { effect } = step;
     if (effect.kind === 'frameTo') {
       rollTo(effect.frame, effect.over * 1000, effect.ease);
+      return;
+    }
+    // The sim clock is no setting, so no overlay can hold it: a crossed `clockTo` is dispatched
+    // and outlives the clip whatever `atEnd` says. The takeover's clock bracket gives it back.
+    if (effect.kind === 'scene' && clockTo.match(effect.action)) {
+      store.dispatch(effect.action);
       return;
     }
     const over = effect.kind === 'scene' ? undefined : effect.over;
