@@ -735,6 +735,19 @@ npm run build-2mrs-bricks
 **Done when:** main's `public/data/volume-pyramid/v1/` holds `mcpm.<fmt>.L0.idx`,
 `polyphorm-2mrs.<fmt>.L0.idx` and their parts for all three formats.
 
+**Done 2026-11-27** (run by Claude on the owner's word). d2/d4/d8 byte-identical, 2MRS native
+max 11272, d1 files 2,488,012,928 B and 3,465,216,128 B. A running dev server does not see the
+new files through the `public/data` link: restart it.
+
+| Field | Format | Entries | Occupied | Packed bytes | Parts | Seconds |
+| --- | --- | --- | --- | --- | --- | --- |
+| MCPM | astc6 | 4704 | 2420 | 57,442,297 | 4 | 286.6 |
+| MCPM | bc4 | 4704 | 2420 | 64,126,237 | 4 | 26.3 |
+| MCPM | r8 | 4704 | 2420 | 97,129,783 | 6 | 130.5 |
+| 2MRS | astc6 | 1000 | 821 | 6,440,840 | 1 | 36.3 |
+| 2MRS | bc4 | 1000 | 821 | 6,641,312 | 1 | 5.9 |
+| 2MRS | r8 | 1000 | 821 | 8,799,119 | 1 | 8.4 |
+
 ---
 
 ## Task 5.1: `planDetailRegion`
