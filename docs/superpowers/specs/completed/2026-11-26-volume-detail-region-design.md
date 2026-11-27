@@ -3,7 +3,7 @@
 > **Status.** Approved by the owner, 2026-11-26. Owner: Alexander Rulkens. PR 4 of the volume
 > effort (PR 1 #1170 prep, PR 2 #1175 progressive sampling, PR 3 #1178 half-res compressed cubes).
 > Shape approved at the ground check (dash ask vxC4) and the whole spec at review, both 2026-11-26;
-> the rulings are quoted in §2. Plan: `docs/superpowers/plans/2026-11-26-volume-detail-region.md`.
+> the rulings are quoted in §2. Plan: `docs/superpowers/plans/completed/2026-11-26-volume-detail-region.md`.
 > **Written against** main at 45528d82f (the archive rows of §3 against 9b1bd2dad, which this branch
 > merged), and against the post-prep shape of §3 as if it existed.
 > **Inputs.** The box spike (worktree `volume-progressive-octree`: `spike/boxSpike.ts`, the

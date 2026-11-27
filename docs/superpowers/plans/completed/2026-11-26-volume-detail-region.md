@@ -1,6 +1,6 @@
 # Volume detail region
 
-**Goal.** Ship [the spec](../specs/2026-11-26-volume-detail-region-design.md): inside a density
+**Goal.** Ship [the spec](../../specs/completed/2026-11-26-volume-detail-region-design.md): inside a density
 volume or close outside it, MCPM and Polyphorm 2MRS draw at native resolution from a box of 48³
 full-res bricks, centred on the camera clamped into the volume and streamed by HTTP Range, over the
 half-res base.
@@ -15,8 +15,8 @@ path and line cited below is checked against `fd7f34369`.
 against off (spec §11 step 1 closed, step 2 dropped, 2026-11-27). Parallelism: this PR alone on its
 branch.
 
-**Ledger.** `.superpowers/sdd/2026-11-26-volume-detail-region/progress.md` in the controller's
-worktree; archived beside this plan at landing.
+**Ledger.** None archived: the ledger was lost with an earlier worktree. Task 1, the counts of Task
+6.4 and the Results section below are the record.
 
 ## Owner rulings this plan builds on
 
@@ -1256,7 +1256,9 @@ Steps:
 
 - [x] Implement. No new test: the image checks are the controller's (no GPU in CI).
 - [x] `npm test -- volumeUniformsLayout volumeField`.
-- [ ] Controller, after the commit: MCPM inside at large, converged, visibly sharper than main
+- [x] **Waived (owner, 2026-11-27, with the acceptance cut):** the first look at medium passed MCPM
+      inside (see Results); large and the just-outside pose were not looked at. Controller, after the
+      commit: MCPM inside at large, converged, visibly sharper than main
       inside the box and identical outside it (one look, no bar yet); at the just-outside pose
       `a,-239.45,-16.5,201.3,0.5,0.3,350,0` the box shows against the near face; no WGSL error.
 
@@ -1280,7 +1282,8 @@ Steps:
 Steps:
 
 - [x] Implement. No new test.
-- [ ] Controller: one shift at the MCPM knot pose fades out, then in, about 0.45 s in all; the pops
+- [x] **Waived (owner, 2026-11-27, with the acceptance cut):** never observed (see Results).
+      Controller: one shift at the MCPM knot pose fades out, then in, about 0.45 s in all; the pops
       metric is acceptance check 8.
 
 **Commit:** `Detail-region fade: three boxes, one weight`
@@ -1546,3 +1549,12 @@ and 8–14 were not run. What stands in for checks 4, 5 and 7 is the first look 
   Nobody looked at the `out` shell (only a shift fills it) or at the fade's appearance.
 - **Never run in a browser:** the base-only pipeline's pixel comparison against main; the level
   tint's `REGION` 0 and 2 variants.
+
+## Landing (Task 7.5, 2026-11-27)
+
+- Comment audit at `91fd4c718`; the deletion audit's safe-now items at `cd0a5142c`. Its one
+  needs-ruling item, the build table's `seconds` column, stays (controller's call).
+- `/feature-done`: ready, with checks 1–14, the DoD smoke pass and Tasks 6.2/6.3's looks waived
+  by the owner's acceptance cut.
+- **Open, the owner's, blocks the merge:** Task 7.2, the bricks built and synced to R2 with
+  `npm run sync-r2-secure`, then the 206 Range check.
