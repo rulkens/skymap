@@ -18,7 +18,7 @@ import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabC
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
 import { sunAngularRadiusRad } from '../../../../utils/camera/bodyCompose/sunAngularRadiusRad';
-import { NO_HORIZON_RECT, WHOLE_GLOBE_HORIZON_RECT } from '../../textures/data/horizonRects';
+import { NO_HORIZON_RECT, WHOLE_GLOBE_HORIZON_RECT } from '../../../../data/gpu/horizonRects';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../render/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../surfaceTiles/format/data/earthSurfaceParams';

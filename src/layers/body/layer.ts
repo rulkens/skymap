@@ -51,7 +51,7 @@ import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
 import { watchDebugPanelWakeSaga } from './surfaceTiles/debug/sagas/watchDebugPanelWakeSaga';
-import { heightAt } from './heightAt';
+import { terrain } from './terrain';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './surfaceTiles/stream/subsystems/surfaceTileStream';
 import { NO_TERRAIN_PICK_MARKER_READOUT } from './terrainPick/present/terrainPickMarkerReadoutOf';
 import SurfaceTileAtlasSectionContainer from './surfaceTiles/debug/ui/SurfaceTileAtlasSectionContainer';
@@ -95,7 +95,7 @@ export const bodyLayer = defineLayer({
   ],
   planners: (runtime) => [surfaceTilePlanner(runtime), atmosphereRosterPlanner],
   sagas: [watchDebugPanelWakeSaga, loadSampledTracksSaga(BODY_TRACK_IDS)],
-  heightAt,
+  terrain,
   guides: (runtime) => ({
     screenLabels: [bodyLabelSource(runtime)],
     orbitTrails: {

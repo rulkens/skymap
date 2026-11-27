@@ -83,4 +83,9 @@ describe('resolveFrameBasis', () => {
     const basis = resolveFrameBasis('galactic', null, 0);
     expectMat3Close(basis, ORIENTATION_FRAMES.galactic);
   });
+
+  it('a 0 ms roll snaps to the destination basis instead of NaN', () => {
+    const basis = resolveFrameBasis('galactic', { ...equatorialToGalactic, durationMs: 0 }, 0);
+    expectMat3Close(basis, ORIENTATION_FRAMES.galactic);
+  });
 });
