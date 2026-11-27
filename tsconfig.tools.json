@@ -4,8 +4,9 @@
     "tools",
     "src",
     "packages/shared/src",
+    "packages/mcpm-workbench",
     "packages/move-files/src",
     "packages/move-files/tests"
   ],
-  "exclude": ["tools/stars-rs/target"]
+  "exclude": ["tools/stars-rs/target", "packages/mcpm-workbench/tests"]
 }

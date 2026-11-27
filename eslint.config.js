@@ -16,8 +16,8 @@
 // filename === export name) live in tests/conventions/ as structural tests —
 // a per-file AST linter is the wrong shape for file-level facts.
 //
-// Scope is `src`, `tools` and `packages/shared/src`; `tests/` is excluded because the hooks rules
-// false-positive on `useX()` test helpers. The two trees have separate
+// Scope is `src`, `tools`, `packages/shared/src` and `packages/mcpm-workbench`; tests are excluded
+// because the hooks rules false-positive on `useX()` test helpers. The two trees have separate
 // tsconfigs, so each gets its own parser block.
 
 import tseslint from 'typescript-eslint';
@@ -69,7 +69,8 @@ export default tseslint.config(
   // Build pipeline + dev sub-apps → tsconfig.tools.json (not auto-discovered,
   // since the nearest tsconfig.json up-tree excludes tools/).
   {
-    files: ['tools/**/*.{ts,tsx}'],
+    files: ['tools/**/*.{ts,tsx}', 'packages/mcpm-workbench/**/*.{ts,tsx}'],
+    ignores: ['packages/mcpm-workbench/tests/**'],
     plugins,
     languageOptions: {
       parser: tseslint.parser,

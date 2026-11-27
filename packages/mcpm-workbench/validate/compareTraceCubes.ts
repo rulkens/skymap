@@ -279,7 +279,7 @@ function statsToJson(s: TraceStats) {
 
 function printUsage(): void {
   console.log(
-    'Usage: npx tsx tools/mcpm-workbench/validate/compareTraceCubes.ts \\\n' +
+    'Usage: npx tsx packages/mcpm-workbench/validate/compareTraceCubes.ts \\\n' +
       '  --a <cube.bin|cube.npy> --b <cube.bin|cube.npy> --dims Nx,Ny,Nz \\\n' +
       '  [--meta export_metadata.txt] [--points packed-catalog.bin] [--bins 17] [--json out.json] \\\n' +
       '  [--a-order x-fastest|c-order] [--b-order x-fastest|c-order]\n' +

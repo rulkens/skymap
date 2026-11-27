@@ -23,6 +23,7 @@ export default defineConfig({
       'tests/**/*.test.tsx',
       'packages/move-files/tests/**/*.test.ts',
       'packages/shared/tests/**/*.test.{ts,tsx}',
+      'packages/mcpm-workbench/tests/**/*.test.{ts,tsx}',
     ],
     setupFiles: ['tests/setup/webgpuGlobals.ts', 'tests/setup/reactTestEnv.ts'],
   },

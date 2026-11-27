@@ -1,0 +1,15 @@
+{
+  "name": "@skymap/mcpm-workbench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "peerDependencies": {
+    "@reduxjs/toolkit": "*",
+    "classnames": "*",
+    "react": "*",
+    "react-dom": "*",
+    "react-redux": "*",
+    "redux-saga": "*",
+    "typed-redux-saga": "*"
+  }
+}

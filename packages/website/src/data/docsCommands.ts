@@ -198,7 +198,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['promote-mcpm-workbench'],
         does: 'Turns a density cube exported from the MCPM workbench into a field the app can show.',
-        manual: 'tools/mcpm-workbench/README.md',
+        manual: 'packages/mcpm-workbench/README.md',
       },
       {
         scripts: ['build-data-manifest'],
@@ -285,7 +285,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['mcpm-workbench:compare'],
         does: 'Compares two density cubes, one from the MCPM workbench and one from the program it was ported from, and prints how far apart they are.',
-        manual: 'tools/mcpm-workbench/README.md',
+        manual: 'packages/mcpm-workbench/README.md',
       },
     ],
   },

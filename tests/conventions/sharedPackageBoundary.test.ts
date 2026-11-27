@@ -4,37 +4,13 @@
  * drag that file's tree along, so each TS import, re-export and `import()`, and each CSS `composes`
  * and `@import`, must resolve inside it. Empty allowlist.
  */
-import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { SyntaxKind } from 'ts-morph';
 import { describe, expect, it } from 'vitest';
-import { cssStatements } from '../helpers/conventions/cssStatements';
-import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
+import { cssSpecifiers } from '../helpers/conventions/cssSpecifiers';
+import { tsSpecifiers } from '../helpers/conventions/tsSpecifiers';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const SRC = 'packages/shared/src';
-const CSS_REFERENCE = /^(?:composes\s*:.*\sfrom|@import)\s+(?:url\()?(['"])(.+?)\1/s;
-
-function tsSpecifiers(file: string): string[] {
-  const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
-  const dynamic = sourceFile
-    .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .filter((call) => call.getExpression().getKind() === SyntaxKind.ImportKeyword)
-    .map((call) => call.getArguments()[0])
-    .filter((arg) => arg?.getKind() === SyntaxKind.StringLiteral)
-    .map((arg) => arg!.getText().slice(1, -1));
-  return [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
-    .map((decl) => decl.getModuleSpecifierValue())
-    .filter((spec): spec is string => spec !== undefined)
-    .concat(dynamic);
-}
-
-function cssSpecifiers(file: string): string[] {
-  return cssStatements(readFileSync(file, 'utf8'))
-    .filter((statement) => statement.kind === 'declaration')
-    .map((statement) => CSS_REFERENCE.exec(statement.text)?.[2])
-    .filter((spec): spec is string => spec !== undefined);
-}
 
 const files = walkFiles(SRC, ['.ts', '.tsx', '.css']);
 const ALLOWED: readonly string[] = [];
