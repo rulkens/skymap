@@ -5,24 +5,22 @@
  */
 import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
-import type { DetailRegion } from '../@types/DetailRegion';
 import type { DetailRegionFrame } from '../@types/DetailRegionFrame';
 import type { DetailRegionHost } from '../@types/DetailRegionHost';
 import type { DetailRegionHostDeps } from '../@types/DetailRegionHostDeps';
+import type { HostedDetailRegion } from '../@types/HostedDetailRegion';
 import { createDetailRegion } from './createDetailRegion';
 
 export function createDetailRegionHost(deps: DetailRegionHostDeps): DetailRegionHost {
-  const regions = new Map<CosmicWebDensityFieldId, DetailRegion>();
-  const bricksPerAxisOf = new Map<CosmicWebDensityFieldId, number>();
+  const hosted = new Map<CosmicWebDensityFieldId, HostedDetailRegion>();
   const drop = (id: CosmicWebDensityFieldId) => {
-    regions.get(id)?.destroy();
-    regions.delete(id);
-    bricksPerAxisOf.delete(id);
+    hosted.get(id)?.region.destroy();
+    hosted.delete(id);
   };
 
   return {
     frame(wanted, eye, gatePxPerRad, frameIndex, nowMs) {
-      for (const [id, k] of bricksPerAxisOf) if (wanted.get(id) !== k) drop(id);
+      for (const [id, { k }] of hosted) if (wanted.get(id) !== k) drop(id);
       const draws = Object.fromEntries(
         COSMIC_WEB_DENSITY_SOURCE_ROWS.map((row) => [row.id, null]),
       ) as Record<CosmicWebDensityFieldId, DetailRegionFrame['draws'][CosmicWebDensityFieldId]>;
@@ -30,25 +28,25 @@ export function createDetailRegionHost(deps: DetailRegionHostDeps): DetailRegion
       for (const row of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
         const k = wanted.get(row.id);
         if (k === undefined) continue;
-        let region = regions.get(row.id);
-        if (!region) {
-          region = createDetailRegion({
+        let entry = hosted.get(row.id);
+        if (!entry) {
+          const region = createDetailRegion({
             ...deps,
             id: row.id,
             binBaseName: row.binBaseName,
             bricksPerAxis: k,
           });
-          regions.set(row.id, region);
-          bricksPerAxisOf.set(row.id, k);
+          entry = { region, k };
+          hosted.set(row.id, entry);
         }
-        const step = region.frame(eye, gatePxPerRad, frameIndex, nowMs);
+        const step = entry.region.frame(eye, gatePxPerRad, frameIndex, nowMs);
         draws[row.id] = step.draw;
         busy ||= step.busy;
       }
       return { draws, busy };
     },
     destroy() {
-      for (const id of [...regions.keys()]) drop(id);
+      for (const id of [...hosted.keys()]) drop(id);
     },
   };
 }
