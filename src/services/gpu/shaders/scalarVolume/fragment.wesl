@@ -292,10 +292,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
     // visibility); see applyContrastWindow's docblock for the math
-    // and the "why not gamma" rationale.  Always runs even at
-    // contrast=1 (identity) — branching would break the uniform-
-    // control-flow contract that lets us call textureSampleLevel
-    // below.
+    // and the "why not gamma" rationale.
     let window = applyContrastWindow(sampleValue, uniforms.contrast, uniforms.contrastCenter, uniforms.trim);
     let signedT = window.x;
     let visibility = window.y;
