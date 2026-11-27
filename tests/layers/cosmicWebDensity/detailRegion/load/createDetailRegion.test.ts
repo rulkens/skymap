@@ -1,0 +1,100 @@
+import { describe, it, expect, vi } from 'vitest';
+import type { VolumePyramidSidecar } from '../../../../../src/@types/data/volume/VolumePyramidSidecar';
+import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
+import type { CosmicWebDensityFieldId } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId';
+import { VOLUME_PYRAMID_FORMATS } from '../../../../../src/data/volume/volumePyramidFormats';
+import { encodeArchiveIndex } from '../../../../../tools/utils/archive/encodeArchiveIndex';
+import { useFetchMock } from '../../../../setup/fetchMock';
+
+vi.mock('../../../../../src/services/loading/fetchWithProgress', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  dataUrl: (path: string) => `/data/${path}`,
+}));
+
+import { createDetailRegion } from '../../../../../src/layers/cosmicWebDensity/detailRegion/load/createDetailRegion';
+
+// 96³ voxels, world box [0, 96]³ Mpc: a 2 × 2 × 2 grid of bricks, all empty.
+const SIDECAR: VolumePyramidSidecar = {
+  gridDims: [96, 96, 96],
+  voxelMpc: 1,
+  originMpc: [0, 0, 0],
+  frame: 'equatorial-cartesian',
+  dataBox: { originVox: [0, 0, 0], dims: [96, 96, 96] },
+  levelMax: [1, 1, 1, 1],
+};
+const ASTC = VOLUME_PYRAMID_FORMATS[0]!;
+const emptyIndex = (count: number) =>
+  encodeArchiveIndex(
+    Array.from({ length: count }, (_, key) => ({ key, part: 0, offset: 0, length: 0 })),
+    0,
+  );
+
+function setup(fetch: { mock: ReturnType<typeof vi.fn> }, index: Uint8Array) {
+  const routes: Record<string, () => BodyInit> = {
+    '/data/volume-pyramid/v1/mcpm.json': () => JSON.stringify(SIDECAR),
+    '/data/volume-pyramid/v1/mcpm.astc6.L0.idx': () => index as Uint8Array<ArrayBuffer>,
+  };
+  fetch.mock.mockImplementation((url: string) =>
+    Promise.resolve(new Response(routes[url]!(), { status: 200 })),
+  );
+  const texture = { destroy: vi.fn() };
+  const device = {
+    features: new Set(ASTC.features),
+    createTexture: vi.fn(() => texture),
+    queue: { writeTexture: vi.fn() },
+  };
+  const renderer = { attachRegion: vi.fn() };
+  const requestRender = vi.fn();
+  const region = createDetailRegion({
+    device: device as unknown as GPUDevice,
+    renderer: renderer as unknown as VolumeFieldRenderer<CosmicWebDensityFieldId>,
+    requestRender,
+    id: 'mcpm',
+    binBaseName: 'mcpm',
+    bricksPerAxis: 2,
+  });
+  const landed = vi.waitFor(() => expect(requestRender).toHaveBeenCalled());
+  return { device, texture, renderer, region, landed };
+}
+
+describe('createDetailRegion', () => {
+  const fetch = useFetchMock();
+
+  it("an index whose entry count is not the grid's leaves the region empty with one warning", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { device, region, landed } = setup(fetch, emptyIndex(7));
+    expect(region.frame([48, 48, 48], 1000, 1, 0)).toEqual({ draw: null, busy: true });
+    await landed;
+    expect(region.frame([48, 48, 48], 1000, 2, 16)).toEqual({ draw: null, busy: false });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(device.createTexture).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('an empty brick is written as the zero brick without a fetch, at most 4 per frame', async () => {
+    const { device, region, landed } = setup(fetch, emptyIndex(8));
+    await landed;
+    region.frame([48, 48, 48], 1000, 1, 0);
+    expect(device.queue.writeTexture).toHaveBeenCalledTimes(4);
+    region.frame([48, 48, 48], 1000, 2, 16);
+    expect(device.queue.writeTexture).toHaveBeenCalledTimes(8);
+    expect(fetch.mock).toHaveBeenCalledTimes(2); // the sidecar and the index
+    // An all-zero ASTC block is an error block: every block is the void-extent zero.
+    const bytes = device.queue.writeTexture.mock.calls[0]![1] as Uint8Array;
+    expect(bytes.byteLength).toBe(49_152);
+    expect(bytes.subarray(16, 32)).toEqual(ASTC.zeroBlock);
+    expect(bytes.subarray(49_136)).toEqual(ASTC.zeroBlock);
+  });
+
+  it('teardown detaches the texture before destroying it', async () => {
+    const { texture, renderer, region, landed } = setup(fetch, emptyIndex(8));
+    await landed;
+    expect(renderer.attachRegion).toHaveBeenCalledWith('mcpm', texture);
+    region.destroy();
+    expect(renderer.attachRegion).toHaveBeenLastCalledWith('mcpm', null);
+    expect(texture.destroy).toHaveBeenCalledOnce();
+    expect(renderer.attachRegion.mock.invocationCallOrder.at(-1)!).toBeLessThan(
+      texture.destroy.mock.invocationCallOrder[0]!,
+    );
+  });
+});

@@ -1,9 +1,10 @@
 /**
  * create — the density family's construction in dependency order: the jitter
  * mask texture (bound by the renderer from the start, filled by its own slot),
- * the one renderer holding every cube, its upsample, then one slot per source
- * row committing into the renderer. No fade is driven here: each asset row's
- * `gates` lets core fade a cube in on its slot's commit.
+ * the one renderer holding every cube, its upsample, one slot per source
+ * row committing into the renderer, then the detail regions lending it
+ * textures. No fade is driven here: each asset row's `gates` lets core fade a
+ * cube in on its slot's commit.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -19,6 +20,7 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySource
 import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
 import { createCosmicWebDensityFetcher } from './densityCubes/load/createCosmicWebDensityFetcher';
 import { createJitterMaskSlot } from './densityCubes/load/createJitterMaskSlot';
+import { createDetailRegionHost } from './detailRegion/load/createDetailRegionHost';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
   const jitterMask = deps.ctx.device.createTexture({
@@ -49,5 +51,10 @@ export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
         createCosmicWebDensitySlot(entry, slotDeps),
       ]),
     ) as CosmicWebDensityRuntime['slots'],
+    regions: createDetailRegionHost({
+      device: deps.ctx.device,
+      renderer,
+      requestRender: deps.requestRender,
+    }),
   };
 }

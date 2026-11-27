@@ -29,6 +29,7 @@ describe('cosmicWebDensity destroy', () => {
       jitterMask,
       jitterMaskSlot,
       slots: {},
+      regions: { destroy: vi.fn() },
     } as unknown as CosmicWebDensityRuntime);
     respond(new Response(new Uint8Array(1), { status: 200 }));
     await loaded;
@@ -58,11 +59,27 @@ describe('cosmicWebDensity destroy', () => {
       jitterMask: { destroy: vi.fn() },
       jitterMaskSlot: { release: vi.fn() },
       slots: { [entry.id]: slot },
+      regions: { destroy: vi.fn() },
     } as unknown as CosmicWebDensityRuntime);
     arrive(volume);
     await loaded;
 
     expect(renderer.upload).not.toHaveBeenCalled();
     expect(volume.texture.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('the regions are destroyed before the renderer', () => {
+    // A region detaches its texture from the renderer before freeing it; a destroyed renderer first
+    // would leave that call on a dead object.
+    const order: string[] = [];
+    destroy({
+      renderer: { destroy: () => order.push('renderer') },
+      upsample: { destroy: vi.fn() },
+      jitterMask: { destroy: vi.fn() },
+      jitterMaskSlot: { release: vi.fn() },
+      slots: {},
+      regions: { destroy: () => order.push('regions') },
+    } as unknown as CosmicWebDensityRuntime);
+    expect(order).toEqual(['regions', 'renderer']);
   });
 });

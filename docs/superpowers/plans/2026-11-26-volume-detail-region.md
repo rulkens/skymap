@@ -1057,15 +1057,15 @@ readonly regions: DetailRegionHost;
 
 Steps:
 
-- [ ] Tests, mock device and stubbed `fetch`:
+- [x] Tests, mock device and stubbed `fetch`:
   - `an index whose entry count is not the grid's leaves the region empty with one warning`.
   - `an empty brick is written as the zero brick without a fetch, at most 4 per frame`.
   - `teardown detaches the texture before destroying it`: `attachRegion(id, null)` precedes
     `texture.destroy`.
   - Host: `a tier switch that changes K rebuilds the region; small ↔ medium keeps it`.
   - `destroy.test.ts`: `the regions are destroyed before the renderer`.
-- [ ] Implement; `loadVolumePyramid` uses the extracted sidecar fetch.
-- [ ] `npm run typecheck:fast`; `npm test -- detailRegion cosmicWebDensity loadVolumePyramid`.
+- [x] Implement; `loadVolumePyramid` uses the extracted sidecar fetch.
+- [x] `npm run typecheck:fast`; `npm test -- detailRegion cosmicWebDensity loadVolumePyramid`.
 
 **Commit:** `Detail regions: the host, one region per pyramid field, streaming bricks into a borrowed texture`
 
