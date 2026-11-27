@@ -1,7 +1,7 @@
 /**
  * probeGpuErrors — headless WebGPU *error* probe for the MCPM workbench.
  *
- *   npx tsx tools/mcpm-workbench/probeGpuErrors.ts   # or: npm run mcpm-workbench:probe
+ *   npx tsx packages/mcpm-workbench/probeGpuErrors.ts   # or: npm run mcpm-workbench:probe
  * Structure and infra (own ephemeral-port dev server, chromium-channel launch
  * with a headless-shell fallback, the `requestDevice` monkey-patch, the step
  * queue + settle-frame + drain loop) mirror `tools/galaxy-renderer/probeGpuErrors.ts`
@@ -36,7 +36,7 @@ const ENERGY_SMOKE_STEPS = 100;
 const ENERGY_SMOKE_SETTLE_FRAMES = ENERGY_SMOKE_STEPS + HISTOGRAM_SETTLE_FRAMES;
 // Band derivation: the tiny synthetic catalog has no fork reference, so center and
 // spread come from measurement, not from the fork-vs-workbench floor. 5 consecutive
-// `npx tsx tools/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
+// `npx tsx packages/mcpm-workbench/probeGpuErrors.ts` runs at commit d23ad70dd, each
 // a fresh reset -> 100 steps: 4.969708, 4.986995, 4.956796, 4.991052, 4.985401
 // (mean 4.977991, max abs deviation from mean 0.021194 — run 3). Width = 6x that
 // spread (0.12717), rounded up to 0.13 for headroom; a 2x shift (0.6925 away) is

@@ -1,6 +1,6 @@
 /**
  * MCPM Workbench — Vite dev server config: a sibling dev tool with its own port
- * (`../utils/io/devPorts.ts`), own `root`, and the repo's shared `public/`.
+ * (`tools/utils/io/devPorts.ts`), own `root`, and the repo's shared `public/`.
  * `weslToml` is passed EXPLICITLY: the plugin otherwise reads
  * `<process.cwd()>/wesl.toml`, and `npm run mcpm-workbench` keeps cwd at the
  * repo root, where the RUNTIME's toml lives — omit the path and it silently

@@ -13,6 +13,16 @@ This is a sibling dev tool, like `tools/flow-workbench/` and
 `tools/galaxy-renderer/` — its own self-contained Vite + React + TS app, not
 part of the skymap runtime bundle.
 
+## Package layout
+
+It is a workspace package of its own. `tests/` mirrors the package root and runs
+in the root suite (`npm test`). It imports `packages/shared` freely, by relative
+path, never as `@skymap/shared` ([ADR 0017](../../docs/adrs/0017-shared-leaf-package.md)).
+A file of the app's `src/` or of `tools/` it may import only from the list in
+`tests/conventions/mcpmWorkbenchBoundary.test.ts`, which only shrinks: the MCPM
+shaders (one WESL root), four galaxy-catalog files, workbench-only helpers not
+moved yet, and tool modules.
+
 ## Launch
 
 ```bash

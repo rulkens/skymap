@@ -6,7 +6,7 @@
  * them with a distinct sentinel per field — a literal-vs-literal test would stay
  * green while the two halves drifted apart, and a drifted offset is invisible
  * until the frame stops presenting.
- * Mirrors `tests/tools/mcpm-workbench/src/render/mcpmCamera.parity.test.ts`.
+ * Mirrors `packages/mcpm-workbench/tests/src/render/mcpmCamera.parity.test.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

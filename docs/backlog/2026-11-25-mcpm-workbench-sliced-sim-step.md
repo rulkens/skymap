@@ -6,7 +6,7 @@ while the calculation stays exactly the same.
 ## Why it locks up (read from the code, not measured)
 
 A step is one compute pass with three dispatches (propagate, decay, histogram) in
-`tools/mcpm-workbench/src/sim/encodeStep.ts`, submitted once per frame. The GPU runs a
+`packages/mcpm-workbench/src/sim/encodeStep.ts`, submitted once per frame. The GPU runs a
 dispatch to completion and the browser's compositing waits behind it, so a dispatch longer
 than a frame stops the page painting.
 

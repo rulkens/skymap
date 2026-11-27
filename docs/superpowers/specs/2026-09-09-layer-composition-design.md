@@ -1198,7 +1198,7 @@ this plan ships, unless promoted into a PR.
 - `src/utils/galaxy/` is a landmine, not a family folder: about 28 of its ~30 files belong to the
   Milky Way ISM generator, and only `galaxySbAmp.ts` and `galaxyMedianAbsMag.ts` are the catalog's.
   Do not move the folder.
-- `tools/filaments/buildFilaments.ts` and `tools/mcpm-workbench` read `src/data/galaxyCatalog/*` and
+- `tools/filaments/buildFilaments.ts` and `packages/mcpm-workbench` read `src/data/galaxyCatalog/*` and
   `services/engine/bake/computeAngularWeights.ts`. The wire format stays in `src/data/` as a shared
   contract; `computeAngularWeights` is pure math and belongs in `src/utils/`.
 - `BodyStore`'s setters are called only at seed time, so it is static data wearing a store's shape.

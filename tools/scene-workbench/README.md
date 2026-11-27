@@ -5,7 +5,7 @@ scans fetched from Denmark's Datafordeler and reduced to skymap's own binary
 point format, one scene per real-world location.
 
 This is a sibling dev tool, like `tools/flow-workbench/` and
-`tools/mcpm-workbench/` — its own self-contained Vite + React + TS app, local
+`packages/mcpm-workbench/` — its own self-contained Vite + React + TS app, local
 only. There is no deploy target: unlike those tools it ships no `:build`
 script or `/scene-workbench/` subpath.
 
