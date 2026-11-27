@@ -2,13 +2,14 @@
  * withFrozenClockSaga — the clock bracket a scripted takeover body runs in: pause the sim clock,
  * hand the body the instant it froze at, and give the clock back in `finally`. The instant is
  * derived at the SAME `nowMs` the `pause` re-anchors from, so it equals the sim time the clock
- * holds for the whole body. Exit restores what the body interrupted: live re-snaps to the wall
- * clock, a playing manual clock resumes, and a paused one stays paused, since `pause` only
- * re-anchored it, which moves no sim time.
+ * holds until the body moves it. A body may move it (a tour beat played alone fires `clockTo`),
+ * so exit puts back the frozen instant, not wherever the clock got to: a playing live clock
+ * re-snaps to the wall clock, any other returns to the frozen instant with its captured mode,
+ * rate and pause, the tour snapshot's rule. Either put drops a still-running `clockTo` ease.
  */
 import { put, select } from 'typed-redux-saga';
 
-import { pause, resume } from './timeSlice';
+import { pause, restoreTime } from './timeSlice';
 import { goLiveNowAction } from './goLiveNowAction';
 import { selectTimeState } from './selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -23,10 +24,10 @@ export function* withFrozenClockSaga<T>(
   try {
     return yield* body(frozenSimDays);
   } finally {
-    if (prior.mode === 'live') {
-      yield* put(goLiveNowAction());
-    } else if (!prior.paused) {
-      yield* put(resume({ nowMs: performance.now() }));
-    }
+    yield* put(
+      prior.mode === 'live' && !prior.paused
+        ? goLiveNowAction()
+        : restoreTime({ captured: prior, simDays: frozenSimDays, nowMs: performance.now() }),
+    );
   }
 }
