@@ -35,6 +35,9 @@ export type DebugSliderProps = {
   readonly title?: string;
   /** Adds the ⓘ help tip at the row's end, as `DebugOverlayToggles`' rows. */
   readonly info?: string;
+  /** A second, one-line label under `label`: what the row tunes, when that changes with the scene. */
+  readonly detail?: string;
+  readonly disabled?: boolean;
 };
 
 function DebugSlider({
@@ -47,10 +50,16 @@ function DebugSlider({
   onChange,
   title,
   info,
+  detail,
+  disabled,
 }: DebugSliderProps): ReactNode {
+  const name = detail === undefined ? label : `${label} · ${detail}`;
   return (
     <div className={styles.root} title={title}>
-      <span className={styles.label}>{label}</span>
+      <span className={styles.label}>
+        {label}
+        {detail !== undefined && <span className={styles.detail}>{detail}</span>}
+      </span>
       <span className={styles.readout}>{readout}</span>
       <input
         type="range"
@@ -58,11 +67,12 @@ function DebugSlider({
         max={max}
         step={step}
         value={value}
-        aria-label={label}
+        disabled={disabled}
+        aria-label={name}
         onChange={(e) => onChange(Number(e.target.value))}
         className={styles.range}
       />
-      {info !== undefined && <DebugInfoTip label={label} info={info} />}
+      {info !== undefined && <DebugInfoTip label={name} info={info} />}
     </div>
   );
 }

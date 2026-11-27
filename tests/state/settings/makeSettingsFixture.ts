@@ -179,6 +179,7 @@ export function makeSettingsFixture(
       meshSelfBounce: 0,
       meshNoShadows: false,
       meshShadowTuning: { ...debugSlice.getInitialState().meshShadowTuning },
+      siteSeatOffsetsM: {},
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

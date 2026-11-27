@@ -54,6 +54,7 @@ const initialState: DebugSettings = {
     filterSide: MESH_SHADOW_FILTER_SIDE,
     filterRadiusTexels: MESH_SHADOW_FILTER_RADIUS_TEXELS,
   },
+  siteSeatOffsetsM: {},
   // 'auto' reproduces the old timing-derived pass shape, so production +
   // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
   renderStrategy: 'auto',
@@ -112,6 +113,9 @@ export const debugSlice = createSlice({
     },
     tuneMeshShadows: (debug, action: PayloadAction<Partial<MeshShadowTuning>>) => {
       Object.assign(debug.meshShadowTuning, action.payload);
+    },
+    setSiteSeatOffsetM: (debug, action: PayloadAction<{ siteId: string; offsetM: number }>) => {
+      debug.siteSeatOffsetsM[action.payload.siteId] = action.payload.offsetM;
     },
     // Override the frame's render-pass shape independently of GPU timing (Joint 1;
     // see `resolveStrategy`). 'auto' restores the timing-derived default.
@@ -215,6 +219,7 @@ export const {
   setMeshSelfBounce,
   setMeshNoShadows,
   tuneMeshShadows,
+  setSiteSeatOffsetM,
   setRenderStrategy,
   inspectClipPath,
   recalcClipPath,

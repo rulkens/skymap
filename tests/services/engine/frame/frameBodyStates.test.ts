@@ -31,6 +31,7 @@ describe('frameBodyStates', () => {
           focus: null,
           ids: { hover: null, select: null, focus: null },
         },
+        settings: { debug: { siteSeatOffsetsM: {} } },
       },
       [{ type: 'satellite', extractRow } as unknown as SelectionKindRow],
       AT,

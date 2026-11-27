@@ -36,6 +36,11 @@ export type DebugSettings = {
   meshNoShadows: boolean;
   meshShadowTuning: MeshShadowTuning;
   /**
+   * Metres each surface site is lifted along its radial, on top of its baked ground height,
+   * keyed by site id; a missing key is 0. The DebugPanel's live seat tuning.
+   */
+  siteSeatOffsetsM: Record<string, number>;
+  /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.
    */

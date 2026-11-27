@@ -19,6 +19,7 @@ import MemorySectionContainer from '../containers/MemorySectionContainer';
 import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSectionContainer';
 import FilmTuningSectionContainer from '../containers/FilmTuningSectionContainer';
 import MeshShadowsSectionContainer from '../containers/MeshShadowsSectionContainer';
+import SurfaceSitesSectionContainer from '../containers/SurfaceSitesSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
@@ -63,6 +64,7 @@ function DebugPanel({
       <FocusMovesTuningSectionContainer />
       <FilmTuningSectionContainer />
       <MeshShadowsSectionContainer />
+      <SurfaceSitesSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>

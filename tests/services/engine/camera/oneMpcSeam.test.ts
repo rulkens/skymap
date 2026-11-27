@@ -95,6 +95,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "world-position precedent — phase 1c folds a surface site's AUTHORED metre offset (host radius + altitude) into the host's world Mpc position, the metres-in/Mpc-out boundary the authored table demands; no slab, no pose, no MVP",
   ],
   [
+    'src/services/engine/frame/seatSurfaceSites.ts',
+    "world-position precedent — deriveBodyStates' phase 1c again: the DebugPanel's metre seat offset joins a site's world Mpc position along its radial; no slab, no pose, no MVP",
+  ],
+  [
     'src/services/engine/camera/framing/pivotRadiusMpc.ts',
     "framing-bridge precedent — the row's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
