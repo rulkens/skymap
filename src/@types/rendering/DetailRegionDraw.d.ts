@@ -13,7 +13,8 @@ export type DetailRegionDraw = {
   readonly texScale: Vec3;
   /** Native voxel edge, Mpc: the region is read only where a pixel spans less. */
   readonly voxelMpc: number;
-  /** null = the steady pipeline. Boxes in the same local frame. */
+  /** null = the steady pipeline. Boxes in the same local frame, inset alike; an empty one (a side
+   *  with nothing to fade, or the settled box during a first fill) is zero-sized at the origin. */
   readonly fade: {
     readonly intoLo: Vec3;
     readonly intoHi: Vec3;
