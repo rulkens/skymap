@@ -51,7 +51,7 @@ vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
       // `trackGpuMemory` (installed by the real, un-mocked `initGpu` phase)
       // wraps both create calls on whatever device `gpu/device`'s mocked
       // `initGpu` hands back, so the stub needs this method too.
-      createTexture: vi.fn(() => ({ destroy: vi.fn() })),
+      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
     } as unknown as GPUDevice,
     context: { __mockContext: true } as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
@@ -217,6 +217,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks,
+    readRoot: () => ({}) as never,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     handleRef: { current: null },

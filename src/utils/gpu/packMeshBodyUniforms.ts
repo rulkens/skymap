@@ -1,5 +1,5 @@
 /**
- * packMeshBodyUniforms — pure packer for the 176-byte `MeshBodyUniforms` struct.
+ * packMeshBodyUniforms — pure packer for the 304-byte `MeshBodyUniforms` struct.
  * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
  * header — read it there; the writes below are in that order. It MATCHES
  * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
@@ -9,6 +9,8 @@
 
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { MeshMaterialFactors } from '../../@types/rendering/MeshMaterialFactors';
 import { MESH_BODY_UNIFORM_FLOATS } from '../../data/mesh/meshBodyUniformLayout';
 
@@ -21,6 +23,21 @@ export function packMeshBodyUniforms(args: {
   readonly sinSunAngularRadius: number;
   readonly ambient: number;
   readonly material: MeshMaterialFactors;
+  /** The terrain horizon at the body's anchor; `NO_HORIZON_RECT` reads fully lit. */
+  readonly horizon: {
+    readonly rect: Readonly<Vec4>;
+    readonly up: Readonly<Vec3>;
+    readonly uv: Readonly<Vec2>;
+  };
+  /** The body's sun shadow layer; null packs slot −1, which reads lit. */
+  readonly shadow: {
+    readonly slot: number;
+    readonly normalOffsetM: number;
+    readonly lightFromLocal: Float32Array;
+    readonly depthBiasTexels: number;
+    readonly filterRadiusTexels: number;
+    readonly filterSide: number;
+  } | null;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
   out.set(args.mvp.subarray(0, 16), 0);
@@ -47,8 +64,21 @@ export function packMeshBodyUniforms(args: {
   out[36] = args.ambient; // byte 144
   out[37] = args.material.metallic;
   out[38] = args.material.roughness; // byte 152; 156 is padding
-  out[40] = args.material.baseColor[0]; // byte 160; 172..175 are the struct's padding
+  out[40] = args.material.baseColor[0]; // byte 160; 172..175 are padding
   out[41] = args.material.baseColor[1];
   out[42] = args.material.baseColor[2];
+  out.set(args.horizon.rect, 44); // byte 176
+  out.set(args.horizon.up, 48); // byte 192; 204..207 are padding
+  out.set(args.horizon.uv, 52); // byte 208
+  // The i32 words in a float buffer: written through an integer view of the same bytes.
+  const ints = new Int32Array(out.buffer);
+  ints[54] = args.shadow?.slot ?? -1; // byte 216
+  if (args.shadow !== null) {
+    out[55] = args.shadow.normalOffsetM; // byte 220
+    out.set(args.shadow.lightFromLocal.subarray(0, 16), 56); // byte 224
+    out[72] = args.shadow.depthBiasTexels; // byte 288
+    out[73] = args.shadow.filterRadiusTexels;
+    ints[74] = args.shadow.filterSide; // byte 296; 300..303 are padding
+  }
   return out;
 }

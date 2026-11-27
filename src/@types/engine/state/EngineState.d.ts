@@ -32,6 +32,7 @@ import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
+import type { TerrainHorizonLookup } from '../../camera/terrain/TerrainHorizonLookup';
 import type { GatedTrailGroup } from '../frame/GatedTrailGroup';
 import type { OrbitTrailGroup } from '../layer/OrbitTrailGroup';
 import type { SampledTrailGroup } from '../layer/SampledTrailGroup';
@@ -107,8 +108,10 @@ export type EngineState = {
   orbitTrailGroups: readonly GatedTrailGroup<OrbitTrailGroup>[];
   /** Every Layer's `guides.sampledTrails` group, each with its fade bound. */
   sampledTrailGroups: readonly GatedTrailGroup<SampledTrailGroup>[];
-  /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `heightAt`. */
+  /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `terrain`. */
   terrainHeightAt: TerrainHeightAtLookup;
+  /** `noTerrainHorizon` until `createLayers` folds the same provider; read by `drawMeshBodiesOnRow`. */
+  terrainHorizonAt: TerrainHorizonLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
   /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `codeIfAsked`. */

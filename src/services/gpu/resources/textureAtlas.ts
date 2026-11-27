@@ -23,6 +23,7 @@ export class TextureAtlas implements SlotStore {
   private readonly slotsPerRow: number;
   private readonly pool: SlotPool;
   private readonly texture: GPUTexture;
+  private view: GPUTextureView | null = null;
 
   constructor(device: GPUDevice, config: TextureAtlasConfig) {
     this.device = device;
@@ -80,9 +81,11 @@ export class TextureAtlas implements SlotStore {
     );
   }
 
-  /** A fresh view per call (cheap), so callers never track view lifetime. */
+  /** One view for the atlas's life (the texture never changes), so a reader can cache a bind
+   *  group on its identity. */
   getTextureView(): GPUTextureView {
-    return this.texture.createView({ label: `${this.label}-view` });
+    this.view ??= this.texture.createView({ label: `${this.label}-view` });
+    return this.view;
   }
 
   /** WebGPU frees a texture only on `destroy()`, never on GC. */

@@ -4,7 +4,7 @@
  * Vitest runs in Node without a WebGPU surface, so every `create*` call returns
  * a plausibly-shaped stand-in (the `texturedBodyRenderer.test.ts` pattern).
  * What's pinned here is the group SPLIT — per-body resources at group 0, the
- * renderer-wide sampler + env-BRDF LUT at group 1 — because a layout that
+ * renderer-wide sampler + env-BRDF LUT at group 1, the host's horizon atlas and the sun shadow array at 2 — because a layout that
  * drifts from the shader's `@group`/`@binding` decorations only fails at
  * device-validation time in the browser, which no other check here reaches.
  */
@@ -131,8 +131,14 @@ describe('createMeshBodyRenderer', () => {
     expect(bindGroupLayouts.map((l) => l.label)).toEqual([
       'meshBody-body-bgl',
       'meshBody-global-bgl',
+      'meshBody-horizon-bgl',
       'meshBody-contact-bgl',
+      'meshBody-shadow-bgl',
     ]);
+    // `lib/meshShadow.wesl` reads a texture_depth_2d_array through a sampler_comparison.
+    const [, shadowMap, shadowSampler] = Array.from(bindGroupLayouts[2]!.entries);
+    expect(shadowMap!.texture).toEqual({ sampleType: 'depth', viewDimension: '2d-array' });
+    expect(shadowSampler!.sampler).toEqual({ type: 'comparison' });
 
     // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);
@@ -214,23 +220,34 @@ describe('createMeshBodyRenderer', () => {
     expect(shadow.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it("draw binds the body's own group at index 0 and the shared group at index 1", () => {
+  it("draw binds the body's own group at 0, the shared group at 1 and the horizon atlas at 2", () => {
     const bindGroups = new Map<string, object>();
     const renderer = makeRenderer(mockDevice({ bindGroups }));
     renderer.setMesh('a', stubAsset());
     renderer.setMesh('b', stubAsset());
 
     const pass = stubPass();
-    renderer.draw(pass, 'a', new Float32Array(32));
-    renderer.draw(pass, 'b', new Float32Array(32));
+    const atlas = {} as GPUTextureView;
+    renderer.draw(pass, 'a', new Float32Array(32), atlas);
+    renderer.draw(pass, 'b', new Float32Array(32), atlas);
+    renderer.draw(pass, 'a', new Float32Array(32), null);
 
     const bound = pass.setBindGroup.mock.calls as [number, object][];
     const atIndex = (i: number) => bound.filter((c) => c[0] === i).map((c) => c[1]);
-    expect(atIndex(0)).toEqual([bindGroups.get('meshBody-bg-a'), bindGroups.get('meshBody-bg-b')]);
-    // One global group for the whole renderer: both draws bind the SAME object.
+    expect(atIndex(0)).toEqual([
+      bindGroups.get('meshBody-bg-a'),
+      bindGroups.get('meshBody-bg-b'),
+      bindGroups.get('meshBody-bg-a'),
+    ]);
+    // One global group for the whole renderer: every draw binds the SAME object.
     const globals = atIndex(1);
-    expect(globals).toHaveLength(2);
-    expect(globals[0]).toBe(globals[1]);
+    expect(new Set(globals).size).toBe(1);
     expect(globals[0]).not.toBe(bindGroups.get('meshBody-bg-a'));
+    // One horizon group per atlas view, and the stand-in for a body off the ground.
+    const [first, second, offGround] = atIndex(2);
+    expect(first).toBe(bindGroups.get('meshBody-horizon-bg'));
+    expect(second).toBe(first);
+    expect(offGround).toBe(bindGroups.get('meshBody-horizon-stand-in-bg'));
+    expect(offGround).not.toBe(first);
   });
 });

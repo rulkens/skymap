@@ -97,6 +97,32 @@ describe('planExtract', () => {
     expect(project.getSourceFileOrThrow('/src/source.ts').getText()).toBe(original);
   });
 
+  it('carries a trailing same-line comment along with the JSDoc', () => {
+    const project = projectWith({
+      '/src/source.ts':
+        'export const KEEP = 1;\n/** Cap. */\nexport const MAX_LEVEL = 23; // 6 B key: 2·23 bits\n',
+    });
+    const resolved = resolveSymbol(project, { file: '/src/source.ts', symbol: 'MAX_LEVEL' });
+
+    planExtract(project, resolved, '/src/maxLevel.ts');
+
+    const dest = project.getSourceFileOrThrow('/src/maxLevel.ts').getFullText();
+    expect(dest).toContain('/** Cap. */\nexport const MAX_LEVEL = 23; // 6 B key: 2·23 bits');
+    const source = project.getSourceFileOrThrow('/src/source.ts').getFullText();
+    expect(source).toBe('export const KEEP = 1;\n');
+  });
+
+  it('ends dest with a newline', () => {
+    const project = projectWith({
+      '/src/source.ts': 'export const KEEP = 1;\nexport function target() { return 1; }\n',
+    });
+    const resolved = resolveSymbol(project, { file: '/src/source.ts', symbol: 'target' });
+
+    planExtract(project, resolved, '/src/target.ts');
+
+    expect(project.getSourceFileOrThrow('/src/target.ts').getFullText()).toMatch(/\}\n$/);
+  });
+
   it('refuses when dest already exists', () => {
     const project = projectWith({
       '/src/source.ts': 'export function target() { return 1; }',

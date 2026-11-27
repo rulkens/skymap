@@ -8,6 +8,8 @@ import type { MeshProbe } from './MeshProbe';
 import type { ContactShadowResources } from './ContactShadowResources';
 
 export type MeshResources = {
+  /** The asset's, metres: the radius its shadow layer is fitted to. */
+  boundingRadiusM: number;
   vertexBuffers: GPUBuffer[];
   indexBuffer: GPUBuffer;
   indexCount: number;

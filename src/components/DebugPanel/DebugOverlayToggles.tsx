@@ -8,7 +8,7 @@
  */
 
 import { Fragment, type ReactElement } from 'react';
-import CompactInfoTip from '../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
+import DebugInfoTip from './DebugInfoTip';
 import styles from './DebugOverlayToggles.module.css';
 
 export type DebugOverlayTogglesProps<Key extends string> = {
@@ -41,11 +41,7 @@ function DebugOverlayToggles<Key extends string>({
         return (
           <div key={row.key} className={styles.infoRow}>
             {toggle}
-            <CompactInfoTip label={row.info} align="end">
-              <button type="button" className={styles.infoIcon} aria-label={`About ${row.label}`}>
-                ⓘ
-              </button>
-            </CompactInfoTip>
+            <DebugInfoTip label={row.label} info={row.info} />
           </div>
         );
       })}

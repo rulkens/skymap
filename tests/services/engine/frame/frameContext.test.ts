@@ -247,6 +247,7 @@ describe('deriveFrameContext — the placed selection', () => {
           pending: { select: null, focus: null },
         },
         selectionRows: state.selectionRows,
+        settings: { debug: { siteSeatOffsetsM: {} } },
       },
       state.selectionKindRows,
       CONST_J2000,

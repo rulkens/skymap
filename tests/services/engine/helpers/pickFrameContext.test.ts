@@ -71,6 +71,7 @@ function makeState(
     settings: {
       orientation: 'equatorial',
       bodies: { items: {} },
+      debug: { siteSeatOffsetsM: {} },
     },
     selection: { hover: null, select: null, focus: null },
     selectionRows: { hover: null, select: null, focus: null },

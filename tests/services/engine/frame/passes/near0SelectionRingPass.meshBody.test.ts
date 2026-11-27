@@ -142,7 +142,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const ringDraw = vi.fn();
   const state = {
     gpu: {
-      meshBodyRenderer: { hasMesh: () => true, draw: meshDraw },
+      meshBodyRenderer: { hasMesh: () => true, draw: meshDraw, shadowOf: () => null },
       selectionRingRenderer: { draw: ringDraw },
     },
     selectionRows: { select: row, focus: row, hover: null },

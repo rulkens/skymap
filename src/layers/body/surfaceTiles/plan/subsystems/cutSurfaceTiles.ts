@@ -10,6 +10,7 @@ import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';
+import { deepestBandMax } from '../utils/deepestBandMax';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { equirectUvToDirection } from '../../../../../utils/math/equirectUvToDirection';
 import { surfacePatchAnchor } from '../../patch/subsystems/surfacePatchAnchor';
@@ -108,16 +109,11 @@ export function cutSurfaceTiles(input: {
   const capAngle = Math.acos(radiusM / capCamLen);
   // The deepest level any band bakes: bounds `required` below so a huge
   // screen-space extent can't ask the walk to descend past every band's max.
-  let maxTileLevel = baseLevel;
-  for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
+  const maxTileLevel = Math.max(baseLevel, deepestBandMax(bands));
   // A standalone product can bake shallower than the cut (night z7 against z13): a deeper
   // leaf starts its climb at the product's deepest band, and with no bands no leaf climbs.
   const standaloneMaxLevel = Object.fromEntries(
-    STANDALONE_PRODUCTS.map((product) => {
-      let max = -1;
-      for (const band of requestBands[product]) if (band.max > max) max = band.max;
-      return [product, max];
-    }),
+    STANDALONE_PRODUCTS.map((product) => [product, deepestBandMax(requestBands[product])]),
   ) as Record<StandaloneProduct, number>;
 
   // Per view, hoisted out of the walk: the x/y/w rows of the vp (the z row is

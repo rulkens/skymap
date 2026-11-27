@@ -1,9 +1,10 @@
 /**
  * buildSiteGroundHeights — bakes each `SURFACE_FIXED_SITES` row's ground up
  * vector and seat height (metres above its host's datum) into
- * `siteGroundHeights.generated.ts`. A `resting` site reads it from the
- * deepest baked height tile under it; an `anchored` site already carries its
- * own real-world height and needs no terrain sample — see `anchoredSeat`.
+ * `siteGroundHeights.generated.ts`. A `resting` site fits both to the drawn
+ * ground under its mesh's contact points (`siteRestingSeat`); an `anchored`
+ * site already carries its own real-world height and needs no terrain sample —
+ * see `anchoredSeat`.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import type { GeodeticAnchor } from '../../src/@types/geo/GeodeticAnchor';
 import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
+import type { SiteSeat } from './@types/SiteSeat';
 import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { normalize3 } from '../../packages/shared/src/utils/math/normalize3';
@@ -21,8 +23,7 @@ import { enuOffsetM } from '../utils/geo/enuOffsetM';
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
-import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
-import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
+import { siteRestingSeat } from '../utils/textures/siteTerrain/siteRestingSeat';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -50,7 +51,7 @@ export function anchoredSeat(
   site: SurfaceFixedSite,
   anchor: GeodeticAnchor,
   radiusM: number,
-): { readonly heightM: number; readonly up: Vec3 } {
+): SiteSeat {
   const [e, n] = enuOffsetM(anchor, site, radiusM);
   return { heightM: anchor.heightM, up: normalize3([-e / radiusM, -n / radiusM, 1]) };
 }
@@ -78,13 +79,13 @@ function serialize(heights: ReadonlyMap<string, number>, ups: ReadonlyMap<string
     "import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';\n" +
     '\n' +
     "/** Site id -> ground height, metres above the host's datum, the posed body\n" +
-    ' *  is seated at: resting on the highest drawn ground under its footprint\n' +
-    ' *  (see the generator). */\n' +
+    ' *  is seated at: on the plane through the drawn ground under its contact\n' +
+    ' *  points (see the generator). */\n' +
     'export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {\n' +
     `${heightRows}\n};\n` +
     '\n' +
     "/** Site id -> the ground's up in the site's radial (east, north, up) frame,\n" +
-    " *  fitted across the body's own footprint; flat ground is [0, 0, 1]. */\n" +
+    ' *  from the same contact-point plane; flat ground is [0, 0, 1]. */\n' +
     'export const SITE_GROUND_UPS_ENU: Readonly<Record<string, Readonly<Vec3>>> = {\n' +
     `${upRows}\n};\n`
   );
@@ -100,9 +101,7 @@ export async function buildSiteGroundHeights(): Promise<void> {
       const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildSiteGroundHeights');
       ({ heightM: m, up } = anchoredSeat(site, anchorForSite(site), host.surface.datumRadiusM));
     } else {
-      const manifest = readSurfaceTileManifest(site.hostId);
-      up = await siteGroundUpEnu(site, manifest);
-      m = await siteSeatHeightM(site, manifest, up);
+      ({ heightM: m, up } = await siteRestingSeat(site, readSurfaceTileManifest(site.hostId)));
     }
     heights.set(site.id, m);
     ups.set(site.id, up);

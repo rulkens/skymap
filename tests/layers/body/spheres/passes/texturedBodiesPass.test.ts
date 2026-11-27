@@ -18,7 +18,7 @@ import { LIMB_DARKENING_PARAMS } from '../../../../../src/layers/body/spheres/da
 import {
   NO_HORIZON_RECT,
   WHOLE_GLOBE_HORIZON_RECT,
-} from '../../../../../src/layers/body/textures/data/horizonRects';
+} from '../../../../../src/data/gpu/horizonRects';
 import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { bodySlabCamAltitudeSq } from '../../../../../src/layers/body/slabs/present/bodySlabCamAltitudeSq';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';

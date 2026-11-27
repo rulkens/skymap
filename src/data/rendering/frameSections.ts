@@ -36,6 +36,10 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'star-cut' },
     // Ahead of the POST_FOREGROUND `asteroids` dots, which read the positions it writes.
     { kind: 'compute', name: 'asteroid-kepler' },
+    // Core's sun shadow layers for mesh bodies, ahead of every mesh and surface-tile draw that
+    // reads them. Once: a shadow depends on the sun, not the view. The capture lines below run
+    // in their own submits BEFORE this frame's batch, so a probe face reads last frame's layers.
+    { kind: 'compute', name: 'mesh-shadows' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).

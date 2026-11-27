@@ -16,6 +16,7 @@ import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceTilePlannerParams } from '../../plan/@types/SurfaceTilePlannerParams';
 import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
+import type { TerrainHorizonSample } from '../../../../../@types/camera/terrain/TerrainHorizonSample';
 
 export type SurfaceTileStream = Destroyable & {
   readonly residency: SurfaceTileResidency;
@@ -47,6 +48,17 @@ export type SurfaceTileStream = Destroyable & {
     dirBodyFixed: Readonly<Vec3>,
     params: SurfaceTilePlannerParams | null,
   ): number | null;
+
+  /**
+   * The horizon the surface tile under a body-fixed direction is shaded with: the leaf at the
+   * level `heightAt` climbs from, its rect resolved as the cut resolves it. Null for any body but
+   * the engaged one, with no horizon atlas, or where the tile is unresident or baked empty.
+   */
+  horizonAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): TerrainHorizonSample | null;
 
   /** `product`'s atlas view (`SURFACE_TILE_LANE_SPECS` has its format and
    *  slot geometry), or `null` while nothing is engaged or the engaged

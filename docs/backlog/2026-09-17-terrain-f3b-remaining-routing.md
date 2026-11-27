@@ -104,7 +104,7 @@ Spec §8.1 sketches `raycast(origin, dir)` — intersect the outer-bound sphere,
 against `terrainHeightM`, bisect the first crossing — as the answer. It does not
 exist; F3a shipped only `terrainHeightM`
 (`src/layers/body/surfaceTiles/stream/subsystems/terrainHeightM.ts`) and the body Layer's
-`heightAt` (`src/layers/body/heightAt.ts`).
+`terrain` hook (`src/layers/body/terrain.ts`).
 
 Note the overlap: the **zoom** anchor is already filed separately
 (`2026-09-17-terrain-aware-zoom-anchor.md`) and its option 2 is a cheap fixed-point
@@ -167,7 +167,7 @@ walks `terrainHeightAt` — a resident-ancestor lookup and a bilinear per step.
   in §8.2, and §8.3's remaining mentions of them are historical. There is one
   estimator, `terrainHeightM`.
 - Mars. Body-generic by construction; the relief interval arrives with F4.
-- Terrain self-shadowing (`2026-09-12-mesh-body-shadows.md`) and vertical
+- Terrain self-shadowing (since shipped: horizon maps, and mesh sun shadows) and vertical
   exaggeration, both out of the parent spec's scope.
 
 ## See also
