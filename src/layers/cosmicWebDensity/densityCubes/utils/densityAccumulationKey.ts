@@ -28,6 +28,7 @@ export function densityAccumulationKey<Id extends string>(
       s.paletteId,
       s.trim,
       s.exposure,
+      s.showLevels,
       opacityOf(id),
       cubeStampOf(id),
       regionOf(id),

@@ -15,6 +15,7 @@ const settings = (): VolumeFieldSettings => ({
   paletteId: 'magma',
   trim: 0.3,
   exposure: 4,
+  showLevels: false,
 });
 
 const region = (): DetailRegionDraw => ({

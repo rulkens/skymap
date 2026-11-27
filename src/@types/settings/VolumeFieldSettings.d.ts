@@ -57,4 +57,6 @@ export type VolumeFieldSettings = DataItemSettings & {
    * brightest entry.
    */
   exposure: number;
+  /** Debug view: shade each march step by the volume level it read (the tuning section's legend). */
+  showLevels: boolean;
 };

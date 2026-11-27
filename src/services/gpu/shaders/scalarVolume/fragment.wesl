@@ -131,6 +131,14 @@ struct RegionUniforms {
 @group(2) @binding(1) var regionTex: texture_3d<f32>;
 @group(2) @binding(2) var regionSampler: sampler;
 override REGION: u32 = 0u;   // 0 base only, 1 steady, 2 fading
+// The "Colour by level" debug view: each step shaded by where it read, at twice the palette's luminance.
+// Off compiles it out. DENSITY_LEVEL_LEGEND's hexes in linear light, in its order (settled, into,
+// out, base mip 0, 1, 2+): the order is the `level` index below.
+override LEVELS: bool = false;
+const LEVEL_TINTS = array<vec3<f32>, 6>(
+  vec3<f32>(0.871, 0.776, 0.054), vec3<f32>(0.791, 0.347, 0.0), vec3<f32>(0.604, 0.191, 0.386),
+  vec3<f32>(0.0, 0.342, 0.171), vec3<f32>(0.093, 0.456, 0.815), vec3<f32>(0.0, 0.168, 0.445),
+);
 
 const SATURATION_THRESHOLD: f32 = 0.99;
 
@@ -272,11 +280,13 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // textureSample's implicit derivatives are undefined. One volume read, two only in a fading
     // shell; the region's texels are valid only inside its boxes.
     var sampleValue: f32;
+    var level = 0u;
     if (REGION != 0u && rayDistance >= settledSpan.x && rayDistance < settledSpan.y) {
       sampleValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
     } else {
       let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
       sampleValue = textureSampleLevel(volume, volumeSampler, samplePos, lod).r;
+      level = 3u + min(u32(round(lod)), 2u);
       // The fading shells: the region at fadeW in `into`, 1 − fadeW in `out`. Both contain the
       // settled box and meet only in it, so a sample here lies in at most one.
       if (REGION == 2u) {
@@ -285,6 +295,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
         if (inInto || inOut) {
           let regionValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
           sampleValue = mix(sampleValue, regionValue, select(1.0 - region.fadeW, region.fadeW, inInto));
+          level = select(2u, 1u, inInto);
         }
       }
     }
@@ -359,7 +370,11 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let dev = abs(signedT - uniforms.contrastCenter) / max(halfRange, 1e-3);
     let blowout = smoothstep(0.5, 1.0, dev);
     let highlightGain = 1.0 + blowout * max(uniforms.exposure - 1.0, 0.0);
-    let contrib = vec4<f32>(lut.rgb * alpha * highlightGain, alpha);
+    var rgb = lut.rgb * alpha * highlightGain;
+    if (LEVELS) {
+      rgb = LEVEL_TINTS[level] * (2.0 * dot(lut.rgb, vec3<f32>(0.2126, 0.7152, 0.0722))) * alpha;
+    }
+    let contrib = vec4<f32>(rgb, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }

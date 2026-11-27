@@ -109,7 +109,7 @@ describe('Settings page', () => {
     /^starCatalogs\.items\.(gaiaStars|sStar)\.labelEnabled$/,
     /^starCatalogs\.(refineThreshold|glowOverlap|exposure(Near|Mid|Far)X|aggregateIntensityCap|chunkSlotsOverride)$/,
     /^milkyWay\.(enabled|renderer|cloud\.\w+|field\..+)$/,
-    /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
+    /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity|showLevels)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
     /^probeSpheres\./,
     /^film\.(letterbox|letterboxAspect|grade\.\w+|glow\.\w+)$/,

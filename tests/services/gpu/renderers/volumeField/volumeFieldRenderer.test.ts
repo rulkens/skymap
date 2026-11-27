@@ -459,10 +459,13 @@ const FADING: DetailRegionDraw = {
   fade: { intoLo: [0, 0, 0], intoHi: [0, 0, 0], outLo: [0, 0, 0], outHi: [0, 0, 0], w: 0.5 },
 };
 
-// The march pipeline built with `REGION` = `variant`, and the group 2 each draw bound.
-function marchPipeline(device: GPUDevice, variant: number): unknown {
+// The march pipeline built with `REGION` = `variant` (and `LEVELS`), and the group 2 each draw bound.
+function marchPipeline(device: GPUDevice, variant: number, levels = 0): unknown {
   const { calls, results } = vi.mocked(device.createRenderPipeline).mock;
-  const at = calls.findIndex(([desc]) => desc.fragment?.constants?.REGION === variant);
+  const at = calls.findIndex(
+    ([desc]) =>
+      desc.fragment?.constants?.REGION === variant && desc.fragment.constants.LEVELS === levels,
+  );
   return results[at]?.value;
 }
 function placeholderGroup(device: GPUDevice): unknown {
@@ -472,6 +475,7 @@ function placeholderGroup(device: GPUDevice): unknown {
 function drawWith(
   r: ReturnType<typeof createVolumeFieldRenderer>,
   region: DetailRegionDraw | null,
+  showLevels = false,
 ): { pipeline: unknown; group2: unknown } {
   const pass = makeFakePass();
   r.draw(
@@ -480,7 +484,7 @@ function drawWith(
     [320, 180],
     1000,
     [0, 0, 5],
-    () => fullSettings(),
+    () => fullSettings({ showLevels }),
     () => 1,
     () => region,
     INPUTS,
@@ -524,6 +528,25 @@ describe('createVolumeFieldRenderer detail regions', () => {
       group2: regionGroup,
     });
     expect(regionGroup).not.toBe(placeholderGroup(device));
+  });
+
+  // The debug view must cost nothing until it is turned on, and then pick the same REGION variant.
+  it('showLevels draws the LEVELS twin of the chosen variant, built on first use only', () => {
+    const device = regionDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    const levelsBuilt = () =>
+      vi
+        .mocked(device.createRenderPipeline)
+        .mock.calls.filter(([desc]) => desc.fragment?.constants?.LEVELS === 1).length;
+    expect(levelsBuilt()).toBe(0);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const fading = drawWith(r, FADING, true).pipeline;
+    expect(fading).toBe(marchPipeline(device, 2, 1));
+    expect(drawWith(r, FADING, true).pipeline).toBe(fading);
+    expect(levelsBuilt()).toBe(1);
+    expect(drawWith(r, STEADY, true).pipeline).toBe(marchPipeline(device, 1, 1));
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 1));
   });
 
   it('a region value with no attached texture draws the base pipeline', () => {

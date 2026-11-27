@@ -25,6 +25,7 @@ function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettin
     paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
     trim: 0,
     exposure: 1,
+    showLevels: false,
     ...over,
   };
 }

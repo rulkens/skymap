@@ -1,0 +1,46 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.infoIcon {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  color: var(--color-fg-faint);
+}
+
+.infoIcon:hover,
+.infoIcon:focus-visible {
+  color: var(--color-fg-muted);
+}
+
+.legend {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.swatch {
+  width: 1em;
+  height: 1em;
+  border-radius: var(--radius-sm);
+}

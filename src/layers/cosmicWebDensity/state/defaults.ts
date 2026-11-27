@@ -17,5 +17,6 @@ export function buildVolumeFieldSettings(
     paletteId: entry.paletteId,
     trim: entry.trim,
     exposure: entry.exposure,
+    showLevels: false,
   };
 }

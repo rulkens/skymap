@@ -1301,6 +1301,11 @@ any extra read sends the change back to D6 before acceptance.
       step read is `textureSampleLevel`; no texel is read twice and no region read falls outside a
       box. Matches the "Shader price" table.
 
+- [x] **Added (owner-approved 2026-11-27): "Colour by level".** A per-field debug toggle in the
+      density tuning section shades each step by where it read (settled region, fading in, fading
+      out, base mip 0 / 1 / 2+), legend in its ⓘ tip. A `LEVELS` override on lazily built twins of
+      the three pipelines; reads per step unchanged with it on or off, and the off image matches.
+
 ---
 
 ## Task 7.1: Docs

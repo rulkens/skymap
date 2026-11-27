@@ -166,10 +166,11 @@ export function createVolumeFieldRenderer<Id extends string>({
 
   // Indexed by REGION: 0 compiles the region code out (the spike measured an empty region branch
   // at +0.1 ms), 1 the steady march, 2 the fading one. All three are built here, so a WGSL error in
-  // any of them shows at creation, region or not.
-  const marchPipelines = [0, 1, 2].map((variant) =>
-    device.createRenderPipeline({
-      label: `scalarVolume-pipeline-region${variant}`,
+  // any of them shows at creation, region or not. The LEVELS (debug view) variants are built on
+  // first use: nobody else pays for them.
+  function createMarchPipeline(variant: number, levels: boolean): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label: `scalarVolume-pipeline-region${variant}${levels ? '-levels' : ''}`,
       layout: pipelineLayout,
       vertex: {
         module: vsModule,
@@ -184,7 +185,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       fragment: {
         module: fsModule,
         entryPoint: 'fs_main',
-        constants: { REGION: variant },
+        constants: { REGION: variant, LEVELS: Number(levels) },
         targets: [
           {
             format: targetFormat,
@@ -196,8 +197,10 @@ export function createVolumeFieldRenderer<Id extends string>({
         topology: 'triangle-list',
         cullMode: 'front', // ← back faces only; see fragment.wesl module header
       },
-    }),
-  );
+    });
+  }
+  const marchPipelines = [0, 1, 2].map((variant) => createMarchPipeline(variant, false));
+  const levelPipelines: GPURenderPipeline[] = [];
   const decayPipeline = device.createRenderPipeline({
     label: 'scalarVolume-decay-pipeline',
     layout: device.createPipelineLayout({
@@ -533,7 +536,12 @@ export function createVolumeFieldRenderer<Id extends string>({
           }
           device.queue.writeBuffer(bound.uniformBuffer, 0, regionScratch);
         }
-        pass.setPipeline(marchPipelines[!bound ? 0 : region?.fade ? 2 : 1]!);
+        const variant = !bound ? 0 : region?.fade ? 2 : 1;
+        pass.setPipeline(
+          s.showLevels
+            ? (levelPipelines[variant] ??= createMarchPipeline(variant, true))
+            : marchPipelines[variant]!,
+        );
         pass.setBindGroup(0, e.bindGroup);
         pass.setBindGroup(1, e.fadeBindGroup);
         pass.setBindGroup(2, bound ? bound.bindGroup : placeholderBindGroup);
