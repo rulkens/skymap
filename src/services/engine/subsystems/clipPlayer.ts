@@ -142,8 +142,9 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     }
     // The sim clock is no setting, so no overlay can hold it: a crossed `clockTo` is dispatched
     // and outlives the clip whatever `atEnd` says. The takeover's clock bracket gives it back.
+    // Under transport the clock stays frozen at the studio's pinned instant (S4 spec §2.2).
     if (effect.kind === 'scene' && clockTo.match(effect.action)) {
-      store.dispatch(effect.action);
+      if (clip!.transport === null) store.dispatch(effect.action);
       return;
     }
     const over = effect.kind === 'scene' ? undefined : effect.over;

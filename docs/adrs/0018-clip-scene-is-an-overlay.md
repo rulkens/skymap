@@ -43,7 +43,8 @@ settings.
 - **The sim clock is not scene.** `scene(clockTo(…))`, a tour beat's date move, writes no setting, so
   no overlay can hold it: the player dispatches it when a play crosses its step, as the old player
   did, and `atEnd` never touches the clock. The takeover's clock bracket gives the clock back (the
-  tour's snapshot, `withFrozenClockSaga`).
+  tour's snapshot, `withFrozenClockSaga`). A play under transport (S4) never dispatches it, so no
+  seek, scrub or lap moves the studio's clock off its pinned instant.
 
 Not decided here: seek, pause and transport (S4). The overlay is evaluable at any t, but a jump has no
 crossings to publish; S4 seeds the registry and the frame roll instead. A paused frame inside a roll

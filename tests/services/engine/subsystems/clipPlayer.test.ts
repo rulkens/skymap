@@ -657,4 +657,29 @@ describe('clipPlayer clock', () => {
     expect(store.getState().time.paused).toBe(true);
     expect(typesOf(dispatch.mock.calls).filter((type) => type === clockTo.type)).toHaveLength(1);
   });
+
+  it('under transport the clock holds at the pinned instant: no play, seek or lap fires clockTo', () => {
+    const { store } = createAppStore();
+    store.dispatch(setSimDays({ simDays: JD, nowMs: performance.now() }));
+    store.dispatch(pause({ nowMs: performance.now() }));
+    const { tick } = makePlayer(store);
+    const loop = { startSec: 0, endSec: 3 };
+    transportClip(
+      store,
+      { timeline: [seq([wait(1), scene(clockTo({ simDays: JD + 0.5, overSec: 0 })), hold(5)])] },
+      { kind: 'running', fromSec: 0, loop },
+    );
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    const t0 = performance.now();
+    for (const ms of [0, 1500, 3500, 4500]) tick(t0 + ms);
+    store.dispatch(clipTransportSet({ kind: 'paused', atSec: 2, camera: 'clip' }));
+    tick(t0 + 5000);
+    store.dispatch(clipTransportSet({ kind: 'running', fromSec: 0.5, loop: null }));
+    tick(t0 + 6000);
+    tick(t0 + 7000);
+
+    expect(typesOf(dispatch.mock.calls)).not.toContain(clockTo.type);
+    expect(deriveSimDays(store.getState().time, performance.now())).toBe(JD);
+  });
 });
