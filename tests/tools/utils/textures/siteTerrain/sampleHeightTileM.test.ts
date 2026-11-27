@@ -25,4 +25,12 @@ describe('sampleHeightTileM', () => {
     const tile = makeTile((col) => (col === 1 ? 50 : 0));
     expect(sampleHeightTileM(tile, CELL, 0)).toBeCloseTo(0, 6);
   });
+
+  it('splits each drawn cell along its SE–NW diagonal, as the patch mesh does', () => {
+    // Raise only the first cell's SW vertex (col 0, row 2): the centre lies on
+    // the SE–NW diagonal, so it reads 0 where a bilinear patch would read 25.
+    const tile = makeTile((col, row) => (col === 0 && row === 2 ? 100 : 0));
+    expect(sampleHeightTileM(tile, CELL, CELL)).toBeCloseTo(0, 6);
+    expect(sampleHeightTileM(tile, 0.5 * CELL, 1.5 * CELL)).toBeCloseTo(50, 6);
+  });
 });
