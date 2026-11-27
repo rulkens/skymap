@@ -1223,7 +1223,7 @@ and no WGSL compile error is logged for any of the three pipelines.
 
 **Files:** `src/services/gpu/shaders/scalarVolume/fragment.wesl` (modify: `fs_main` `:188-326`)
 
-**Per ray** (`REGION != 0u`, after `intersectUnitAabb` `:196`): one ray–box intersection with
+**Per ray** (`REGION != 0u`, after the unit-cube `intersectAabb(origin, dir, lo, hi)` call): one ray–box intersection with
 `[settledLo, settledHi]`, its far end capped at `tGate = pxPerRad · voxelMpc / |M · dir|`, the
 length `fragment.wesl:227-228` already computes for the LOD. Beyond `tGate` a pixel spans more than
 one native voxel, so the base serves it.
@@ -1274,6 +1274,12 @@ No commit except the ledger. Fetch the linked module from the feature dev server
 value and per branch of the step loop, every `textureSampleLevel`, `textureSample` and
 `textureLoad` reachable per step and per ray. The counts must equal the "Shader price" table above;
 any extra read sends the change back to D6 before acceptance.
+
+- [x] **Counted (2026-11-27), independently from source at b9f70ba1f.** Reads per march step:
+      `REGION` 0 = 2 (base, palette); `REGION` 1 = 2 (region or base, palette); `REGION` 2 = at
+      most 3 (base + region in the fading shell, palette). Per ray, 1 jitter `textureLoad`. Every
+      step read is `textureSampleLevel`; no texel is read twice and no region read falls outside a
+      box. Matches the "Shader price" table.
 
 ---
 
