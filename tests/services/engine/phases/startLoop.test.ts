@@ -63,6 +63,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: { store: { dispatch: vi.fn(), getState: () => ({}) } } as never,
+    readRoot: () => ({}) as never,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     handleRef: { current: null },

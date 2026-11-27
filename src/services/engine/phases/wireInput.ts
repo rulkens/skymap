@@ -79,12 +79,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // itself is `arrivalSaga`'s, which commits over this base before any frame
   // draws; a focus link keeps this base's yaw and pitch, so a wall-clock base
   // framed the same link differently on every load.
-  const simDays = deriveSimDays(selectTimeState(store.getState()), performance.now());
+  const simDays = deriveSimDays(selectTimeState(deps.readRoot()), performance.now());
   // The URL's orientation is already in the store: `createEngine` dispatches
   // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap this phase
   // runs inside, and `arrivalSaga` lands it on that boot read, before it
   // waits for this runtime. A seed in another frame re-encodes on frame 1.
-  const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+  const frameBasis = ORIENTATION_FRAMES[selectOrientation(deps.readRoot())];
 
   state.booted = true;
 
@@ -92,7 +92,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
   // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
   state.cameraRuntime = seedCameraRuntime({
-    state: store.getState(),
+    state: deps.readRoot(),
     projection: {
       fovYRad: DEFAULT_FOV_Y_RAD,
       aspect: canvas.width / canvas.height,
