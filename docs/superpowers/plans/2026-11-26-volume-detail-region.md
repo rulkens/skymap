@@ -502,13 +502,13 @@ export function readNpyHeader(bytes: Uint8Array): NpyHeader;
 
 Steps:
 
-- [ ] Tests, on `writeNpy` output (`tools/parsers/npyWriter.ts`):
+- [x] Tests, on `writeNpy` output (`tools/parsers/npyWriter.ts`):
   - `reads dtype, shape and data offset from the header alone`: a `[2, 3, 4]` `<f4` file, passed
     only its first `dataOffset` bytes; `dataOffset` equals the file length minus 96 (an independent
     property) and is a multiple of 64.
   - `too few bytes for the header throws`.
-- [ ] Implement; `readNpy` delegates. Its existing tests pin the rest.
-- [ ] `npm test -- readNpyHeader npyReader npyWriter`.
+- [x] Implement; `readNpy` delegates. Its existing tests pin the rest.
+- [x] `npm test -- readNpyHeader npyReader npyWriter`.
 
 **Commit:** `readNpyHeader: an .npy header without reading the data`
 
