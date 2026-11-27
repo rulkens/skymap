@@ -9,6 +9,7 @@ import type { PassByDir } from '../animation/PassByDir';
 import type { ClipPathTuningActive } from './ClipPathTuningActive';
 import type { RenderStrategy } from '../engine/frame/RenderStrategy';
 import type { DebugOverlayKey } from '../data/debug/DebugOverlayKey';
+import type { MeshShadowTuning } from './MeshShadowTuning';
 
 export type DebugSettings = {
   overlays: Record<DebugOverlayKey, boolean>;
@@ -33,6 +34,7 @@ export type DebugSettings = {
   meshSelfBounce: number;
   /** Mesh bodies draw without their sun shadow maps, on themselves and on the ground. */
   meshNoShadows: boolean;
+  meshShadowTuning: MeshShadowTuning;
   /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.

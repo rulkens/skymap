@@ -12,7 +12,7 @@
  * three 16-byte columns, so its 9 values land at 20..22 / 24..26 / 28..30 with a
  * dead float between each, and packing it densely would slide every later field. The horizon
  * block is the other trap: a vec2 after a vec3 aligns to 8, so `horizonUv` starts at 52, not 51.
- * `shadowSlot` is an i32 word inside the float buffer: read back through an integer view.
+ * `shadowSlot` and `shadowFilterSide` are i32 words in the float buffer: read back through an integer view.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -49,7 +49,14 @@ const HORIZON = {
 } as const;
 const LIGHT_FROM_LOCAL = new Float32Array(16);
 for (let i = 0; i < 16; i++) LIGHT_FROM_LOCAL[i] = 201 + i;
-const SHADOW = { slot: 5, normalOffsetM: 0.4375, lightFromLocal: LIGHT_FROM_LOCAL };
+const SHADOW = {
+  slot: 5,
+  normalOffsetM: 0.4375,
+  lightFromLocal: LIGHT_FROM_LOCAL,
+  depthBiasTexels: 0.71875,
+  filterRadiusTexels: 1.15625,
+  filterSide: 3,
+};
 
 describe('MeshBodyUniforms byte offsets', () => {
   it('packs every field at its documented float index', () => {
@@ -67,7 +74,7 @@ describe('MeshBodyUniforms byte offsets', () => {
     });
 
     expect(out).toHaveLength(MESH_BODY_UNIFORM_FLOATS);
-    expect(out.byteLength).toBe(288);
+    expect(out.byteLength).toBe(304);
 
     for (let i = 0; i < 16; i++) expect(out[i]).toBe(i + 1); // bytes 0..63
 
@@ -97,6 +104,10 @@ describe('MeshBodyUniforms byte offsets', () => {
     expect(new Int32Array(out.buffer)[54]).toBe(5); // byte 216 — shadowSlot, an i32
     expect(out[55]).toBe(0.4375); // byte 220 — shadowNormalOffsetM
     for (let i = 0; i < 16; i++) expect(out[56 + i]).toBe(201 + i); // bytes 224..287
+    expect(out[72]).toBe(0.71875); // byte 288 — shadowDepthBiasTexels
+    expect(out[73]).toBe(1.15625); // byte 292 — shadowFilterRadiusTexels
+    expect(new Int32Array(out.buffer)[74]).toBe(3); // byte 296 — shadowFilterSide, an i32
+    expect(out[75]).toBe(0); // padding to a 16-byte multiple
   });
 
   // Slot 0 is a real layer: a body without one must pack -1, or it reads layer 0's shadow.

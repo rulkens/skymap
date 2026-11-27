@@ -17,8 +17,7 @@ import { requestSelect } from '../../../../state/selection/requestSelect';
 import { requestFocus } from '../../../../state/selection/requestFocus';
 import { setVisibility } from '../../../../state/settings/setVisibilityAction';
 import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
-import DebugOverlayToggles from '../../../../components/DebugPanel/DebugOverlayToggles';
-import { setMeshNoShadows, setMeshSelfBounce } from '../../../../state/settings/core/debugSlice';
+import { setMeshSelfBounce } from '../../../../state/settings/core/debugSlice';
 
 function ProbeSpheresTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -31,7 +30,6 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
     [dispatch],
   );
   const selfBounce = useAppSelector((s) => s.settings.debug.meshSelfBounce);
-  const meshNoShadows = useAppSelector((s) => s.settings.debug.meshNoShadows);
 
   return (
     <DebugTuningSection
@@ -70,11 +68,6 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
         readout={selfBounce.toFixed(3)}
         title="Fill light a sunlit mesh bounces onto itself, as a fraction of sunlight"
         onChange={(value) => dispatch(setMeshSelfBounce(value))}
-      />
-      <DebugOverlayToggles
-        rows={[{ key: 'meshNoShadows', label: 'No mesh shadows (all meshes)' }] as const}
-        overlays={{ meshNoShadows }}
-        onToggle={(_key, enabled) => dispatch(setMeshNoShadows(enabled))}
       />
       <DebugColorRow
         label="Colour"

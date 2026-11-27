@@ -44,10 +44,12 @@ export type MeshBodyRenderer = Renderer & {
     depthView: GPUTextureView,
   ): void;
   /** Hands the nearest resident `casters` a layer each and redraws only the layers whose mesh
-   *  or mesh-frame sun moved; encodes nothing when none did. */
+   *  or mesh-frame sun moved; encodes nothing when none did. A `mapPx` other than the array's
+   *  re-makes it at that size and redraws every layer. */
   renderShadows(
     encoder: GPUCommandEncoder,
     casters: readonly MeshShadowCaster[],
+    mapPx: number,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void;
   /** The body's layer as of the last `renderShadows`; null without one (it reads lit). */
@@ -55,6 +57,7 @@ export type MeshBodyRenderer = Renderer & {
   /** Up to `MESH_SHADOW_GROUND_CASTERS` site bodies on `hostId` holding a layer, nearest first,
    *  each with its matrix from a point relative to the eye at `eyeRelBodyM` (host axes, metres). */
   groundCasters(hostId: string, eyeRelBodyM: Readonly<Vec3>): readonly MeshGroundCaster[];
-  /** The whole shadow array, `texture_depth_2d_array`, for a pipeline that reads it. */
+  /** The whole shadow array, `texture_depth_2d_array`, for a pipeline that reads it. A new
+   *  view after a resize: a bind group holding it is cached on its identity. */
   readonly shadowMapView: GPUTextureView;
 };

@@ -48,6 +48,11 @@ export const meshShadowsCompute: ContentCompute = {
         groundHostId: driver?.kind === 'surfaceFixed' && driver.hostId === hostId ? hostId : null,
       });
     }
-    renderer.renderShadows(encoder, casters, claimTimestampWrites);
+    renderer.renderShadows(
+      encoder,
+      casters,
+      state.settings.debug.meshShadowTuning.mapPx,
+      claimTimestampWrites,
+    );
   },
 };

@@ -18,6 +18,7 @@ import package::lib::pbr::envSplitSum;
 import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 import package::lib::meshShadow::meshShadowVisibility;
+import package::lib::meshShadow::MeshShadowFilter;
 
 @group(0) @binding(0) var<uniform> uniforms: MeshBodyUniforms;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
@@ -80,6 +81,7 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
     let receiver = in.localPos + geometricNormal * uniforms.shadowNormalOffsetM;
     selfSun = meshShadowVisibility(
       shadowMap, shadowSampler, uniforms.shadowSlot, (uniforms.lightFromLocal * vec4<f32>(receiver, 1.0)).xyz,
+      MeshShadowFilter(uniforms.shadowDepthBiasTexels, uniforms.shadowFilterRadiusTexels, uniforms.shadowFilterSide),
     );
   }
   let direct =

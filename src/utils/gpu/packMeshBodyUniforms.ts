@@ -1,5 +1,5 @@
 /**
- * packMeshBodyUniforms — pure packer for the 288-byte `MeshBodyUniforms` struct.
+ * packMeshBodyUniforms — pure packer for the 304-byte `MeshBodyUniforms` struct.
  * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
  * header — read it there; the writes below are in that order. It MATCHES
  * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
@@ -34,6 +34,9 @@ export function packMeshBodyUniforms(args: {
     readonly slot: number;
     readonly normalOffsetM: number;
     readonly lightFromLocal: Float32Array;
+    readonly depthBiasTexels: number;
+    readonly filterRadiusTexels: number;
+    readonly filterSide: number;
   } | null;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
@@ -67,11 +70,15 @@ export function packMeshBodyUniforms(args: {
   out.set(args.horizon.rect, 44); // byte 176
   out.set(args.horizon.up, 48); // byte 192; 204..207 are padding
   out.set(args.horizon.uv, 52); // byte 208
-  // An i32 word in a float buffer: written through an integer view of the same bytes.
-  new Int32Array(out.buffer)[54] = args.shadow?.slot ?? -1; // byte 216
+  // The i32 words in a float buffer: written through an integer view of the same bytes.
+  const ints = new Int32Array(out.buffer);
+  ints[54] = args.shadow?.slot ?? -1; // byte 216
   if (args.shadow !== null) {
     out[55] = args.shadow.normalOffsetM; // byte 220
     out.set(args.shadow.lightFromLocal.subarray(0, 16), 56); // byte 224
+    out[72] = args.shadow.depthBiasTexels; // byte 288
+    out[73] = args.shadow.filterRadiusTexels;
+    ints[74] = args.shadow.filterSide; // byte 296; 300..303 are padding
   }
   return out;
 }

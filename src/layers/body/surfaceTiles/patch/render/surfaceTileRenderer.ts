@@ -122,7 +122,9 @@ export function createSurfaceTileRenderer(
     usage: GPUTextureUsage.TEXTURE_BINDING,
   });
   const meshShadowStandInView = meshShadowStandIn.createView({ dimension: '2d-array' });
-  // Cached on the array view's identity: the core's view lives as long as the engine.
+  // Count 0: what the casters buffer holds while there is no shadow array to read.
+  const noMeshCasters = new ArrayBuffer(MESH_SHADOW_CASTERS_BYTES);
+  // Cached on the array view's identity, so a resized shadow array rebinds here by itself.
   let meshShadowBinding: { view: GPUTextureView; bindGroup: GPUBindGroup } | null = null;
   function meshShadowBindGroup(view: GPUTextureView): GPUBindGroup {
     if (meshShadowBinding?.view !== view) {
@@ -402,7 +404,9 @@ export function createSurfaceTileRenderer(
     device.queue.writeBuffer(
       meshShadowBuffer,
       0,
-      packMeshShadowCasters(meshShadows?.casters ?? []),
+      meshShadows === null
+        ? noMeshCasters
+        : packMeshShadowCasters(meshShadows.casters, meshShadows.tuning),
     );
 
     // Rebuilt every draw: the storage buffer may have grown and views arrive per call.

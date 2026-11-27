@@ -5,6 +5,7 @@ import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileShading } from '../../format/@types/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 import type { MeshGroundCaster } from '../../../../../@types/rendering/MeshGroundCaster';
+import type { MeshShadowTuning } from '../../../../../@types/settings/MeshShadowTuning';
 
 /**
  * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is the already-culled,
@@ -49,6 +50,7 @@ export type SurfaceTileDrawArgs = {
   readonly meshShadows: {
     readonly view: GPUTextureView;
     readonly casters: readonly MeshGroundCaster[];
+    readonly tuning: MeshShadowTuning;
   } | null;
   /** Each product's atlas view, bound at its lane row's `binding`: albedo's resident patches
    *  sampled at each tile's resolved rect, height's Terrain-RGB codes `textureLoad`ed at the

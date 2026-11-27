@@ -15,6 +15,7 @@ import package::lib::surfaceLight::composeSurfaceLight;
 import package::lib::horizonLookup::horizonVisibility;
 import package::lib::horizonLookup::localSunAngles;
 import package::lib::meshShadow::MeshShadowCasters;
+import package::lib::meshShadow::MeshShadowFilter;
 import package::lib::meshShadow::meshShadowVisibility;
 import package::lib::nightLights::nightLights;
 import package::lib::util::raySphere;
@@ -87,9 +88,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Eye-relative metres, precise at a rover's scale (never 'normalLocal': 0.25 m steps at Mars radius).
   let eyeRelPosM = -in.viewDirLocal * uniforms.radiusM;
   var meshSun = 1.0;
+  let meshFilter = MeshShadowFilter(meshCasters.depthBiasTexels, meshCasters.filterRadiusTexels, meshCasters.filterSide);
   for (var caster = 0; caster < meshCasters.count; caster++) {
     let lightClip = meshCasters.lightFromEye[caster] * vec4<f32>(eyeRelPosM, 1.0);
-    meshSun *= meshShadowVisibility(meshShadowMap, meshShadowSampler, meshCasters.slots[caster], lightClip.xyz);
+    meshSun *= meshShadowVisibility(meshShadowMap, meshShadowSampler, meshCasters.slots[caster], lightClip.xyz, meshFilter);
   }
   let colour = composeSurfaceLight(
     direct * uniforms.sunIrradiance, uniforms.ambientLight * baseAlbedo, horizon.x * meshSun, horizon.y,

@@ -19,6 +19,7 @@
  */
 
 import type { ReactNode } from 'react';
+import DebugInfoTip from './DebugInfoTip';
 import styles from './DebugSlider.module.css';
 
 export type DebugSliderProps = {
@@ -32,6 +33,8 @@ export type DebugSliderProps = {
   readonly onChange: (value: number) => void;
   /** Optional hover tooltip on the whole row. */
   readonly title?: string;
+  /** Adds the ⓘ help tip at the row's end, as `DebugOverlayToggles`' rows. */
+  readonly info?: string;
 };
 
 function DebugSlider({
@@ -43,6 +46,7 @@ function DebugSlider({
   readout,
   onChange,
   title,
+  info,
 }: DebugSliderProps): ReactNode {
   return (
     <div className={styles.root} title={title}>
@@ -58,6 +62,7 @@ function DebugSlider({
         onChange={(e) => onChange(Number(e.target.value))}
         className={styles.range}
       />
+      {info !== undefined && <DebugInfoTip label={label} info={info} />}
     </div>
   );
 }

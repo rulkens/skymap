@@ -129,6 +129,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
             : {
                 view: meshBodies.shadowMapView,
                 casters: meshBodies.groundCasters(hostId, pose.eyeRelBodyM),
+                tuning: state.settings.debug.meshShadowTuning,
               },
         atlasViews,
       });

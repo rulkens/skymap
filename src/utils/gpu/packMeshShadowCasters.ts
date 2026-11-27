@@ -5,10 +5,14 @@
  */
 
 import type { MeshGroundCaster } from '../../@types/rendering/MeshGroundCaster';
+import type { MeshShadowTuning } from '../../@types/settings/MeshShadowTuning';
 import { MESH_SHADOW_CASTERS_BYTES } from '../../data/mesh/meshShadowCastersLayout';
 import { MESH_SHADOW_GROUND_CASTERS } from '../../data/mesh/meshShadowMap';
 
-export function packMeshShadowCasters(casters: readonly MeshGroundCaster[]): ArrayBuffer {
+export function packMeshShadowCasters(
+  casters: readonly MeshGroundCaster[],
+  tuning: MeshShadowTuning,
+): ArrayBuffer {
   const bytes = new ArrayBuffer(MESH_SHADOW_CASTERS_BYTES);
   const floats = new Float32Array(bytes);
   const ints = new Int32Array(bytes);
@@ -18,5 +22,8 @@ export function packMeshShadowCasters(casters: readonly MeshGroundCaster[]): Arr
     ints[64 + i] = caster.slot; // byte 256 + 4i
   });
   ints[68] = used.length; // byte 272
+  floats[69] = tuning.depthBiasTexels; // byte 276
+  floats[70] = tuning.filterRadiusTexels;
+  ints[71] = tuning.filterSide; // byte 284
   return bytes;
 }

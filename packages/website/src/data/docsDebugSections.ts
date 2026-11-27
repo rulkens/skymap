@@ -147,6 +147,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: `${PANEL}/FilmTuningSection/FilmTuningSection.tsx`,
   },
   {
+    heading: 'Shadows',
+    shows:
+      'The sun shadows of rovers, craft and moons, on themselves and on the ground: a switch to turn them off, the size of each shadow map (512, 1024 or 2048 pixels a side), and how each pixel reads it: a depth bias, a step off the surface, the number of samples (1, 4, 9 or 16) and how far apart they lie.',
+    file: `${PANEL}/MeshShadowsSection/MeshShadowsSection.tsx`,
+  },
+  {
     heading: 'Galaxy Provenance',
     shows:
       'How many loaded galaxies have no measured orientation and no measured size, with switches to colour them or to draw only the measured or only the unmeasured ones.',

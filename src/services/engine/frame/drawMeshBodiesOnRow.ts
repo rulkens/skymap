@@ -59,6 +59,7 @@ export function drawMeshBodiesOnRow(
   if (hostPose === null) return;
   const sunRadiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
   const noMeshShadows = state.settings.debug.meshNoShadows;
+  const tuning = state.settings.debug.meshShadowTuning;
 
   for (const body of bodies) {
     const bodyState = bodyStates.get(body.id)!;
@@ -113,8 +114,11 @@ export function drawMeshBodiesOnRow(
         },
         shadow: shadow && {
           slot: shadow.slot,
-          normalOffsetM: shadow.normalOffsetM,
+          normalOffsetM: tuning.normalOffsetTexels * shadow.texelM,
           lightFromLocal: narrowMat4(meshShadowLightFromLocal(shadow.lightFromMesh, rotM)),
+          depthBiasTexels: tuning.depthBiasTexels,
+          filterRadiusTexels: tuning.filterRadiusTexels,
+          filterSide: tuning.filterSide,
         },
       }),
       horizon?.atlas ?? null,

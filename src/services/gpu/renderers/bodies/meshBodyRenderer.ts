@@ -26,9 +26,9 @@ import {
   MESH_SHADOW_DEPTH_BIAS_SLOPE,
   MESH_SHADOW_GROUND_CASTERS,
   MESH_SHADOW_MAP_PX,
-  MESH_SHADOW_NORMAL_OFFSET_TEXELS,
   MESH_SHADOW_SAMPLER,
   MESH_SHADOW_SLOTS,
+  MESH_SHADOW_SPHERE_PAD,
 } from '../../../../data/mesh/meshShadowMap';
 import { assignMeshShadowSlots } from '../../../../utils/meshBodies/assignMeshShadowSlots';
 import { meshShadowLightFromMesh } from '../../../../utils/meshBodies/meshShadowLightFromMesh';
@@ -143,25 +143,27 @@ export function createMeshBodyRenderer(init: {
     ],
   });
 
-  // The sun shadow array: a 2D view per layer to render into, one array view to read.
-  const shadowMap = device.createTexture({
-    label: 'meshBody-shadow-map',
-    size: [MESH_SHADOW_MAP_PX, MESH_SHADOW_MAP_PX, MESH_SHADOW_SLOTS],
-    format: 'depth16unorm',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-  });
-  const shadowMapView = shadowMap.createView({
-    label: 'meshBody-shadow-map-view',
-    dimension: '2d-array',
-  });
-  const shadowLayerViews = Array.from({ length: MESH_SHADOW_SLOTS }, (_, layer) =>
-    shadowMap.createView({
-      label: `meshBody-shadow-layer-${layer}`,
-      dimension: '2d',
-      baseArrayLayer: layer,
-      arrayLayerCount: 1,
-    }),
-  );
+  // The sun shadow array: a 2D view per layer to render into, one array view to read. Sized by
+  // `renderShadows`' `mapPx`, so every view and bind group holding it is re-made with it.
+  function createShadowMap(mapPx: number) {
+    const texture = device.createTexture({
+      label: 'meshBody-shadow-map',
+      size: [mapPx, mapPx, MESH_SHADOW_SLOTS],
+      format: 'depth16unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const view = texture.createView({ label: 'meshBody-shadow-map-view', dimension: '2d-array' });
+    const layerViews = Array.from({ length: MESH_SHADOW_SLOTS }, (_, layer) =>
+      texture.createView({
+        label: `meshBody-shadow-layer-${layer}`,
+        dimension: '2d',
+        baseArrayLayer: layer,
+        arrayLayerCount: 1,
+      }),
+    );
+    return { mapPx, texture, view, layerViews };
+  }
+  let shadowMap = createShadowMap(MESH_SHADOW_MAP_PX);
   const shadowSampler = device.createSampler(MESH_SHADOW_SAMPLER);
 
   // Group 2: the host's horizon atlas, read with `textureLoad` (`lib/horizonLookup.wesl`),
@@ -184,7 +186,7 @@ export function createMeshBodyRenderer(init: {
       layout: horizonBindGroupLayout,
       entries: [
         { binding: 0, resource: view },
-        { binding: 1, resource: shadowMapView },
+        { binding: 1, resource: shadowMap.view },
         { binding: 2, resource: shadowSampler },
       ],
     });
@@ -195,11 +197,13 @@ export function createMeshBodyRenderer(init: {
     format: 'rgba8unorm',
     usage: GPUTextureUsage.TEXTURE_BINDING,
   });
-  const horizonStandInBindGroup = horizonBindGroupOf(
-    horizonStandIn.createView(),
+  const horizonStandInView = horizonStandIn.createView();
+  let horizonStandInBindGroup = horizonBindGroupOf(
+    horizonStandInView,
     'meshBody-horizon-stand-in-bg',
   );
-  // Cached on the atlas view's identity, as `drawContactShadow` caches its own.
+  // Cached on the atlas view's identity, as `drawContactShadow` caches its own; dropped with
+  // the shadow array it also binds.
   let horizonAtlasBinding: { view: GPUTextureView; bindGroup: GPUBindGroup } | null = null;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'meshBody.vertex');
@@ -590,11 +594,25 @@ export function createMeshBodyRenderer(init: {
     pass.draw(CUBE_VERTEX_COUNT);
   }
 
+  function resizeShadowMap(mapPx: number): void {
+    shadowMap.texture.destroy();
+    shadowMap = createShadowMap(mapPx);
+    horizonStandInBindGroup = horizonBindGroupOf(
+      horizonStandInView,
+      'meshBody-horizon-stand-in-bg',
+    );
+    horizonAtlasBinding = null;
+  }
+
   function renderShadows(
     encoder: GPUCommandEncoder,
     casters: readonly MeshShadowCaster[],
+    mapPx: number,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void {
+    // A new size starts from an empty array: every held layer redraws below.
+    const resized = mapPx !== shadowMap.mapPx;
+    if (resized) resizeShadowMap(mapPx);
     const ranked = casters
       .filter((caster) => meshes.has(caster.id))
       .sort((a, b) => a.cameraDistanceSq - b.cameraDistanceSq)
@@ -609,7 +627,11 @@ export function createMeshBodyRenderer(init: {
       if (id === null) return null;
       const caster = casterOf.get(id)!;
       const held = shadowLayers[slot];
-      if (held?.caster.id === id && !meshShadowNeedsRender(held.rendered, caster.sunDirMesh)) {
+      if (
+        !resized &&
+        held?.caster.id === id &&
+        !meshShadowNeedsRender(held.rendered, caster.sunDirMesh)
+      ) {
         return { ...held, caster };
       }
       dirty.push(slot);
@@ -619,7 +641,7 @@ export function createMeshBodyRenderer(init: {
         shadow: {
           slot,
           lightFromMesh: meshShadowLightFromMesh(caster.sunDirMesh, radiusM),
-          normalOffsetM: (MESH_SHADOW_NORMAL_OFFSET_TEXELS * 2 * radiusM) / MESH_SHADOW_MAP_PX,
+          texelM: (2 * radiusM * MESH_SHADOW_SPHERE_PAD) / mapPx,
         },
         caster,
       };
@@ -640,7 +662,7 @@ export function createMeshBodyRenderer(init: {
         label: `meshBody-shadow-pass-${slot}`,
         colorAttachments: [],
         depthStencilAttachment: {
-          view: shadowLayerViews[slot]!,
+          view: shadowMap.layerViews[slot]!,
           depthClearValue: 1,
           depthLoadOp: 'clear',
           depthStoreOp: 'store',
@@ -693,7 +715,7 @@ export function createMeshBodyRenderer(init: {
     meshes.clear();
     horizonStandIn.destroy();
     horizonAtlasBinding = null;
-    shadowMap.destroy();
+    shadowMap.texture.destroy();
     for (const uniform of shadowUniforms) uniform.buffer.destroy();
     shadowLayers = shadowLayers.map(() => null);
     rankedLayers = [];
@@ -710,7 +732,9 @@ export function createMeshBodyRenderer(init: {
     renderShadows,
     shadowOf,
     groundCasters,
-    shadowMapView,
+    get shadowMapView() {
+      return shadowMap.view;
+    },
     destroy,
   };
   renderer satisfies Renderer;

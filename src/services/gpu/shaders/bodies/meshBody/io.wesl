@@ -16,7 +16,7 @@
 // '@builtin(position)'-bearing struct -- a second one links fine and is rejected
 // at 'createShaderModule' (the runtime-only landmine).
 //
-// ## Byte layout (uniform address space) -- 288 bytes, 72 words
+// ## Byte layout (uniform address space) -- 304 bytes, 76 words
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major)
 //   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned)
@@ -41,6 +41,10 @@
 //   offset 216..219: shadowSlot          (i32 -- the body's sun shadow layer; -1 reads lit)
 //   offset 220..223: shadowNormalOffsetM (f32 -- the receiver's step off its surface, metres)
 //   offset 224..287: lightFromLocal      (mat4x4<f32> -- 'localPos' to that layer's clip)
+//   offset 288..291: shadowDepthBiasTexels     (f32 -- the fields of 'MeshShadowFilter'
+//   offset 292..295: shadowFilterRadiusTexels  (f32    (lib/meshShadow.wesl), unpacked)
+//   offset 296..299: shadowFilterSide          (i32)
+//   offset 300..303: struct padding to a 16-byte multiple
 //
 // The first 80 bytes match 'LitBodyUniforms' byte-for-byte, but
 // 'packLitBodyUniforms' can NOT be reused: it zeroes byte 76 that
@@ -63,6 +67,9 @@ struct MeshBodyUniforms {
   shadowSlot: i32,
   shadowNormalOffsetM: f32,
   lightFromLocal: mat4x4<f32>,
+  shadowDepthBiasTexels: f32,
+  shadowFilterRadiusTexels: f32,
+  shadowFilterSide: i32,
 };
 
 struct MeshBodyVSOut {

@@ -7,6 +7,6 @@
 export type MeshShadowSlot = {
   readonly slot: number;
   readonly lightFromMesh: Float64Array;
-  /** `MESH_SHADOW_NORMAL_OFFSET_TEXELS` of this layer's texels, in metres. */
-  readonly normalOffsetM: number;
+  /** One texel of this layer, in metres: the unit of the receiver's normal offset. */
+  readonly texelM: number;
 };
