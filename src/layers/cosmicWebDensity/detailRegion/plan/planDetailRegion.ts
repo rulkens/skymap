@@ -68,7 +68,7 @@ export function planDetailRegion(
   ranked.sort((p, q) => p.shell - q.shell || p.d2 - q.d2);
   const shown = [settled, fade?.into, fade?.out].filter((box): box is BrickBox => !!box);
   return {
-    state: { target, settled, fade, inReach: true },
+    state: { settled, fade, inReach: true },
     wanted: ranked.map((r) => r.b),
     shown,
     busy: ranked.length > 0 || fade !== null,

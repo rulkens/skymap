@@ -46,8 +46,7 @@ export const cosmicWebDensityLayer = defineLayer({
     cosmicWebDensityAccumulationPlanner(runtime),
     detailRegionPlanner(runtime),
   ],
-  // The second planner instance is only a typed handle: the result store keys by
-  // planner name, so it reads the one above's value.
+  // A typed handle onto the accumulation planner's result above (the store keys by planner name).
   passes: (runtime) => [
     cosmicWebDensityPass(runtime, cosmicWebDensityAccumulationPlanner(runtime)),
     cosmicWebDensityUpsamplePass(runtime),

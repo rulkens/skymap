@@ -10,7 +10,7 @@ import { brickCoordsOf } from '../../../../../src/utils/volume/brickCoordsOf';
 // MCPM: dataBox 672 × 1152 × 648 voxels, 14 × 24 × 14 bricks of 48.
 const GRID: Vec3 = [14, 24, 14];
 const DIMS: Vec3 = [672, 1152, 648];
-const START: DetailRegionState = { target: null, settled: null, fade: null, inReach: false };
+const START: DetailRegionState = { settled: null, fade: null, inReach: false };
 // The middle of brick (7, 12, 7): target (5, 10, 5)–(10, 15, 10).
 const MID: Vec3 = [360, 600, 360];
 const TARGET: BrickBox = { lo: [5, 10, 5], hi: [10, 15, 10] };
@@ -30,6 +30,13 @@ const input = (over: Partial<DetailRegionPlanInput> = {}): DetailRegionPlanInput
 const id = (x: number, y: number, z: number) => brickId([x, y, z], GRID);
 const inBox = (box: BrickBox) => (b: number) =>
   brickCoordsOf(b, GRID).every((c, a) => c >= box.lo[a]! && c < box.hi[a]!);
+/** The box the wanted bricks span: the target, while nothing is held. */
+const targetOf = (over: Partial<DetailRegionPlanInput>): BrickBox => {
+  const coords = planDetailRegion(START, input(over)).wanted.map((b) => brickCoordsOf(b, GRID));
+  const edge = (pick: (...v: number[]) => number, add: number) =>
+    [0, 1, 2].map((a) => pick(...coords.map((c) => c[a]!)) + add) as Vec3;
+  return { lo: edge(Math.min, 0), hi: edge(Math.max, 1) };
+};
 
 /** Runs frames until no fade is left. */
 const settle = (
@@ -44,11 +51,11 @@ const settle = (
 
 describe('planDetailRegion', () => {
   it('the target is K bricks around the centre brick, shifted inside the grid at both corners', () => {
-    expect(planDetailRegion(START, input({ eyeVox: [10, 10, 10] })).state.target).toEqual({
+    expect(targetOf({ eyeVox: [10, 10, 10] })).toEqual({
       lo: [0, 0, 0],
       hi: [5, 5, 5],
     });
-    expect(planDetailRegion(START, input({ eyeVox: [670, 1150, 640] })).state.target).toEqual({
+    expect(targetOf({ eyeVox: [670, 1150, 640] })).toEqual({
       lo: [9, 19, 9],
       hi: [14, 24, 14],
     });
@@ -56,8 +63,7 @@ describe('planDetailRegion', () => {
 
   it('an even K keeps the eye within half a brick of the target centre, either half of its brick', () => {
     // Brick 7 along x: 346 voxels sits in its lower half, 374 in its upper half.
-    const target = (eyeVox: Vec3) =>
-      planDetailRegion(START, input({ bricksPerAxis: 8, eyeVox })).state.target!;
+    const target = (eyeVox: Vec3) => targetOf({ bricksPerAxis: 8, eyeVox });
     const lower = target([346, 590, 346]);
     const upper = target([374, 590, 346]);
     expect(upper.lo).toEqual([lower.lo[0] + 1, lower.lo[1], lower.lo[2]]);
@@ -73,17 +79,17 @@ describe('planDetailRegion', () => {
 
   it('an eye outside the box but in reach gets a target against the nearest face', () => {
     const { state } = planDetailRegion(START, input({ eyeVox: [-100, 600, 300] }));
-    expect(state.target).toEqual({ lo: [0, 10, 4], hi: [5, 15, 9] });
+    expect(targetOf({ eyeVox: [-100, 600, 300] })).toEqual({ lo: [0, 10, 4], hi: [5, 15, 9] });
     expect(state.inReach).toBe(true);
   });
 
   it('moving parallel to the face slides the target; moving straight away does not', () => {
-    const target = (eyeVox: Vec3) => planDetailRegion(START, input({ eyeVox })).state.target;
-    expect(target([-100, 696, 300])!.lo[1]).toBe(target([-100, 600, 300])!.lo[1] + 2);
+    const target = (eyeVox: Vec3) => targetOf({ eyeVox });
+    expect(target([-100, 696, 300]).lo[1]).toBe(target([-100, 600, 300]).lo[1] + 2);
     expect(target([-200, 600, 300])).toEqual(target([-100, 600, 300]));
   });
 
-  it('an eye out of reach wants nothing, keeps its target and settled box, and is not in reach', () => {
+  it('an eye out of reach wants nothing, keeps its settled box, and is not in reach', () => {
     const near = settle(START, { eyeVox: [-100, 600, 300], held: () => true });
     const plan = planDetailRegion(near, input({ eyeVox: [-400, 600, 300] }));
     expect(plan.state).toEqual({ ...near, inReach: false });

@@ -52,6 +52,5 @@ struct RegionUniforms {
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
-  @location(0) localPos: vec3<f32>,
-  @location(1) worldPos: vec3<f32>,
+  @location(0) worldPos: vec3<f32>,
 };

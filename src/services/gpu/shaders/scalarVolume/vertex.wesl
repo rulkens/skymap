@@ -11,7 +11,6 @@ fn vs_main(@location(0) cornerLocal: vec3<f32>) -> VsOut {
   let worldPos4 = uniforms.modelMatrix * vec4<f32>(cornerLocal, 1.0);
   var out: VsOut;
   out.clip = uniforms.cam.viewProj * worldPos4;
-  out.localPos = cornerLocal;
   out.worldPos = worldPos4.xyz;
   return out;
 }

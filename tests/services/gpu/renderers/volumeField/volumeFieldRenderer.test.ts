@@ -41,7 +41,7 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
     createPipelineLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       renderPipelines?.push(desc);
-      return { getBindGroupLayout: vi.fn(() => ({})) };
+      return {};
     }),
     createBindGroup: vi.fn(() => ({})),
     queue: { writeBuffer: vi.fn(), writeTexture: vi.fn() },
@@ -459,17 +459,11 @@ function drawWith(
 }
 
 describe('createVolumeFieldRenderer detail regions', () => {
-  // createBindGroup returns a fresh object per call, so a group is told apart by identity.
-  function regionDevice(): GPUDevice {
-    const device = mockDevice();
-    vi.mocked(device.createBindGroup).mockImplementation(() => ({}) as GPUBindGroup);
-    return device;
-  }
   const regionTexture = () =>
     ({ createView: vi.fn(() => ({})), destroy: vi.fn() }) as unknown as GPUTexture;
 
   it('a field with no region draws the base pipeline with the placeholder group 2', () => {
-    const device = regionDevice();
+    const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     r.attachRegion('mcpm', regionTexture());
@@ -479,7 +473,7 @@ describe('createVolumeFieldRenderer detail regions', () => {
   });
 
   it('a region without a fade picks the steady pipeline; with a fade, the fading one', () => {
-    const device = regionDevice();
+    const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     r.attachRegion('mcpm', regionTexture());
@@ -497,7 +491,7 @@ describe('createVolumeFieldRenderer detail regions', () => {
 
   // The debug view must cost nothing until it is turned on, and then pick the same REGION variant.
   it('showLevels draws the LEVELS twin of the chosen variant, built on first use only', () => {
-    const device = regionDevice();
+    const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const levelsBuilt = () =>
       vi
@@ -515,7 +509,7 @@ describe('createVolumeFieldRenderer detail regions', () => {
   });
 
   it('a region value with no attached texture draws the base pipeline', () => {
-    const device = regionDevice();
+    const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     r.upload('mcpm', fixture(), MCPM_ENTRY);
     expect(drawWith(r, FADING)).toEqual({
@@ -525,7 +519,7 @@ describe('createVolumeFieldRenderer detail regions', () => {
   });
 
   it('attachRegion(id, null) drops the binding; a base re-upload keeps it; destroy never destroys a region texture', () => {
-    const device = regionDevice();
+    const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const texture = regionTexture();
     r.upload('mcpm', fixture(), MCPM_ENTRY);

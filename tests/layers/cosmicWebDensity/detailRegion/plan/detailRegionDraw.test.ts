@@ -8,7 +8,6 @@ import { detailRegionDraw } from '../../../../../src/layers/cosmicWebDensity/det
 const MCPM: DetailRegionGeometry = { dims: [672, 1152, 648], bricksPerAxis: 5, voxelMpc: 0.78 };
 const box = (lo: Vec3, hi: Vec3) => ({ lo, hi });
 const STATE: DetailRegionState = {
-  target: box([0, 0, 0], [5, 5, 5]),
   settled: box([1, 1, 1], [3, 3, 3]),
   fade: null,
   inReach: true,

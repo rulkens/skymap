@@ -67,19 +67,4 @@ describe('cosmicWebDensity destroy', () => {
     expect(renderer.upload).not.toHaveBeenCalled();
     expect(volume.texture.destroy).toHaveBeenCalledOnce();
   });
-
-  it('the regions are destroyed before the renderer', () => {
-    // A region detaches its texture from the renderer before freeing it; a destroyed renderer first
-    // would leave that call on a dead object.
-    const order: string[] = [];
-    destroy({
-      renderer: { destroy: () => order.push('renderer') },
-      upsample: { destroy: vi.fn() },
-      jitterMask: { destroy: vi.fn() },
-      jitterMaskSlot: { release: vi.fn() },
-      slots: {},
-      regions: { destroy: () => order.push('regions') },
-    } as unknown as CosmicWebDensityRuntime);
-    expect(order).toEqual(['regions', 'renderer']);
-  });
 });

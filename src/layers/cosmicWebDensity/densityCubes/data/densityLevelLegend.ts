@@ -1,5 +1,6 @@
-// The "Colour by level" legend (Okabe-Ito, so no pair leans on red against green). fragment.wesl's
-// LEVEL_TINTS holds the same colours in linear light, in this order: the shader indexes by it.
+// The "Colour by level" legend (Okabe-Ito, so no pair leans on red against green).
+// scalarVolume/constants.wesl's LEVEL_TINTS holds the same colours in linear light, in this order:
+// the shader indexes by it.
 export const DENSITY_LEVEL_LEGEND = [
   { label: 'Detail region', color: '#F0E442' },
   { label: 'Region fading in', color: '#E69F00' },

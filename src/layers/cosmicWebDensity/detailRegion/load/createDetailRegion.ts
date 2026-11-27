@@ -133,7 +133,7 @@ function runDetailRegion(
     return bytes;
   };
 
-  let state: DetailRegionState = { target: null, settled: null, fade: null, inReach: false };
+  let state: DetailRegionState = { settled: null, fade: null, inReach: false };
   let lastEyeVox: Vec3 | null = null;
   let lastMs: number | null = null;
 
@@ -185,7 +185,7 @@ function runDetailRegion(
       return { draw: detailRegionDraw(state, geometry), busy: plan.busy };
     },
     destroy() {
-      // Detach first: the renderer borrows the texture the stream's destroy frees.
+      // Left attached, the next frame would bind the texture the stream's destroy frees.
       renderer.attachRegion(id, null);
       stream.destroy();
     },
