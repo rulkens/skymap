@@ -6,7 +6,7 @@
  */
 
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../data/camera/bodyLocalFrame';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { frameUp } from './frameUp';

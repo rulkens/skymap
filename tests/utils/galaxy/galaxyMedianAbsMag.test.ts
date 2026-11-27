@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { galaxyMedianAbsMag } from '../../../src/utils/galaxy/galaxyMedianAbsMag';
 import { absoluteFromApparent } from '../../../src/utils/math/absoluteFromApparent';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 describe('galaxyMedianAbsMag', () => {
   it('returns the median of absoluteFromApparent over every row', () => {

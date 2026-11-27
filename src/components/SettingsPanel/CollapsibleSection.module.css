@@ -42,7 +42,7 @@ button.header {
 
 /* Optional master toggle between chevron and title; `composes` keeps the pill look shared. */
 .headerToggle {
-  composes: pillToggle from './pillToggle.module.css';
+  composes: pillToggle from '../../../packages/shared/src/components/SettingsPanel/pillToggle.module.css';
   margin: 0 var(--space-4) 0 0;
   align-self: center;
 }

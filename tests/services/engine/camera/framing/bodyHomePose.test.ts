@@ -19,7 +19,7 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { updatePosition } from '../../../../../src/utils/camera/orbitCamera/updatePosition';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';

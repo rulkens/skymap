@@ -32,7 +32,7 @@ import {
   GALAXY_CATALOG_DATA_PREFIX,
 } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
-import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe';

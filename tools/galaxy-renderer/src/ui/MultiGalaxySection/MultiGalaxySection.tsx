@@ -10,10 +10,10 @@
  * `setExtras` call is `engineBridge`'s job, not this component's.
  */
 import type { ReactNode } from 'react';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { extrasToggled, extrasCountSet, extrasRegenerated } from '../../state/slices/extrasSlice';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider';
 import styles from './MultiGalaxySection.module.css';
 
 function MultiGalaxySection(): ReactNode {

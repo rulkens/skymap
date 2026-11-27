@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import type { GridBox } from './GridBox';
 import type { GridElement } from './GridElement';
 

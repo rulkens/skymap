@@ -45,7 +45,7 @@
 
 /* At the text's size, not the rows' larger ⓘ, so the row keeps its line height. */
 .tipIcon {
-  composes: infoIcon from '../../../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  composes: infoIcon from '../../../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider.module.css';
   font-size: inherit;
 }
 

@@ -9,7 +9,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 export function seatSurfaceSites(
   base: ReadonlyMap<PositionedId, BodyState>,

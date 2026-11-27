@@ -1,7 +1,7 @@
 /** ReverseIcon: two arrows pointing opposite ways. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function ReverseIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

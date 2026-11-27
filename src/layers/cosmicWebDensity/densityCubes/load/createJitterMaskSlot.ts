@@ -6,7 +6,7 @@
 
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
-import { fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import { fetchWithProgress } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const MASK_URL = '/lut/blueNoise.bin';
 

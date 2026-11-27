@@ -2,7 +2,7 @@
  * STAR_CATALOG_TUNING_FIELDS — one row per engine-tuning knob of the octree-cut
  * star renderer, iterated by the Debug panel's tuning board.
  */
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
 const x1 = (v: number) => `${v.toFixed(1)}×`;

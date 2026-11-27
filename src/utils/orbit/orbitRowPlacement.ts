@@ -7,7 +7,7 @@
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { addVec3 } from '../math/addVec3';
 import { correctionSeriesAt } from './correctionSeriesAt';

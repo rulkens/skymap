@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { OrbitCameraInit } from '../../../../src/@types/camera/orbitCamera/OrbitCameraInit';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';

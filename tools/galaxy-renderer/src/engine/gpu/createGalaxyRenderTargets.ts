@@ -12,7 +12,7 @@ import type { FieldRowKey } from '../../../@types/engine/FieldRowKey';
 import type { FieldTargetId } from '../../../../../src/layers/milkyWay/field/@types/FieldTargetId';
 import type { GalaxyFieldRenderTargets } from '../../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
 import type { HiiTier } from '../../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
 import { mapHiiTiers } from '../../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';

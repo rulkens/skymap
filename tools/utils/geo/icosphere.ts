@@ -3,8 +3,8 @@
  * refines further (e.g. `refineMeshByEdgeLength`) once a displacement field
  * is known.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { normalize3 } from '../../../src/utils/math/normalize3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 
 export type Icosphere = {
   directions: Vec3[];

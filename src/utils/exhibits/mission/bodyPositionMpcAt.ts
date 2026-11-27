@@ -5,7 +5,7 @@
  * A craft with no track loaded sits at Earth's centre, absent.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { positionDriverById } from '../../../data/bodies/positionDrivers';
 import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';

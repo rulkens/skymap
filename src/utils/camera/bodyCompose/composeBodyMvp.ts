@@ -66,7 +66,7 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { mat4dFromMat3 } from '../../math/mat4dFromMat3';
 
 /**

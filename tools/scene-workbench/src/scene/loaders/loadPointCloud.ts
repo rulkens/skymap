@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { GpuAsset } from '../../render/renderResources';
 import { uploadPointCloud } from '../../render/uploadPointCloud';
 import { parsePoints } from '../parsePoints';

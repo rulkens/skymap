@@ -8,11 +8,11 @@
  */
 
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
-import type { InputStep } from '../../../../../../@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { SurfaceStepCtx } from '../@types/SurfaceStepCtx';
 import type { SurfaceGestureMemory } from '../../../../../../@types/camera/arms/SurfaceGestureMemory';
 import type { TiltMemory } from '../../../../../../@types/camera/orientation/TiltMemory';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { draggedSurfacePose } from './utils/draggedSurfacePose';
 import { latchSurfaceGesture } from './utils/latchSurfaceGesture';
 import { settledDragPose } from './utils/settledDragPose';

@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { AsteroidClassSliderKey } from '../../@types/AsteroidClassSliderKey';
 
 /** The asteroid tuning section's per-class slider rows; the tint is a picker row, not a slider. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { CameraBasis } from '../../../../../tools/mcpm-workbench/@types/render/camera/CameraBasis';
 import { screenToRay } from '../../../../../tools/mcpm-workbench/src/gizmo/screenToRay';
 

@@ -1,5 +1,5 @@
 import type { SkySpot } from '../camera/pose/SkySpot';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * SkyEntryFacts — where "Look up from here" would stand: the view-centre ground hit on the

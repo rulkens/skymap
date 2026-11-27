@@ -5,8 +5,8 @@
 import { useState, type ReactNode } from 'react';
 
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import Slider from '../../../../../src/components/common/Slider/Slider';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import Slider from '../../../../../packages/shared/src/components/common/Slider/Slider';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BoundsM } from '../../../@types/BoundsM';
 import type { SplatMetrics } from '../../state/group/groupSlice';
 import {

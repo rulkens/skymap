@@ -24,7 +24,7 @@
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipId } from '../../../@types/animation/ClipId';
 import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { evaluateClip } from '../camera/clips/evaluateClip';
 import { yawPitchToDir } from '../../../utils/camera/orbitPose/yawPitchToDir';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { selectKth } from '../../../../../../tools/mcpm-workbench/src/utils/math/selectKth';
 
 describe('selectKth', () => {

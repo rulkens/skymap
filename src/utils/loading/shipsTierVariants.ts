@@ -1,4 +1,4 @@
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 /**
  * A galaxy catalog ships per-tier `.bin` variants iff it carries any per-tier cap.

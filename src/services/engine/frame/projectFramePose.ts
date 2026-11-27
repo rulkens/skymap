@@ -18,7 +18,7 @@ import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraP
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
 import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
 import type { TiltMemory } from '../../../@types/camera/orientation/TiltMemory';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/bodyFrame/applyFocusedBodyPivot';
 import { hOverR } from '../camera/bodyFrame/hOverR';

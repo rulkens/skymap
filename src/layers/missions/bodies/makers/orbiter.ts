@@ -11,7 +11,7 @@ import { degToRad } from '../../../../utils/math/degToRad';
 import { CONST_J2000 } from '../../../../data/time/constJ2000';
 import { planeFrameFromPole } from '../../../../data/bodies/orbitPlaneFrames';
 import type { OrbitalElements } from '../../../../@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import { DAYS_PER_JULIAN_CENTURY } from '../../../../data/time/daysPerJulianCentury';
 

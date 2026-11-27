@@ -16,7 +16,7 @@ import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
 import vsCode from '../../../../services/gpu/shaders/satellites/points/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/satellites/points/fragment.wesl?static';
 import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SATELLITE_PICK_RADIUS_PX } from '../data/satellitePickRadiusPx';
 import { SATELLITE_PROFILE_BYTES } from './packSatelliteProfiles';

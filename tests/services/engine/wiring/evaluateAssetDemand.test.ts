@@ -23,7 +23,7 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { VisibilityAddress } from '../../../../src/@types/animation/VisibilityAddress';
 import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const at = (a: string) => a as VisibilityAddress;
 

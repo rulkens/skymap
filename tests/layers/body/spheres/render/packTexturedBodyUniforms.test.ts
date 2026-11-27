@@ -16,7 +16,7 @@ import {
   TEXTURED_BODY_UNIFORM_FLOATS,
 } from '../../../../../src/layers/body/spheres/render/packTexturedBodyUniforms';
 import { packLitBodyUniforms } from '../../../../../src/layers/body/spheres/render/packLitBodyUniforms';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const MVP = new Float32Array(16);
 for (let i = 0; i < 16; i++) MVP[i] = i + 1;

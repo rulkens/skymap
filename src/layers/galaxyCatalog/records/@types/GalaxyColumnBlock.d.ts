@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * The resident columns the disk walk, its visitors and structure membership

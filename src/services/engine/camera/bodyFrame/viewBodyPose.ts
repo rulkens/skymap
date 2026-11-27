@@ -5,7 +5,7 @@
  * (`oneMpcSeam.test.ts`).
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';

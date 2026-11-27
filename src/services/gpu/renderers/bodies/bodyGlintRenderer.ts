@@ -50,10 +50,10 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { BodyGlintRenderer } from '../../../../@types/rendering/BodyGlintRenderer';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import vsCode from '../../shaders/bodies/bodyGlint/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/bodyGlint/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';

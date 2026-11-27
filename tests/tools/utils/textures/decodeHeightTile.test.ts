@@ -15,7 +15,7 @@ import {
   HEIGHT_TILE_VERSION,
 } from '../../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../packages/shared/src/utils/random/mulberry32';
 import { codeHeightM } from '../../../../src/layers/body/surfaceTiles/format/utils/codeHeightM';
 import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
 import { decodeHeightTileHeader } from '../../../../src/layers/body/surfaceTiles/format/utils/decodeHeightTileHeader';

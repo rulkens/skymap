@@ -7,7 +7,7 @@
  * leave a dark fringe that no longer matches "exactly black".
  */
 
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function fillBlackWithMeanColour(rgb: Uint8Array): Vec3 {
   let r = 0;

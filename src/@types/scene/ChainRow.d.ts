@@ -4,7 +4,7 @@
  * `chainOverlapViolations`'s §7.2 painter-order check needs it.
  */
 
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export type ChainRow = {
   readonly index: number;

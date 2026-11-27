@@ -53,7 +53,7 @@
  */
 
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import { deriveBodyStates } from '../../frame/deriveBodyStates';
 import { bodyRowAt } from '../../../../utils/scene/bodyRowAt';

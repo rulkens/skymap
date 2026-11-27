@@ -15,7 +15,7 @@ import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
 import type { PhotoPose } from '../../scene-workbench/@types/PhotoPose';
 import type { SkraafotoStacItem } from '../@types/SkraafotoStacItem';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function photoPoseFromStacItem(
   item: SkraafotoStacItem,

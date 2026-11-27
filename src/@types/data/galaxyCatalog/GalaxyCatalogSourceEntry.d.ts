@@ -4,7 +4,7 @@ import type { GalaxyDurableIdClaim } from './GalaxyDurableIdClaim';
 import type { GalaxyTypeColour } from './GalaxyTypeColour';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
-import type { Tier } from '../Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 
 /**
  * Galaxy catalog-typed row of the APP_SOURCE_REGISTRY — all the per-galaxy-catalog metadata

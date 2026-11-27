@@ -20,7 +20,7 @@ import type { MeshShadowSlot } from '../../../../@types/rendering/MeshShadowSlot
 import type { MeshGroundCaster } from '../../../../@types/rendering/MeshGroundCaster';
 import type { MeshShadowLayer } from '../../../../@types/rendering/MeshShadowLayer';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import {
   MESH_SHADOW_DEPTH_BIAS,
   MESH_SHADOW_DEPTH_BIAS_SLOPE,
@@ -43,7 +43,7 @@ import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { horizonLookupConstants } from '../../../../utils/gpu/horizonLookupConstants';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { ContactShadowResources } from '../../../../@types/rendering/ContactShadowResources';
 import { CONTACT_SHADOW_UNIFORM_BYTES } from '../../../../data/mesh/contactShadowUniformLayout';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';

@@ -5,7 +5,7 @@
  * image on that slider at rest (its test moves each key of a settings literal TS forces complete).
  */
 
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import type { DetailRegionDraw } from '../../../../@types/rendering/DetailRegionDraw';
 

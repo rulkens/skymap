@@ -5,7 +5,7 @@
  * orthonormal frame, and its UN-normalized fade*clump*survival modulation.
  * Both `pushArmRidges` and the young-star chain producer consume it.
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export type GalaxyArmRidgeNode = {
   readonly logR: number;

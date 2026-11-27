@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildExtraSpecs } from '../../../../../tools/galaxy-renderer/src/data/buildExtraSpecs';
-import { mulberry32 } from '../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../packages/shared/src/utils/random/mulberry32';
 
 describe('buildExtraSpecs', () => {
   it('is deterministic under a seeded rng', () => {

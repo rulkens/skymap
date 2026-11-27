@@ -6,7 +6,7 @@
  * alone: scaling by a negative ratio would fold it into view.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** Where the pin lands, as a multiple of `nearClipW`: a hair inside the plane,
  *  so f32 rounding of the narrowed vp cannot tip the boundary case back out. */

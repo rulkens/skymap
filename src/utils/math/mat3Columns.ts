@@ -6,7 +6,7 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function mat3Columns(m: Readonly<Mat3>): {
   readonly right: Vec3;

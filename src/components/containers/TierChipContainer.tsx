@@ -23,7 +23,7 @@ import { TierChip } from '../SettingsPanel/TierChip';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectTier } from '../../state/tier/selectors';
 import { requestTier } from '../../state/tier/requestTier';
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 function TierChipContainer(): React.ReactElement {
   const tier = useAppSelector(selectTier);

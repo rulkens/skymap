@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HI_RES_LAYER_COUNT } from '../../../../../src/layers/galaxyCatalog/hiResFamous/data/hiResLayerCount';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../../../../../src/layers/galaxyCatalog/hiResFamous/data/hiResLayerSideByTier';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { TexturedDiskRenderer } from '../../../../../src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskRenderer';
 
 const reqFor = (tier: Tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] });

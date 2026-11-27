@@ -1,5 +1,5 @@
 /** A density volume ready to draw; `VolumeFieldRenderer.upload` owns it from then on. */
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { CubePlacement } from './CubePlacement';
 
 export type GpuVolume = {

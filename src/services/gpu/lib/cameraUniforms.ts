@@ -54,7 +54,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * Byte size of the shared `CameraUniforms` prefix:

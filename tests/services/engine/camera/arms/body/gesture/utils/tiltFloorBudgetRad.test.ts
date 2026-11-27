@@ -9,9 +9,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { tiltFloorBudgetRad } from '../../../../../../../../src/services/engine/camera/arms/body/gesture/utils/tiltFloorBudgetRad';
-import { quatFromAxisAngle } from '../../../../../../../../src/utils/math/quatFromAxisAngle';
-import { rotateVec3ByQuat } from '../../../../../../../../src/utils/math/rotateVec3ByQuat';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
+import { quatFromAxisAngle } from '../../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
+import { rotateVec3ByQuat } from '../../../../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 
 const EAST: Vec3 = [1, 0, 0];
 

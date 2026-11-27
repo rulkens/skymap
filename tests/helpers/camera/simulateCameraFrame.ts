@@ -21,7 +21,7 @@ import { selectPendingInput } from '../../../src/state/input/selectors';
 import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
 import { inputConsumed } from '../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export function simulateCameraFrame(
   harness: CameraSimHarness,

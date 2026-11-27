@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Bilinear sample of an equirectangular (galactic l, b) radius plane for a unit direction. */
 export function radiusAtDirection(

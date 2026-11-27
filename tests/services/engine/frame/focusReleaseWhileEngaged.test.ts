@@ -14,7 +14,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -36,7 +36,7 @@ import { positionDriverById } from '../../../../src/data/bodies/positionDrivers'
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { resume } from '../../../../src/state/time/timeSlice';
 import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { tween } from '../../../../src/services/engine/animation/effectHelpers';
@@ -51,7 +51,7 @@ import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cam
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';

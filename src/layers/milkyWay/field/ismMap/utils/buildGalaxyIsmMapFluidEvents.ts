@@ -8,7 +8,7 @@
  * `ismMapFluidEventWindow` (its own file) binary-searches this order to hand a
  * per-step [start, end) slice of active events, not the whole list.
  */
-import { mulberry32 } from '../../../../../utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { ismMapGasProfile } from './ismMapGasProfile';
 import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';

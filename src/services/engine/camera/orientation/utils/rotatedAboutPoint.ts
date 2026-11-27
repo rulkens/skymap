@@ -1,9 +1,9 @@
 import type { BodyFixedPose } from '../../../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { rotateBasisByQuat } from './rotateBasisByQuat';
-import { rotateVec3ByQuat } from '../../../../../utils/math/rotateVec3ByQuat';
+import { rotateVec3ByQuat } from '../../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 
 /**
  * Turn the eye and the basis about a body-fixed point. The anchor stays where

@@ -8,9 +8,9 @@
  * Schema: docs/superpowers/specs/2026-08-10-rhizome-scfd-importer-design.md
  */
 
-import type { ScalarFieldFrameKind } from '../../src/@types/data/volume/ScalarFieldFrameKind';
-import type { Vec3 } from '../../src/@types/math/Vec3';
-import type { PackedTraceInputLayout } from '../../src/utils/volume/packLogTraceVoxels';
+import type { ScalarFieldFrameKind } from '../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
+import type { PackedTraceInputLayout } from '../../packages/shared/src/utils/volume/packLogTraceVoxels';
 
 export type PolyphyTraceSidecar = {
   readonly dims: Vec3;

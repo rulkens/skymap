@@ -7,7 +7,7 @@
  * so tap offsets are in the SOURCE level's texels. `runBloom` holds the pass order.
  */
 
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import type { BrightParams } from './BrightParams';
 import type { FoldKind } from './FoldKind';
 import type { StreakTaps } from './StreakTaps';

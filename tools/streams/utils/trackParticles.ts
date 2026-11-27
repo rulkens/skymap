@@ -4,7 +4,7 @@
  * drawn for the stream's [Fe/H]. `rng` is shared across streams by the caller, so the build's
  * stream order fixes every draw.
  */
-import { normalize3 } from '../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { pointAlongPolyline } from '../../utils/math/pointAlongPolyline';

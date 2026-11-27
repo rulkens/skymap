@@ -5,7 +5,7 @@
  * voxel floor moves with every edit, and sweeps must still come back exactly.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import type { GridSlice } from '../../../../../../../../tools/mcpm-workbench/@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../../../../../tools/mcpm-workbench/src/grid/deriveGridBox';
 import {

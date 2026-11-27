@@ -41,14 +41,14 @@ import { surfaceFloorM } from '../../../../../src/services/engine/camera/arms/bo
 import { SURFACE_STANDOFF_RADII } from '../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { RawInputStep } from '../../../../../src/@types/camera/input/RawInputStep';
 import type { ZoomLimitPress } from '../../../../../src/@types/camera/input/ZoomLimitPress';
 import { ZOOM_LIMIT_PUSH_LN } from '../../../../../src/data/input/zoomLimitPushLn';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { CAMERA_DRIVERS } from '../../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { ridesWheelTarget } from '../../../../../src/services/engine/camera/input/ridesWheelTarget';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';

@@ -20,7 +20,7 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 

@@ -5,7 +5,7 @@
  * outermost element — two roots rather than one wrapper.  The per-row internals
  * below (.thumb / .glyph / .source / .secondary) are emitted by the ROW_VIEW
  * table in `paletteRows.tsx`, which composes this same module.  All atoms
- * reference tokens from `src/styles/global.css`.
+ * reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 .root {

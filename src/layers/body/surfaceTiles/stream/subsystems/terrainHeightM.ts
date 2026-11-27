@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { ResidentHeightLookup } from '../@types/ResidentHeightLookup';
 import { SURFACE_TILE_PX } from '../../format/data/surfaceTileParams';
 import { HEIGHT_CODE_BYTES, HEIGHT_GRID_POSTS_PER_EDGE } from '../../format/data/heightTileFormat';

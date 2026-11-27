@@ -6,7 +6,7 @@
  * `reliefM` defaults to `[0, 0]`; a body with a measured height source (Mars)
  * passes that source's extremes, never a hand-picked guess.
  */
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type BodySpec = {
   readonly id: string;

@@ -38,7 +38,7 @@ import type { GalaxyRowFixture, StructureRowFixture } from '../../support/select
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
 import type { SelectionResolver } from '../../../src/@types/engine/selection/SelectionResolver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedId } from '../../../src/@types/scene/PositionedId';
 import type { RootState } from '../../../src/store/types';
 

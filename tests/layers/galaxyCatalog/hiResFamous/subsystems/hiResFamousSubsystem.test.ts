@@ -25,7 +25,7 @@ import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxy
 import { describe, it, expect, vi } from 'vitest';
 import { createHiResFamousSubsystem } from '../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { FamousGalaxyName } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/@types/FamousGalaxyName';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';

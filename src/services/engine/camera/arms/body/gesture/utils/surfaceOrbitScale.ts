@@ -1,7 +1,7 @@
 import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
 import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
 
 /**
  * The factor that turns a screen-radian orbit into a sweep about the body

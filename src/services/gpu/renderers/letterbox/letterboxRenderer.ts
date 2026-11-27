@@ -12,7 +12,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { Size } from '../../../../@types/rendering/Size';
 import vsCode from '../../shaders/letterbox/vertex.wesl?static';
 import fsCode from '../../shaders/letterbox/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 export function createLetterboxRenderer(init: {
   readonly device: GPUDevice;

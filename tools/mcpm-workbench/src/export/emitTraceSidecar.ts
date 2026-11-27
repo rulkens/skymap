@@ -3,7 +3,7 @@ import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
 import type { GridBox } from '../../@types/grid/GridBox';
 import type { McpmParams } from '../../@types/sim/McpmParams';
 import type { UserFileProvenance } from '../../@types/catalog/UserFileProvenance';
-import type { Tier } from '../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 import { buildParamsPayload } from '../params/buildParamsPayload';

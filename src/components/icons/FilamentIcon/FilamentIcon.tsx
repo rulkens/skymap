@@ -1,7 +1,7 @@
 /** FilamentIcon: a curved trail between two points, the paths the trace records. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function FilamentIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

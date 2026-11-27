@@ -19,7 +19,7 @@
 
 /* No inset: a label starts on the content edge, where a slider pill's border does. */
 .labelText {
-  composes: label from '../../../../../../src/components/common/Slider/Slider.module.css';
+  composes: label from '../../../../../../packages/shared/src/components/common/Slider/Slider.module.css';
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -50,7 +50,7 @@
 }
 
 .infoIcon {
-  composes: infoIcon from '../../../../../../src/components/common/ParamSlider/ParamSlider.module.css';
+  composes: infoIcon from '../../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider.module.css';
   transition:
     color var(--duration-color) var(--ease-standard),
     opacity var(--duration-color) var(--ease-standard);

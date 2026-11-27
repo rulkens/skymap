@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { meshShadowNeedsRender } from '../../../src/utils/meshBodies/meshShadowNeedsRender';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const turned = (deg: number): Vec3 => {
   const rad = (deg * Math.PI) / 180;

@@ -39,7 +39,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { RootState } from '../../../../src/store/types';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 

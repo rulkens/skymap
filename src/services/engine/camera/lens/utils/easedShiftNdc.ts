@@ -4,7 +4,7 @@
  * function of its inputs, so the recorder stays deterministic.
  */
 
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import { LENS_SHIFT_EASE_TAU_MS } from '../data/lensShiftEaseTauMs';
 
 // Frames stop once the shift settles, so the frame a cover change wakes can

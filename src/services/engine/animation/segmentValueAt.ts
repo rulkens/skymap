@@ -8,7 +8,7 @@
 
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { SegmentCurve } from '../../../@types/animation/compiledClip/SegmentCurve';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { EASE } from './ease';
 import { lerpChannel } from './lerpChannel';
 import { hermiteUnit } from '../../../utils/math/hermiteUnit';

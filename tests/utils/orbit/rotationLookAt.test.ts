@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { rotationLookAt } from '../../../src/utils/orbit/rotationLookAt';
 import { ECLIPTIC_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Column c of a column-major Mat3 is the contiguous span m[c*3 .. c*3+2].
 // A local restatement of the storage contract, so the tests read the matrix the

@@ -7,7 +7,7 @@
 
 import type { VisibilityEntryCommon } from '../../../@types/engine/layer/VisibilityEntryCommon';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-import { lerp } from '../../../utils/math/lerp';
+import { lerp } from '../../../../packages/shared/src/utils/math/lerp';
 import { STRONG_RECESSION } from '../../../data/strongRecession';
 import { MILD_RECESSION } from '../../../data/mildRecession';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { atmosphereShellBound } from '../../../src/utils/math/atmosphereShellBound';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // Every expectation below is hand-computed, independent of the
 // implementation, using the same quadratic `raySphereRoots` composes:

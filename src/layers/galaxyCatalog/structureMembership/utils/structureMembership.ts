@@ -7,7 +7,7 @@
  * subsystem that sees tier swaps bump `dataRev` (spec §4.3).
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
 
 /** O(total galaxy count), single-digit ms for ~2.5M galaxies (spec §4.2). */

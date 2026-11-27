@@ -20,7 +20,7 @@ import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitPo
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { APP_HOME } from '../../../../../src/compositions/appHome';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 describe('homePose', () => {

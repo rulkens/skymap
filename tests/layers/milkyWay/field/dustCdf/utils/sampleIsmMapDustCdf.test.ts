@@ -10,7 +10,7 @@ import { buildIsmMapDustCdf } from '../../../../../../src/utils/galaxy/buildIsmM
 import { sampleIsmMapDustCdf } from '../../../../../../src/layers/milkyWay/field/dustCdf/utils/sampleIsmMapDustCdf';
 import { ismMapDustDensity } from '../../../../../utils/galaxy/ismMapDustDensity';
 import { ismMapDustRingEdges } from '../../../../../../src/utils/galaxy/ismMapDustRingEdges';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import type { GalaxyIsmMap } from '../../../../../../src/@types/galaxy/GalaxyIsmMap';
 
 /** Every fixture here only fills gas/activity, so this is dust's own density exactly. */

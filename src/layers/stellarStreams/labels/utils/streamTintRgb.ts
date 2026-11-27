@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import { lerp } from '../../../../utils/math/lerp';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { STREAM_BP_RP_RANGE } from '../../streaks/data/stellarStreamColours.constants';
 import { STELLAR_STREAM_LABEL_TINT } from '../data/stellarStreamLabelStyle.constants';

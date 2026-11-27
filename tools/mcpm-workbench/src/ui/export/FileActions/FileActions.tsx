@@ -6,7 +6,7 @@
  * preset file and shows why an import failed.
  */
 import { useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import Button from '../../../../../../src/components/common/Button/Button';
+import Button from '../../../../../../packages/shared/src/components/common/Button/Button';
 import ButtonTip from '../../panel/ButtonTip/ButtonTip';
 import CubeIcon from '../../../../../../src/components/icons/CubeIcon/CubeIcon';
 import FilamentIcon from '../../../../../../src/components/icons/FilamentIcon/FilamentIcon';

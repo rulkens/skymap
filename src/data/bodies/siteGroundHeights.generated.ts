@@ -4,7 +4,7 @@
 // of a non-dev Mars tile bake)
 // Source of truth:  the host's own baked height tiles
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Site id -> ground height, metres above the host's datum, the posed body
  *  is seated at: on the plane through the drawn ground under its contact

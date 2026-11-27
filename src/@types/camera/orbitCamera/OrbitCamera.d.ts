@@ -4,7 +4,7 @@
  * raycasting code can read it cheaply without re-deriving it each frame.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitCameraInit } from './OrbitCameraInit';
 
 /**

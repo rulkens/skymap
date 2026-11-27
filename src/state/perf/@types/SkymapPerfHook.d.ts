@@ -18,7 +18,7 @@ import type { PerfSample } from '../../../@types/perf/PerfSample';
 import type { MemorySnapshot } from '../../../@types/perf/MemorySnapshot';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
-import type { Tier } from '../../../@types/data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 
 export type SkymapPerfHook = {
   readonly setPose: (pose: PerfPose) => Promise<void>;

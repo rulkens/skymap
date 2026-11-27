@@ -1,6 +1,6 @@
 /** The film grade's knobs for the DebugPanel board; ranges are the spec's slider table. */
 
-import type { SliderField } from '../../@types/data/SliderField';
+import type { SliderField } from '../../../packages/shared/src/@types/data/SliderField';
 import type { FilmGrade } from '../../@types/settings/FilmGrade';
 
 const two = (v: number): string => v.toFixed(2);

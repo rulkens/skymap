@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ForwardProjectedPoint } from '../../../src/@types/camera/projection/ForwardProjectedPoint';
 import type { ProjectedLabel } from '../../../src/@types/rendering/ProjectedLabel';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { DOME_LABEL_SCALE } from '../../../src/data/labels/domeLabelScale';
 import { REFERENCE_PX_PER_RAD } from '../../../src/data/labels/referencePxPerRad';
 import { DOME_FACES } from '../../../src/data/rendering/domeFaces';

@@ -38,7 +38,7 @@
  * inverse-model transform (a scaled model breaks unit length; the house
  * trap), exactly as the WESL twin assumes.
  */
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { raySphereRoots } from './raySphereRoots';
 
 const ORIGIN: Readonly<Vec3> = [0, 0, 0];

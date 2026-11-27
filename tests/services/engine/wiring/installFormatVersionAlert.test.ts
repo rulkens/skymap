@@ -17,8 +17,8 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AppDispatch } from '../../../../src/store/types';
 import { installFormatVersionAlert } from '../../../../src/services/engine/wiring/installFormatVersionAlert';
-import { FormatVersionError } from '../../../../src/data/formatVersionError';
-import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
+import { FormatVersionError } from '../../../../packages/shared/src/data/formatVersionError';
+import { HttpError } from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import { reopenSplash } from '../../../../src/state/ui/uiSlice';
 

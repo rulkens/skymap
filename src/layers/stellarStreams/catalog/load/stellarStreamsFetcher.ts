@@ -4,7 +4,10 @@
  */
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { StellarStreamsPayload } from '../@types/StellarStreamsPayload';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { decodeStellarStreams } from '../utils/decodeStellarStreams';
 import { streamPairMismatch } from '../utils/streamPairMismatch';
 

@@ -20,15 +20,15 @@ import { inverseCovarianceFromFrame } from '../../mixture/utils/inverseCovarianc
 import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../mixture/utils/warpHeight';
 import { warpSurfaceFrame } from '../../mixture/utils/warpSurfaceFrame';
-import { gaussian } from '../../../../../utils/random/gaussian';
-import { mulberry32 } from '../../../../../utils/random/mulberry32';
+import { gaussian } from '../../../../../../packages/shared/src/utils/random/gaussian';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import type { GalaxyFieldComponent } from '../../mixture/@types/GalaxyFieldComponent';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../@types/GalaxyStarFormationParams';
 import type { SfEvent } from '../@types/SfEvent';
 import type { IsmMapFluidEvent } from '../../ismMap/@types/IsmMapFluidEvent';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 import { ismMapFluidEventWindow } from '../../ismMap/utils/ismMapFluidEventWindow';
 import { ismMapGridRadius } from '../../ismMap/utils/ismMapGridRadius';

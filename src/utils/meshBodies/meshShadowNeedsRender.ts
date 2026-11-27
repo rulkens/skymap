@@ -4,7 +4,7 @@
  * 1× time crosses it every ~25 s; a spinning self-hosted body (Bennu) most frames time runs.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { MESH_SHADOW_RERENDER_COS } from '../../data/mesh/meshShadowMap';
 import { dot3 } from '../math/dot3';
 

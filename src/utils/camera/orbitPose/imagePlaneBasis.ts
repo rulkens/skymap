@@ -45,7 +45,7 @@
  *                 is allocated when omitted.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../@types/camera/pose/ImagePlaneBasis';
 
 export function imagePlaneBasis(

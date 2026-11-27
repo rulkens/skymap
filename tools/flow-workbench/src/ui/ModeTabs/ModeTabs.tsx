@@ -8,7 +8,7 @@
  */
 import type { ReactNode } from 'react';
 import type { FlowMode } from '../../../../../src/layers/flow/@types/FlowMode';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import styles from './ModeTabs.module.css';
 
 export type ModeTabsProps = {

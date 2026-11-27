@@ -55,7 +55,7 @@ import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { LiveCameraRuntime, RootState } from '../../../src/store/types';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const EARTH = asSceneBodyId('earth');

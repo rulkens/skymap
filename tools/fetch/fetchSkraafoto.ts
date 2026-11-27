@@ -29,7 +29,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
 import { readKeychainSecret } from '../utils/io/readKeychainSecret';
 import { redactSecret } from '../utils/io/redactSecret';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 const SEARCH_ENDPOINT = 'https://api.dataforsyningen.dk/rest/skraafoto_api/v1.0/search';
 const KEYCHAIN_SERVICE = 'skymap-dataforsyningen-apikey';

@@ -10,7 +10,7 @@
  * that `settings.milkyWay.cloud` copies; the renderer reads the live settings
  * copy, which is what lets the DebugPanel sliders move them without a reload.
  */
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../data/milkyWay/milkyWayGalaxyParams';
 

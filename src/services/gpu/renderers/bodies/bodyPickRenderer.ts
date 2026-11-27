@@ -84,7 +84,7 @@ import {
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import type { BodySpherePickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodySpherePickArgs';
 import type { BodyPointPickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPickArgs';

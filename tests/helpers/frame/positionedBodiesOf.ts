@@ -7,7 +7,7 @@
 import type { PositionedSceneBody } from '../../../src/@types/engine/frame/PositionedSceneBody';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { SceneBody } from '../../../src/@types/scene/SceneBody';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function positionedBodiesOf(
   bodies: readonly SceneBody[],

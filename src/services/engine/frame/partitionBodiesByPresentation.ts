@@ -9,7 +9,7 @@
 
 import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';
 import type { SceneBodyPresentation } from '../../../@types/engine/frame/SceneBodyPresentation';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { isBodyResolved } from '../../../utils/scene/isBodyResolved';
 
 export function partitionBodiesByPresentation(input: {

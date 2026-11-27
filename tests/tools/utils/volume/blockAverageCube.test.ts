@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { blockAverageCube } from '../../../../tools/utils/volume/blockAverageCube';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 describe('blockAverageCube', () => {
   // n = i*16 + j*4 + k (C-order, axis 0 slowest) — hand-computed below,

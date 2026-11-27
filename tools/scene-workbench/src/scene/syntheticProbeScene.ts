@@ -7,9 +7,9 @@
  * no baked data; `resolveAssetUrl.ts` is what lets the resulting blob:
  * URLs through the saga's fetches unprefixed.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
-import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
+import { mulberry32 } from '../../../../packages/shared/src/utils/random/mulberry32';
 import type { GaussianSplatAsset } from '../../@types/GaussianSplatAsset';
 import type { GroupAnchor } from '../../@types/GroupAnchor';
 import type { GroupRegistryEntry } from '../../@types/GroupRegistryEntry';

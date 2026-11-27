@@ -1,6 +1,6 @@
 import type { FadeBand } from '../math/FadeBand';
-import type { Vec3 } from '../math/Vec3';
-import type { Vec4 } from '../math/Vec4';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { LabelStyleId } from './LabelStyleId';
 
 /** One label as a `LabelSource` describes it: what it says and what it names, nothing about the view. */

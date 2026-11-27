@@ -19,7 +19,7 @@ import {
 import type { PickDriverDeps } from '../../../@types/engine/interaction/PickDriverDeps';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { UnitPoint } from '../../../@types/input/UnitPoint';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 export function createPickDriver(deps: PickDriverDeps): Destroyable {
   const { store, state } = deps;

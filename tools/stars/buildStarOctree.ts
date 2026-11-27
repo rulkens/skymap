@@ -104,7 +104,7 @@
  * boundary between the two regions of the blob; a leaf/fat-leaf's `firstRecord`
  * indexes region one, an aggregate's indexes region two.
  */
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { SkstCatalog } from '../../src/@types/data/starCatalog/SkstCatalog';
 import type { SkstNode } from '../../src/@types/data/starCatalog/SkstNode';
 import { mortonDecode3 } from '../../src/utils/math/mortonDecode3';

@@ -25,8 +25,8 @@
  * the wrong quantity for cosmological redshifts.
  */
 
-import { HUBBLE_DISTANCE_MPC, C_KM_S } from './constants';
-import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
+import { HUBBLE_DISTANCE_MPC, C_KM_S } from '../../../packages/shared/src/utils/math/constants';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 /**
  * Present-day proper recession velocity in km/s for a given redshift.

@@ -11,7 +11,7 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 // Reads window.devicePixelRatio, which the node environment has no window for.
-vi.mock('../../../../src/services/gpu/device', () => ({
+vi.mock('../../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -66,7 +66,7 @@ import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { liveClipStartPose } from '../../../../src/services/engine/helpers/liveClipStartPose';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
@@ -80,7 +80,7 @@ import { deepFreeze } from '../../../helpers/deepFreeze';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { RawInputStep } from '../../../../src/@types/camera/input/RawInputStep';

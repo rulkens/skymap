@@ -9,8 +9,8 @@
  * rotation about this axis reaches it (no crossing possible, nothing to cap).
  */
 
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
-import { cross3 } from '../../../../../../../utils/math/cross3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../../../../../../packages/shared/src/utils/math/cross3';
 
 function dotWith(v: Readonly<Vec3>, w: Readonly<Vec3>): number {
   return v[0] * w[0] + v[1] * w[1] + v[2] * w[2];

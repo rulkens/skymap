@@ -2,7 +2,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceR
 import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 /** The ONE point-source request. */
 export function galaxyCatalogRequest(source: GalaxyCatalogId, tier: Tier): GalaxyCatalogReq {

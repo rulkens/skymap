@@ -5,9 +5,9 @@
  * pure body ENU. The engaged settle and the camera debug readout both read THIS.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { blendedUpDir } from './blendedUpDir';
-import { cross3 } from '../../math/cross3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 import { BODY_LOCAL_FRAME } from '../../../data/camera/bodyLocalFrame';
 
 export function blendedEnuAt(

@@ -8,7 +8,7 @@
  * A blob laid tangent to the warped disc is tipped about its own radial axis
  * too (see `warpSurfaceFrame`), so its frame is a full rotation.
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /** Off-diagonal is (m01, m02, m12); the shader's quadratic form doubles it. */
 export function inverseCovarianceFromFrame(

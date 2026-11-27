@@ -59,10 +59,10 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarPointRenderer } from '../@types/StarPointRenderer';
 import type { PositionedStar } from '../@types/PositionedStar';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import vsCode from '../../../../services/gpu/shaders/bodies/starPoints/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/starPoints/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import {
   createViewSlotUniformRing,

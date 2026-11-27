@@ -50,7 +50,7 @@
 
 import vsCode from '../shaders/additiveUpsample/vertex.wesl?static';
 import fsCode from '../shaders/additiveUpsample/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
 

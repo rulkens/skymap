@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../packages/shared/src/utils/url/hasUrlGate';
 import { qrModules } from '../../utils/remote/qrModules';
 import DomePairingCard from './DomePairingCard';
 import styles from './PairingOverlay.module.css';

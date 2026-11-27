@@ -17,7 +17,7 @@ import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPos
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { TimeState } from '../../../../../src/@types/time/TimeState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const EARTH_RADIUS_M = 6371000;

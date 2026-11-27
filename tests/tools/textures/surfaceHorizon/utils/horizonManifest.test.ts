@@ -16,7 +16,7 @@ import { surfaceTileInBand } from '../../../../../src/layers/body/surfaceTiles/f
 import { derivePlannerParams } from '../../../../../src/layers/body/surfaceTiles/plan/subsystems/derivePlannerParams';
 import { resolveStandaloneRect } from '../../../../../src/layers/body/surfaceTiles/plan/subsystems/resolveStandaloneRect';
 import { BODY_TEXTURE_REGISTRY } from '../../../../../src/layers/body/textures/data/bodyTextureRegistry';
-import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../../../packages/shared/src/data/tierLadder';
 import { clampTier } from '../../../../../src/utils/math/clampTier';
 import { HORIZON_GLOBE_LEVELS } from '../../../../../tools/textures/surfaceHorizon/data/horizonGlobeLevels';
 import { horizonManifest } from '../../../../../tools/textures/surfaceHorizon/utils/horizonManifest';

@@ -14,7 +14,7 @@ import { MESH_ASSETS } from '../meshAssets.generated';
 import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /** Camera floor at two radii: the body fills the view. A ratio, not metres, so the 0.46 m pot and the 6.8 m whale both frame. */

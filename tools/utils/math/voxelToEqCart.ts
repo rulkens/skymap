@@ -6,7 +6,7 @@
  * supplied by the caller) and rotates the resulting SG position back into
  * the equatorial frame via `sgToEq`.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { sgToEq } from './sgToEq';
 
 export function voxelToEqCart(vox: Vec3, dims: Vec3, voxelSize: number): Vec3 {

@@ -1,5 +1,5 @@
 import type { SiteSeat } from '../../../textures/@types/SiteSeat';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceFixedSite } from '../../../../src/@types/scene/SurfaceFixedSite';
 import type { SurfaceTileManifest } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import { rotationRowById } from '../../../../src/data/bodies/rotationElements';

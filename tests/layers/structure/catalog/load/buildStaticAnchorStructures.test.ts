@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildStaticAnchorStructures } from '../../../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import structureSeedJson from '../../../../../data/seeds/structure_anchors.seed.json';
-import { raDecDistToEqCart } from '../../../../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../../../../packages/shared/src/utils/math/raDecDistToEqCart';
 
 describe('buildStaticAnchorStructures', () => {
   it('emits one structure per seed entry across all four categories', () => {

@@ -13,7 +13,7 @@
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import { BLOOM_LEVELS, STREAK_FALLOFF_TEXELS, STREAK_STRIDES } from '../../../data/bloomConstants';
 import { DEFAULT_BLOOM_CAP } from '../../../data/defaults';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';

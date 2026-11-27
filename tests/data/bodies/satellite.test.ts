@@ -5,7 +5,7 @@ import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPosition
 import { ECLIPTIC_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const io = elementsById('io');
 

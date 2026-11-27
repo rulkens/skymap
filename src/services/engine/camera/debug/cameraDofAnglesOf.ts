@@ -17,7 +17,7 @@ import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { CameraTuning } from '../../../../@types/camera/orbitCamera/CameraTuning';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { hOverR } from '../bodyFrame/hOverR';
 import { nearestBodyHR } from '../bodyFrame/nearestBodyHR';
 import { bandRollTarget } from '../arms/world/frameAlignedRoll';
@@ -33,7 +33,7 @@ import { cameraBasisWorld } from '../../../../utils/camera/orbitPose/cameraBasis
 import { mappedTiltRad } from '../orientation/utils/mappedTiltRad';
 import { refAzimuthOf } from '../../../../utils/camera/surfaceFrame/refAzimuthOf';
 import { tiltFromNadirRad } from '../../../../utils/camera/surfaceFrame/tiltFromNadirRad';
-import { normalize3 } from '../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import { rotateByTranspose } from '../../../../utils/math/rotateByTranspose';
 import { wrapRad } from '../../../../utils/math/wrapRad';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';

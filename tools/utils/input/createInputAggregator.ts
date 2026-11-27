@@ -11,8 +11,8 @@
 
 import type { InputAggregator } from '../../@types/input/InputAggregator';
 import type { InputGestureEvent } from '../../@types/input/InputGestureEvent';
-import type { InputStep } from '../../../src/@types/camera/input/InputStep';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { InputStep } from '../../../packages/shared/src/@types/camera/input/InputStep';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import { WHEEL_ZOOM_K } from '../../../src/data/input/wheelZoomK';
 
 export function createInputAggregator(): InputAggregator {

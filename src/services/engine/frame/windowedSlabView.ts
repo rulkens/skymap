@@ -1,7 +1,7 @@
 import { mat4d } from 'wgpu-matrix';
 import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import { pickWindowCrop } from '../../../utils/gpu/pickWindowCrop';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 

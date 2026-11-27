@@ -4,7 +4,7 @@
  * settled box's growth by whole held layers, and the fade each change of it becomes (§8). The region
  * object keeps the state.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
 import { brickId } from '../../../../utils/volume/brickId';
 import type { BrickBox } from '../@types/BrickBox';

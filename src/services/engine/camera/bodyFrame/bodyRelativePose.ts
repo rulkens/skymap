@@ -9,7 +9,7 @@
  * by the same factor, before the cancellation ever gets a chance — see spec §5.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';

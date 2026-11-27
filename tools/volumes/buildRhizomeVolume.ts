@@ -17,10 +17,10 @@ import { basename, dirname, extname, join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
-import { packLogTraceVoxels } from '../../src/utils/volume/packLogTraceVoxels';
-import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import { packLogTraceVoxels } from '../../packages/shared/src/utils/volume/packLogTraceVoxels';
+import { encodeScalarField } from '../../packages/shared/src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 function sidecarPathFor(npyPath: string): string {
   return join(dirname(npyPath), basename(npyPath, extname(npyPath)) + '.json');

@@ -3,7 +3,7 @@
  * (mission or celestial) its identity lives in. `id` keys slot, renderer, state and pick.
  */
 import type { MeshAsset } from '../data/mesh/MeshAsset';
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { SceneBodyId } from './SceneBodyId';
 
 export type MeshPresentation = {

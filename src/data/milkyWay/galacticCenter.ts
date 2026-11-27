@@ -24,7 +24,7 @@
  * Milky Way needs this special case.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 
 /**

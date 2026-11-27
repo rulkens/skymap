@@ -17,7 +17,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packPickWord } from '../../../../data/selectionEncoding';

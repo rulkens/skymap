@@ -8,13 +8,13 @@
 import { createInputAggregator } from '../../../utils/input/createInputAggregator';
 import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
 import type { InputGestureEvent } from '../../../@types/input/InputGestureEvent';
-import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { GizmoDragState } from '../../@types/gizmo/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ViewSlice } from '../../@types/view/ViewSlice';
-import { multiplyQuat } from '../../../../src/utils/math/multiplyQuat';
-import { quatFromAxisAngle } from '../../../../src/utils/math/quatFromAxisAngle';
+import { multiplyQuat } from '../../../../packages/shared/src/utils/math/multiplyQuat';
+import { quatFromAxisAngle } from '../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
 import { boxAxesFor } from '../grid/box/boxAxesFor';
 import { deriveGridBox } from '../grid/deriveGridBox';

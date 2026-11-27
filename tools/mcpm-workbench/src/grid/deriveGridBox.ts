@@ -1,6 +1,6 @@
 import type { GridBox } from '../../@types/grid/GridBox';
 import type { GridSlice } from '../../@types/grid/GridSlice';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { autoFitGridBox } from './autoFit/autoFitGridBox';
 import { boxHalfExtentMpc } from './box/boxHalfExtentMpc';
 import { voxelSizeFloorMpc } from './voxelSize/voxelSizeFloorMpc';

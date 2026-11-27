@@ -15,7 +15,7 @@
  * `MeshBody.boundingRadiusM`); the card resolves the seed by `id` instead.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBodyId } from '../scene/SceneBodyId';
 
 export type BodyInfo = {

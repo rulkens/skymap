@@ -13,7 +13,7 @@
  */
 import { barLengthOf } from './barLengthOf';
 import { hubbleStageOf } from './hubbleStageOf';
-import { lerp } from '../../../../utils/math/lerp';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
 import type { GalaxyCategory } from '../../../../@types/galaxy/GalaxyCategory';
 import type { GalaxyLightDecomposition } from '../../../../@types/galaxy/GalaxyLightDecomposition';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';

@@ -35,7 +35,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { StarRenderer } from '../@types/StarRenderer';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import {
   BODY_SPHERE_RINGS,
@@ -44,7 +44,7 @@ import {
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/star/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/star/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 /**
  * `TintedSphereUniforms` byte size: mat4x4<f32> (64) + vec3<f32> (12) +

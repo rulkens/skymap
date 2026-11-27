@@ -16,7 +16,7 @@
  * FRONT faces, so the clipped near cap is never the fragment that's rasterised.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { composeBodySlabMvp } from '../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';

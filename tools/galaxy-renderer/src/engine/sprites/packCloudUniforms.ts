@@ -49,8 +49,8 @@
 import { writeCameraPrefix } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/data/milkyWay/milkyWayCloudUniformBufferSize';
 import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/MilkyWayCloudTuning';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** Float count of `io.wesl`'s `Uniforms` — 208 bytes / 4. */
 export const CLOUD_UNIFORM_FLOATS = MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE / 4;

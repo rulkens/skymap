@@ -3,7 +3,7 @@ import { createLabel3DRenderer } from '../../../../../src/services/gpu/renderers
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 import type { Label3D } from '../../../../../src/@types/rendering/Label3D';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 // '?static' pulls the LINKED WGSL text (package:: imports resolved), the same
 // specifier label3DRenderer.ts itself imports — see wesl-shaders skill gotcha
 // #4 for why vitest.config.ts must separately register weslStaticPlugin for this

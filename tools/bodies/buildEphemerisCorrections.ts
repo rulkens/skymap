@@ -21,7 +21,7 @@ import { keplerianPositionMpc } from '../../src/utils/orbit/keplerianPositionMpc
 import { propagateElements } from '../../src/utils/orbit/propagateElements';
 import type { OrbitalElements } from '../../src/@types/scene/OrbitalElements';
 import type { CorrectionSeries } from '../../src/@types/scene/CorrectionSeries';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { FittedBody } from './@types/FittedBody';
 import type { HorizonsBody } from './@types/HorizonsBody';
 import { FITTED_BODIES } from './fittedBodies';

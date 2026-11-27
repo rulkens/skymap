@@ -11,7 +11,7 @@
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import type { OrbitPlaneFrame } from '../../@types/scene/OrbitPlaneFrame';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { ECLIPTIC_FRAME } from '../../data/bodies/orbitPlaneFrames';
 
 /**

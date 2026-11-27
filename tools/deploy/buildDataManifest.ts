@@ -20,7 +20,7 @@ import {
 import { join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { DataManifest } from '../../src/@types/data/DataManifest';
+import type { DataManifest } from '../../packages/shared/src/@types/data/DataManifest';
 import { contentHash8 } from '../utils/data/contentHash8';
 import { hashedDataName } from '../utils/data/hashedDataName';
 import { logicalDataName } from '../utils/data/logicalDataName';

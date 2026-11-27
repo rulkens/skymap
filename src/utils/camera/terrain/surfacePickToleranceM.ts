@@ -8,7 +8,7 @@
  * most precise and for a bounded extra cost. Shared by both gesture call sites
  * so the range is defined once.
  */
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { metresPerPixelAtRange } from './metresPerPixelAtRange';
 
 export function surfacePickToleranceM(

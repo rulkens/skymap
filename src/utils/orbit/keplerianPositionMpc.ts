@@ -10,7 +10,7 @@
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { keplerianEllipse } from './keplerianEllipse';
 import { eccentricAnomalyFromMean } from './eccentricAnomalyFromMean';
 

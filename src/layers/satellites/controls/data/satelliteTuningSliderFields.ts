@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import type { SatelliteTuningSliderKey } from '../../@types/SatelliteTuningSliderKey';
 
 /** The satellite tuning section's slider rows; the colours are picker rows, not sliders. */

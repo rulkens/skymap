@@ -7,9 +7,9 @@
  * `warpHeight`. Its two tangents and their normal ARE the blob's three axes:
  * long azimuthally, narrow radially, thin along the normal.
  */
-import { normalize3 } from '../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * `across` is Gram-Schmidt'd against `along` rather than used raw: the two

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The inverse of `brickId`. */
 export function brickCoordsOf(id: number, grid: Readonly<Vec3>): Vec3 {

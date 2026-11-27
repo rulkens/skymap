@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { Tier } from '../../../src/@types/data/Tier';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
 import { meshTierPrefix } from '../../../src/utils/meshBodies/meshTierPrefix';
 import { resolveDataFile } from '../data/resolveDataFile';

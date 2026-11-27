@@ -1,6 +1,6 @@
 import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { directionToLonLatDeg } from './directionToLonLatDeg';
 import { degToRad } from '../math/degToRad';
 

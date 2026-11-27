@@ -50,7 +50,7 @@
  * orchestrator that owns those cuts owns their counts.)
  */
 
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 /**
  * The pre-quantization payload every downstream stage needs: a heliocentric

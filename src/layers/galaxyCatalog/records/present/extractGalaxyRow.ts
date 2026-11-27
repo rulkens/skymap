@@ -13,7 +13,7 @@
  * it back with `BigInt(...)` where it needs the numeric identity.
  */
 import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRow } from '../@types/GalaxyRow';
 

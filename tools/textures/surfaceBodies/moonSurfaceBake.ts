@@ -11,7 +11,7 @@ import {
 } from '../../../src/layers/body/surfaceTiles/format/data/moonSurfaceParams';
 import { WHOLE_GLOBE_BOUNDS } from '../../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
-import { TIER_LADDER } from '../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../packages/shared/src/data/tierLadder';
 import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
 import { constantHeightSource } from '../constantHeightSource';

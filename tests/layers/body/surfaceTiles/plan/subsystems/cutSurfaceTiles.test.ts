@@ -36,7 +36,7 @@ import { foregroundFrustum } from '../../../../../../src/utils/camera/frustum/fo
 import { MARS_DATUM_RADIUS_M } from '../../../../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import type { SurfaceTileId } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileId';
 import type { SurfaceTileBand } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/symmetricFrustum';
 import { angleBetween } from '../../../../../helpers/math/angleBetween';
 import { requestBandsOf } from '../../../../../support/requestBandsOf';

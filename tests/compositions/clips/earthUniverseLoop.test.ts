@@ -16,7 +16,7 @@ import { yawPitchToDir } from '../../../src/utils/camera/orbitPose/yawPitchToDir
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('earthUniverseLoop', () => {

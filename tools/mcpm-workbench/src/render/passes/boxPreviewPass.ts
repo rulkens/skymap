@@ -8,12 +8,12 @@
  * comes from `pendingBox`'s own rotated axes. `arrowLengthMpc` comes from `view` each draw via
  * gizmoArrowLengthMpc — the SAME formula Viewport.tsx's pick/hover path uses.
  */
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../../src/@types/math/Vec4';
-import { cross3 } from '../../../../../src/utils/math/cross3';
-import { lerpVec3 } from '../../../../../src/utils/math/lerpVec3';
-import { normalize3 } from '../../../../../src/utils/math/normalize3';
-import { rotateVec3ByQuat } from '../../../../../src/utils/math/rotateVec3ByQuat';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
+import { cross3 } from '../../../../../packages/shared/src/utils/math/cross3';
+import { lerpVec3 } from '../../../../../packages/shared/src/utils/math/lerpVec3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
+import { rotateVec3ByQuat } from '../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 import type { GizmoHandleId } from '../../../@types/gizmo/GizmoHandleId';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import { boxAxesFor } from '../../grid/box/boxAxesFor';

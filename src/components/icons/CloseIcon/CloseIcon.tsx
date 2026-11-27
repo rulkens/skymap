@@ -1,7 +1,7 @@
 /** CloseIcon: a cross. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function CloseIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

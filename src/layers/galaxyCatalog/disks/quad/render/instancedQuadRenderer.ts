@@ -62,9 +62,9 @@
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
 import type { InstancedQuadConfig } from '../@types/InstancedQuadConfig';
 import type { InstancedQuadRenderer } from '../@types/InstancedQuadRenderer';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
-import { createShaderModuleWithDevLog } from '../../../../../services/gpu/shaderCompileLogger';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
+import { createShaderModuleWithDevLog } from '../../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../../services/gpu/lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
 

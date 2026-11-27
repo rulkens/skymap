@@ -92,7 +92,7 @@ Report: docs/superpowers/conventions/ui-ux.md self-check, two screenshots per st
 
 - **Dark only.** Background `--color-bg`, `color-scheme: dark`. A raised surface is lighter than what
   is under it; text is never pure white. [HIG-dark]
-- **No colour, size or space without a token.** App and site share `src/styles/tokens.css`; the site
+- **No colour, size or space without a token.** App and site share `packages/shared/src/styles/tokens.css`; the site
   adds `--site-*` in `packages/website/src/styles/site.css`. A raw hex, rgba or px gap in a component
   is a finding; a token at another alpha is `color-mix(in srgb, var(--token) N%, transparent)`. Every gap comes from a scale: the app's px `--space-*`, the site's rem `--site-space-*`
   (3xs to 3xl); a length off the scale is geometry (a picture's size, an overlap, a tap area, an `em`). [GOVUK-spacing]

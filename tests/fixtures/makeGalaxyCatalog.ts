@@ -19,7 +19,7 @@
  * `count`, and the forced write keeps `count` from desyncing from those arrays.
  */
 
-import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 export function makeGalaxyCatalog(
   count: number,

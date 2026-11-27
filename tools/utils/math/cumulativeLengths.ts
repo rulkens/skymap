@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Arc length from the first point to each point of a polyline; [0] = 0, last = total length. */
 export function cumulativeLengths(points: readonly Readonly<Vec3>[]): number[] {

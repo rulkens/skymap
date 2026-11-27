@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { clampVec3Length } from '../../../src/utils/math/clampVec3Length';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('clampVec3Length', () => {
   it('scales an over-limit vector to the max length, preserving direction', () => {

@@ -1,6 +1,6 @@
 import type { ClipData } from '../../animation/ClipData';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * A zoom notch pressed against an arm's limit, as a value: the arm reports every press, and the

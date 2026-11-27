@@ -19,8 +19,8 @@ import {
 import { ORIENTATION_FRAMES } from '../../../../../../src/data/orientation/orientationFrames';
 import type { CameraPose } from '../../../../../../src/@types/camera/pose/CameraPose';
 import type { PivotFraming } from '../../../../../../src/@types/camera/arms/PivotFraming';
-import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
-import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
+import type { InputStep } from '../../../../../../packages/shared/src/@types/camera/input/InputStep';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /** Earth's mean radius (km → Mpc) — the pivot radius for the zoom-floor cases. */
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;

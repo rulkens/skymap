@@ -1,8 +1,8 @@
 /** What `buildCubeModelMatrix` needs to place a voxel cube in world space: narrow, so a volume
  *  (`GpuVolume.placement`) and the axis-aligned flow field (identity rotation) both build one. */
-import type { Vec3 } from '../math/Vec3';
-import type { Vec4 } from '../math/Vec4';
-import type { ScalarFieldFrameKind } from '../data/volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
+import type { ScalarFieldFrameKind } from '../../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
 
 export type CubePlacement = {
   readonly frameKind: ScalarFieldFrameKind;

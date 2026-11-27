@@ -52,7 +52,7 @@ import { APP_LABELS_AND_GUIDES_REGISTRY } from './compositions/appLabelsAndGuide
 import { APP_LAYER_SWITCH_ROWS } from './compositions/appLayerSwitchRows';
 import { createLocalTransport } from './services/remote/createLocalTransport';
 import { remoteReceiverSaga } from './state/remote/remoteReceiverSaga';
-import { hasUrlGate } from './utils/url/hasUrlGate';
+import { hasUrlGate } from '../packages/shared/src/utils/url/hasUrlGate';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
 import { RunSagaProvider } from './store/RunSagaProvider';
@@ -70,7 +70,7 @@ import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
 // and the page-level reset.  Loaded once at app boot so every CSS module
 // can reference `var(--token-name)`.
-import './styles/global.css';
+import '../packages/shared/src/styles/global.css';
 
 const root = document.getElementById('root');
 if (!root) {

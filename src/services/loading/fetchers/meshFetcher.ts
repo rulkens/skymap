@@ -17,7 +17,10 @@ import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { decodeMesh } from '../../../data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
 import { meshTierPrefix } from '../../../utils/meshBodies/meshTierPrefix';
-import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 async function fetchTexture(
   url: string,

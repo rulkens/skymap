@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * The convergence history as polyline points in a `width` × `height` box: one

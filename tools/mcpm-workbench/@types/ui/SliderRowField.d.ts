@@ -1,5 +1,5 @@
-import type { SliderDisplayed } from '../../../../src/@types/components/SliderDisplayed';
-import type { SliderField } from '../../../../src/@types/data/SliderField';
+import type { SliderDisplayed } from '../../../../packages/shared/src/@types/components/SliderDisplayed';
+import type { SliderField } from '../../../../packages/shared/src/@types/data/SliderField';
 
 /**
  * One workbench slider row, drawn by `SliderRows`: the app's `SliderField`, whose `title` is

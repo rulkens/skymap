@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { f32ToF16Bits } from '../../packages/shared/src/utils/math/f32ToF16Bits';
 import { envBrdfLut } from './envBrdfLut';
 
 export type EnvBrdfLutMeta = {

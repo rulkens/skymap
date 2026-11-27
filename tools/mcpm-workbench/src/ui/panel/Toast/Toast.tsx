@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { ToastAction } from '../../../../@types/ui/ToastAction';
-import Button from '../../../../../../src/components/common/Button/Button';
+import Button from '../../../../../../packages/shared/src/components/common/Button/Button';
 import styles from './Toast.module.css';
 
 type ToastProps = {

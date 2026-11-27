@@ -3,7 +3,7 @@ import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // JPL Horizons, position relative to Neptune centre (500@899), ICRF equatorial axes (the scene's
 // world frame), km. External contract: Nereid is given on the ecliptic at 2020, so a wrong plane

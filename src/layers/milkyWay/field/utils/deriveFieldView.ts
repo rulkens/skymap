@@ -9,7 +9,7 @@
  */
 import { vec3n, type Mat4 } from 'wgpu-matrix';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { FieldView } from '../@types/FieldView';
 import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';

@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RendererId } from '../../../@types/view/RendererId';
 import type { ViewSlice } from '../../../@types/view/ViewSlice';
-import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import { PITCH_LIMIT } from './pitchLimit.constant';
 import { CAMERA_DISTANCE_FLOOR } from './cameraDistanceFloor.constant';
 

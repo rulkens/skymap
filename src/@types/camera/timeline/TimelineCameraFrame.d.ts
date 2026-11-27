@@ -6,7 +6,7 @@
  */
 
 import type { TimelineStop } from './TimelineStop';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type TimelineCameraFrame = {
   readonly aim: Vec3;

@@ -29,7 +29,7 @@ import { sceneBodyStates } from '../../../../../src/services/engine/frame/sceneB
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // sunDirLocal runs for real so the packed sun direction reveals a drift in the rotate/pack.
 const MOCK_MVP = new Float64Array(16);

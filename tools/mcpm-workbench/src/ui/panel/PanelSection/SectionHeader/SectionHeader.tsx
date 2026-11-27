@@ -5,7 +5,7 @@
  * from assistive tech, since the body says the same and a live summary must not chatter.
  */
 import { useId, useState, type ReactNode } from 'react';
-import ChevronRightIcon from '../../../../../../../src/components/icons/ChevronRightIcon/ChevronRightIcon';
+import ChevronRightIcon from '../../../../../../../packages/shared/src/components/icons/ChevronRightIcon/ChevronRightIcon';
 import IconTip from '../IconTip/IconTip';
 import type { PanelSectionProps } from '../PanelSection';
 import styles from './SectionHeader.module.css';

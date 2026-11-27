@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import { ceil8 } from '../../utils/math/ceil8';
 

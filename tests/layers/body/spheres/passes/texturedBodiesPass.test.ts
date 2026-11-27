@@ -35,7 +35,7 @@ import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
 import type { TextureKind } from '../../../../../src/@types/data/TextureKind';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];

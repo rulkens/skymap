@@ -1,6 +1,7 @@
 /**
  * Typed so `defaultRetryPolicy` can give up instead of retrying a version
- * mismatch. Lives in `src/data/` — `src/data` must not import `src/services`.
+ * mismatch. Lives in `data/`, not beside the policy in `src/services/`: data
+ * must not import services, and the shared SCFD decoder throws it too.
  */
 export class FormatVersionError extends Error {
   readonly format: string;

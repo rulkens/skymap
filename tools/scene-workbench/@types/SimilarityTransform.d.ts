@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 /** An asset's placement within its group's metre frame. */
 export type SimilarityTransform = {

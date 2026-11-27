@@ -18,14 +18,14 @@ import { orbitForwardOf } from '../../../../src/utils/camera/orbitPose/orbitForw
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { mat3Columns } from '../../../../src/utils/math/mat3Columns';
 import { DOME_FACES, DOME_FACE_COUNT } from '../../../../src/data/rendering/domeFaces';
 import { DOME_PARAMS } from '../../../../src/data/rendering/domeParams';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FieldView } from '../../../../../../src/layers/milkyWay/field/@types/FieldView';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { deriveFieldFrameLanes } from '../../../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
 import { FIELD_CALIBRATION } from '../../../../../../src/layers/milkyWay/field/data/fieldCalibration';
 

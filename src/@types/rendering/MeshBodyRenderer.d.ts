@@ -18,7 +18,7 @@ import type { MeshShadowCaster } from './MeshShadowCaster';
 import type { MeshShadowSlot } from './MeshShadowSlot';
 import type { MeshGroundCaster } from './MeshGroundCaster';
 import type { ClaimTimestampWrites } from '../gpu/timing/ClaimTimestampWrites';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type MeshBodyRenderer = Renderer & {
   /** Albedo is sRGB; the metal-rough and normal maps are LINEAR `rgba8unorm`

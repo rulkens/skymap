@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import {
   buildPaletteLut,
   PALETTE_IDS,
-} from '../../../../../../../src/data/volume/scalarFieldPalettes';
+} from '../../../../../../../packages/shared/src/data/volume/scalarFieldPalettes';
 import PaletteSwatch from '../../PaletteSwatch/PaletteSwatch';
 import { paletteGradientStops } from '../../../../utils/color/paletteGradientStops';
 

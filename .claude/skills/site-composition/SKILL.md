@@ -6,7 +6,7 @@ description: The visual grammar for composing a section of the Skymap website, i
 # Site composition
 
 How a section of the companion website is put together. The tokens are in
-`packages/website/src/styles/site.css` (plus the app's `src/styles/tokens.css`); the grid and
+`packages/website/src/styles/site.css` (plus the app's `packages/shared/src/styles/tokens.css`); the grid and
 rhythm classes are in `packages/website/src/styles/layout.module.css`. Where `ui-ux.md` already
 states a rule, it is not repeated here.
 

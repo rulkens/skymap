@@ -24,7 +24,7 @@ import { volumePyramidLevelPath } from '../../src/utils/volume/volumePyramidLeve
 import { volumePyramidLevels } from '../../src/utils/volume/volumePyramidLevels';
 import type { VolumePyramidFieldRow } from '../@types/volumes/VolumePyramidFieldRow';
 import type { VolumePyramidSidecar } from '../../src/@types/data/volume/VolumePyramidSidecar';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 const shift = (v: Vec3, k: number): Vec3 => [v[0] >> k, v[1] >> k, v[2] >> k];
 

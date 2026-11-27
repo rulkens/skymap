@@ -10,7 +10,7 @@ import type { StellarStreamRibbons } from '../@types/StellarStreamRibbons';
 
 import vsCode from '../../../../services/gpu/shaders/stellarStreams/ribbonPick/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/stellarStreams/ribbonPick/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import {
   CAMERA_UNIFORM_BYTES,
   writeCameraPrefix,

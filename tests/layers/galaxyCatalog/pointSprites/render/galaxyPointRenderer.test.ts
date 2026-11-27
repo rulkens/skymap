@@ -24,7 +24,7 @@ import { createGalaxyPointRenderer } from '../../../../../src/layers/galaxyCatal
 import type { BuildRunner } from '../../../../../src/layers/galaxyCatalog/pointSprites/@types/BuildRunner';
 import { VIEW_SLOT_COUNT } from '../../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer';
-import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';

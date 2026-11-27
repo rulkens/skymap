@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { simplifyPolyline } from '../../../../tools/utils/math/simplifyPolyline';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // A wiggly arc, densely sampled: the reference the simplified line must stay near.
 const arc: Vec3[] = Array.from({ length: 400 }, (_, i) => {

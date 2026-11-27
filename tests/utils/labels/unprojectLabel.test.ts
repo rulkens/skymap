@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OutputProjection } from '../../../src/@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../../src/@types/rendering/ProjectedLabel';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 import { projectLabel } from '../../../src/utils/labels/projectLabel';
 import { unprojectLabel } from '../../../src/utils/labels/unprojectLabel';

@@ -12,10 +12,10 @@ import { isSurfaceTileBodyId } from '../../../../../../src/layers/body/surfaceTi
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { frameViewsAt } from '../../../../../helpers/frame/frameViewsAt';
 import type { FrameView } from '../../../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 const STATES = deriveBodyStates(CONST_J2000);
 const NEAR_DISTANCE_MPC = 1e-12;

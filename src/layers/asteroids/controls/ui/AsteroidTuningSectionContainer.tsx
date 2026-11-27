@@ -13,7 +13,7 @@ import {
   setAsteroidSizeBy,
   setAsteroidSlider,
 } from '../../state/asteroidTuning/slice';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderKey';
 import type { AsteroidClassSliderKey } from '../../@types/AsteroidClassSliderKey';

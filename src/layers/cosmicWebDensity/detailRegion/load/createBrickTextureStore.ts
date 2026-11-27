@@ -6,7 +6,7 @@
  */
 import type { VolumePyramidFormatRow } from '../../../../@types/data/volume/VolumePyramidFormatRow';
 import type { SlotEvictHandler } from '../../../../@types/cache/SlotEvictHandler';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../../data/gpu/textureBytesPerTexel';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
 import { levelByteLength } from '../../../../utils/gpu/memory/levelByteLength';

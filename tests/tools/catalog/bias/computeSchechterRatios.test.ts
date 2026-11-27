@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeSchechterRatios } from '../../../../tools/catalog/bias/computeSchechterRatios';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(count: number): GalaxyCatalog {
   return makeGalaxyCatalog(count, {

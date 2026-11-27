@@ -25,7 +25,7 @@
  * cluster land on a δ>1 knot in the spike's cross-match — the empirical anchor,
  * not a cosmological constant to be "corrected".
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { eqToSg } from '../../../../tools/utils/math/eqToSg';
 
 export const CF4PP_HUBBLE_H = 0.77;

@@ -13,7 +13,7 @@
  */
 
 import { PROVENANCE_AXES } from '../../../../data/provenanceAxes';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 

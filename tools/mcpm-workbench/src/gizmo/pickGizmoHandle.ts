@@ -2,7 +2,7 @@ import type { GizmoHandleGeometry } from '../../@types/gizmo/GizmoHandleGeometry
 import type { GizmoHandleId } from '../../@types/gizmo/GizmoHandleId';
 import type { RingHandle } from '../../@types/gizmo/RingHandle';
 import type { Ray } from '../../@types/gizmo/Ray';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { closestPointOnRayToLine } from './closestPointOnRayToLine';
 import { PICK_TOLERANCE_FRACTION } from './pickToleranceFraction.constant';
 import { rayPlaneIntersect } from './rayPlaneIntersect';

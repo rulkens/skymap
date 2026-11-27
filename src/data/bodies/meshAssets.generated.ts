@@ -2,10 +2,10 @@
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 export type MeshAssetRow = {
   readonly key: string;

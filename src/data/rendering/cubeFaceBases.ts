@@ -4,9 +4,9 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { mat3FromColumns } from '../../utils/math/mat3FromColumns';
-import { cross3 } from '../../utils/math/cross3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 
 /**
  * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's

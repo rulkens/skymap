@@ -5,7 +5,7 @@
  */
 
 import type { ReactElement } from 'react';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { AsteroidTuning } from '../../@types/AsteroidTuning';
 import type { AsteroidBeltRamp } from '../../@types/AsteroidBeltRamp';
@@ -22,7 +22,7 @@ import { rec709Luminance } from '../../../../utils/color/rec709Luminance';
 import { scaleToLuminance } from '../../../../utils/color/scaleToLuminance';
 import { scaleToUnitMax } from '../../../../utils/color/scaleToUnitMax';
 import AsteroidClassTuningSection from './AsteroidClassTuningSection';
-import Button from '../../../../components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
 import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugSection from '../../../../components/DebugPanel/DebugSection';

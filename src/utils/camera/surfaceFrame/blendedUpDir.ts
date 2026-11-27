@@ -8,8 +8,8 @@
  * read THIS, so the engaged settle and the world-arm roll cannot diverge.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { normalize3 } from '../../math/normalize3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 /**
  * `|blend| / (w·|pole_⊥| + (1−w)·|sceneUp_⊥|)` below this ⇒ the terms are

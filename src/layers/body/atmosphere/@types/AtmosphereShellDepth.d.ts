@@ -7,7 +7,7 @@
  */
 
 import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 export type AtmosphereShellDepth = {
   readonly frame: SampledDepthKmFrame | null;

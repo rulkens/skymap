@@ -3,7 +3,7 @@
  * nadir orthographic view built from the canvas's CSS size. That view's basis is horizontal,
  * so the map is affine and needs no matrix inverse.
  */
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { SceneCameraView } from '../render/sceneCameraView';
 
 export function pxToGroupXY(view: SceneCameraView, px: Vec2): Vec2 {

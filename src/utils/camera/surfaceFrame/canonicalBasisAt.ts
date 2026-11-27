@@ -1,7 +1,7 @@
 import type { EyeFrame } from '../../../@types/camera/pose/EyeFrame';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { cross3 } from '../../math/cross3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
 
 /** The roll-free basis at `frame`'s standpoint with this azimuth and tilt. */
 export function canonicalBasisAt(frame: EyeFrame, azimuthRad: number, tiltRad: number): Mat3 {

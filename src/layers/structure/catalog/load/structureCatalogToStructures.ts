@@ -52,7 +52,7 @@
 
 import type { StructureCatalogPayload } from '../@types/StructureCatalogPayload';
 import type { StructureInfo } from '../../../../@types/data/structure/StructureInfo';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { minOf } from '../../../../utils/math/minOf';
 import { makeMinMaxNormaliser } from '../../../../utils/math/makeMinMaxNormaliser';
 

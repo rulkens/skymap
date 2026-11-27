@@ -10,9 +10,9 @@
  */
 import { getContext, put, select, takeLatest } from 'typed-redux-saga';
 
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BoundsM } from '../../../@types/BoundsM';
-import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import { sceneCameraView } from '../../render/sceneCameraView';
 import { sortSplatOrder } from '../../scene/sortSplatOrder';
 import type { SceneSagaContext } from '../../store/sagaContext';

@@ -12,7 +12,7 @@ import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';
 import ArmCloudSection from '../ArmCloudSection/ArmCloudSection';
 import CollapsibleSection from '../../../../../src/components/common/CollapsibleSection/CollapsibleSection';
-import ParamSlider from '../../../../../src/components/common/ParamSlider/ParamSlider';
+import ParamSlider from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider';
 import SpursSection from '../SpursSection/SpursSection';
 import styles from './ArmFieldSection.module.css';
 

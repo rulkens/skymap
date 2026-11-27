@@ -8,7 +8,7 @@
  * general symmetric M is the only form closed under that (see
  * `galaxyFieldInverseCovariance`).
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export type GalaxyFieldComponent = {
   /** Peak emissivity, relative — the mixture is normalised by an exposure knob, not physically. */

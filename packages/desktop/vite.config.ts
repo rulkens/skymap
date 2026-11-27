@@ -16,13 +16,13 @@ const plainScript: Plugin = {
 };
 
 // tokens.css names its faces at the web app's /fonts/; from file:// that is the disk's root. Rebased
-// onto public/fonts, Vite bundles the files into build/control beside the page.
-const bundledFonts: Plugin = {
+// onto the repo's public/fonts (relative to tokens.css), Vite bundles the files into build/control.
+export const bundledFonts: Plugin = {
   name: 'bundled-fonts',
   enforce: 'pre',
   transform: (code, id) =>
-    id.endsWith('/src/styles/tokens.css')
-      ? code.replaceAll("url('/fonts/", "url('../../public/fonts/")
+    id.endsWith('/packages/shared/src/styles/tokens.css')
+      ? code.replaceAll("url('/fonts/", "url('../../../../public/fonts/")
       : undefined,
 };
 

@@ -4,7 +4,7 @@
  * deliberately lower than the detail cards: same glass family, tighter
  * padding, slightly less opaque background.  Each compact card composes the
  * pieces it needs from here.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * `packages/shared/src/styles/global.css`.
  */
 
 /* Outer glass panel — same base as the detail card but more compact */

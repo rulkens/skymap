@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { McpmHarness } from '../sim/McpmHarness';
 import type { BuildInputs } from './BuildInputs';
 import type { RenderGraph } from './RenderGraph';

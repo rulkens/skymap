@@ -1,5 +1,5 @@
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import { rotateVec3ByQuat } from '../../../../src/utils/math/rotateVec3ByQuat';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import { rotateVec3ByQuat } from '../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 import type { SimilarityTransform } from '../../@types/SimilarityTransform';
 
 /** Group-frame XY metres to asset-local XY: the inverse of `assetToGroupM`. Only valid when

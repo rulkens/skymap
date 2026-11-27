@@ -5,10 +5,10 @@
  * fixtures call this directly against the AUTHORED (pre-projection) pose.
  */
 
-import { normalize3 } from '../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function tiltOfPose(pose: CameraPose, eye: Readonly<Vec3>, body: BodyState): number {
   const n = normalize3([

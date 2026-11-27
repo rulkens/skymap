@@ -101,7 +101,7 @@ import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
 import type { Channel } from '../../../../@types/animation/Channel';
 import type { Ease } from '../../../../@types/animation/Ease';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/TerrainHeightAtLookup';
 import { compileClip } from '../../animation/compileClip';

@@ -1,5 +1,5 @@
 import type { Turns } from './Turns';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /** Source texels → destination texels for one chart: `d = R(turns)·M·(s·scale) + offsetPx`, R a
  *  90° CCW turn — `R(1)·(x, y) = (−y, x)`, see `rotateTurns.ts` — and M the x-mirror xatlas

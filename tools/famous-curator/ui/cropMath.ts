@@ -29,7 +29,7 @@
  * convention exactly, only swapping the square snap for the aspect one.
  */
 
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export type Crop = {
   x: number;

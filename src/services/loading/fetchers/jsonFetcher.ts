@@ -29,7 +29,7 @@
  * directly for assets where streaming progress matters.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import { HttpError } from '../fetchWithProgress';
+import { HttpError } from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 export function makeJsonFetcher<T, Req = void>(
   urlFor: (req: Req) => string,

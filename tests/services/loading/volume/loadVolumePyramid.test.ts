@@ -7,12 +7,15 @@ import { describe, expect, it, vi } from 'vitest';
 import type { VolumePyramidSidecar } from '../../../../src/@types/data/volume/VolumePyramidSidecar';
 import { useFetchMock } from '../../../setup/fetchMock';
 
-vi.mock('../../../../src/services/loading/fetchWithProgress', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  dataUrl: (path: string) => `/data/${path}`,
-}));
+vi.mock(
+  '../../../../packages/shared/src/services/loading/fetchWithProgress',
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    dataUrl: (path: string) => `/data/${path}`,
+  }),
+);
 
-import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
+import { HttpError } from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { loadVolumePyramid } from '../../../../src/services/loading/volume/loadVolumePyramid';
 
 // Base 1: L1 8×8×4 (256 B), L2 4×4×2 (32 B), L3 2×2×1 (4 B).

@@ -27,14 +27,14 @@ import { symmetricFrustum } from '../../../../../../src/utils/camera/frustum/sym
 import { DEFAULT_CAMERA_TUNING } from '../../../../../../src/data/camera/cameraTuning';
 import { datumOnlyTerrainHeight } from '../../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { bodyFixedEyeM } from '../../../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { earthArm } from '../../../../../fixtures/earthArm';
 import { cursorRayBodyLocal } from '../../../../../../src/utils/camera/terrain/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../../../src/utils/math/raySphereRoots';
-import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
 import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
-import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../../packages/shared/src/@types/camera/input/InputStep';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000);

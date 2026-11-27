@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { boxLocalToWorld } from '../../../../../../tools/mcpm-workbench/src/grid/box/boxLocalToWorld';
 import { worldToBoxLocal } from '../../../../../../tools/mcpm-workbench/src/grid/box/worldToBoxLocal';
 import type { GridBox } from '../../../../../../tools/mcpm-workbench/@types/grid/GridBox';
-import { quatFromAxisAngle } from '../../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 const box: GridBox = {
   centerMpc: [10, -4, 6],

@@ -1,7 +1,7 @@
 /** VolumeFieldDefaults — a field's look on first registration: presentation, so it sits on the field's
  *  source row (`layers/cosmicWebDensity/sources/`), never in the data file. */
 
-import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;

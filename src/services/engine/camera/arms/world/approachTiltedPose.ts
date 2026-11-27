@@ -17,7 +17,7 @@ import { frameUp } from '../../../../../utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../../utils/camera/orbitPose/imagePlaneBasis';
 import { mappedTiltRad } from '../../orientation/utils/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
-import { normalize3 } from '../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { tiltFromNadirRad } from '../../../../../utils/camera/surfaceFrame/tiltFromNadirRad';
 import { isWorldArm } from './isWorldArm';
 import { selectionDriver } from '../../../../../utils/selection/selectionDriver';
@@ -25,7 +25,7 @@ import type { BodyState } from '../../../../../@types/scene/BodyState';
 import type { CameraTuning } from '../../../../../@types/camera/orbitCamera/CameraTuning';
 import type { FramedCameraPose } from '../../../../../@types/camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { SelectionRowBase } from '../../../../../@types/engine/selection/SelectionRowBase';
 
 export function approachTiltedPose(

@@ -42,7 +42,7 @@ import type { OctreeGrid } from '../../../../../src/@types/octree/OctreeGrid';
 import type { OctreeNodeTable } from '../../../../../src/@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/starOctreeFamily';

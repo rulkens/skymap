@@ -10,8 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { buildRhizomeVolume } from '../../tools/volumes/buildRhizomeVolume';
-import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
-import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
+import { decodeScalarField } from '../../packages/shared/src/data/volume/scalarFieldFormat';
+import { f32ToF16Bits } from '../../packages/shared/src/utils/math/f32ToF16Bits';
 import { f16BitsToFloat } from '../../tools/utils/math/f16BitsToFloat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {

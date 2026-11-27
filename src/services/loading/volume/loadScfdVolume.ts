@@ -7,9 +7,12 @@ import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
-} from '../../../data/volume/scalarFieldFormat';
+} from '../../../../packages/shared/src/data/volume/scalarFieldFormat';
 import { gpuTextureFormatForChannels } from '../../../utils/gpu/gpuTextureFormatForChannels';
-import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /** `stem` is the file name under the scalar-field prefix, without `.scfd`. */
 export async function loadScfdVolume(

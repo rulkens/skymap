@@ -6,7 +6,7 @@
  * Per-frame constant: every glint shares one eye.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { SCALE_FADE_BANDS } from '../../data/scaleFadeBands';
 import { fadeBand } from '../math/fadeBand';

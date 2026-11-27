@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import cx from 'classnames';
 
-import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
 import { describeTimelineInstant } from '../../utils/exhibits/timeline/describeTimelineInstant';

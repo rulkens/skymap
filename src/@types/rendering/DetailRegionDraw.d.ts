@@ -1,7 +1,7 @@
 /** DetailRegionDraw — one field's detail region for one frame, as the volume march reads it. Numbers
  *  only: it goes into the density accumulation key. */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type DetailRegionDraw = {
   /** Read at weight 1. The stored box's local [0,1]³, inset half a native voxel; the high face is

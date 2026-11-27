@@ -1,4 +1,4 @@
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 /** Jittered frames averaged after the view stops; each one re-renders the whole scene. */
 export const DENSITY_SAMPLE_CAP_BY_TIER: Readonly<Record<Tier, number>> = {

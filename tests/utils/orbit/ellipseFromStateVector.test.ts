@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ellipseFromStateVector } from '../../../src/utils/orbit/ellipseFromStateVector';
 import { eccentricAnomalyFromMean } from '../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { EARTH_GM_KM3_S2 as MU } from '../../../src/data/earthGmKm3S2';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const pointAt = (
   o: NonNullable<ReturnType<typeof ellipseFromStateVector>>,

@@ -5,7 +5,7 @@
  * split decision reads only its own edge's two endpoints, so faces agree.
  */
 
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type RefinedMesh = {
   /** Unit direction per vertex; the caller re-derives radius from its own field. */

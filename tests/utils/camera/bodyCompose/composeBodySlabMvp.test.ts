@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { mat4d, vec4 } from 'wgpu-matrix';
 
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { composeBodySlabMvp } from '../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 
 describe('composeBodySlabMvp', () => {

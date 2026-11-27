@@ -18,7 +18,10 @@
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { FamousStarMetaEntry } from '../@types/FamousStarMetaEntry';
 import type { FamousStarsPayload } from '../@types/FamousStarsPayload';
-import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgress';
+import {
+  HttpError,
+  dataUrl,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /**
  * Parse `famous_stars_meta.json` content. Throws on schema mismatch. Public

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { DetailRegionDraw } from '../../../../../src/@types/rendering/DetailRegionDraw';
 import { densityAccumulationKey } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/densityAccumulationKey';

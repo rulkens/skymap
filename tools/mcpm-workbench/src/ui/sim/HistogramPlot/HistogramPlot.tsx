@@ -8,7 +8,7 @@
  * histogram changes or its box resizes, so it never stays stretched.
  */
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import CompactInfoTip from '../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import type { HistogramSlice } from '../../../../@types/sim/HistogramSlice';
 import { barFractions } from './utils/barFractions';
 import { binLabel } from './utils/binLabel';

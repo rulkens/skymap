@@ -8,7 +8,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StellarStreamMeta } from '../../catalog/@types/StellarStreamMeta';
 import type { StellarStreamsFocus } from '../@types/StellarStreamsFocus';
 import { unpackPick } from '../../../../data/selectionEncoding';
-import { lerp } from '../../../../utils/math/lerp';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
 import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
 import { stellarStreamsVisibility } from '../../visibility';

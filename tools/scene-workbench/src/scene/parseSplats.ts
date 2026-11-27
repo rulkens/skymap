@@ -7,7 +7,7 @@
  * the depth sort re-reads them every frame. No Node imports.
  */
 import type { BoundsM } from '../../@types/BoundsM';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import {
   SPLATS_MAGIC,
   SPLATS_FORMAT_VERSION,

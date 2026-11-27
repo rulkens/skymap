@@ -15,13 +15,13 @@ import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars
 import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
-import { normalize3 } from '../../src/utils/math/normalize3';
+import { normalize3 } from '../../packages/shared/src/utils/math/normalize3';
 import { SCENE_EARTH } from '../../src/data/bodies/sceneEarth';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import { visibilityEntryOf } from '../../src/utils/visibility/visibilityEntryOf';
 import { fadeBand } from '../../src/utils/math/fadeBand';
 import { regionById } from '../../src/utils/regions/regionById';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { FadeBand } from '../../src/@types/math/FadeBand';
 import type { VisibilityAddress } from '../../src/@types/animation/VisibilityAddress';
 

@@ -9,7 +9,7 @@
  * premultiplied colour); at full alpha that is just the straight RGB.
  */
 
-import type { Vec4 } from '../../@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 export function speedRamp(speed01: number): Vec4 {
   const x = speed01 < 0 ? 0 : speed01 > 1 ? 1 : speed01;

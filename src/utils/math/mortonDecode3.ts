@@ -15,7 +15,7 @@
  * @param code A 30-bit Morton code, as produced by `mortonEncode3`.
  * @returns The `[x, y, z]` grid coordinates, each an integer in [0, 1023].
  */
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function mortonDecode3(code: number): Vec3 {
   return [compact1by2(code), compact1by2(code >> 1), compact1by2(code >> 2)];

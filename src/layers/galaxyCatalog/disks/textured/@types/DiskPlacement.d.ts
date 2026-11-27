@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /** Disk render frame: the size/tilt/nucleus the textured quad is emitted with. */
 export type DiskPlacement = {

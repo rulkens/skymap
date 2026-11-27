@@ -2,7 +2,7 @@
  * FeaturedCardTip — the InfoTip body that hovers a featured-grid card. Two
  * optional sections stacked with progressively muted typography: an aliases
  * line (designations, dot-separated) then the curated blurb. All atoms
- * reference tokens from `src/styles/global.css`.
+ * reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 /* The tip body is injected into InfoTip's container; .root just groups the

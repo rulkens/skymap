@@ -6,8 +6,8 @@
  */
 
 import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
-import { rotateVec3ByQuat } from '../../../../../utils/math/rotateVec3ByQuat';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
+import { rotateVec3ByQuat } from '../../../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
 import { reorthonormalise } from '../../../../../utils/math/reorthonormalise';
 
 export function rotateBasisByQuat(q: Readonly<Vec4>, basisLocal: Readonly<Mat3>): Mat3 {

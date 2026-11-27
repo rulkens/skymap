@@ -23,7 +23,7 @@
  */
 
 import type { Renderer } from './Renderer';
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export type BodyGlintRenderer = Renderer & {
   /**

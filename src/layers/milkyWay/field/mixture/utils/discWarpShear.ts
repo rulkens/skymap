@@ -9,7 +9,7 @@
  * z once R is fixed — a shear, which is affine and integrates exactly.
  */
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * The two off-diagonal entries of the world -> unwarped map

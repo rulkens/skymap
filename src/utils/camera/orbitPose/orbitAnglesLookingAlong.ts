@@ -49,7 +49,7 @@
  * that way, with the eye trailing behind along the direction of travel.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 
 export function orbitAnglesLookingAlong(

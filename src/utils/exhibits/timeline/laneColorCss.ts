@@ -1,5 +1,5 @@
 import { linearRgbToHex } from '../../color/linearRgbToHex';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * A trail's HDR tint (channels ≲ 0.5, linear) as a CSS colour: scaled so its brightest

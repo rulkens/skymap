@@ -40,7 +40,7 @@ import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';

@@ -13,8 +13,8 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { computeViewProj } from '../../../utils/camera/projection/computeViewProj';
 import { stillFramesOf } from '../../../utils/frame/stillFramesOf';
 import { viewFromCameraEye } from '../../../utils/camera/projection/viewFromCameraEye';

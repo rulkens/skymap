@@ -11,7 +11,7 @@
 
 import type { SampledBody } from '../../@types/scene/SampledBody';
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { orientationForBody } from '../../data/bodies/orientationForBody';
 import { EARTH_DATUM_RADIUS_M } from '../../data/bodies/earthDatumRadiusM';
 import { LAUNCH_CLIMB } from '../../data/orbit/launchClimb';
@@ -19,7 +19,7 @@ import { SCALE_UNITS } from '../../data/scaleUnits';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 import { surfacePointBodyFixed } from '../geo/surfacePointBodyFixed';
 import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 import { smoothstep } from '../math/smoothstep';
 import { isoToJulianDays } from '../time/isoToJulianDays';

@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { hubbleVelocityKmS } from '../../../src/utils/math/hubbleVelocityKmS';
-import { C_KM_S } from '../../../src/utils/math/constants';
+import { C_KM_S } from '../../../packages/shared/src/utils/math/constants';
 
 describe('hubbleVelocityKmS', () => {
   it('agrees with c·z at low z (the classical Hubble-law regime)', () => {

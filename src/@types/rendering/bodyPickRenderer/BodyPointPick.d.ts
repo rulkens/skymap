@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** One scene-star POINT-partition body: its camera-relative anchor + packed id. */
 export type BodyPointPick = {

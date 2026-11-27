@@ -4,7 +4,7 @@
  * The glassmorphic card + clickable header + collapse affordance live
  * in `components/common/Panel/Panel.module.css`; this file only styles
  * the cheatsheet's two-column rows that render inside Panel's body.
- * All atoms reference tokens from `src/styles/global.css`.
+ * All atoms reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 /*

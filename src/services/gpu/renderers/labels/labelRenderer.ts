@@ -9,7 +9,7 @@
  * per `OverlaySceneOcclusion` kind: group(1) is the sampled-depth joint, or one mask texture.
  */
 
-import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { LabelRenderer } from '../../../../@types/rendering/LabelRenderer';
 import type { LabelPipelines } from '../../../../@types/rendering/LabelPipelines';
@@ -22,7 +22,7 @@ import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
 import vsOccludeMaskCode from '../../shaders/labels/vertexOccludeMask.wesl?static';
 import fsOccludeMaskCode from '../../shaders/labels/fragmentOccludeMask.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,

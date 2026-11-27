@@ -10,8 +10,8 @@
  */
 
 import type { Mat3 } from '../../../../../@types/math/Mat3';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
-import { quatFromAxisAngle } from '../../../../../utils/math/quatFromAxisAngle';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 /** Below this angle the bases agree to float noise and no correction is due. */
 const AGREE_RAD = 1e-12;

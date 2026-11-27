@@ -36,7 +36,7 @@ import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 
 const SIM_DAYS = 0;

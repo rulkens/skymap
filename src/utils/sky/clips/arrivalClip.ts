@@ -10,7 +10,7 @@ import type { CameraArmBasisCtx } from '../../../@types/camera/arms/CameraArmBas
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { all, moveTarget, tween } from '../../../services/engine/animation/effectHelpers';
 import { toBodyFixedChannels } from '../../../services/engine/camera/arms/body/toBodyFixedChannels';
 import { encodeBodyFixedChannels } from '../../../services/engine/camera/arms/body/utils/encodeBodyFixedChannels';

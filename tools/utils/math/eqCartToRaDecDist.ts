@@ -4,7 +4,7 @@
  * RA is wrapped into [0, 360) before converting to hours, so a vector in
  * the −y half-plane reports a positive RA rather than a negative one.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function eqCartToRaDecDist(eq: Vec3): {
   raHours: number;

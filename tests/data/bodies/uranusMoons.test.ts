@@ -4,7 +4,7 @@ import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // JPL Horizons, position relative to Uranus centre (500@799), ICRF equatorial axes (the scene's
 // world frame), JD 2451545.0 TDB, km. External contract: a pole on the wrong side of the sky

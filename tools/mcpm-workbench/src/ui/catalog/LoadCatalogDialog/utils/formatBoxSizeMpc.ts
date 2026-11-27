@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { formatSizeMpc } from '../../../../utils/format/formatSizeMpc';
 
 /** formatBoxSizeMpc — a box's size as the size sliders show it, once when it is a cube. */

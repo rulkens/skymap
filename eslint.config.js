@@ -16,7 +16,7 @@
 // filename === export name) live in tests/conventions/ as structural tests —
 // a per-file AST linter is the wrong shape for file-level facts.
 //
-// Scope is `src` + `tools`; `tests/` is excluded because the hooks rules
+// Scope is `src`, `tools` and `packages/shared/src`; `tests/` is excluded because the hooks rules
 // false-positive on `useX()` test helpers. The two trees have separate
 // tsconfigs, so each gets its own parser block.
 
@@ -55,9 +55,9 @@ export default tseslint.config(
     ignores: ['dist', 'coverage', 'public', 'node_modules', 'tools/stars-rs/target', '**/*.wesl'],
   },
 
-  // Product code → root tsconfig.json (discovered via projectService).
+  // Product code and the shared package → root tsconfig.json (discovered via projectService).
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'packages/shared/src/**/*.{ts,tsx}'],
     plugins,
     languageOptions: {
       parser: tseslint.parser,

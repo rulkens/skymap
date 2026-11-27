@@ -1,7 +1,7 @@
 /** declinationAt — a world-frame target's declination against a host's equator (radians). */
 
 import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { altAzFromSpot } from './altAzFromSpot';

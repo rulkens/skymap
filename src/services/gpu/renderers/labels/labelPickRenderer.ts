@@ -15,7 +15,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import pickCode from '../../shaders/labels/pick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 /** `LabelPickUniforms` (pick.wesl): vec2<f32> viewportPx + 2 pad f32. */
 const UNIFORM_BYTES = 16;

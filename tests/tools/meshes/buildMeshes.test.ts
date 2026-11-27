@@ -7,9 +7,9 @@ import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Tier } from '../../../src/@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { MeshOrigin } from '../../../tools/meshes/@types/MeshOrigin';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
 import { buildMeshes, type MeshBuildTarget } from '../../../tools/meshes/buildMeshes';

@@ -2,7 +2,7 @@
 
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { findByIdOrThrow } from '../object/findByIdOrThrow';

@@ -23,7 +23,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));

@@ -41,7 +41,7 @@ import { levelByteLength } from '../../src/utils/gpu/memory/levelByteLength';
 import { brickId } from '../../src/utils/volume/brickId';
 import { volumeBrickArchivePath } from '../../src/utils/volume/volumeBrickArchivePath';
 import type { VolumePyramidFieldRow } from '../@types/volumes/VolumePyramidFieldRow';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 function writeOut(path: string, bytes: Uint8Array): void {
   const out = `public/data/${path}`;

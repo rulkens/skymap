@@ -8,8 +8,8 @@ import { describe, it, expect } from 'vitest';
 import { meshShadowLightFromMesh } from '../../../src/utils/meshBodies/meshShadowLightFromMesh';
 import { meshShadowLightFromLocal } from '../../../src/utils/meshBodies/meshShadowLightFromLocal';
 import { meshShadowLightFromEye } from '../../../src/utils/meshBodies/meshShadowLightFromEye';
-import { normalize3 } from '../../../src/utils/math/normalize3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 function transform(m: Float64Array, p: Readonly<Vec3>): Vec3 {

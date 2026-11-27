@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import { HORIZON_TILE_ATLAS_SIDE, HORIZON_TILE_PX } from '../../format/data/surfaceTileParams';
 import { HORIZON_POSTS_PER_TILE } from '../data/horizonAngleMap';

@@ -3,8 +3,8 @@ import type { CameraTuning } from '../../../../../../../@types/camera/orbitCamer
 import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
 import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
 import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { anchoredZoomStep } from './anchoredZoomStep';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { bodyUpWeight } from '../../../../orientation/utils/bodyUpWeight';
@@ -18,7 +18,7 @@ import { surfacePickToleranceM } from '../../../../../../../utils/camera/terrain
 import { settledZoomPose } from './settledZoomPose';
 import { spentZoomFactor } from '../../../../input/utils/spentZoomFactor';
 import { dot3 } from '../../../../../../../utils/math/dot3';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
 
 export function surfaceZoomStep(
   arm: BodyFixedPose,

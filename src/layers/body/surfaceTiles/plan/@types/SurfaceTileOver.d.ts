@@ -7,7 +7,7 @@
 
 import type { SurfaceTileBodyId } from '../../format/@types/SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 export type SurfaceTileOver = {
   readonly bodyId: SceneBodyId & SurfaceTileBodyId;

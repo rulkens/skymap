@@ -2,7 +2,7 @@ import { armRidgeAngle } from './armRidgeAngle';
 import { warpHeight } from '../../mixture/utils/warpHeight';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * Ridge position at a given log-radius — armStarSample's `x`/`y`/`z` before

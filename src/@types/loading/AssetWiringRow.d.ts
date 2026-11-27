@@ -9,7 +9,7 @@
 import type { AssetKey } from './AssetKey';
 import type { AssetSlot } from './AssetSlot';
 import type { AssetDemand } from './AssetDemand';
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { VisibilityAddress } from '../animation/VisibilityAddress';
 
 export type AssetWiringRow<T = unknown, R = unknown, Key extends AssetKey = AssetKey> = {

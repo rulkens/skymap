@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { bodySurfaceTier } from '../../../../../src/layers/body/textures/load/bodySurfaceTier';
 import { bodyTextureSlotKey } from '../../../../../src/layers/body/textures/load/bodyTextureSlotKey';
 import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 /** The body's texture slots, with an `earth:surface` slot in `kind` holding a request for

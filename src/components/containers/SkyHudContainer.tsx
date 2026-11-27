@@ -27,7 +27,7 @@ import { neverRises } from '../../utils/sky/neverRises';
 import { tonightAt } from '../../utils/sky/tonightAt';
 import { radToDeg } from '../../utils/math/radToDeg';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const MS_PER_MINUTE = 60_000;
 /** The Sun is the heliocentric origin. */

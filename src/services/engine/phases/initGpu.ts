@@ -11,15 +11,19 @@
 
 import { DUAL_SOURCE_FEATURE } from '../../../data/rendering/dualSourceBlend';
 import { VOLUME_PYRAMID_FORMATS } from '../../../data/volume/volumePyramidFormats';
-import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
+import {
+  initGpu as gpuInitGpu,
+  resizeCanvasToDisplay,
+  watchHdrCapability,
+} from '../../../../packages/shared/src/services/gpu/device';
 import { trackGpuMemory } from '../../gpu/memory/trackGpuMemory';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { loadEnvBrdfLut } from '../../gpu/resources/loadEnvBrdfLut';
-import { loadDataManifest } from '../../loading/dataManifest';
+import { loadDataManifest } from '../../../../packages/shared/src/services/loading/dataManifest';
 import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
-import { hasUrlGate } from '../../../utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../../packages/shared/src/utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';

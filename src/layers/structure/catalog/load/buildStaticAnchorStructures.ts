@@ -41,7 +41,7 @@
  * below, so this remains synchronous.
  */
 
-import { raDecDistToEqCart } from '../../../../utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../../../utils/math/lengthToMpc';
 import type { Length } from '../../../../@types/data/Length';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';

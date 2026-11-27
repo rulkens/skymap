@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** Minimal shape the comparator needs — any disk instance with a world position. */
 type Positioned = { readonly x: number; readonly y: number; readonly z: number };

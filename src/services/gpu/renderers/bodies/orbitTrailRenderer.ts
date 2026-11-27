@@ -17,7 +17,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { OrbitTrailRenderer } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
 import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';

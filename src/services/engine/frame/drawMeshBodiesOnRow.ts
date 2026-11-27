@@ -27,7 +27,7 @@ import { composeMeshMvp } from '../../../utils/camera/bodyCompose/composeMeshMvp
 import { sunDirLocal } from '../../../utils/camera/bodyCompose/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { meshShadowLightFromLocal } from '../../../utils/meshBodies/meshShadowLightFromLocal';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { packMeshBodyUniforms } from '../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';

@@ -25,8 +25,8 @@
  * implementation across the codebase.
  */
 
-import type { Vec3 } from '../../src/@types/math/Vec3';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
+import { raDecDistToEqCart } from '../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/eqToSg';
 
 /**

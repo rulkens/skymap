@@ -21,8 +21,8 @@ import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/Te
 import type { RootState } from '../../../../store/types';
 import type { CameraEpochs } from '../../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../utils/camera/orbitPose/eyeMpcOf';
@@ -40,7 +40,7 @@ import { ORIENTATION_FRAMES } from '../../../../data/orientation/orientationFram
 import { liveBodyPosition } from '../bodyFrame/liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { EASED_FOCUS_EASE } from '../../../../data/camera/focusMoveDefaults';
-import { lerp } from '../../../../utils/math/lerp';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
 import { isWorldArm } from '../arms/world/isWorldArm';
 import { rowFor } from '../arms/rowFor';
 import { selectGestureHeld } from '../../../../state/input/selectors';

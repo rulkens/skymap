@@ -6,7 +6,7 @@
  * to keep, so it passes through unchanged.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function compressBrightness(rgb: Readonly<Vec3>, gamma: number): Vec3 {
   const max = Math.max(rgb[0], rgb[1], rgb[2]);

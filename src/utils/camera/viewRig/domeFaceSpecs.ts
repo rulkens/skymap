@@ -7,7 +7,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { DOME_FACE_COUNT, DOME_FACE_NAMES } from '../../../data/rendering/domeFaces';
 import { DOME_PARAMS } from '../../../data/rendering/domeParams';
 import { domeFaceRotations } from '../../dome/domeFaceRotations';

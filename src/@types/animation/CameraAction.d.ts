@@ -54,7 +54,7 @@ import type { Channel } from './Channel';
 import type { Ease } from './Ease';
 import type { Space } from './Space';
 import type { PoseFrame } from '../camera/pose/PoseFrame';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type CameraAction =
   | {

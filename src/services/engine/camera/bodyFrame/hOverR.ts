@@ -5,7 +5,7 @@
  * any orthonormal matrix works.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { bodyRelativePose } from './bodyRelativePose';

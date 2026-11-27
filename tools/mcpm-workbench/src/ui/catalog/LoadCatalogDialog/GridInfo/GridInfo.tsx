@@ -7,7 +7,7 @@
  * shows here as it will be stored.
  */
 import type { ReactNode } from 'react';
-import CompactInfoTip from '../../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import type { UserCatalogLoad } from '../../../../../@types/catalog/UserCatalogLoad';
 import type { GridSlice } from '../../../../../@types/grid/GridSlice';
 import { deriveGridBox } from '../../../../grid/deriveGridBox';

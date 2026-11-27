@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { cross3 } from '../../../src/utils/math/cross3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 
 // atan2 of the cross over the dot: acos of a dot reads a one-ulp difference between
 // parallel vectors as 1.5e-8 rad and anything smaller as exactly 0. Scale-invariant.

@@ -12,7 +12,7 @@
  * @param kpc  Diameter in kiloparsecs. Must be non-negative.
  */
 
-import { PC_TO_LY } from '../math/constants';
+import { PC_TO_LY } from '../../../packages/shared/src/utils/math/constants';
 import { formatScalar } from './formatScalar';
 
 export function formatDiameterKpc(kpc: number): string {

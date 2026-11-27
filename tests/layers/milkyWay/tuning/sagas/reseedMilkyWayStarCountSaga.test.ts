@@ -10,7 +10,7 @@ import { rootReducer } from '../../../../../src/store/rootReducer';
 import { reseedMilkyWayStarCountSaga } from '../../../../../src/layers/milkyWay/tuning/sagas/reseedMilkyWayStarCountSaga';
 import { setTier } from '../../../../../src/state/tier/tierSlice';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import { TIER_LADDER } from '../../../../../packages/shared/src/data/tierLadder';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 

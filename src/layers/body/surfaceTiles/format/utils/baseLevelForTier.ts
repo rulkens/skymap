@@ -1,5 +1,5 @@
 import type { SurfaceTileBodyId } from '../@types/SurfaceTileBodyId';
-import type { Tier } from '../../../../../@types/data/Tier';
+import type { Tier } from '../../../../../../packages/shared/src/@types/data/Tier';
 import { BODY_TEXTURE_REGISTRY } from '../../../textures/data/bodyTextureRegistry';
 import { clampTier } from '../../../../../utils/math/clampTier';
 import { tierToTexturePx } from '../../../../../utils/math/tierToTexturePx';

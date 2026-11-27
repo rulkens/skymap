@@ -16,7 +16,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyEngineHandle } from '../../../@types/engine/GalaxyEngineHandle';
 import type { GalaxyDescriptor } from '../../../@types/matcher/GalaxyDescriptor';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import { useAppDispatch, useAppSelector, useAppStore } from '../../state/hooks';
 import {
   referenceSelected,

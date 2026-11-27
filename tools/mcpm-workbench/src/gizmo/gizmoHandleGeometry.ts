@@ -2,7 +2,7 @@ import type { GizmoHandleGeometry } from '../../@types/gizmo/GizmoHandleGeometry
 import type { GridBox } from '../../@types/grid/GridBox';
 import type { Handle } from '../../@types/gizmo/Handle';
 import type { RingHandle } from '../../@types/gizmo/RingHandle';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 import { RING_RADIUS_ARROW_MULTIPLE } from './ringRadiusArrowMultiple.constant';
 

@@ -26,7 +26,7 @@ import { buildPathTrack } from '../../../../src/services/engine/animation/buildP
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CompositeSample } from '../../../../src/@types/animation/compiledClip/CompositeSample';
 import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
 import { DEFAULT_LOOK_AHEAD } from '../../../../src/services/engine/animation/pathDefaults';

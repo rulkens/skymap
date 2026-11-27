@@ -12,7 +12,7 @@ import { selectionRoute } from '../../../src/store/constants';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const MARS = { type: 'body', id: 'mars' };

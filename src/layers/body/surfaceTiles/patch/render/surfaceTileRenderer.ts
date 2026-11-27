@@ -21,7 +21,7 @@ import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';
 import { patchOriginRelEyeM } from '../subsystems/patchOriginRelEyeM';
 import { surfacePatchIndices } from '../subsystems/surfacePatchIndices';
 import { surfaceEffectsKey } from '../../plan/subsystems/surfaceEffectsKey';
-import { createShaderModuleWithDevLog } from '../../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import vsCode from '../../../../../services/gpu/shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
@@ -38,7 +38,7 @@ import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
 import { NO_HORIZON_RECT } from '../../../../../data/gpu/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import { MESH_SHADOW_SAMPLER } from '../../../../../data/mesh/meshShadowMap';
 import { MESH_SHADOW_CASTERS_BYTES } from '../../../../../data/mesh/meshShadowCastersLayout';
 import { packMeshShadowCasters } from '../../../../../utils/gpu/packMeshShadowCasters';

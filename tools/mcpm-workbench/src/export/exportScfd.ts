@@ -1,9 +1,9 @@
 import type { GridBox } from '../../@types/grid/GridBox';
-import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
-import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
-import { packLogTraceVoxels } from '../../../../src/utils/volume/packLogTraceVoxels';
+import type { ScalarCube } from '../../../../packages/shared/src/@types/data/volume/ScalarCube';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
+import { encodeScalarField } from '../../../../packages/shared/src/data/volume/scalarFieldFormat';
+import { packLogTraceVoxels } from '../../../../packages/shared/src/utils/volume/packLogTraceVoxels';
 import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
 
 /**

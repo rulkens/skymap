@@ -17,7 +17,7 @@ import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { UiState } from '../../../../../src/@types/ui/UiState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // `slot` is carried, never called here.
 const ROW = satellitesAssetRows({} as SatellitesRuntime)[0]!;

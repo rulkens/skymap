@@ -12,8 +12,8 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import cx from 'classnames';
-import Button from '../common/Button/Button';
-import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import Button from '../../../packages/shared/src/components/common/Button/Button';
+import CompactInfoTip from '../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './TimeBar.module.css';
 
 const HOLD_DELAY_MS = 400; // dwell before press-and-hold auto-repeat engages

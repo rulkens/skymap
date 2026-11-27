@@ -54,7 +54,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO, NEAR0 } from './slabs';

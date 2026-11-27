@@ -1,5 +1,5 @@
 import { SDSS_TARGET_MEAN_MAG } from '../data/sdssTargetMeanMag';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * The cosmetic shift moving a catalog's mean finite `magG` onto the SDSS target

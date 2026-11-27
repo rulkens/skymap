@@ -46,9 +46,9 @@
  */
 
 import { mat4, type Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec4 } from '../../../../@types/math/Vec4';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { FlowField } from '../@types/FlowField';
 import type { FlowSettings } from '../../@types/FlowSettings';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
@@ -63,7 +63,7 @@ import { TRAIL, MAX_PARTICLES, HEAD_SPEED_SCALE, RIBBON_WIDTH } from '../data/fl
 import flowComputeWgsl from '../../../../services/gpu/shaders/flow/compute.wesl?static';
 import flowVertexWgsl from '../../../../services/gpu/shaders/flow/vertex.wesl?static';
 import flowFragmentWgsl from '../../../../services/gpu/shaders/flow/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 
 const WORKGROUP_SIZE = 64;

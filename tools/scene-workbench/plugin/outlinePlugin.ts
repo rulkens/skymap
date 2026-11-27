@@ -8,7 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { Plugin } from 'vite';
 
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import { normalizeRing } from '../../scene-recon/crop/normalizeRing';
 import { groupManifestPath, meshOutlinePath } from '../../scene-recon/manifest/geo3dLayout';
 import { readJsonBody } from '../../utils/http/readJsonBody';

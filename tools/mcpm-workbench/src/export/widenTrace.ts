@@ -1,5 +1,5 @@
 import type { TraceReadback } from '../../@types/sim/TraceReadback';
-import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../../packages/shared/src/utils/math/f16ToFloat';
 
 /**
  * widenTrace — `TraceReadback` → `Float32Array`, feeding `packLogTraceVoxels`

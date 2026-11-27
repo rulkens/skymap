@@ -43,8 +43,8 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustum/frustumPerspectiveF64';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

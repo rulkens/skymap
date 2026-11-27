@@ -1,4 +1,4 @@
-import type { InputStep } from './InputStep';
+import type { InputStep } from '../../../../packages/shared/src/@types/camera/input/InputStep';
 
 /** An `InputStep` as the input layer hands it to the drain: a zoom carries the `fresh` its source
  * stamped (`inputSlice`), which `replayInput` reads; no arm reads wheel timing. */

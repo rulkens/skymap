@@ -2,7 +2,7 @@
  * ringEdgeInsertion — where a click on a draft ring's edge would add a corner, in screen px. Both
  * radii are pixels, not metres, so zooming in lets corners sit closer together in the world.
  */
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 export function ringEdgeInsertion(
   cornersPx: readonly Vec2[],

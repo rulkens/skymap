@@ -9,7 +9,7 @@ import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { geodesicPath } from '../../../utils/camera/focusMotion/geodesicPath';
 import { EASE } from './ease';
 

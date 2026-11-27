@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Distance from `p` to the segment a–b (not the infinite line: a track can double back past an end). */
 export function pointSegmentDistance(

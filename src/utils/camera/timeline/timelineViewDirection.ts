@@ -5,7 +5,7 @@
 
 import type { TimelineCameraFrame } from '../../../@types/camera/timeline/TimelineCameraFrame';
 import type { TimelineOffsets } from '../../../@types/camera/timeline/TimelineOffsets';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function timelineViewDirection(frame: TimelineCameraFrame, offsets: TimelineOffsets): Vec3 {
   const cp = Math.cos(offsets.pitch);

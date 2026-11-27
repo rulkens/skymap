@@ -8,7 +8,7 @@
 
 import type { ReactNode } from 'react';
 import type { HexString } from '../../@types/math/HexString';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
 import styles from './DebugSlider.module.css';

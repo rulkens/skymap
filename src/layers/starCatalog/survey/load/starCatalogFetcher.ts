@@ -19,7 +19,10 @@ import { decodeOctreeIndex } from '../../../../data/octree/decodeOctreeIndex';
 import { starOctreeFromSkst } from '../utils/starOctreeFromSkst';
 import { octreeFromIndex } from '../../../../utils/octree/octreeFromIndex';
 import { starColumnsOf } from '../utils/starColumnsOf';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import type { StarColumns } from '../@types/StarColumns';
 
 export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = async (

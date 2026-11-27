@@ -16,7 +16,7 @@ import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.

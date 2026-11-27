@@ -16,7 +16,7 @@ import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRunt
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
 import { seededBodyStates } from '../../../../helpers/frame/seededBodyStates';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';

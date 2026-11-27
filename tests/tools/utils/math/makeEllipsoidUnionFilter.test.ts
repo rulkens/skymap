@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeEllipsoidUnionFilter } from '../../../../tools/utils/math/makeEllipsoidUnionFilter';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // A representative sky direction + depth inside the SGW shell.
 const RA = 175;

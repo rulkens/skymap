@@ -17,7 +17,10 @@ import { pickVolumePyramidFormat } from '../../../utils/volume/pickVolumePyramid
 import { volumePyramidLevelPath } from '../../../utils/volume/volumePyramidLevelPath';
 import { volumePyramidLevels } from '../../../utils/volume/volumePyramidLevels';
 import { volumePyramidPlacement } from '../../../utils/volume/volumePyramidPlacement';
-import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { fetchVolumePyramidSidecar } from './fetchVolumePyramidSidecar';
 
 export async function loadVolumePyramid(

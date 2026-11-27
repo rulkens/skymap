@@ -9,10 +9,10 @@
  */
 import { useState, type ReactNode } from 'react';
 import skymapIconUrl from '../../../../../../public/favicon.svg';
-import type { Tier } from '../../../../../../src/@types/data/Tier';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Tier } from '../../../../../../packages/shared/src/@types/data/Tier';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { APP_SOURCE_REGISTRY } from '../../../../../../src/compositions/appSources';
-import PlusIcon from '../../../../../../src/components/icons/PlusIcon/PlusIcon';
+import PlusIcon from '../../../../../../packages/shared/src/components/icons/PlusIcon/PlusIcon';
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { tierTarget } from '../../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import { WORKBENCH_SOURCES } from '../../../catalog/workbenchSources.constant';

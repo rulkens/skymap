@@ -6,7 +6,7 @@
  * The order is the blend contract — opaque kinds write depth first, splats
  * blend over that depth last and never write it.
  */
-import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { CameraProjection } from '../../@types/CameraProjection';
 import type { SceneDisplay } from '../../@types/SceneDisplay';
 import { createLidarPointRenderer } from './lidarPointRenderer';

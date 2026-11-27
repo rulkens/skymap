@@ -6,11 +6,14 @@
  * included), fanned out over `sources`. Store-free, with its own abort-less fetches.
  */
 import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Tier } from '../../../../src/@types/data/Tier';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
+import type { GalaxyCatalog } from '../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { CatalogPoints } from '../../@types/catalog/CatalogPoints';
-import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
-import { dataUrl, fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
+import { loadDataManifest } from '../../../../packages/shared/src/services/loading/dataManifest';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 import {
   tierTarget,
   tierFilenameForSource,

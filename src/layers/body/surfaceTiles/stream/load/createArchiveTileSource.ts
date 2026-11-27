@@ -8,7 +8,7 @@ import { readArchiveRange } from '../../../../../utils/archive/readArchiveRange'
 import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../../data/archive/archiveFetchDeadlineMs';
 import { surfaceTileArchivePath } from '../../archive/utils/surfaceTileArchivePath';
 import { surfaceTileMortonKey } from '../../archive/utils/surfaceTileMortonKey';
-import { dataUrl } from '../../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /**
  * createArchiveTileSource — reads tiles from per-level `.idx` + `.pack`

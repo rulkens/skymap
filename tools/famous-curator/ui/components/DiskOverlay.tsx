@@ -35,7 +35,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { RecipeDisk } from '../../plugin/recipe';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import {
   diskFromDrag,
   majorAxisHandle,

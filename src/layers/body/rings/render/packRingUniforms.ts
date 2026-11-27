@@ -7,7 +7,7 @@
  * fragment's in-front-of-planet view-ray test. `innerRatio` is ring inner / outer.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** f32 count of the uniform struct. */
 export const RING_UNIFORM_FLOATS = 24;

@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /** A body-fixed direction placed on level z's tile grid: the tile, and the point's uv inside it
  *  in the patch's convention (`vertex.wesl`'s `out.uv`): u east from the west edge, v south from

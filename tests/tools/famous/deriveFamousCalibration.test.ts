@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalibration';
 import type { RecipeCrop, RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ import { skraafotoHarvestDir } from '../../utils/skraafoto/skraafotoHarvestDir';
 import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from '../@types/SkraafotoStacItem';
 import type { PhotoPose } from '../../scene-workbench/@types/PhotoPose';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export async function groupPhotoPoses(
   group: SceneGroupDefinition,

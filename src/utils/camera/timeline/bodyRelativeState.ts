@@ -4,7 +4,7 @@
  * the track starts the craft is read at its first sample: the launch ascent is a fitted ease.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
 import { hermiteTrackAt } from '../../orbit/hermiteTrackAt';

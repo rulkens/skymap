@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { dataPointHistogram } from '../../../../tools/mcpm-workbench/validate/dataPointHistogram';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 describe('dataPointHistogram', () => {
   it('samples one data point into its hand-computed voxel and bin', () => {

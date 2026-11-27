@@ -31,16 +31,16 @@ import { decodeBodyFixedChannels } from '../../../../../../src/services/engine/c
 import { SKY_EXIT_PITCH_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPitchMs';
 import { SKY_EXIT_CLIMB_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitClimbMs';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
-import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
-import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
+import type { InputStep } from '../../../../../../packages/shared/src/@types/camera/input/InputStep';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import type { FrameOf } from '../../../../../../src/@types/camera/arms/FrameOf';
 import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
 import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
 import type { SceneBodyId } from '../../../../../../src/@types/scene/SceneBodyId';
 import type { SkySpot } from '../../../../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
-import type { DragMode } from '../../../../../../src/@types/camera/input/DragMode';
+import type { DragMode } from '../../../../../../packages/shared/src/@types/camera/input/DragMode';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = asSceneBodyId('earth');

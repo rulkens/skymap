@@ -11,7 +11,7 @@
 
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { SlabRow } from '../../@types/engine/frame/SlabRow';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { distanceMpc } from '../math/distanceMpc';
 import { fadeBand } from '../math/fadeBand';
 

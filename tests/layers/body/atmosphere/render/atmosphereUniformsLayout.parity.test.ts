@@ -13,7 +13,7 @@ import {
   packAtmosphereUniforms,
   ATMOSPHERE_UNIFORM_FLOATS,
 } from '../../../../../src/layers/body/atmosphere/render/packAtmosphereUniforms';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));

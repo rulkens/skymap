@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { steppedSitePose } from '../../../../../../../src/services/engine/camera/arms/site/utils/steppedSitePose';
 import { ORBIT_MAX_RAD_PER_PX } from '../../../../../../../src/services/engine/camera/input/utils/orbitRadPerPixel';
 import { SITE_CAMERA_ARM } from '../../../../../../../src/services/engine/camera/arms/site/data/siteCameraArm';
-import type { InputStep } from '../../../../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { MeshBody } from '../../../../../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../../../../../src/@types/camera/pose/SitePose';
 import { asSceneBodyId } from '../../../../../../../src/utils/scene/asSceneBodyId';

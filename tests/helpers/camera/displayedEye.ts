@@ -10,7 +10,7 @@ import { eyeMpcOf } from '../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 

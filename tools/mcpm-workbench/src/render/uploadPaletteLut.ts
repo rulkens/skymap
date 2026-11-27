@@ -10,8 +10,11 @@
  * The LUT's alpha channel is uploaded but never read — the raymarch takes its
  * opacity from Polyphorm's `opticalThickness * r` instead.
  */
-import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../src/data/volume/scalarFieldPalettes';
+import type { ScalarFieldPaletteId } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
+import {
+  buildPaletteLut,
+  PALETTE_LUT_SIZE,
+} from '../../../../packages/shared/src/data/volume/scalarFieldPalettes';
 
 export function uploadPaletteLut(device: GPUDevice, id: ScalarFieldPaletteId): GPUTexture {
   const texture = device.createTexture({

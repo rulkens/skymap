@@ -13,7 +13,7 @@ import type { CompositeTrack } from '../../../@types/animation/compiledClip/Comp
 import type { Channel } from '../../../@types/animation/Channel';
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { baseTracksOf } from './baseTracksOf';
 import { buildFrameLegs } from './buildFrameLegs';
 import { easeEndSlopes } from './easeEndSlopes';

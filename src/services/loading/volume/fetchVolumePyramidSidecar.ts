@@ -1,6 +1,9 @@
 import type { VolumePyramidSidecar } from '../../../@types/data/volume/VolumePyramidSidecar';
 import { VOLUME_PYRAMID_DATA_PREFIX } from '../../../data/volume/volumePyramidDataPrefix';
-import { dataUrl, HttpError } from '../fetchWithProgress';
+import {
+  dataUrl,
+  HttpError,
+} from '../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 /** A pyramid's sidecar, read by the base load and again by its detail region (an HTTP-cache hit). */
 export async function fetchVolumePyramidSidecar(

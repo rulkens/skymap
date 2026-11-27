@@ -6,6 +6,6 @@
  * the overlays and trails already measure their subjects in.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type SampledDepthKmFrame = { readonly invMvp: Float32Array; readonly camPosKm: Vec3 };

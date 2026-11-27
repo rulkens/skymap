@@ -14,7 +14,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { unixMsToJulianDays } from '../../../../../src/utils/time/unixMsToJulianDays';
 import { buildSatelliteCatalog } from '../../../../../tools/satellites/buildSatelliteCatalog';
 import { GOES_18, ISS } from '../../fixtures/celestrakRecords';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const { catalog } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [ISS, GOES_18] }],

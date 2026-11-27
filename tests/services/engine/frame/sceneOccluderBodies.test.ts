@@ -14,7 +14,7 @@ import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRad
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // Lets one case compose no Earth row; every other case reads the real list.
 const earthRowsOverride = vi.hoisted(() => ({ value: null as readonly EarthBody[] | null }));

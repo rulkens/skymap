@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { formatSizeMpc } from '../../../../utils/format/formatSizeMpc';
 
 /** formatSelectionSummary — the box's extent in the size sliders' own numbers. */

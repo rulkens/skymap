@@ -14,7 +14,7 @@
  * callers on a per-frame hot path can cheaply skip a fresh allocation, and it
  * documents that the clamp is a no-op below the limit.
  */
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function clampVec3Length(v: Vec3, maxLen: number): Vec3 {
   const len = Math.hypot(v[0], v[1], v[2]);

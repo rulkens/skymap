@@ -17,7 +17,10 @@ import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { FilamentReq } from '../@types/FilamentReq';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import { decodeFilaments, FILAMENT_DATA_PREFIX } from '../data/filamentBinaryFormat';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  fetchWithProgress,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 export const filamentFetcher: Fetcher<FilamentCloud, FilamentReq> = async (
   req,

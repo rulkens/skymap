@@ -9,11 +9,11 @@
  * `orbit: [0, 0]` is not identity on the world arm.
  */
 import type { ArmDelta } from '../../@types/ArmDelta';
-import type { NavAxis } from '../../../../../@types/camera/input/NavAxis';
+import type { NavAxis } from '../../../../../../packages/shared/src/@types/camera/input/NavAxis';
 import type { NavigatorState } from '../../../../../@types/camera/input/NavigatorState';
 import type { NavSettings } from '../../../../../@types/camera/input/NavSettings';
 import type { NavStep } from '../../@types/NavStep';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import {
   NAV_DT_CAP_MS,
   NAV_FRICTION_EPS,

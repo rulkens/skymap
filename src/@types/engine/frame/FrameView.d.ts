@@ -10,7 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/orbitCamera/OrbitCamera';
 import type { ViewFrustum } from '../../camera/projection/ViewFrustum';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Size } from '../../rendering/Size';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { ReadyFrameContext } from './ReadyFrameContext';

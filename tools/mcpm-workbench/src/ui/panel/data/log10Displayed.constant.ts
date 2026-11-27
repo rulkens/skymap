@@ -1,4 +1,4 @@
-import type { SliderDisplayed } from '../../../../../../src/@types/components/SliderDisplayed';
+import type { SliderDisplayed } from '../../../../../../packages/shared/src/@types/components/SliderDisplayed';
 
 // 10 ** log10(x) leaves float dust (3.125 → 3.1250000000000004) in the typed box's prefill.
 const SHOWN_SIGNIFICANT_DIGITS = 12;

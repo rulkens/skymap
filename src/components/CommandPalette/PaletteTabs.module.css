@@ -1,7 +1,7 @@
 /*
  * PaletteTabs — one serif-typeset row, scrolling sideways when the strip
  * overflows (phone width). All atoms reference tokens from
- * `src/styles/global.css`.
+ * `packages/shared/src/styles/global.css`.
  */
 
 .root {

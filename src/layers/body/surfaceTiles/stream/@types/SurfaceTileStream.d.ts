@@ -13,7 +13,7 @@ import type { SurfaceTileResidency } from './SurfaceTileResidency';
 import type { SurfaceTileDebugSnapshot } from '../../debug/@types/SurfaceTileDebugSnapshot';
 import type { Destroyable } from '../../../../../@types/rendering/Destroyable';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceTilePlannerParams } from '../../plan/@types/SurfaceTilePlannerParams';
 import type { SurfaceTileProduct } from '../../format/@types/SurfaceTileProduct';
 import type { TerrainHorizonSample } from '../../../../../@types/camera/terrain/TerrainHorizonSample';

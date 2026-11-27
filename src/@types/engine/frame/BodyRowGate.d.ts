@@ -1,5 +1,5 @@
 import type { ViewFrustum } from '../../camera/projection/ViewFrustum';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** One view's eye, look direction and projection: what `visibleBodyRows` culls the
  *  frame's body-row candidates against. */

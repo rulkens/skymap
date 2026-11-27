@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { LabelDescription } from '../../../src/@types/rendering/LabelDescription';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { encodeLabelSource } from '../../../src/utils/labels/encodeLabelSource';
 import { createLabelRecords } from '../../../src/utils/labels/createLabelRecords';
 import { labelSource } from '../../../src/utils/labels/labelSource';

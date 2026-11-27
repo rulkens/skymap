@@ -4,7 +4,7 @@
  * returns them as the 400 body.
  */
 import { segmentsTouch } from './segmentsTouch';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 export function normalizeRing(ringM: readonly Vec2[]): Vec2[] {
   const ring = ringM.map(([x, y]): Vec2 => [x, y]);

@@ -1,4 +1,4 @@
-import { fetchWithProgress } from './fetchWithProgress';
+import { fetchWithProgress } from '../../../packages/shared/src/services/loading/fetchWithProgress';
 import { resolveLiveFileUrl } from './resolveLiveFileUrl';
 
 /** Fetches a live dataset's newest file: the pointer first, then the dated file it names. */

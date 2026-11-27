@@ -7,7 +7,7 @@
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
 import { focusBodyIdOf } from '../../../../../utils/camera/arms/focusBodyIdOf';
 import { skyPoseFromBodyArm } from './utils/skyPoseFromBodyArm';

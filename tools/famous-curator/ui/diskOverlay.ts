@@ -20,7 +20,7 @@
  * helpers are each other's inverse at the geometry level.
  */
 
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import type { RecipeDisk } from '../plugin/recipe';
 
 /**

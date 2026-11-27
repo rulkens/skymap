@@ -3,7 +3,7 @@ import { orientationForBody } from '../../../src/data/bodies/orientationForBody'
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 // A superset of the real table, plus one row with no BODY_TEXTURE_REGISTRY
 // counterpart — the shape a mesh body has, and the only way to exercise the

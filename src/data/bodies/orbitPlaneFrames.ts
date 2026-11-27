@@ -43,7 +43,7 @@
 
 import { degToRad } from '../../utils/math/degToRad';
 import type { OrbitPlaneFrame } from '../../@types/scene/OrbitPlaneFrame';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * Build a plane frame from an IAU north-pole direction. `normal` is the pole

@@ -49,7 +49,7 @@ import { parseFitsBinTable } from '../parsers/parseFitsBinTable';
 import type { DesiTracer } from '../parsers/desiFits';
 import type { FitsColumn } from '../parsers/@types/FitsColumn';
 import { eqRaDecToUnitCart } from '../../src/utils/math/eqRaDecToUnitCart';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -94,7 +94,11 @@ function buildCandidateGrid(): Candidate[] {
 }
 
 /** Case-insensitive column lookup, throwing a clear error on absence — the requireColumn idiom from `parseDesiClustering`. */
-function requireColumn(columns: readonly FitsColumn[], name: string, tracer: DesiTracer): FitsColumn {
+function requireColumn(
+  columns: readonly FitsColumn[],
+  name: string,
+  tracer: DesiTracer,
+): FitsColumn {
   const lower = name.toLowerCase();
   const col = columns.find((c) => c.name.toLowerCase() === lower);
   if (!col) {
@@ -188,7 +192,9 @@ export function main(): void {
   );
   console.log('');
 
-  console.log(`── Full ±${OFFSET_RANGE_DEG}° grid (${OFFSET_STEP_DEG}° steps), sorted by total desc ──`);
+  console.log(
+    `── Full ±${OFFSET_RANGE_DEG}° grid (${OFFSET_STEP_DEG}° steps), sorted by total desc ──`,
+  );
   console.log(
     ['dRA', 'dDec', 'RA', 'Dec', 'BGS', 'LRG', 'ELG', 'QSO', 'Total']
       .map((h) => h.padStart(9))
@@ -208,7 +214,9 @@ export function main(): void {
       c.counts.QSO.toLocaleString(),
       totalOf(c).toLocaleString(),
     ];
-    console.log(cells.map((cell) => cell.padStart(9)).join('') + (isConfigured ? '  ← configured' : ''));
+    console.log(
+      cells.map((cell) => cell.padStart(9)).join('') + (isConfigured ? '  ← configured' : ''),
+    );
   }
   console.log('');
   console.log(RECENTER_INSTRUCTION);

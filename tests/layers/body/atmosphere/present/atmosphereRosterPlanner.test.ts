@@ -13,12 +13,12 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
-import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../packages/shared/src/utils/math/normalize3';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const EARTH = asSceneBodyId('earth');
 const EARTH_POS = deriveBodyStates(CONST_J2000).get(EARTH)!.positionMpc;

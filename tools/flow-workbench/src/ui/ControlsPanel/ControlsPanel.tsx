@@ -22,7 +22,7 @@ import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
 import type { NumericFlowKey } from '../../state/slices/flowSlice';
 import { MAX_PARTICLES } from '../../../../../src/layers/flow/streamlines/data/flowFieldConstants';
 import { Panel } from '../../../../../src/components/common/Panel/Panel';
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import { useStore } from '../../state/useStore';
 import { setFlowEnabled, setFlowMode, setFlowParam } from '../../state/slices/flowSlice';
 import { setLabelsEnabled } from '../../state/slices/labelsSlice';

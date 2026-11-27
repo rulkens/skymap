@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import { cappedRotationToward } from '../../../../../../src/services/engine/camera/orientation/utils/cappedRotationToward';
 import { rotateBasisByQuat } from '../../../../../../src/services/engine/camera/orientation/utils/rotateBasisByQuat';
-import { quatFromAxisAngle } from '../../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 import type { Mat3 } from '../../../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /** right | up | forward — the nadir fixture basis the controller tests use. */
 const BASE: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];

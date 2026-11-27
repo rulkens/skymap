@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { FocusUniformsValue } from '../../../../@types/rendering/FocusUniformsValue';
 import type { StarFocusSphere } from '../@types/StarFocusSphere';
 

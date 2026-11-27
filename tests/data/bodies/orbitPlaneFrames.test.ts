@@ -6,7 +6,7 @@ import {
   SATURN_EQUATORIAL_FRAME,
 } from '../../../src/data/bodies/orbitPlaneFrames';
 import type { OrbitPlaneFrame } from '../../../src/@types/scene/OrbitPlaneFrame';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const dot = (a: Readonly<Vec3>, b: Readonly<Vec3>) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const len = (a: Readonly<Vec3>) => Math.sqrt(dot(a, a));

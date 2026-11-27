@@ -1,7 +1,7 @@
 import type { BodyFixedPose } from '../../../../../../../@types/camera/pose/BodyFixedPose';
 import type { CameraTuning } from '../../../../../../../@types/camera/orbitCamera/CameraTuning';
 import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../../../../../../data/camera/bodyLocalFrame';
 import { ORIENT_DECAY } from '../../../../data/orientDecay';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
@@ -15,8 +15,8 @@ import { riddenOrientStepRad } from '../../../../orientation/utils/riddenOrientS
 import { tiltFromNadirRad } from '../../../../../../../utils/camera/surfaceFrame/tiltFromNadirRad';
 import { tiltTurnedPose } from '../../../../orientation/utils/tiltTurnedPose';
 import { turnedPose } from '../../../../orientation/utils/turnedPose';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../../../../utils/math/quatFromAxisAngle';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 import { wrapRad } from '../../../../../../../utils/math/wrapRad';
 
 /**

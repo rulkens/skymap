@@ -1,6 +1,6 @@
 .root {
   composes: row from '../../panelGrid.module.css';
-  composes: sectionHeader from '../../../../../../../src/components/common/shared.module.css';
+  composes: sectionHeader from '../../../../../../../packages/shared/src/components/common/shared.module.css';
   user-select: none;
 }
 
@@ -100,7 +100,7 @@
 }
 
 .toggle {
-  composes: pillToggle from '../../../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  composes: pillToggle from '../../../../../../../packages/shared/src/components/SettingsPanel/pillToggle.module.css';
   grid-column: control;
   justify-self: end;
   margin: 0;

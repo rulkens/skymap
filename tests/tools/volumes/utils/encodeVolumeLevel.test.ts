@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { encodeVolumeLevel } from '../../../../tools/volumes/utils/encodeVolumeLevel';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // encodeMax = e − 1 makes log1p(encodeMax) = 1, so a code is round(255 · log1p(v)).
 const E_MINUS_1 = Math.E - 1;

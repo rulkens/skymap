@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { insideRing } from '../../../../tools/scene-recon/crop/insideRing';
 import { triangulateOutline } from '../../../../tools/scene-recon/crop/triangulateOutline';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 const L: Vec2[] = [
   [0, 0],

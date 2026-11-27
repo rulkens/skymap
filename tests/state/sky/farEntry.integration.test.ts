@@ -9,7 +9,7 @@ vi.mock('../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 // Reads window.devicePixelRatio, which the node environment has no window for.
-vi.mock('../../../src/services/gpu/device', () => ({
+vi.mock('../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
@@ -22,7 +22,7 @@ import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { RootState } from '../../../src/store/types';
 
 installAppSelectionKinds();

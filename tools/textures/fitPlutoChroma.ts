@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-import type { Vec2 } from '../../src/@types/math/Vec2';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec2 } from '../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import { BODY_TEXTURE_REGISTRY } from '../../src/layers/body/textures/data/bodyTextureRegistry';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { rawDataPath } from '../utils/io/rawDataRegistry';

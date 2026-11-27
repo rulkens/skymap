@@ -3,7 +3,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 
-import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import type { GpuVolume } from './GpuVolume';
 
 export type FieldEntry = {

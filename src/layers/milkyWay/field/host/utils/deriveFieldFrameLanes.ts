@@ -10,7 +10,7 @@ import type { FieldView } from '../../@types/FieldView';
 
 import { FIELD_EXPOSURE_GAUGE } from '../data/fieldExposureGauge';
 import { dustSliceEdges } from '../../dust/utils/dustSliceEdges';
-import { lerp } from '../../../../../utils/math/lerp';
+import { lerp } from '../../../../../../packages/shared/src/utils/math/lerp';
 import { smoothstep } from '../../../../../utils/math/smoothstep';
 
 // Disc radii: below NEAR the near grain calibration alone applies, beyond FAR

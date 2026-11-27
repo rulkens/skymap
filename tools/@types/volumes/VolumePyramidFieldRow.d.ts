@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { ScalarFieldFrameKind } from '../../../src/@types/data/volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { ScalarFieldFrameKind } from '../../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
 import type { RawDataKey } from '../../utils/io/rawDataRegistry';
 
 /** One density field `buildVolumePyramid.ts` builds; the geometry members become its sidecar. */

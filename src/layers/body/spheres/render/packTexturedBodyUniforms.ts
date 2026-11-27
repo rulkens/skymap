@@ -8,8 +8,8 @@
  * (`camAltitudeSq`, `vpCamRelLocal`; see `lib/analyticSphere.wesl`).
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of the uniform struct. */

@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 export type FullscreenIconProps = Pick<IconProps, 'size'> & {
   readonly active: boolean;

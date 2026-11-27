@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import type { GalaxyParams } from '../../../../../../src/@types/galaxy/GalaxyParams';
 import { armRidgeCurvePoint } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
 import { spurRootSpacing } from '../../../../../../src/layers/milkyWay/field/arms/utils/spurRootSpacing';

@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import type { StandaloneRect } from '../../plan/@types/StandaloneRect';
 import { NO_HORIZON_RECT } from '../../../../../data/gpu/horizonRects';
 import { horizonPostRect } from './horizonPostRect';

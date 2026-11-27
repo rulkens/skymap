@@ -4,7 +4,7 @@ import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * Invariants only (per testing.md). The seeded element VALUES are verified

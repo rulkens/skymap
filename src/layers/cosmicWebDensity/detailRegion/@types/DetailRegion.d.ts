@@ -1,5 +1,5 @@
 import type { DetailRegionDraw } from '../../../../@types/rendering/DetailRegionDraw';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** One field's region: sidecar, index, store, stream and plan state; the only writer of that state. */
 export type DetailRegion = {

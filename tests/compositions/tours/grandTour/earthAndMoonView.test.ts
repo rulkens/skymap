@@ -16,7 +16,7 @@ import { bodyPositionMpcAt } from '../../../../src/utils/exhibits/mission/bodyPo
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const RESOLVER = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 const BASIS = ORIENTATION_FRAMES.galactic;

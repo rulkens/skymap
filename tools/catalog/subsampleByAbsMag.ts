@@ -39,7 +39,7 @@
  */
 
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import type { ParsedRecord } from '../parsers/common';
 
 export function subsampleByAbsMag(records: ParsedRecord[], target: number): ParsedRecord[] {

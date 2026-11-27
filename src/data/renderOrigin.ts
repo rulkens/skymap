@@ -21,7 +21,7 @@
  * All camera pose (lookAt, up, position) is expressed in the same frame.
  */
 
-import type { Vec3 } from '../@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 /** The Sun's galactic coordinates in Megaparsecs (origin of the coordinate frame). */
 export const RENDER_ORIGIN_MPC: Readonly<Vec3> = [0, 0, 0];

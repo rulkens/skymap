@@ -9,12 +9,15 @@
  * production caller: nothing in `drawFrame` needs a scalar summary of a
  * target it just wrote.
  */
-import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../../../packages/shared/src/utils/math/f16ToFloat';
 
 const BYTES_PER_TEXEL = 8; // rgba16float: 4 lanes x 2 bytes
 const COPY_BYTES_PER_ROW_ALIGNMENT = 256;
 
-export async function readTextureChannelSum(device: GPUDevice, texture: GPUTexture): Promise<number> {
+export async function readTextureChannelSum(
+  device: GPUDevice,
+  texture: GPUTexture,
+): Promise<number> {
   const { width, height } = texture;
   const unpaddedBytesPerRow = width * BYTES_PER_TEXEL;
   const bytesPerRow =
@@ -25,7 +28,11 @@ export async function readTextureChannelSum(device: GPUDevice, texture: GPUTextu
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   const enc = device.createCommandEncoder({ label: 'galaxy:textureChannelSumReadback' });
-  enc.copyTextureToBuffer({ texture }, { buffer, bytesPerRow, rowsPerImage: height }, { width, height });
+  enc.copyTextureToBuffer(
+    { texture },
+    { buffer, bytesPerRow, rowsPerImage: height },
+    { width, height },
+  );
   device.queue.submit([enc.finish()]);
 
   await buffer.mapAsync(GPUMapMode.READ);

@@ -8,8 +8,8 @@ import { mat4d } from 'wgpu-matrix';
 import type { OutputProjection } from '../../../src/@types/rendering/OutputProjection';
 import type { ViewFrustum } from '../../../src/@types/camera/projection/ViewFrustum';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { frustumPerspectiveF64 } from '../../../src/utils/camera/frustum/frustumPerspectiveF64';
 
 export function pinholeFixture(input: {

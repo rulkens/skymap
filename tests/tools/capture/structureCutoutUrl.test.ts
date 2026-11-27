@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { structureCutoutFovDeg } from '../../../tools/capture/structureCutoutFovDeg';
 import { structureCutoutUrl } from '../../../tools/capture/structureCutoutUrl';
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 describe('structureCutoutFovDeg', () => {

@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';
 import { createStructureCatalogSlot } from '../../../../../src/layers/structure/catalog/load/structureCatalogSlot';
 import { structureCatalogFetcher } from '../../../../../src/layers/structure/catalog/load/structureCatalogFetcher';
-import { HttpError } from '../../../../../src/services/loading/fetchWithProgress';
+import { HttpError } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { STRUCTURE_IDS } from '../../../../../src/data/structure/structureIds';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { StructureCatalogPayload } from '../../../../../src/layers/structure/catalog/@types/StructureCatalogPayload';

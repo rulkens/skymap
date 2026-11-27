@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** The box's own three world-space unit axis directions — mirrors CameraBasis's
  * named-triplet shape (no matrices anywhere in the tool). */

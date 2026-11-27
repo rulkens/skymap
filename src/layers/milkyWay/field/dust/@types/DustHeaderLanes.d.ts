@@ -6,7 +6,7 @@
  * assembled at the pack site.
  */
 
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 import type { FieldDustCarve } from './FieldDustCarve';
 import type { FieldDustNoise } from './FieldDustNoise';

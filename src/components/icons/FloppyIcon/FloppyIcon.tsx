@@ -1,7 +1,7 @@
 /** FloppyIcon: a floppy disk, the save glyph. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function FloppyIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

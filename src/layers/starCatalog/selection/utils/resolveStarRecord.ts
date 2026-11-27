@@ -8,7 +8,7 @@
  * A blob falls past its owner's own range and resolves to null. Positions go
  * through `octreeNodeOriginRelCamMpc`, the formula the renderer draws with.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { OctreeResidency } from '../../../../@types/octree/OctreeResidency';
 import type { OctreeNodeTable } from '../../../../@types/octree/OctreeNodeTable';

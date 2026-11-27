@@ -5,7 +5,7 @@
  */
 
 import type { InsetsPx } from '../../../../../@types/layout/InsetsPx';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import { clampedAxisCover } from './clampedAxisCover';
 
 export function coverShiftNdc(insets: InsetsPx, canvasPx: Readonly<Vec2>): Vec2 {

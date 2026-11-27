@@ -8,7 +8,7 @@
  * `galaxyCatalogTransfer.ts` module just for the return shape.
  */
 
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 export type ClonedGalaxyCatalog = {
   /** A structurally complete GalaxyCatalog whose typed-array buffers are fresh, transferable copies. */

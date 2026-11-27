@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { gizmoArrowLengthMpc } from '../../../../../tools/mcpm-workbench/src/gizmo/gizmoArrowLengthMpc';
 
 describe('gizmoArrowLengthMpc', () => {

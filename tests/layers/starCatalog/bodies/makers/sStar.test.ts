@@ -7,7 +7,7 @@ import { S_STAR_SEEDS } from '../../../../../src/layers/starCatalog/bodies/sStar
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { SStarSeed } from '../../../../../src/layers/starCatalog/@types/SStarSeed';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 

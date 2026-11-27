@@ -24,7 +24,7 @@ import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/Po
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { StarBody } from '../../../../src/@types/scene/StarBody';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';

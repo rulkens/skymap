@@ -21,7 +21,7 @@ import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import cutCode from '../shaders/octree/cut.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../data/octree/octreeNodeFade';
 import {
   AGG_DRAW_BYTE_OFFSET,

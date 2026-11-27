@@ -11,7 +11,7 @@
 
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { BodyTextureSpec } from '../@types/BodyTextureSpec';
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import { MARS_GLOBE_GRADE } from '../../surfaceTiles/format/data/marsSurfaceParams';
 
 // Every globe's `horizon` stops at medium: up close the surface tiles take over, so a large

@@ -6,7 +6,7 @@
  * RA in HOURS (not degrees) follows the astronomical convention for
  * catalogue tables; the standard
  * `raHours * 15 * π/180` conversion to radians lives in
- * `src/utils/math/raDecDistToEqCart.ts`.
+ * `packages/shared/src/utils/math/raDecDistToEqCart.ts`.
  */
 
 /** Right-ascension hours, declination degrees, distance in Mpc. */

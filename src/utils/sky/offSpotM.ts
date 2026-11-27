@@ -1,5 +1,5 @@
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { skySpotRadial } from '../geo/skySpotRadial';
 
 /** How far a body-fixed point lies from the spot's radial line, metres: the ground offset at its height. */

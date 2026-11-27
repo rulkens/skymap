@@ -3,7 +3,7 @@
  */
 
 import type { ReactElement } from 'react';
-import CompactInfoTip from '../../../../components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import { DENSITY_LEVEL_LEGEND } from '../data/densityLevelLegend';
 import styles from './DensityLevelsRow.module.css';
 

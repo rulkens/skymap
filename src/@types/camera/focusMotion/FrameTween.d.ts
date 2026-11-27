@@ -14,7 +14,7 @@
  * the id is stored.
  */
 
-import type { Vec4 } from '../../math/Vec4';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import type { OrientationFrameId } from '../orientation/OrientationFrameId';
 import type { Ease } from '../../animation/Ease';
 

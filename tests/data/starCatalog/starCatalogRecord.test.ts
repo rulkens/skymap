@@ -20,7 +20,7 @@ import {
   packStarRecord,
   unpackStarRecord,
 } from '../../../src/data/starCatalog/starCatalogFormat';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('star record pack/unpack', () => {
   it.each<{ name: string; offset: Vec3; absMagIdx: number; colorIdx: number }>([

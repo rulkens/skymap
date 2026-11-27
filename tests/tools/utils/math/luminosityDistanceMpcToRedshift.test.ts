@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { luminosityDistanceMpcToRedshift } from '../../../../tools/utils/math/luminosityDistanceMpcToRedshift';
-import { redshiftToDistanceMpc } from '../../../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 describe('luminosityDistanceMpcToRedshift', () => {
   it('returns 0 for d ≤ 0 or NaN', () => {

@@ -5,7 +5,7 @@
 
 import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { LightTimeLiveness } from './LightTimeLiveness';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 

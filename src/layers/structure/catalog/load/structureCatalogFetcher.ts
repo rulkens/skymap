@@ -36,7 +36,10 @@ import {
   decodeStructureCatalog,
   STRUCTURE_CATALOG_DATA_PREFIX,
 } from '../data/structureCatalogFormat';
-import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgress';
+import {
+  HttpError,
+  dataUrl,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import type { StructureMetaEntry } from '../@types/StructureMetaEntry';
 
 /**

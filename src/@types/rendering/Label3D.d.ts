@@ -1,6 +1,6 @@
 import type { FontId } from '../data/FontId';
 import type { Label3DArcPlacement } from './Label3DArcPlacement';
-import type { Vec4 } from '../math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 /**
  * Label3D — one world-anchored text label drawn by the shared

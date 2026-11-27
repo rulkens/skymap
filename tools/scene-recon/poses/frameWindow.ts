@@ -10,7 +10,7 @@ import { lonLatBoundsToEnuM } from '../../utils/scene/lonLatBoundsToEnuM';
 import { skraafotoDownsampleScale } from '../../utils/skraafoto/skraafotoDownsampleScale';
 import type { SceneGroupDefinition } from '../@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from '../@types/SkraafotoStacItem';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Group-frame z the bounds box is swept over: below the anchor for the
  *  park's dug-out ground, well above it for Frederiksberg Slot and the

@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../math/Vec3';
-import type { ScalarFieldFrameKind } from './ScalarFieldFrameKind';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { ScalarFieldFrameKind } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
 
 /** The pyramid's JSON file (one per field, beside its level files). */
 export type VolumePyramidSidecar = {

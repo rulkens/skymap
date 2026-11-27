@@ -26,7 +26,7 @@ import {
 } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
 import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
 import { runProceduralSolo } from '../../../../../services/engine/subsystems/diskWalkHarness';
-import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';

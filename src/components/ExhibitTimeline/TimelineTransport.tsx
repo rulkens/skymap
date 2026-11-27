@@ -11,7 +11,7 @@ import MinusIcon from '../icons/MinusIcon/MinusIcon';
 import NextIcon from '../icons/NextIcon/NextIcon';
 import PauseIcon from '../icons/PauseIcon/PauseIcon';
 import PlayIcon from '../icons/PlayIcon/PlayIcon';
-import PlusIcon from '../icons/PlusIcon/PlusIcon';
+import PlusIcon from '../../../packages/shared/src/components/icons/PlusIcon/PlusIcon';
 import PrevIcon from '../icons/PrevIcon/PrevIcon';
 
 import { formatClockDate } from '../../utils/exhibits/timeline/formatClockDate';

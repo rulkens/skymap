@@ -8,7 +8,7 @@
  * A clip box cuts before all of that: only the splats inside it are sorted,
  * so the returned length is also the instance count the renderer draws.
  */
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { BoundsM } from '../../@types/BoundsM';
 
 const BUCKETS = 1 << 16;

@@ -7,7 +7,7 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EntryBand } from '../../../../src/@types/engine/layer/EntryBand';
 import type { ShowEntry } from '../../../../src/@types/engine/layer/ShowEntry';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const GC_ANCHOR: Vec3 = [-0.0004, -0.007, -0.004];
 

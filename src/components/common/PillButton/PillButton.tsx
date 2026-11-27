@@ -25,7 +25,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import cx from 'classnames';
-import CompactInfoTip from '../CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './PillButton.module.css';
 
 export type PillButtonProps = {

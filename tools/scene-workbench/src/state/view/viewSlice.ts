@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BoundsM } from '../../../@types/BoundsM';
 import type { CameraProjection } from '../../../@types/CameraProjection';
 import { clampSceneDistanceM } from '../../scene/clampSceneDistanceM';

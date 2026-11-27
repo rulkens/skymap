@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 
-import Button from '../../../../../src/components/common/Button/Button';
+import Button from '../../../../../packages/shared/src/components/common/Button/Button';
 import {
   drawOutlineRequested,
   outlineDiscardRequested,

@@ -49,7 +49,7 @@
  */
 
 import type { Clip } from '../../@types/animation/Clip';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import {
   all,
   dollyTo,

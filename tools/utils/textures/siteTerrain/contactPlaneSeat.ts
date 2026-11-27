@@ -1,6 +1,6 @@
 import type { GroundSample } from '../../../textures/@types/GroundSample';
 import type { SiteSeat } from '../../../textures/@types/SiteSeat';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { seatHeightM } from './seatHeightM';
 
 /** Below this, the contacts' spread is a line (or a point) and the cross-slope is unconstrained. */

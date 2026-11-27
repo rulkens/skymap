@@ -11,7 +11,7 @@
 }
 
 .toggle {
-  composes: pillToggle from '../../../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  composes: pillToggle from '../../../../../../../packages/shared/src/components/SettingsPanel/pillToggle.module.css';
   grid-column: control;
   justify-self: start;
   margin: 0;

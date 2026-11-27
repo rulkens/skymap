@@ -1,6 +1,6 @@
 /** RaymarchRows — the Rendering section's rows while the raymarch is the renderer. */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../../../../src/@types/data/volume/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../../../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
 import type { ViewSlice } from '../../../../@types/view/ViewSlice';
 import PaletteRow from '../PaletteRow/PaletteRow';
 import SliderRows from '../../panel/SliderRows/SliderRows';

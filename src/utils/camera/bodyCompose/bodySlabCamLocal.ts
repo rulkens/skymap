@@ -7,7 +7,7 @@
  * its Mpc-side sibling this util carries no oblateness parameter.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** eyeRelBodyM ÷ the body's metre radius → the unit-sphere frame. */
 export function bodySlabCamLocal(eyeRelBodyM: Readonly<Vec3>, radiusM: number): Vec3 {

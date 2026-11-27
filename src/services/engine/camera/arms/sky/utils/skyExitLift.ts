@@ -10,7 +10,7 @@
 import type { CameraArmCtx } from '../../../../../../@types/camera/arms/CameraArmCtx';
 import type { ClipData } from '../../../../../../@types/animation/ClipData';
 import type { FramedPose } from '../../../../../../@types/camera/pose/FramedPose';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { DEFAULT_FOV_Y_RAD } from '../../../framing/cameraFraming';
 import { SKY_EXIT_ALTITUDE_M } from '../data/skyExitAltitudeM';
 import { SKY_EXIT_CLIMB_MS } from '../data/skyExitClimbMs';

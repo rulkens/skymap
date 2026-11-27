@@ -8,14 +8,14 @@
  * hence the large default `maxLines`.
  */
 
-import type { GpuContext } from '../../../../@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { DebugLine } from '../../../../@types/rendering/DebugLine';
 import type { DebugLineRenderer } from '../../../../@types/rendering/DebugLineRenderer';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import vsCode from '../../shaders/debugLines/vertex.wesl?static';
 import fsCode from '../../shaders/debugLines/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';

@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from 'react';
-import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 import styles from './DebugInfoTip.module.css';
 
 export type DebugInfoTipProps = {

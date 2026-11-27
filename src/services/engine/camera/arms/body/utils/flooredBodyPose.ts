@@ -1,13 +1,13 @@
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { GroundRadiusLookup } from '../../../../../../@types/camera/terrain/GroundRadiusLookup';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { bodyFixedEyeM } from '../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { rotatedAboutPoint } from '../../../orientation/utils/rotatedAboutPoint';
 import { surfaceFloorM } from './surfaceFloorM';
-import { cross3 } from '../../../../../../utils/math/cross3';
+import { cross3 } from '../../../../../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../../../../../../utils/math/dot3';
-import { normalize3 } from '../../../../../../utils/math/normalize3';
-import { quatFromAxisAngle } from '../../../../../../utils/math/quatFromAxisAngle';
+import { normalize3 } from '../../../../../../../packages/shared/src/utils/math/normalize3';
+import { quatFromAxisAngle } from '../../../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 
 /**
  * The descent floor, unconditional and resampled after the last position write

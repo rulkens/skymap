@@ -43,7 +43,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { PositionedSceneBody } from '../../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { SceneBody } from '../../../../../src/@types/scene/SceneBody';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
 // object identity and (b) hand the layer a recognisable Float64Array — real

@@ -8,7 +8,7 @@
  * means no ring.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { packLitBodyUniforms } from '../../spheres/render/packLitBodyUniforms';
 
 /** f32 count of the uniform struct. */

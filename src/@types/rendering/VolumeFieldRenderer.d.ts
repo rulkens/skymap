@@ -5,8 +5,8 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { GpuVolume } from './GpuVolume';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { VolumeFieldDrawInputs } from './VolumeFieldDrawInputs';
 import type { DetailRegionDraw } from './DetailRegionDraw';
 

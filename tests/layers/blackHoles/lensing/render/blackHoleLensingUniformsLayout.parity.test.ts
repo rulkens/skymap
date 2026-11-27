@@ -17,8 +17,8 @@ import {
   packBlackHoleLensingUniforms,
   BLACK_HOLE_LENSING_UNIFORM_FLOATS,
 } from '../../../../../src/layers/blackHoles/lensing/render/packBlackHoleLensingUniforms';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 

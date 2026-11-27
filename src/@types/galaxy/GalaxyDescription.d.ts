@@ -10,7 +10,7 @@ import type { GalaxyCategory } from './GalaxyCategory';
 import type { GalaxyFieldArmRecord } from './GalaxyFieldArmRecord';
 import type { GalaxyLightDecomposition } from './GalaxyLightDecomposition';
 import type { HiiPalette } from './HiiPalette';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type GalaxyDescription = {
   readonly category: GalaxyCategory;

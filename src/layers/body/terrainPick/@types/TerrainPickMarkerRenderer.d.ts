@@ -1,5 +1,5 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * TerrainPickMarkerRenderer — one analytic sphere at the terrain pick point,

@@ -5,8 +5,8 @@
  * 100% it defers to `denseFractionBounds`, already covered by its own suite.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import type { CatalogPoints } from '../../../../../../tools/mcpm-workbench/@types/catalog/CatalogPoints';
 import { catalogBounds } from '../../../../../../tools/mcpm-workbench/src/catalog/catalogBounds';
 import { resolveAutoFitBounds } from '../../../../../../tools/mcpm-workbench/src/grid/autoFit/resolveAutoFitBounds';

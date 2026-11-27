@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { fetchWithProgress, dataUrl } from '../../../src/services/loading/fetchWithProgress';
-import { useFetchMock } from '../../setup/fetchMock';
+import { useFetchMock } from '../../../../../tests/setup/fetchMock';
 
 // None of these cases call loadDataManifest, so resolveDataPath (Task 12)
 // stays identity — dataManifest.test.ts covers the hashed-path resolution

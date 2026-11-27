@@ -10,6 +10,8 @@ import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const ROOTS = [
   'src',
+  'packages/shared/src',
+  'packages/shared/tests',
   'tools',
   'packages/website/src',
   'packages/desktop/src',

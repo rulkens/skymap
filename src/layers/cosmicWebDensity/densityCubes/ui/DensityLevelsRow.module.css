@@ -10,7 +10,7 @@
 }
 
 .infoIcon {
-  composes: infoIcon from '../../../../components/common/ParamSlider/ParamSlider.module.css';
+  composes: infoIcon from '../../../../../packages/shared/src/components/common/ParamSlider/ParamSlider.module.css';
 }
 
 .legend {

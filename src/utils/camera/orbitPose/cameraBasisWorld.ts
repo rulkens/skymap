@@ -6,7 +6,7 @@
  */
 
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { frameUp } from './frameUp';
 import { mat3FromColumns } from '../../math/mat3FromColumns';

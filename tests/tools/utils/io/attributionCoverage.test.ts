@@ -66,6 +66,7 @@ function sourceFiles(dir: string): string[] {
 
 const SOURCE = [
   ...sourceFiles(join(ROOT, 'src')),
+  ...sourceFiles(join(ROOT, 'packages/shared/src')),
   join(ROOT, 'index.html'),
   join(ROOT, '.env.production'),
 ].map((path) => readFileSync(path, 'utf8'));

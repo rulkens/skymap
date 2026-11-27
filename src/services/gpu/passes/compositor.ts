@@ -20,7 +20,7 @@
 import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/tonemap/clampExposure';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';

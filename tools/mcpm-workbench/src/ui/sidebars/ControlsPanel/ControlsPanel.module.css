@@ -16,6 +16,6 @@
 }
 
 .simActionButton {
-  composes: blockButton from '../../../../../../src/components/common/shared.module.css';
+  composes: blockButton from '../../../../../../packages/shared/src/components/common/shared.module.css';
   font-size: var(--font-size-sm);
 }

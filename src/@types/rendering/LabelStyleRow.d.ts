@@ -1,5 +1,5 @@
 import type { FontId } from '../data/FontId';
-import type { Vec4 } from '../math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 /** One row of `LABEL_STYLES`: how every label of a kind looks and where it sits. */
 export type LabelStyleRow = {

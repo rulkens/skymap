@@ -9,7 +9,7 @@
  * rather than differential, so it cancels between the two.
  */
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Runs one `cct <pipeline>` over stdin, returning its stdout lines. */
 export type CctRunner = (

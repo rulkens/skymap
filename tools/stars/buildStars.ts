@@ -14,7 +14,7 @@ import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { OctreeGrid } from '../../src/@types/octree/OctreeGrid';
 import type { OctreeStratify } from '../../src/@types/octree/OctreeStratify';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';

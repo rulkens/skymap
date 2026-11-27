@@ -10,7 +10,7 @@ vi.mock('../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 // Reads window.devicePixelRatio, which the node environment has no window for.
-vi.mock('../../../src/services/gpu/device', () => ({
+vi.mock('../../../packages/shared/src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 

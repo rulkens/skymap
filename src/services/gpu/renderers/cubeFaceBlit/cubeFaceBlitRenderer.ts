@@ -9,7 +9,7 @@ import type { CubeFaceBlitRenderer } from '../../../../@types/rendering/CubeFace
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import blitCode from '../../shaders/cubeFaceBlit/cubeFaceBlit.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 // A WGSL `mat3x3<f32>` is three 16-byte columns: 12 floats, not 9.
 const BASIS_UNIFORM_FLOATS = 12;

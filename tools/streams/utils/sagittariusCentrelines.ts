@@ -5,12 +5,12 @@
  * in-plane angle from the remnant, unwrapped past ±180° so its far wrap stays at its end, and each
  * bin's mean heliocentric position is a point. The bound remnant's mean heads both arms.
  */
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { cross3 } from '../../../src/utils/math/cross3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { distance3 } from '../../../src/utils/math/distance3';
 import { dot3 } from '../../../src/utils/math/dot3';
-import { normalize3 } from '../../../src/utils/math/normalize3';
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
+import { raDecDistToEqCart } from '../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { meanPoint3 } from '../../utils/math/meanPoint3';
 import { median } from '../../utils/perf/median';

@@ -6,7 +6,7 @@
  * slab test reads an inverted box as a real one.
  */
 import type { DetailRegionDraw } from '../../../../@types/rendering/DetailRegionDraw';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
 import type { BrickBox } from '../@types/BrickBox';
 import type { DetailRegionGeometry } from '../@types/DetailRegionGeometry';

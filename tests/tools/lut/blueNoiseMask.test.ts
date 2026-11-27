@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { blueNoiseMask } from '../../../tools/lut/blueNoiseMask';
-import { mulberry32 } from '../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../packages/shared/src/utils/random/mulberry32';
 
 // Test scale, not the baked 64 × 64 × 16: the properties are about the ordering, not its size.
 const SIZE = 16;

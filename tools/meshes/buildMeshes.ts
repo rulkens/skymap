@@ -29,15 +29,15 @@ import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
 import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
-import type { Tier } from '../../src/@types/data/Tier';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Tier } from '../../packages/shared/src/@types/data/Tier';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import type { Geometry } from './@types/Geometry';
 import type { MeshOrigin } from './@types/MeshOrigin';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { meshTierPrefix } from '../../src/utils/meshBodies/meshTierPrefix';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
@@ -828,10 +828,10 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
   ).join('');
   return (
     GENERATED_BANNER +
-    "import type { Vec3 } from '../../@types/math/Vec3';\n" +
+    "import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';\n" +
     "import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';\n" +
     "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
-    "import type { Tier } from '../../@types/data/Tier';\n" +
+    "import type { Tier } from '../../../packages/shared/src/@types/data/Tier';\n" +
     '\n' +
     `export type MeshAssetRow = {\n${rowType}};\n` +
     '\n' +

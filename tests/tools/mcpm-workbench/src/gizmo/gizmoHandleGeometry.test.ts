@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../../tools/mcpm-workbench/@types/grid/GridBox';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { gizmoHandleGeometry } from '../../../../../tools/mcpm-workbench/src/gizmo/gizmoHandleGeometry';
 
 // Hand-picked, unrelated to the box's own size — the point of the feature.

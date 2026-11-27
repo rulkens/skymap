@@ -20,7 +20,7 @@ import type { SlabRow } from '../../../../../src/@types/engine/frame/SlabRow';
 import { seededBodyStates } from '../../../../helpers/frame/seededBodyStates';
 import { bodySlabsOf } from '../../../../helpers/frame/bodySlabsOf';
 import type { SeededBody } from '../../../../helpers/frame/SeededBody';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({

@@ -28,7 +28,7 @@
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
 import type { PathWaypoint } from '../../../src/@types/animation/PathWaypoint';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** Deterministic, non-collinear spread — keeps the fitted spline healthy. */
 function syntheticAt(n: number): Vec3 {

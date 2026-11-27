@@ -11,7 +11,7 @@
  * (millions of catalog rows).
  */
 
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { eqRaDecToUnitCart } from '../../../src/utils/math/eqRaDecToUnitCart';
 
 const RAD = Math.PI / 180;
@@ -22,10 +22,7 @@ export function makeConeFilter(
   radiusDeg: number,
 ): (raDeg: number, decDeg: number) => boolean {
   // Precompute the center unit vector and cos(radius) once.
-  const centerVec: Readonly<Vec3> = eqRaDecToUnitCart(
-    centerRaDeg,
-    centerDecDeg,
-  );
+  const centerVec: Readonly<Vec3> = eqRaDecToUnitCart(centerRaDeg, centerDecDeg);
   const cosRadius = Math.cos(radiusDeg * RAD);
 
   // Return the predicate: fast dot-product comparison per query.
@@ -33,9 +30,7 @@ export function makeConeFilter(
     const queryVec = eqRaDecToUnitCart(raDeg, decDeg);
     // Dot product of two 3D vectors: x1*x2 + y1*y2 + z1*z2.
     const dot =
-      centerVec[0] * queryVec[0] +
-      centerVec[1] * queryVec[1] +
-      centerVec[2] * queryVec[2];
+      centerVec[0] * queryVec[0] + centerVec[1] * queryVec[1] + centerVec[2] * queryVec[2];
     // If dot > cos(radius), then the angular separation is < radius.
     return dot > cosRadius;
   };

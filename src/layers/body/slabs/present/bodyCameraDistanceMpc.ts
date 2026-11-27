@@ -7,7 +7,7 @@
  * this one quantity.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export function bodyCameraDistanceMpc(bodyPositionMpc: Vec3, camPosMpc: Readonly<Vec3>): number {
   return Math.hypot(

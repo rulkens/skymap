@@ -9,7 +9,7 @@
 // The tool and the app must share one palette so a look tuned here
 // transfers directly to skymap's own UI — this pulls in the app's design
 // tokens (and page reset) as the tool's sole token vocabulary.
-import '../../../src/styles/global.css';
+import '../../../packages/shared/src/styles/global.css';
 
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { brickCoordsOf } from '../../../src/utils/volume/brickCoordsOf';
 import { brickId } from '../../../src/utils/volume/brickId';
 

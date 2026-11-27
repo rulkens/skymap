@@ -6,9 +6,9 @@
  * one sun direction keeps matching its texels while the body turns under it.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
-import { cross3 } from '../math/cross3';
-import { normalize3 } from '../math/normalize3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { MESH_SHADOW_SPHERE_PAD } from '../../data/mesh/meshShadowMap';
 
 export function meshShadowLightFromMesh(sunDirMesh: Readonly<Vec3>, radiusM: number): Float64Array {

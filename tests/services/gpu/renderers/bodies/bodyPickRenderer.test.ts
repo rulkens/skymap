@@ -19,8 +19,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createBodyPickRenderer } from '../../../../../src/services/gpu/renderers/bodies/bodyPickRenderer';
 import type { BodyGlintPick } from '../../../../../src/@types/rendering/bodyPickRenderer/BodyGlintPick';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyPointPick } from '../../../../../src/@types/rendering/bodyPickRenderer/BodyPointPick';
 
 function mockDevice(): GPUDevice {

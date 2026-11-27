@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../../../packages/shared/src/@types/rendering/GpuContext';
 import type { MeshGpuAsset } from '../../render/renderResources';
 import { uploadTexturedMesh } from '../../render/uploadTexturedMesh';
 import { readMeshGlb } from '../readMeshGlb';

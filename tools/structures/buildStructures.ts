@@ -47,13 +47,13 @@ import {
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { dedupeByProximity } from '../curation/dedupeByProximity';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
-import { H0_KM_S_MPC } from '../../src/utils/math/constants';
+import { redshiftToDistanceMpc } from '../../packages/shared/src/utils/math/redshiftToDistanceMpc';
+import { H0_KM_S_MPC } from '../../packages/shared/src/utils/math/constants';
 import type { StructureCatalog } from '../../src/layers/structure/catalog/@types/StructureCatalog';
 import type { StructureCategoryByte } from '../../src/@types/data/structure/structureCatalog/StructureCategoryByte';
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 // ── Tunable threshold constants ───────────────────────────────────────────────
 //

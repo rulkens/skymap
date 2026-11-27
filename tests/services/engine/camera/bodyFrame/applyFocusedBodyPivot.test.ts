@@ -18,7 +18,7 @@ import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { bodyRowAt } from '../../../../../src/utils/scene/bodyRowAt';
 import { MILKY_WAY_ROW } from '../../../../fixtures/milkyWayRow';

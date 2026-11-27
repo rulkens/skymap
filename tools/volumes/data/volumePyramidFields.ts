@@ -1,5 +1,5 @@
 import type { VolumePyramidFieldRow } from '../../@types/volumes/VolumePyramidFieldRow';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { MCPM_ENTRY } from '../../../src/layers/cosmicWebDensity/sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from '../../../src/layers/cosmicWebDensity/sources/polyphorm-2mrs';
 

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 

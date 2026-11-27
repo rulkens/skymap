@@ -4,7 +4,7 @@
  * builds each one before returning, so no reader re-checks a handle.
  */
 
-import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from './GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../records/@types/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';

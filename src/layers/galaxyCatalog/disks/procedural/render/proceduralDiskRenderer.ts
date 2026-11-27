@@ -61,8 +61,8 @@ import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
 import type { GalaxyCatalogId } from '../../../@types/GalaxyCatalogId';
 import type { ProceduralDiskRenderer } from '../@types/ProceduralDiskRenderer';
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
-import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../../../@types/rendering/FocusUniformsBgl';
 import {
   FLOATS_PER_INSTANCE,
@@ -71,7 +71,7 @@ import {
   createInstancedQuadRenderer,
 } from '../../quad/render/instancedQuadRenderer';
 import { packSelection } from '../../../../../data/selectionEncoding';
-import { createShaderModuleWithDevLog } from '../../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../../services/gpu/lib/cameraUniforms';
 import { resolveDepthCompare } from '../../../../../utils/gpu/resolveDepthCompare';
 

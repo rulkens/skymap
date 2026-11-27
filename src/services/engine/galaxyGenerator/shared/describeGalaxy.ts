@@ -8,8 +8,8 @@
  * rerolls every galaxy in the gallery. A pinned value (`barAngleDeg`,
  * `armAges[a]`) still CONSUMES its draw and throws it away for that reason.
  */
-import { lerp } from '../../../../utils/math/lerp';
-import { mulberry32 } from '../../../../utils/random/mulberry32';
+import { lerp } from '../../../../../packages/shared/src/utils/math/lerp';
+import { mulberry32 } from '../../../../../packages/shared/src/utils/random/mulberry32';
 import { normalizeGenerationSeed } from '../../../../utils/galaxy/normalizeGenerationSeed';
 import { gaussian } from '../../../../../tools/utils/random/gaussian';
 import { classifyHubbleType } from './classifyHubbleType';
@@ -21,7 +21,7 @@ import { GENERATION_UBO } from './generationUboLayout';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * Per-arm age bands: alternating old/young by parity, each with its own

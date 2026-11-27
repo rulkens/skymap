@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { directionToLonLatDeg } from '../../../src/utils/geo/directionToLonLatDeg';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The forward mapping `equirectUvToDirection` bakes into the tile grid,
  *  reimplemented from degrees so the round-trip doesn't share code with the

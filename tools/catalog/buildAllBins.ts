@@ -72,7 +72,7 @@ import type { DesiPatch } from './desiPatches';
 import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { raDecZToCartesian } from '../../src/utils/math/raDecZToCartesian';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';
 import { catalogDistanceFor } from './catalogDistanceFor';
 import type { LocalVolumeDistanceSeed } from './catalogDistanceFor';
@@ -83,13 +83,13 @@ import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
-import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
   tierTarget,
   tierFilenameForSource,
   fluxSupplementMagLimitFor,
 } from '../../src/layers/galaxyCatalog/records/data/tierTargets';
-import { TIER_LADDER } from '../../src/data/tierLadder';
+import { TIER_LADDER } from '../../packages/shared/src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { estimateLog10StellarMass } from './estimateLog10StellarMass';

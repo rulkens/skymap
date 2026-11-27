@@ -35,7 +35,7 @@
 
 import type { SampledDepthSceneOcclusion } from '../../../../@types/rendering/SampledDepthSceneOcclusion';
 import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 // The group index the overlay pipelines bind this joint at. Named once here
 // so the TS `setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, ...)` and the WESL

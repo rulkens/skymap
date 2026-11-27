@@ -22,7 +22,7 @@
  */
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import type { MilkyWayCloudSliderKey } from '../@types/MilkyWayCloudSliderKey';
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 
 export const MILKY_WAY_CLOUD_SLIDER_FIELDS: readonly SliderField<MilkyWayCloudSliderKey>[] = [
   {

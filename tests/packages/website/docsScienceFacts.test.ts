@@ -8,9 +8,14 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { fact } from '../../../packages/website/src/data/fact';
-import { C_KM_S, H0_KM_S_MPC, HUBBLE_TIME_GYR, PC_TO_LY } from '../../../src/utils/math/constants';
+import {
+  C_KM_S,
+  H0_KM_S_MPC,
+  HUBBLE_TIME_GYR,
+  PC_TO_LY,
+} from '../../../packages/shared/src/utils/math/constants';
 import { lookbackTimeGyr } from '../../../src/utils/math/lookbackTimeGyr';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 const PAGE = readFileSync(
   resolve(__dirname, '../../../packages/website/src/content/docs/science.mdx'),

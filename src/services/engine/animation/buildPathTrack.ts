@@ -63,7 +63,7 @@
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Ease } from '../../../@types/animation/Ease';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
@@ -76,7 +76,7 @@ import { yawPitchToDir } from '../../../utils/camera/orbitPose/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
-import { lerp } from '../../../utils/math/lerp';
+import { lerp } from '../../../../packages/shared/src/utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
 import { buildDwellWarp } from './buildDwellWarp';
 import {

@@ -9,7 +9,7 @@
  * slot LRU and the slot-index rule live in `SlotPool`, which this composes.
  */
 
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import type { SlotEvictHandler } from '../../../@types/cache/SlotEvictHandler';
 import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { TextureAtlasConfig } from '../../../@types/rendering/TextureAtlasConfig';

@@ -37,7 +37,7 @@
  */
 
 import { type ReactNode } from 'react';
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import styles from './TierChip.module.css';
 
 type TierChipProps = {

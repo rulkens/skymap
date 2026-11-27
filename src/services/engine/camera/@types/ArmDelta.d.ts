@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * One frame's pixel-free motion. orbit/look/roll are SCREEN radians (a drag of

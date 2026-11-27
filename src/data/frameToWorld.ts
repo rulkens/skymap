@@ -4,7 +4,7 @@
  */
 import { mat4 } from 'wgpu-matrix';
 import type { Mat4 as WgpuMat4 } from 'wgpu-matrix';
-import type { ScalarFieldFrameKind } from '../@types/data/volume/ScalarFieldFrameKind';
+import type { ScalarFieldFrameKind } from '../../packages/shared/src/@types/data/volume/ScalarFieldFrameKind';
 import { mat4dFromMat3 } from '../utils/math/mat4dFromMat3';
 import { GAL_TO_EQ_MATRIX, SG_TO_EQ_MAT4_COL_MAJOR } from './superGalacticTransform';
 

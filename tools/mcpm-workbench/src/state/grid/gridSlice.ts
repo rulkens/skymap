@@ -4,8 +4,8 @@ import type { AutoFitRequest } from '../../../@types/grid/AutoFitRequest';
 import type { GridSlice } from '../../../@types/grid/GridSlice';
 import type { GridBox } from '../../../@types/grid/GridBox';
 import type { GridElement } from '../../../@types/grid/GridElement';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../../src/@types/math/Vec4';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../../packages/shared/src/@types/math/Vec4';
 
 /**
  * defaultGridSlice — a manual origin-centred cube is the boot view (an

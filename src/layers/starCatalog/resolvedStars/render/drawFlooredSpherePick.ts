@@ -64,7 +64,7 @@
 
 import type { BodyPickRenderer } from '../../../../@types/rendering/bodyPickRenderer/BodyPickRenderer';
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { camPosLocal } from '../../../../utils/camera/bodyCompose/camPosLocal';
 import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';

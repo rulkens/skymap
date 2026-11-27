@@ -20,7 +20,7 @@
  * hour wondering why a label looks black.
  */
 
-import type { Vec4 } from '../../@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { HexString } from '../../@types/math/HexString';
 
 export function hexToGl(hex: HexString): Vec4 {

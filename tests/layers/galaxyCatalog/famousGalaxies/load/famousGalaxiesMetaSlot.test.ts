@@ -17,7 +17,7 @@ vi.mock(
 );
 
 import { createFamousGalaxiesMetaSlot } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaSlot';
-import { HttpError } from '../../../../../src/services/loading/fetchWithProgress';
+import { HttpError } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const M87: FamousGalaxyMetaEntry = {
   id: 'm87',

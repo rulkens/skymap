@@ -8,7 +8,7 @@
  */
 
 import type { SurfaceFixedSite } from '../../../@types/scene/SurfaceFixedSite';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { surfacePointBodyFixed } from '../../geo/surfacePointBodyFixed';
 
 export function sitePointBodyFixed(site: SurfaceFixedSite, hostRadiusM: number): Vec3 {

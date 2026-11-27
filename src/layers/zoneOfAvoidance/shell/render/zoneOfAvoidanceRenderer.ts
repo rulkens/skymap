@@ -9,7 +9,7 @@
  * `shaders/zoneOfAvoidance/io.wesl` is authoritative.
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
@@ -18,7 +18,7 @@ import { frustumRayAxis } from '../../../../utils/camera/frustum/frustumRayAxis'
 import vsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { packPickWord } from '../../../../data/selectionEncoding';
@@ -28,7 +28,7 @@ import type { ZoneOfAvoidanceShell } from '../@types/ZoneOfAvoidanceShell';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
 import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import type { PickWindowNdc } from '../../../../@types/engine/frame/PickWindowNdc';
 import { pickWindowNdc } from '../../../../utils/gpu/pickWindowNdc';

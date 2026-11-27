@@ -5,7 +5,7 @@
  * re-checks a null handle.
  */
 
-import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from './records/@types/GalaxyRecordSource';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

@@ -2,7 +2,7 @@
  * asteroidNowAt — row k's distances and V as seen from Earth, the same H,G formula the dots run.
  * Δ takes the dots' floor, so a row that passes through Earth's position never reads V = −∞.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidCatalog } from '../../catalog/@types/AsteroidCatalog';
 import type { AsteroidNow } from '../@types/AsteroidNow';
 import { ASTEROID_FORMAT as F } from '../../../../data/asteroids/asteroidFormat';

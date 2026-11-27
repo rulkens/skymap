@@ -11,7 +11,7 @@
  */
 
 import type { Clip } from '../../@types/animation/Clip';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import {
   aimAt,
   all,
@@ -27,7 +27,7 @@ import { linkedPoseToWorld } from '../../services/engine/camera/arms/utils/linke
 import { orbitAnglesLookingAlong } from '../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { frameUp } from '../../utils/camera/orbitPose/frameUp';
 import { eyeMpcOf } from '../../utils/camera/orbitPose/eyeMpcOf';
-import { normalize3 } from '../../utils/math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { northUpRoll } from '../../utils/camera/orbitPose/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../data/scaleUnits';

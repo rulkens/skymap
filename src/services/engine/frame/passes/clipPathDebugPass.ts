@@ -49,7 +49,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { DebugLine } from '../../../../@types/rendering/DebugLine';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { buildClipPathLines } from '../../presentation/buildClipPathLines';
 import { frustumFovYRad } from '../../../../utils/camera/frustum/frustumFovYRad';
 import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';

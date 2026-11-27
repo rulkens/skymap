@@ -16,7 +16,7 @@ import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../services/engine/galaxyGen
 import { createMilkyWayCloudRenderer } from './cloud/render/milkyWayCloudRenderer';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';
-import { createShaderModuleWithDevLog } from '../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { createFieldHostSlot } from './field/host/subsystems/createFieldHostSlot';
 import { createGalaxyFieldHost } from './field/host/subsystems/createGalaxyFieldHost';
 import { milkyWayFieldHostTuningFor } from './field/host/utils/milkyWayFieldHostTuningFor';

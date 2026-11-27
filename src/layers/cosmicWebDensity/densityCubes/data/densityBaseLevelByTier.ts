@@ -1,4 +1,4 @@
-import type { Tier } from '../../../../@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 
 // Level 1 is the half-resolution cube, level 2 the quarter. Medium and large share level 1 so a
 // switch between them reloads nothing.

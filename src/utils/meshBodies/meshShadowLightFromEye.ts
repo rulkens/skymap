@@ -6,7 +6,7 @@
  */
 
 import { mat4d } from 'wgpu-matrix';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export function meshShadowLightFromEye(
   lightFromLocal: Float64Array,

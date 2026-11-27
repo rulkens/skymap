@@ -13,7 +13,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { StarBody } from '../../../../src/@types/scene/StarBody';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));

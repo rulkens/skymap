@@ -8,8 +8,8 @@
  * Galaxies pill adds the catalog dots on top of it.
  */
 import { useState, type ReactNode } from 'react';
-import Button from '../../../../../../src/components/common/Button/Button';
-import EyeIcon from '../../../../../../src/components/icons/EyeIcon/EyeIcon';
+import Button from '../../../../../../packages/shared/src/components/common/Button/Button';
+import EyeIcon from '../../../../../../packages/shared/src/components/icons/EyeIcon/EyeIcon';
 import type { CatalogSlice } from '../../../../@types/catalog/CatalogSlice';
 import type { AgentInitMode } from '../../../../@types/sim/AgentInitMode';
 import type { McpmParams } from '../../../../@types/sim/McpmParams';

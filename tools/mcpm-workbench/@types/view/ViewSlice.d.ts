@@ -1,5 +1,5 @@
-import type { ScalarFieldPaletteId } from '../../../../src/@types/data/volume/ScalarFieldPaletteId';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { ScalarFieldPaletteId } from '../../../../packages/shared/src/@types/data/volume/ScalarFieldPaletteId';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { RendererId } from './RendererId';
 
 /**

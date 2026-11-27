@@ -7,7 +7,7 @@
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { SitePose } from '../../../../../../@types/camera/pose/SitePose';
 import type { SurfaceFixedSite } from '../../../../../../@types/scene/SurfaceFixedSite';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { canonicalBasisAt } from '../../../../../../utils/camera/surfaceFrame/canonicalBasisAt';
 import { siteEyeFrame } from '../../utils/siteEyeFrame';
 import { sitePointBodyFixed } from '../../../../../../utils/camera/arms/sitePointBodyFixed';

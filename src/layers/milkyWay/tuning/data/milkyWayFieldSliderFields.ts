@@ -3,7 +3,7 @@
  * divisor row per app field target, so the keys follow `APP_FIELD_TARGET_IDS` by
  * construction; `milkyWayFieldSliderPatch` writes them.
  */
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 import { APP_FIELD_TARGET_IDS } from '../../field/data/appFieldTargetIds';
 import type { MilkyWayFieldSliderKey } from '../@types/MilkyWayFieldSliderKey';
 

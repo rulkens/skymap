@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { raycastTerrain } from '../../../../src/utils/camera/terrain/raycastTerrain';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { distance3 } from '../../../../src/utils/math/distance3';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { GroundRadiusLookup } from '../../../../src/@types/camera/terrain/GroundRadiusLookup';
 
 // Earth-scale bounds (spec §8.1's [-430, 8849] relief, rounded for readable

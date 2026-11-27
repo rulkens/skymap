@@ -34,7 +34,7 @@ import { describe, expect, it } from 'vitest';
 import { mat4, mat4d, vec4 } from 'wgpu-matrix';
 
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../../src/utils/camera/bodyCompose/composeBodyMvp';

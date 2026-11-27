@@ -23,7 +23,7 @@ import type { FocusUniformsValue } from '../../../../../src/@types/rendering/Foc
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { MilkyWayRuntime } from '../../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import type { MilkyWayRenderer } from '../../../../../src/layers/milkyWay/@types/MilkyWayRenderer';
 

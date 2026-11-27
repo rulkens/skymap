@@ -1,5 +1,5 @@
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { AsteroidMeasuredSize } from '../../catalog/@types/AsteroidMeasuredSize';
 import type { AsteroidNow } from './AsteroidNow';
 

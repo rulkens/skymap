@@ -3,8 +3,8 @@
  * hands one value to `drawOrbitConics` instead of the frame's whole context.
  */
 
-import type { Vec2 } from '../../math/Vec2';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitTrailDrawArgs } from './OrbitTrailDrawArgs';
 
 export type OrbitTrailView = {

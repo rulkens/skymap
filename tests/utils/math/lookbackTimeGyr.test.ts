@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { lookbackTimeGyr } from '../../../src/utils/math/lookbackTimeGyr';
-import { HUBBLE_TIME_GYR } from '../../../src/utils/math/constants';
+import { HUBBLE_TIME_GYR } from '../../../packages/shared/src/utils/math/constants';
 
 describe('lookbackTimeGyr', () => {
   it('returns half the Hubble time at z = 1 (z/(1+z) = 0.5)', () => {

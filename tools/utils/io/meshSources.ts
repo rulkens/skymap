@@ -9,7 +9,7 @@
 
 import type { GeodeticAnchor } from '../../../src/@types/geo/GeodeticAnchor';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { Tier } from '../../../src/@types/data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { MeshTierSource } from '../../meshes/@types/MeshTierSource';
 
 export type MeshSourceEntry = {

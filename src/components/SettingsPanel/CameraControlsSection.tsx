@@ -11,7 +11,7 @@ import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId
 import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import CollapsibleSection from './CollapsibleSection';
-import Slider from '../common/Slider/Slider';
+import Slider from '../../../packages/shared/src/components/common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
 
 const FRICTION_TOGGLES: readonly { group: FrictionGroup; label: string }[] = [

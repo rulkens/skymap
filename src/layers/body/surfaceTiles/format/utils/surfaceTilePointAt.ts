@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceTilePoint } from '../@types/SurfaceTilePoint';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../../data/bodies/texturePrimeMeridianU';
 import { surfaceTileColumns } from './surfaceTileColumns';

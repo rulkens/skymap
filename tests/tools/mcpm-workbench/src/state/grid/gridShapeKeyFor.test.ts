@@ -6,7 +6,7 @@
  * the instant the drag ends.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec4 } from '../../../../../../src/@types/math/Vec4';
+import type { Vec4 } from '../../../../../../packages/shared/src/@types/math/Vec4';
 import { defaultAppState } from '../../../../../../tools/mcpm-workbench/src/store/defaultAppState';
 import { gridShapeKeyFor } from '../../../../../../tools/mcpm-workbench/src/state/grid/gridShapeKeyFor';
 

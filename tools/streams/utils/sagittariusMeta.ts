@@ -1,5 +1,5 @@
 import { arrayMean } from '../../../src/utils/math/arrayMean';
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { raDecDistToEqCart } from '../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMeta } from '../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';

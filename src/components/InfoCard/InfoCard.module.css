@@ -6,7 +6,7 @@
  * directly, so this module's only rule is the stack container itself.  The
  * shared card styling lives in cardChrome.module.css and compactChrome.module.css.
  *
- * All atoms reference tokens from `src/styles/global.css`.
+ * All atoms reference tokens from `packages/shared/src/styles/global.css`.
  */
 
 /*

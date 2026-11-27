@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Tier } from '../../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../../packages/shared/src/@types/data/Tier';
 import type { VolumeAccumulationPlan } from '../../../../../src/layers/cosmicWebDensity/@types/VolumeAccumulationPlan';
 import { planVolumeAccumulation } from '../../../../../src/layers/cosmicWebDensity/densityCubes/utils/planVolumeAccumulation';
 

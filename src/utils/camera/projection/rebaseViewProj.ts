@@ -57,7 +57,7 @@
  */
 
 import { mat4d } from 'wgpu-matrix';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function rebaseViewProj(vpF64: Float64Array, rebaseOrigin: Readonly<Vec3>): Float64Array {
   // vp · translate(O): a column-vector v transforms as (vp·T)·v, so applying

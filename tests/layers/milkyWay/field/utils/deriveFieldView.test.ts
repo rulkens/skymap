@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mat4, vec3n, vec4 } from 'wgpu-matrix';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { FieldView } from '../../../../../src/layers/milkyWay/field/@types/FieldView';
 import { deriveFieldView } from '../../../../../src/layers/milkyWay/field/utils/deriveFieldView';
 import { milkyWayCamPosModel } from '../../../../../src/layers/milkyWay/cloud/render/milkyWayCamPosModel';

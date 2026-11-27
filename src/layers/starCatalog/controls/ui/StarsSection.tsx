@@ -43,7 +43,7 @@ import { memo } from 'react';
 import { STAR_CATALOG_IDS } from '../../../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
-import Slider from '../../../../components/common/Slider/Slider';
+import Slider from '../../../../../packages/shared/src/components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../@types/StarCatalogItemSettings';

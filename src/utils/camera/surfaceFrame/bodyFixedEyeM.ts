@@ -1,5 +1,5 @@
 import type { BodyFixedPose } from '../../../@types/camera/pose/BodyFixedPose';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function bodyFixedEyeM(pose: BodyFixedPose): Vec3 {
   const { anchorLocalM: a, eyeRelAnchorM: e } = pose;

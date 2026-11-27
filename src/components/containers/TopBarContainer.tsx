@@ -17,7 +17,7 @@ import { selectPaletteOpen, selectSplashVisible } from '../../state/ui/selectors
 import { setPaletteOpen, reopenSplash } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../packages/shared/src/utils/url/hasUrlGate';
 import styles from './TopBarContainer.module.css';
 
 // Temporary `?tour` debug gate for the grand-tour pill. Read once at module

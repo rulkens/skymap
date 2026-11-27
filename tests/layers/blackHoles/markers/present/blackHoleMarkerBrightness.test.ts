@@ -11,7 +11,7 @@ import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticC
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 const ANCHOR = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
 const STATES: ReadonlyMap<string, BodyState> = new Map([

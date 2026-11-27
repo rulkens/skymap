@@ -19,10 +19,10 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { BodyFixedPose } from '../../../../../src/@types/camera/pose/BodyFixedPose';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
-import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
+import type { InputStep } from '../../../../../packages/shared/src/@types/camera/input/InputStep';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const VIEWPORT: Vec2 = [100, 100];

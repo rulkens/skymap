@@ -6,7 +6,7 @@
  * collapse affordance live in `components/common/Panel/Panel.module.css`;
  * this file only styles the rows, sliders, dropdowns, and divider that
  * render inside Panel's body.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * `packages/shared/src/styles/global.css`.
  */
 
 /* A single label + control row */
@@ -160,7 +160,7 @@
  * is a real composed class the build resolves, not a copy of the pill CSS.
  */
 .toggle {
-  composes: pillToggle from './pillToggle.module.css';
+  composes: pillToggle from '../../../packages/shared/src/components/SettingsPanel/pillToggle.module.css';
   margin: 0;
 }
 

@@ -1,4 +1,4 @@
-import type { Tier } from '../../../../src/@types/data/Tier';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
 import type { AgentWeights } from '../catalog/AgentWeights';
 import type { CatalogPoints } from '../catalog/CatalogPoints';
 import type { UserFileProvenance } from '../catalog/UserFileProvenance';

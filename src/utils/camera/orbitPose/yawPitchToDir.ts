@@ -31,7 +31,7 @@
  *               `Vec3` is allocated when omitted.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function yawPitchToDir(yaw: number, pitch: number, out?: Vec3): Vec3 {
   const cp = Math.cos(pitch); // horizontal-plane scale factor

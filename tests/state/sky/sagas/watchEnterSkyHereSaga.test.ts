@@ -9,7 +9,7 @@ import { enterSky } from '../../../../src/state/sky/actions/enterSky';
 import { skyEntryReported } from '../../../../src/state/sky/skySlice';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { SkySpot } from '../../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2186, latRad: 0.9716 };
 const POINT: Vec3 = [3_500_000, 780_000, 5_260_000];

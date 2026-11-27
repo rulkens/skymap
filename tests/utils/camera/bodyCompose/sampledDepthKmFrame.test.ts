@@ -13,7 +13,7 @@ import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
 import { makeSlab } from '../../../fixtures/makeSlab';
 
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The eye in the body's fixed frame — metres, asymmetric so a dropped or

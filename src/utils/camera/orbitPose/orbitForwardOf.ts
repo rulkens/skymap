@@ -7,14 +7,14 @@
  * right; the single place a view builder learns of the offset. */
 
 import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { yawPitchToDir } from './yawPitchToDir';
 import { frameUp } from './frameUp';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
-import { rotateVec3ByQuat } from '../../math/rotateVec3ByQuat';
-import { quatFromAxisAngle } from '../../math/quatFromAxisAngle';
-import { cross3 } from '../../math/cross3';
-import { normalize3 } from '../../math/normalize3';
+import { rotateVec3ByQuat } from '../../../../packages/shared/src/utils/math/rotateVec3ByQuat';
+import { quatFromAxisAngle } from '../../../../packages/shared/src/utils/math/quatFromAxisAngle';
+import { cross3 } from '../../../../packages/shared/src/utils/math/cross3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 
 const scratchDir: Vec3 = [0, 0, 0];
 

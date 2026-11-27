@@ -4,7 +4,7 @@ import { meanAnomalyCorrectionTarget } from '../../../../tools/utils/math/meanAn
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const row: OrbitalElements = {

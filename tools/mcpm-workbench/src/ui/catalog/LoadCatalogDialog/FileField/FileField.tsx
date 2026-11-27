@@ -1,6 +1,6 @@
 /** FileField — the load dialog's File row: Choose file…, and the chosen name or the formats it takes. */
 import { useId, useRef, type ReactNode } from 'react';
-import Button from '../../../../../../../src/components/common/Button/Button';
+import Button from '../../../../../../../packages/shared/src/components/common/Button/Button';
 import FormField from '../../../panel/FormField/FormField';
 import { NAME_END_CHARS } from '../data/nameEndChars.constant';
 import controls from '../dialogControl.module.css';

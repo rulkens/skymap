@@ -13,7 +13,7 @@
  * `enabled: 1,` line the destination literal has no place for.
  */
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../state/defaults';
 
 const DECIMALS = 4;

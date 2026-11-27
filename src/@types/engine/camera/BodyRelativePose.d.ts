@@ -7,7 +7,7 @@
  * `bodyRelativePose` for the derivation.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../math/Mat3';
 
 export type BodyRelativePose = {

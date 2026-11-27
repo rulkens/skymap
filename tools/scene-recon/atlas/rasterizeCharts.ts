@@ -8,7 +8,7 @@ import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
 import type { Turns } from '../@types/Turns';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 const EDGE_MARGIN_PX = Math.SQRT1_2;
 

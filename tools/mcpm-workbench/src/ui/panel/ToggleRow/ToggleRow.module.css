@@ -7,6 +7,6 @@
 }
 
 .toggle {
-  composes: pillToggle from '../../../../../../src/components/SettingsPanel/pillToggle.module.css';
+  composes: pillToggle from '../../../../../../packages/shared/src/components/SettingsPanel/pillToggle.module.css';
   margin: 0;
 }

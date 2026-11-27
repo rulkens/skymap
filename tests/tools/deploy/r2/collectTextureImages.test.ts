@@ -13,7 +13,7 @@
  *      not.
  *   2. R2 key shape: `data/images/textures/<file>`. The `data/` prefix
  *      is load-bearing — `dataUrl()` in
- *      `src/services/loading/fetchWithProgress.ts` requests
+ *      `packages/shared/src/services/loading/fetchWithProgress.ts` requests
  *      `images/textures/<file>` against the same base URL it uses for
  *      `.bin` files.
  */

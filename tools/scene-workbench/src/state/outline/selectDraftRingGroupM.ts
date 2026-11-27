@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { assetToGroupM } from '../../scene/assetToGroupM';
 import type { RootState } from '../../store/types';
 import { selectDraftAsset } from './selectDraftAsset';

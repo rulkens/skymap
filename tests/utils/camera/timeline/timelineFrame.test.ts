@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { TimelineFrame } from '../../../../src/@types/camera/timeline/TimelineFrame';
 import type { TimelineEvent } from '../../../../src/@types/exhibits/timeline/TimelineEvent';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { MISSION_EVENTS } from '../../../../src/layers/missions/events/data/missionEvents.generated';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { bodyPositionMpcAt } from '../../../../src/utils/exhibits/mission/bodyPositionMpcAt';

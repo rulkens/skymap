@@ -28,7 +28,7 @@
  * expectations. Returns a value in `[0, 1)`.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { BODY_GLINT_MAX_PX } from '../../data/bodies/bodyGlintMaxPx';
 
 // Rec.709 luma weights — the luminance of a linear-RGB albedo tint.

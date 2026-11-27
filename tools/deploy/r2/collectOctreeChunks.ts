@@ -6,7 +6,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DataManifest } from '../../../src/@types/data/DataManifest';
+import type { DataManifest } from '../../../packages/shared/src/@types/data/DataManifest';
 import type { OctreeChunkHeader } from '../../../src/@types/octree/OctreeChunkHeader';
 import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../../src/@types/octree/OctreeIndexHeader';

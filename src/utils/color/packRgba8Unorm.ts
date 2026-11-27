@@ -3,7 +3,7 @@
  * `unpack4x8unorm` (red in the low byte). Out-of-range channels clamp.
  */
 
-import type { Vec4 } from '../../@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 export function packRgba8Unorm(color: Readonly<Vec4>): number {
   let word = 0;

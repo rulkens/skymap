@@ -1,6 +1,6 @@
 import type { BodyTextureReq } from '../@types/BodyTextureReq';
 import { LIVE_DATASETS } from '../../../../data/live/liveDatasets';
-import { dataUrl } from '../../../../services/loading/fetchWithProgress';
+import { dataUrl } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { resolveLiveFileUrl } from '../../../../services/loading/resolveLiveFileUrl';
 import { bodyTextureFilename } from '../../../../utils/bodyTextures/bodyTextureFilename';
 

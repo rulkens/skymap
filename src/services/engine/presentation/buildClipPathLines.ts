@@ -24,7 +24,7 @@
 
 import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
 import type { DebugLine } from '../../../@types/rendering/DebugLine';
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import { speedRamp } from '../../../utils/color/speedRamp';
 import { cameraGizmoLines } from './cameraGizmoLines';
 

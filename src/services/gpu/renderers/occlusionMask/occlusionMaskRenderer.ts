@@ -10,7 +10,7 @@ import type { OcclusionMaskRenderer } from '../../../../@types/rendering/Occlusi
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import vsCode from '../../shaders/occlusionMask/vertex.wesl?static';
 import fsCode from '../../shaders/occlusionMask/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,
   OCCLUSION_COVERAGE_LAYOUT_DESC,

@@ -8,7 +8,7 @@
  * cursor is over with no pointer down (spec §6b), where no drag baseline exists.
  */
 
-import type { DragMode } from '../../../src/@types/camera/input/DragMode';
+import type { DragMode } from '../../../packages/shared/src/@types/camera/input/DragMode';
 
 export type InputGestureEvent =
   | { kind: 'gestureStart' }

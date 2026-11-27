@@ -21,7 +21,7 @@
  *      parsec defined as distance where 1 AU subtends 1 arcsecond.
  */
 
-import { PC_TO_LY } from '../utils/math/constants';
+import { PC_TO_LY } from '../../packages/shared/src/utils/math/constants';
 
 // Named locals: physical constants per the IAU.
 const PC_IN_KM = 3.0856775814913673e13;

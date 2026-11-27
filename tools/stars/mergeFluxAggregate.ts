@@ -66,7 +66,7 @@
  * leaf-cell grid units). Throws on an empty `children` array — a flux merge of
  * nothing has no meaningful centroid or magnitude, so it is a caller bug.
  */
-import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec3 } from '../../packages/shared/src/@types/math/Vec3';
 
 /**
  * One node participating in a flux merge — a leaf star (`starCount === 1`) or a

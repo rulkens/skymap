@@ -25,7 +25,7 @@ import type { Octree } from '../../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../../src/layers/starCatalog/octreeCut/@types/StarCatalogCutDrawArgs';
 import type { StarCatalogPickDrawArgs } from '../../../../../src/layers/starCatalog/survey/@types/StarCatalogPickDrawArgs';
 import type { StarCutInputs } from '../../../../../src/layers/starCatalog/octreeCut/@types/StarCutInputs';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.

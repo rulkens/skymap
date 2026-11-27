@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * Pixel size of a reduced-resolution render target: `floor(size / scale)`,

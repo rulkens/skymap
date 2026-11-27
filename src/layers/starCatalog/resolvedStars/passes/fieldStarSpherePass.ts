@@ -10,7 +10,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Octree } from '../../../../@types/octree/Octree';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';

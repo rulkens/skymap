@@ -1,5 +1,5 @@
 import type { SceneBodyId } from '../../scene/SceneBodyId';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** Terrain height above the datum, metres. `SurfaceTileStream.heightAt`'s
  *  shape, threaded as a value so the pure derivations stay pure. */

@@ -4,7 +4,7 @@ import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPosition
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const J2000_JD = 2_451_545.0;

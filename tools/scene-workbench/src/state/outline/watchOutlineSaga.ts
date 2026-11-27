@@ -7,7 +7,7 @@
 import type { Action } from '@reduxjs/toolkit';
 import { call, getContext, put, select, takeEvery, takeLatest } from 'typed-redux-saga';
 
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { MeshOutline } from '../../../@types/MeshOutline';
 import { writeMeshMask } from '../../render/writeMeshMask';
 import { isZOnlyRotation } from '../../scene/isZOnlyRotation';

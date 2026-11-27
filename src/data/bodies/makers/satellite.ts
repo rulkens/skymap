@@ -36,7 +36,7 @@ import { moonRatesFromPeriods } from '../../../utils/orbit/moonRatesFromPeriods'
 import { moonRatesFromSiderealPeriods } from '../../../utils/orbit/moonRatesFromSiderealPeriods';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function satellite(spec: {

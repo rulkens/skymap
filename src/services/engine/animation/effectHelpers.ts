@@ -47,7 +47,7 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
 import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';

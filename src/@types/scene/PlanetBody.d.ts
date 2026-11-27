@@ -13,7 +13,7 @@
  */
 
 import type { BodySurface } from './BodySurface';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SceneBodyId } from './SceneBodyId';
 
 export type PlanetBody = {

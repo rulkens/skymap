@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { PNG } from 'pngjs';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import { BASISU_ARGS } from '../data/basisuArgs';
 import { DDS_DX10_HEADER_BYTES } from '../data/ddsDx10HeaderBytes';
 import { GREY_PNG } from '../data/greyPng';

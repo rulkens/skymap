@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * The distance along `dirToEye` from `target` at which the eye is outside the sphere: `distance`

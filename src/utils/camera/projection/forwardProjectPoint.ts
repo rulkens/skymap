@@ -4,7 +4,7 @@
  * caller-owned `out` scratch rather than returning a fresh object, so a
  * per-point hot loop allocates nothing.
  */
-import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { ForwardProjectedPoint } from '../../../@types/camera/projection/ForwardProjectedPoint';
 
 export function forwardProjectPoint(

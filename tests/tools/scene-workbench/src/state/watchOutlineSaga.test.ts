@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { SceneManifest } from '../../../../../tools/scene-workbench/@types/SceneManifest';
 import {
   drawOutlineRequested,

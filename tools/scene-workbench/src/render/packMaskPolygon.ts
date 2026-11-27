@@ -1,4 +1,4 @@
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
 /** `struct MaskPolygon { count: u32, _pad: u32, cornersM: array<vec2f> }` in shaders/texturedMesh/io.wesl. */
 const COUNT_OFFSET = 0;

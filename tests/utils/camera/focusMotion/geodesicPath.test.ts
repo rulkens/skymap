@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { geodesicPath } from '../../../../src/utils/camera/focusMotion/geodesicPath';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 import { relErr } from '../../../support/relErr';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const FOV_Y = (50 * Math.PI) / 180;
 const TUNING = DEFAULT_GEODESIC_TUNING;

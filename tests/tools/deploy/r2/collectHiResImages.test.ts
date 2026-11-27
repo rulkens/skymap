@@ -12,7 +12,7 @@
  *      (e.g. recipe.json the curator drops next to images) are not.
  *   2. R2 key shape: `data/images/famous-hires/<id>.webp`. The
  *      `data/` prefix is load-bearing — `dataUrl()` in
- *      `src/services/loading/fetchWithProgress.ts` requests
+ *      `packages/shared/src/services/loading/fetchWithProgress.ts` requests
  *      `images/famous-hires/<id>.webp` against the same base URL it
  *      uses for `.bin` files.
  */

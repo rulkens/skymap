@@ -16,11 +16,11 @@ import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 
-import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 import { createGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { hasUrlGate } from '../../../../src/utils/url/hasUrlGate';
+import { hasUrlGate } from '../../../../packages/shared/src/utils/url/hasUrlGate';
 
 import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';

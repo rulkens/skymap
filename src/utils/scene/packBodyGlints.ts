@@ -6,7 +6,7 @@
  * narrows to f32: narrowing the raw AU-scale anchor would already have lost the low bits.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 import type { MeshBody } from '../../@types/scene/MeshBody';

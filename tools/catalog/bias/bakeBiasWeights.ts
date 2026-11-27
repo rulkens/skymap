@@ -4,7 +4,7 @@
  * the sample the tier draws, and the tier selection (brightest by absolute
  * magnitude) changes which directions are over-sampled.
  */
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { galaxyCatalogFluxLimit } from '../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../../src/utils/math/absoluteFromApparent';

@@ -1,5 +1,5 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { raDecDistToEqCart } from '../../../packages/shared/src/utils/math/raDecDistToEqCart';
 import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
 
 const KPC_PER_MPC = 1e3;

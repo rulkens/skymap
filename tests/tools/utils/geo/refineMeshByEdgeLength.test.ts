@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { refineMeshByEdgeLength } from '../../../../tools/utils/geo/refineMeshByEdgeLength';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /** Unit octahedron — a closed triangle mesh small enough to reason about. */
 function octahedron(): {

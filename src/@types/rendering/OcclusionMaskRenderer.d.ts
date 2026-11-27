@@ -3,7 +3,7 @@
  * how much the foreground covers and how far its nearest drawn surface is, in km.
  */
 
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import type { SampledDepthSceneOcclusion } from './SampledDepthSceneOcclusion';
 import type { Renderer } from './Renderer';
 

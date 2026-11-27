@@ -4,7 +4,7 @@
  */
 
 import type { ShellMesh } from '../../@types/ShellMesh';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 export type LocalBubbleRenderer = {
   readonly label: string;

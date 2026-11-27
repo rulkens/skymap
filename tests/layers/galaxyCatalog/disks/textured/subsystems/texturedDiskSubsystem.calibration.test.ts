@@ -28,7 +28,7 @@ import {
 } from '../../../../../services/engine/subsystems/diskWalkHarness';
 import { paddedRadiusMpc } from '../../../../../../src/layers/galaxyCatalog/appearance/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../../../src/utils/random/fallbackOrientation';
-import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { FamousCalibration } from '../../../../../../src/@types/loading/FamousCalibration';

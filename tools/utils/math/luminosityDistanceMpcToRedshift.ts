@@ -11,7 +11,7 @@
  */
 
 import { distanceMpcToRedshift } from '../../../src/utils/math/distanceMpcToRedshift';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 /** 0.1 kpc — far below the forward integral's own 1e-6 relative error. */
 const D_TOLERANCE_MPC = 1e-4;

@@ -8,8 +8,8 @@
  * that primitive's mutable-out shape to the `Vec2 | null` callers here expect.
  */
 
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { ForwardProjectedPoint } from '../../../@types/camera/projection/ForwardProjectedPoint';
 import { forwardProjectPoint } from './forwardProjectPoint';
 

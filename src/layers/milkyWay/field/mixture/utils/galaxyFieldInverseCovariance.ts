@@ -7,7 +7,7 @@
  * congruence per ray per component, which is the cost the closed form exists
  * to avoid. M changes only when the galaxy is regenerated.
  */
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * M0 = Q^T*D*Q is the tilted diagonal form (Q is the world -> component

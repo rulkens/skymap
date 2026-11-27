@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { DetailRegionGeometry } from '../../../../../src/layers/cosmicWebDensity/detailRegion/@types/DetailRegionGeometry';
 import type { DetailRegionState } from '../../../../../src/layers/cosmicWebDensity/detailRegion/@types/DetailRegionState';
 import { detailRegionDraw } from '../../../../../src/layers/cosmicWebDensity/detailRegion/plan/detailRegionDraw';

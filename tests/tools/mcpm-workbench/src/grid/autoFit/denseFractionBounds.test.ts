@@ -5,7 +5,7 @@
  * and a zero-IQR axis must not poison the rank with NaN.
  */
 import { describe, expect, it } from 'vitest';
-import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { denseFractionBounds } from '../../../../../../tools/mcpm-workbench/src/grid/autoFit/denseFractionBounds';
 import { catalogBounds } from '../../../../../../tools/mcpm-workbench/src/catalog/catalogBounds';
 

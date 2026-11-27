@@ -1,4 +1,4 @@
-import type { GpuContext } from '../../../src/@types/rendering/GpuContext';
+import type { GpuContext } from '../../../packages/shared/src/@types/rendering/GpuContext';
 import type { GpuAsset } from '../src/render/renderResources';
 
 /** Parse → upload for one `SceneAsset.kind`; `ASSET_LOADERS` dispatches on it. */

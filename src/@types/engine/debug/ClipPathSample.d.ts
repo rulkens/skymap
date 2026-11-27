@@ -5,7 +5,7 @@
  * and stores these.
  */
 
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type ClipPathSample = {
   /** Seconds since the clip start (uniform spacing across the snapshot). */

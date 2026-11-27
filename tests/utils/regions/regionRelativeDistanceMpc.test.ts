@@ -7,7 +7,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyRegion } from '../../../src/@types/scene/BodyRegion';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
 

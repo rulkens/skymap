@@ -38,10 +38,10 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { cameraBasisWorld } from '../../../../src/utils/camera/orbitPose/cameraBasisWorld';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../packages/shared/src/utils/math/normalize3';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';

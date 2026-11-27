@@ -8,9 +8,9 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec4 } from '../../@types/math/Vec4';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 import type { MeshMaterialFactors } from '../../@types/rendering/MeshMaterialFactors';
 import { MESH_BODY_UNIFORM_FLOATS } from '../../data/mesh/meshBodyUniformLayout';
 

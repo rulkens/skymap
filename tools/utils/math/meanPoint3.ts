@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The centroid of a set of points; NaN for none. */
 export function meanPoint3(points: readonly Readonly<Vec3>[]): Vec3 {

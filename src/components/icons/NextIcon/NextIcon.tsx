@@ -1,7 +1,7 @@
 /** NextIcon: skip forward, a solid right-pointing triangle and a bar. */
 
 import type { ReactNode } from 'react';
-import Icon, { type IconProps } from '../../Icon/Icon';
+import Icon, { type IconProps } from '../../../../packages/shared/src/components/Icon/Icon';
 
 function NextIcon({ size }: Pick<IconProps, 'size'>): ReactNode {
   return (

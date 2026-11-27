@@ -5,8 +5,8 @@
  */
 
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** The unit view direction that `projectLabel` sends to `px`. */
 export function unprojectLabel(px: Readonly<Vec2>, p: OutputProjection, out: Vec3): void {

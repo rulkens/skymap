@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { sceneCameraView } from '../../../../../tools/scene-workbench/src/render/sceneCameraView';
 
 describe('sceneCameraView', () => {

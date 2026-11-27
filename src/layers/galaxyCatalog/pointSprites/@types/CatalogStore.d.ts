@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyPointStats } from './GalaxyPointStats';
 import type { CatalogDrawEntry } from './CatalogDrawEntry';

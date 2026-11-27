@@ -8,7 +8,7 @@
 import type { BodyFixedPose } from '../../../../../../@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../../../@types/camera/pose/SkyPose';
 import type { SkySpot } from '../../../../../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../../packages/shared/src/@types/math/Vec3';
 import { SKY_EYE_HEIGHT_M } from '../data/skyEyeHeightM';
 import { canonicalBasisAt } from '../../../../../../utils/camera/surfaceFrame/canonicalBasisAt';
 import { siteEyeFrame } from '../../utils/siteEyeFrame';

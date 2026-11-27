@@ -5,7 +5,7 @@
  * `placement` and `align` keep the tip off the button and inside its sidebar.
  */
 import { useId, type ReactNode } from 'react';
-import CompactInfoTip from '../../../../../../src/components/common/CompactInfoTip/CompactInfoTip';
+import CompactInfoTip from '../../../../../../packages/shared/src/components/common/CompactInfoTip/CompactInfoTip';
 
 export type ButtonTipProps = {
   readonly tip: string;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { eqToSg } from '../../../../tools/utils/math/eqToSg';
 import { sgToEq } from '../../../../tools/utils/math/sgToEq';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 describe('eqToSg', () => {
   it('round-trips with sgToEq back to the input vector', () => {

@@ -6,7 +6,7 @@
  * body's own lobe.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type OrbitConic = {
   readonly centerMpc: Readonly<Vec3>;

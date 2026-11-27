@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Octree } from '../../../../src/@types/octree/Octree';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {

@@ -3,15 +3,15 @@ import type { DragStep } from '../@types/DragStep';
 import type { GroundRadiusLookup } from '../../../../../../../@types/camera/terrain/GroundRadiusLookup';
 import type { SurfaceGesture } from '../../../../../../../@types/camera/arms/SurfaceGesture';
 import type { ViewFrustum } from '../../../../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../../../@types/math/Vec3';
+import type { Vec2 } from '../../../../../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../../../../packages/shared/src/@types/math/Vec3';
 import { MIN_INCIDENCE_COS } from './anchoredDragRotation';
 import { bodyFixedEyeM } from '../../../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { cursorRayBodyLocal } from '../../../../../../../utils/camera/terrain/cursorRayBodyLocal';
 import { pickOnBody } from './pickOnBody';
 import { raycastTerrain } from '../../../../../../../utils/camera/terrain/raycastTerrain';
 import { surfacePickToleranceM } from '../../../../../../../utils/camera/terrain/surfacePickToleranceM';
-import { normalize3 } from '../../../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../../../packages/shared/src/utils/math/normalize3';
 
 export function latchSurfaceGesture(
   arm: BodyFixedPose,

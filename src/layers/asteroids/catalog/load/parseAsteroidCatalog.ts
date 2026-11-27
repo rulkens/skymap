@@ -6,7 +6,7 @@
 import type { AsteroidCatalog } from '../@types/AsteroidCatalog';
 import { ASTEROID_FORMAT as F } from '../../../../data/asteroids/asteroidFormat';
 import { GAUSS_K_RAD_PER_DAY } from '../../../../data/asteroids/gaussKRadPerDay';
-import { FormatVersionError } from '../../../../data/formatVersionError';
+import { FormatVersionError } from '../../../../../packages/shared/src/data/formatVersionError';
 import { perifocalAxesWorld } from '../../../../utils/orbit/perifocalAxesWorld';
 import { ASTEROID_HIDDEN_FLAG } from '../data/asteroidHiddenFlag';
 import { MESH_ASTEROID_BODIES } from '../../../../data/asteroids/meshAsteroidBodies';

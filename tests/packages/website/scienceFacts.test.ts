@@ -13,8 +13,8 @@ import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
 import { DOCS_SETTING_SIZES } from '../../../packages/website/src/data/docsSettingSizes';
 import { fact } from '../../../packages/website/src/data/fact';
 import { HORIZON_RADIUS_GPC } from '../../../src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc';
-import { C_KM_S, H0_KM_S_MPC, PC_TO_LY } from '../../../src/utils/math/constants';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { C_KM_S, H0_KM_S_MPC, PC_TO_LY } from '../../../packages/shared/src/utils/math/constants';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 import { statedFigures } from './statedFigures';
 
 const OMEGA_M = 0.315;

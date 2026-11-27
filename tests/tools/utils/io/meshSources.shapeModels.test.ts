@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { MESH_SOURCES } from '../../../../tools/utils/io/meshSources';
 

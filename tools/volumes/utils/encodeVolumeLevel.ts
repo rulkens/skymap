@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** One r8 level: crop `box` out of a whole block-mean level (C-order, x slowest), zero raw values
  *  below `zeroBelowRaw`, code round(255 · log1p(v) / log1p(encodeMax)) clamped to 0..255, x fastest. */

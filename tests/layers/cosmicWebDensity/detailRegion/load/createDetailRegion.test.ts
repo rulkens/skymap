@@ -8,10 +8,13 @@ import { DETAIL_REGION_FADE_MS } from '../../../../../src/layers/cosmicWebDensit
 import { encodeArchiveIndex } from '../../../../../tools/utils/archive/encodeArchiveIndex';
 import { useFetchMock } from '../../../../setup/fetchMock';
 
-vi.mock('../../../../../src/services/loading/fetchWithProgress', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  dataUrl: (path: string) => `/data/${path}`,
-}));
+vi.mock(
+  '../../../../../packages/shared/src/services/loading/fetchWithProgress',
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    dataUrl: (path: string) => `/data/${path}`,
+  }),
+);
 
 import { createDetailRegion } from '../../../../../src/layers/cosmicWebDensity/detailRegion/load/createDetailRegion';
 

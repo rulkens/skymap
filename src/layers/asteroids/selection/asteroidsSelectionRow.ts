@@ -29,7 +29,7 @@ import type { AsteroidsRuntime } from '../@types/AsteroidsRuntime';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { AsteroidRef } from './@types/AsteroidRef';
 import type { AsteroidSelectionRow } from './@types/AsteroidSelectionRow';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 const FOCUS_ID = /^asteroid-(\d+)$/;
 const RAD_TO_DEG = 180 / Math.PI;

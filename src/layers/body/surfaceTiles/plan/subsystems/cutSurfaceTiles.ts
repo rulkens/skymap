@@ -6,7 +6,7 @@ import type { SurfaceCutTile } from '../@types/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../stream/@types/ResolvedTileResidency';
 import type { TileCamera } from '../@types/TileCamera';
 import type { SurfaceTilePlannerParams } from '../@types/SurfaceTilePlannerParams';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { surfaceTileColumns } from '../../format/utils/surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileInBand } from '../../format/utils/surfaceTileInBand';

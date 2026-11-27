@@ -22,7 +22,7 @@ import { EARTH_SURFACE_UNIFORM_FLOATS } from './packEarthSurfaceUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/earth/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../../../../../packages/shared/src/services/gpu/shaderCompileLogger';
 
 /** Per-face grid subdivision: 6 x 48^2 quads in total. */
 const CUBESPHERE_FACE_RESOLUTION = 48;

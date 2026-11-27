@@ -1,4 +1,4 @@
-import type { SliderProps } from '../../../../../../../src/components/common/Slider/Slider';
+import type { SliderProps } from '../../../../../../../packages/shared/src/components/common/Slider/Slider';
 import type { GridBox } from '../../../../../@types/grid/GridBox';
 import { ceil8 } from '../../../../utils/math/ceil8';
 import { SIZE_MAX_MPC } from '../data/sizeMaxMpc.constant';

@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { sunVisibleFraction } from '../../../src/utils/occlusion/sunVisibleFraction';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 const BODY: Vec3 = [0, 0, 0];
 

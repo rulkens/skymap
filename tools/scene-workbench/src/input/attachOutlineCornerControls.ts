@@ -4,7 +4,7 @@
  * capture-phase `pointerdown` swallows those presses, so `attachOrbitControls` never pans or
  * appends for them. Desktop-only: `setPointerCapture` breaks iOS touch, which attachOrbitControls avoids.
  */
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
 import type { HeldCorner } from '../../@types/HeldCorner';
 import { sceneCameraView } from '../render/sceneCameraView';
 import { assetToGroupM } from '../scene/assetToGroupM';

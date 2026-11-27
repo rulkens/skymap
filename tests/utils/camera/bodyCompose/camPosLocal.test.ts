@@ -23,7 +23,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import { camPosLocal } from '../../../../src/utils/camera/bodyCompose/camPosLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 

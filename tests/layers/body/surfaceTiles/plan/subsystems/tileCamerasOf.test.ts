@@ -10,7 +10,7 @@ import { deriveBodyStates } from '../../../../../../src/services/engine/frame/de
 import { composeBodySlabMvp } from '../../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { cutSurfaceTiles } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
-import { normalize3 } from '../../../../../../src/utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { SURFACE_TILE_PX } from '../../../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { SCENE_EARTH } from '../../../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
@@ -18,7 +18,7 @@ import { CONST_J2000 } from '../../../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../../../helpers/frame/frameViewsAt';
 import type { TileCamera } from '../../../../../../src/layers/body/surfaceTiles/plan/@types/TileCamera';
-import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { SurfaceTileBand } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
 import { requestBandsOf } from '../../../../../support/requestBandsOf';
 

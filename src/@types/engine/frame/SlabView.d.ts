@@ -20,8 +20,8 @@ import type { PickWindow } from './PickWindow';
 import type { SampledDepth } from './SampledDepth';
 import type { SampledMask } from './SampledMask';
 import type { Slab } from './Slab';
-import type { Vec2 } from '../../math/Vec2';
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec2 } from '../../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export type SlabView = {
   /** The resolved slab — near/far, frame, precision — for the rare layer that cares. */

@@ -8,7 +8,7 @@
 import type { BodyFixedPose } from '../../@types/camera/pose/BodyFixedPose';
 import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
 import type { ViewFrustum } from '../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
 import type { HostBody } from '../../services/engine/camera/arms/@types/HostBody';
 import { NO_SKY_ENTRY } from '../../data/sky/noSkyEntry';
 import { SKY_HOSTS } from '../../data/sky/skyHosts';

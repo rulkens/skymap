@@ -17,8 +17,8 @@
  *     z = d · sin(dec)
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
-import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { redshiftToDistanceMpc } from '../../../packages/shared/src/utils/math/redshiftToDistanceMpc';
 
 /**
  * Convert (RA, Dec, z) → Cartesian (x, y, z) in Mpc.

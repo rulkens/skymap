@@ -9,7 +9,7 @@
  * zeros is a constant: the second half's "tightest cluster of zeros" is the first half's
  * "largest void", and one insert loop ranks every cell from the initial pattern up.
  */
-import { mulberry32 } from '../../src/utils/random/mulberry32';
+import { mulberry32 } from '../../packages/shared/src/utils/random/mulberry32';
 
 const SIGMA = 1.9;
 const SPATIAL_RADIUS = 6; // ≈ 3σ

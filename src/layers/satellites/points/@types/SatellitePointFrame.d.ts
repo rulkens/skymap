@@ -4,7 +4,7 @@
  * in f64 by the pass.
  */
 import type { Mat3 } from '../../../../@types/math/Mat3';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 
 export type SatellitePointFrame = {

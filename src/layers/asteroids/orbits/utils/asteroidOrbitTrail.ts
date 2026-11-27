@@ -3,7 +3,7 @@
  * solved in: position = A·(cos E − e) + B·sin E, so the conic's centre is the Sun − e·A and its axes
  * are A and B. The lobe sits at the row's mean anomaly at `simJd`, which is where the dot is.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { OrbitTrail } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrail';
 import type { AsteroidCatalog } from '../../catalog/@types/AsteroidCatalog';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';

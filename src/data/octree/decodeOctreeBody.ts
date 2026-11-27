@@ -4,7 +4,7 @@ import type { DecodedOctreeObject } from '../../@types/octree/DecodedOctreeObjec
 import type { OctreeChunkHeader } from '../../@types/octree/OctreeChunkHeader';
 import type { OctreeColumn } from '../../@types/octree/OctreeColumn';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
-import { f16ToFloat } from '../../utils/math/f16ToFloat';
+import { f16ToFloat } from '../../../packages/shared/src/utils/math/f16ToFloat';
 import { roundUpToMultiple } from '../../utils/math/roundUpToMultiple';
 import {
   COLUMN_STORE_BYTES,

@@ -11,8 +11,8 @@
  * `null` is the no-op.
  */
 
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec2 } from '../../../packages/shared/src/@types/math/Vec2';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { SampledDepthSceneOcclusion } from './SampledDepthSceneOcclusion';
 
 export type SelectionRingRenderer = {

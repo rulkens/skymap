@@ -8,7 +8,7 @@
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { flowFieldFetcher } from './flowFieldFetcher';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
+import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { FlowFieldRenderer } from '../@types/FlowFieldRenderer';
 
 export function createFlowFieldSlot(renderer: FlowFieldRenderer): AssetSlot<ScalarCube, void> {

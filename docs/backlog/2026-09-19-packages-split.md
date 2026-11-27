@@ -20,9 +20,12 @@ config.
 ## The hard part
 
 The workbenches and much of `tools/` import straight from `src/` (renderer,
-formats, `@types/`). Splitting them needs a shared-code package (or `src/`
-exported as a library package) first; without it the packages are folders
-with deep `../../` imports and nothing gained.
+formats, `@types/`). The shared-code package now exists: `packages/shared`, a
+leaf holding what the app and the MCPM workbench both use (ADR 0017). What
+remains: the MCPM workbench still imports 16 `src/` files by ruling (12 MCPM
+shaders on the single WESL root, 4 galaxy-catalog Layer files) and 19
+workbench-only helpers that move with it; the other workbenches' closures
+reach into Layers and the engine and have not been sorted.
 
 ## Blast radius to plan for
 

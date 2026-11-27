@@ -1,4 +1,4 @@
-import type { Tier } from '../data/Tier';
+import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 
 /** A celestial body drawn from a mission shape model instead of a sphere. */
 export type ShapeModel = {

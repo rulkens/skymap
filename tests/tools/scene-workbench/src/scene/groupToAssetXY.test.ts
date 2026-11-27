@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { quatFromAxisAngle } from '../../../../../src/utils/math/quatFromAxisAngle';
+import { quatFromAxisAngle } from '../../../../../packages/shared/src/utils/math/quatFromAxisAngle';
 import type { SimilarityTransform } from '../../../../../tools/scene-workbench/@types/SimilarityTransform';
 import { assetToGroupM } from '../../../../../tools/scene-workbench/src/scene/assetToGroupM';
 import { groupToAssetXY } from '../../../../../tools/scene-workbench/src/scene/groupToAssetXY';

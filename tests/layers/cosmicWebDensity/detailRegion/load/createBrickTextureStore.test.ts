@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { VolumePyramidFormatRow } from '../../../../../src/@types/data/volume/VolumePyramidFormatRow';
 import { VOLUME_PYRAMID_FORMATS } from '../../../../../src/data/volume/volumePyramidFormats';
 import { createBrickTextureStore } from '../../../../../src/layers/cosmicWebDensity/detailRegion/load/createBrickTextureStore';

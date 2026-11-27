@@ -23,7 +23,7 @@ import { buildRhizomeVolume } from './buildRhizomeVolume';
 import { parsePolyphyTraceSidecar } from '../parsers/polyphyTraceSidecar';
 import { buildDataManifest } from '../deploy/buildDataManifest';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { SCALAR_FIELD_DATA_PREFIX } from '../../src/data/volume/scalarFieldFormat';
+import { SCALAR_FIELD_DATA_PREFIX } from '../../packages/shared/src/data/volume/scalarFieldFormat';
 
 const REQUIRED_PRODUCER = 'mcpm-workbench';
 

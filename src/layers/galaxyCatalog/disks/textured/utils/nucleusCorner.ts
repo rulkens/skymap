@@ -10,7 +10,7 @@
  * renderer plumbing.
  */
 
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 
 /**
  * Nucleus position mapped from normalised WebP coordinates into the

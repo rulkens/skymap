@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 /** glTF-style factors the mesh shader multiplies its baked maps by: linear RGB, then [0, 1] scalars. */
 export type MeshMaterialFactors = {

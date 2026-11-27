@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // Translate-arrow reach as a fraction of viewport height — Blender's constant on-screen gizmo.
 const ARROW_SCREEN_HEIGHT_FRACTION = 0.12;

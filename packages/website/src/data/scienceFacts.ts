@@ -55,14 +55,14 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-galaxy-distance',
     text: 'Beyond 30 megaparsecs (98 million light-years) a galaxy’s distance is computed from its redshift. It is a comoving distance, the distance today, in a flat Lambda-CDM model, the standard model of cosmology, with a Hubble constant of 70 km/s per megaparsec and a matter density of 0.315.',
-    source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
+    source: `${REPO_BLOB}/packages/shared/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'sci-h0-range',
     text: 'The Hubble constant is the rate at which space expands. Measurements run from about 67 to about 73 km/s per megaparsec, and every redshift distance scales inversely with it. A galaxy we place at 100 megaparsecs would sit at about 96 with a constant of 73, or 104 with 67.4.',
-    source: `${REPO_BLOB}/src/utils/math/constants.ts`,
+    source: `${REPO_BLOB}/packages/shared/src/utils/math/constants.ts`,
     sourceLabel: `the constants file, ${IN_REPO}`,
     checked: CHECKED,
   },

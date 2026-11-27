@@ -22,7 +22,7 @@
  * of the type rather than a comment.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../math/Mat3';
 import type { OrbitalElements } from './OrbitalElements';
 

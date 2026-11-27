@@ -1,5 +1,5 @@
 import type { GroundSample } from '../../../textures/@types/GroundSample';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * seatHeightM — the ground height to place a site at so the posed body rests

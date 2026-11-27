@@ -1,7 +1,7 @@
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
 import type { PlacedRow } from '../../../../@types/engine/selection/PlacedRow';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * A star's row, fields snapshotted at extract time. `id` is the seed id the `star-<seedId>` URL

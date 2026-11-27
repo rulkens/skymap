@@ -14,7 +14,7 @@ import {
   LIT_BODY_UNIFORM_FLOATS,
 } from '../../../../src/layers/body/spheres/render/packLitBodyUniforms';
 import { createBodyPickRenderer } from '../../../../src/services/gpu/renderers/bodies/bodyPickRenderer';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 // A recognisable MVP: 1..16 so any transposition or off-by-one placement of a
 // later field into the matrix block shows up as a wrong value.

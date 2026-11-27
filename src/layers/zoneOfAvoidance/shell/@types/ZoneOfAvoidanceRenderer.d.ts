@@ -16,7 +16,7 @@
 
 import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { ViewFrustum } from '../../../../@types/camera/projection/ViewFrustum';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
 import type { ZoneOfAvoidanceShell } from './ZoneOfAvoidanceShell';

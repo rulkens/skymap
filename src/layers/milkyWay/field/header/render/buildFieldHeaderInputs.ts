@@ -7,7 +7,7 @@
  * one `camera` and mostly diverge on which lanes carry REAL values versus
  * the packer's own inert defaults — see each field's own comment below.
  */
-import type { Vec2 } from '../../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../../packages/shared/src/@types/math/Vec2';
 import type { DustHeaderLanes } from '../../dust/@types/DustHeaderLanes';
 import type { FieldTargetId } from '../../@types/FieldTargetId';
 import type { FieldView } from '../../@types/FieldView';

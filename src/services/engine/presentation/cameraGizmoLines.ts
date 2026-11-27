@@ -14,8 +14,8 @@
  * cross products stay well-defined.
  */
 
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
+import type { Vec4 } from '../../../../packages/shared/src/@types/math/Vec4';
 import type { DebugLine } from '../../../@types/rendering/DebugLine';
 
 const GIZMO_COLOR: Vec4 = [1, 0.85, 0.1, 1]; // amber — distinct from the speed-coloured route

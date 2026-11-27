@@ -3,7 +3,7 @@
  * metres: the shape `bodySlabRow` reads for an attached mesh body's near face.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 export type HostFrameSphere = {
   readonly posM: Readonly<Vec3>;

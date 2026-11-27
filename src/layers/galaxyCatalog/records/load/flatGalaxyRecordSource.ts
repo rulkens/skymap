@@ -5,7 +5,7 @@
  * one (the famous catalog's synthetic 0..N-1 `objIDs`) never shadows a pgc.
  */
 
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';

@@ -1,6 +1,6 @@
 import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Tier } from '../../../../src/@types/data/Tier';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Tier } from '../../../../packages/shared/src/@types/data/Tier';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 import type { CatalogPoints } from './CatalogPoints';
 import type { UserCatalog } from './UserCatalog';
 import type { UserFileProvenance } from './UserFileProvenance';

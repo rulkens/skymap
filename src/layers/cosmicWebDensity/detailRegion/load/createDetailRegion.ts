@@ -8,13 +8,16 @@ import type { ArchiveEntry } from '../../../../@types/archive/ArchiveEntry';
 import type { ArchiveIndex } from '../../../../@types/archive/ArchiveIndex';
 import type { VolumePyramidFormatRow } from '../../../../@types/data/volume/VolumePyramidFormatRow';
 import type { VolumePyramidSidecar } from '../../../../@types/data/volume/VolumePyramidSidecar';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import { mat4, vec3 } from 'wgpu-matrix';
 import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../data/archive/archiveFetchDeadlineMs';
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../../data/gpu/textureBytesPerTexel';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
 import { createTileStreamSubsystem } from '../../../../services/engine/subsystems/tileStreamSubsystem';
-import { dataUrl, HttpError } from '../../../../services/loading/fetchWithProgress';
+import {
+  dataUrl,
+  HttpError,
+} from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 import { fetchVolumePyramidSidecar } from '../../../../services/loading/volume/fetchVolumePyramidSidecar';
 import { decodeArchiveIndex } from '../../../../utils/archive/decodeArchiveIndex';
 import { findArchiveEntry } from '../../../../utils/archive/findArchiveEntry';

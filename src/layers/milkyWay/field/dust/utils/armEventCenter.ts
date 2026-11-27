@@ -3,7 +3,7 @@ import { warpSurfaceFrame } from '../../mixture/utils/warpSurfaceFrame';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { SfEvent } from '../../starFormation/@types/SfEvent';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 
 /**

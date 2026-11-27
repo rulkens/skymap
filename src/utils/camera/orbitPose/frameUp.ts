@@ -33,7 +33,7 @@
  */
 
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 export function frameUp(frameBasis: Readonly<Mat3> | undefined, out?: Vec3): Vec3 {
   const dst = out ?? ([0, 0, 0] as Vec3);

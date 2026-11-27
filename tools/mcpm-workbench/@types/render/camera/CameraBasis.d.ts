@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 
 /** An orthonormal right-handed frame: `forward` looks at the target, `up` is re-derived. */
 export type CameraBasis = {

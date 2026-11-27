@@ -7,7 +7,7 @@
  * glow correlate instead of being two independent sprinkles.
  */
 import { distance3 } from '../../../../../utils/math/distance3';
-import { mulberry32 } from '../../../../../utils/random/mulberry32';
+import { mulberry32 } from '../../../../../../packages/shared/src/utils/random/mulberry32';
 import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';

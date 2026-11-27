@@ -9,7 +9,7 @@
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec4 } from '../../@types/math/Vec4';
+import type { Vec4 } from '../../../packages/shared/src/@types/math/Vec4';
 
 export function matrixToQuaternion(m: Mat3): Vec4 {
   // Diagonal elements: m[0], m[4], m[8] (rows 0,1,2 of columns 0,1,2).

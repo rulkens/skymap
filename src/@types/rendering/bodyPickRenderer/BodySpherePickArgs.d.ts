@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../math/Vec3';
+import type { Vec3 } from '../../../../packages/shared/src/@types/math/Vec3';
 
 /**
  * One sphere body's pick draw: its CPU-baked model-view-projection (16 f32,

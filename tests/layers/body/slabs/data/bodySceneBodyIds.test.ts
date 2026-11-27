@@ -21,7 +21,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../../packages/shared/src/@types/math/Vec3';
 import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 

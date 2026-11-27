@@ -9,7 +9,7 @@
  * pose. Second and last user of the Mpc↔metre constants here (spec §10).
  */
 
-import type { Vec3 } from '../../../../../@types/math/Vec3';
+import type { Vec3 } from '../../../../../../packages/shared/src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../@types/math/Mat3';
 import type { SceneBodyId } from '../../../../../@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../../@types/scene/BodyState';
@@ -23,7 +23,7 @@ import { frameUp } from '../../../../../utils/camera/orbitPose/frameUp';
 import { orbitAnglesLookingAlong } from '../../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { rollFromScreenUp } from '../../../../../utils/camera/orbitPose/rollFromScreenUp';
 import { rotateVec3ByTightMat3 } from '../../../../../utils/math/rotateVec3ByTightMat3';
-import { normalize3 } from '../../../../../utils/math/normalize3';
+import { normalize3 } from '../../../../../../packages/shared/src/utils/math/normalize3';
 import { raySphereRoots } from '../../../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from './utils/surfaceFloorM';
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';

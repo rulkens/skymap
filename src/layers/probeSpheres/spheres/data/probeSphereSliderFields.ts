@@ -1,4 +1,4 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
+import type { SliderField } from '../../../../../packages/shared/src/@types/data/SliderField';
 
 export const PROBE_SPHERE_SLIDER_FIELDS: readonly SliderField<'metallic' | 'roughness'>[] = [
   {

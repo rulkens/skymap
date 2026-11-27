@@ -3,7 +3,7 @@
  * source-independent shader scalars. The lists stay on the GPU.
  */
 
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec2 } from '../../../../../packages/shared/src/@types/math/Vec2';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { OctreeDrawStream } from '../../../../@types/octree/OctreeDrawStream';
 import type { StarFocusSphere } from './StarFocusSphere';

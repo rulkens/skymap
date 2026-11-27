@@ -10,7 +10,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { regionById } from '../../../src/utils/regions/regionById';
 import { regionRelativeDistanceMpc } from '../../../src/utils/regions/regionRelativeDistanceMpc';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {
   it('every position driver belongs to exactly one region', () => {

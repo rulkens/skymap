@@ -1,6 +1,6 @@
 /** LoadFooter — the load dialog's footer: a slow read's progress line, Cancel and Load. */
 import type { ReactNode, Ref } from 'react';
-import Button from '../../../../../../../src/components/common/Button/Button';
+import Button from '../../../../../../../packages/shared/src/components/common/Button/Button';
 import ImportIcon from '../../../../../../../src/components/icons/ImportIcon/ImportIcon';
 import controls from '../dialogControl.module.css';
 import styles from './LoadFooter.module.css';

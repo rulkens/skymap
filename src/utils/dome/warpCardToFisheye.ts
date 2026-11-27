@@ -9,10 +9,10 @@
  * averages a grid of nearest-neighbour samples. Pixels outside the card stay transparent; the card's own alpha is ignored (opaque cards only).
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
-import { cross3 } from '../math/cross3';
+import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';
+import { cross3 } from '../../../packages/shared/src/utils/math/cross3';
 import { dot3 } from '../math/dot3';
-import { normalize3 } from '../math/normalize3';
+import { normalize3 } from '../../../packages/shared/src/utils/math/normalize3';
 import { directionToFisheye } from './directionToFisheye';
 import { fisheyeDirection } from './fisheyeDirection';
 
