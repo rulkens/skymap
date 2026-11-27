@@ -4,6 +4,7 @@ import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/Vo
 import type { CosmicWebDensityFieldId } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId';
 import { ARCHIVE_FETCH_DEADLINE_MS } from '../../../../../src/data/archive/archiveFetchDeadlineMs';
 import { VOLUME_PYRAMID_FORMATS } from '../../../../../src/data/volume/volumePyramidFormats';
+import { DETAIL_REGION_FADE_MS } from '../../../../../src/layers/cosmicWebDensity/detailRegion/data/detailRegionFadeMs';
 import { encodeArchiveIndex } from '../../../../../tools/utils/archive/encodeArchiveIndex';
 import { useFetchMock } from '../../../../setup/fetchMock';
 
@@ -36,9 +37,13 @@ const stalledFetch = (_url: string, init: RequestInit) =>
     init.signal!.addEventListener('abort', () => reject(init.signal!.reason)),
   );
 
-function setup(fetch: { mock: ReturnType<typeof vi.fn> }, index: Uint8Array | 'stalled') {
+function setup(
+  fetch: { mock: ReturnType<typeof vi.fn> },
+  index: Uint8Array | 'stalled',
+  sidecar = SIDECAR,
+) {
   const routes: Record<string, () => BodyInit> = {
-    '/data/volume-pyramid/v1/mcpm.json': () => JSON.stringify(SIDECAR),
+    '/data/volume-pyramid/v1/mcpm.json': () => JSON.stringify(sidecar),
     '/data/volume-pyramid/v1/mcpm.astc6.L0.idx': () => index as Uint8Array<ArrayBuffer>,
   };
   fetch.mock.mockImplementation(
@@ -114,6 +119,26 @@ describe('createDetailRegion', () => {
     warn.mockRestore();
     timeout.mockRestore();
     vi.useRealTimers();
+  });
+
+  // Touch before allocate is the fade's slot lock (spec §6.4): allocating first evicted a brick
+  // still drawn in the box fading out, and the entering brick overwrote its slot.
+  it('a brick in the box fading out keeps its slot against a wanted brick of the same residue', async () => {
+    // 144 × 48 × 48 voxels: a row of three bricks, K = 2, so bricks 0 and 2 share slot 0.
+    const row: VolumePyramidSidecar = {
+      ...SIDECAR,
+      gridDims: [144, 48, 48],
+      dataBox: { originVox: [0, 0, 0], dims: [144, 48, 48] },
+    };
+    const { device, region, landed } = setup(fetch, emptyIndex(3), row);
+    await landed;
+    region.frame([10, 24, 24], 1000, 1, 0); // bricks 0 and 1 written
+    region.frame([10, 24, 24], 1000, 2, 0); // the fade into [0, 2) starts
+    region.frame([10, 24, 24], 1000, 3, DETAIL_REGION_FADE_MS); // and settles
+    expect(device.queue.writeTexture).toHaveBeenCalledTimes(2);
+    // The target moves to [1, 3): [0, 2) fades out, brick 0 still drawn, brick 2 wanted.
+    region.frame([140, 24, 24], 1000, 4, DETAIL_REGION_FADE_MS);
+    expect(device.queue.writeTexture).toHaveBeenCalledTimes(2);
   });
 
   it('teardown detaches the texture before destroying it', async () => {
