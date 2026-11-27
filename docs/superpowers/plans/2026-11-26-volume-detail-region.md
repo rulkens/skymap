@@ -1259,7 +1259,7 @@ Steps:
 
 Steps:
 
-- [ ] Implement. No new test.
+- [x] Implement. No new test.
 - [ ] Controller: one shift at the MCPM knot pose fades out, then in, about 0.45 s in all; the pops
       metric is acceptance check 8.
 

@@ -250,9 +250,15 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   let mpcPerT = length((uniforms.modelMatrix * vec4<f32>(rayDirLocal, 0.0)).xyz);
   let lodOffset = log2(mpcPerT / (uniforms.cam.pxPerRad * uniforms.baseVoxelMpc));
   var settledSpan = vec2<f32>(0.0);
+  var intoSpan = vec2<f32>(0.0);
+  var outSpan = vec2<f32>(0.0);
   if (REGION != 0u) {
     let tGate = uniforms.cam.pxPerRad * region.voxelMpc / mpcPerT;
     settledSpan = regionSpan(rayOriginLocal, rayDirLocal, region.settledLo, region.settledHi, tGate);
+    if (REGION == 2u) {
+      intoSpan = regionSpan(rayOriginLocal, rayDirLocal, region.intoLo, region.intoHi, tGate);
+      outSpan = regionSpan(rayOriginLocal, rayDirLocal, region.outLo, region.outHi, tGate);
+    }
   }
   // Opacity and the envelope stay in native-grid units, so a cropped box looks like the whole grid.
   let nativeStepLength = stepLength * length(uniforms.nativeBoxScale * rayDirLocal);
@@ -263,14 +269,24 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // Local [0,1]^3 is the stored box, so 'samplePos' is directly the texture coordinate.
     let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Explicit LOD: the saturation 'break' below makes control flow non-uniform, where
-    // textureSample's implicit derivatives are undefined. One volume read either way: the region
-    // is native-scale (gain 1, unclamped) and holds valid texels only inside its boxes.
+    // textureSample's implicit derivatives are undefined. One volume read, two only in a fading
+    // shell: the region is native-scale (gain 1, unclamped), its texels valid only inside its boxes.
     var sampleValue: f32;
     if (REGION != 0u && rayDistance >= settledSpan.x && rayDistance < settledSpan.y) {
       sampleValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
     } else {
       let lod = clamp(log2(max(rayDistance, 1e-6)) + lodOffset, 0.0, maxLod);
       sampleValue = min(textureSampleLevel(volume, volumeSampler, samplePos, lod).r * uniforms.gain, 1.0);
+      // The fading shells: the region at fadeW in `into`, 1 − fadeW in `out`. Both contain the
+      // settled box and meet only in it, so a sample here lies in at most one.
+      if (REGION == 2u) {
+        let inInto = rayDistance >= intoSpan.x && rayDistance < intoSpan.y;
+        let inOut = rayDistance >= outSpan.x && rayDistance < outSpan.y;
+        if (inInto || inOut) {
+          let regionValue = textureSampleLevel(regionTex, regionSampler, samplePos * region.texScale, 0.0).r;
+          sampleValue = mix(sampleValue, regionValue, select(1.0 - region.fadeW, region.fadeW, inInto));
+        }
+      }
     }
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
