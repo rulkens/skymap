@@ -98,7 +98,7 @@ export function planExtract(project: Project, resolved: ResolvedSymbol, dest: st
   // each exclusive dep. Ranges pin which references fall inside the cohort.
   const cohortNodes = orderedCohort(sourceFile, resolved, exclusive);
   const cohortRanges = cohortNodes.map((node) => [node.getStart(), node.getEnd()] as const);
-  const cohortText = cohortNodes.map((node) => node.getText(true)).join('\n\n');
+  const cohortText = cohortNodes.map(textWithComments).join('\n\n') + '\n';
 
   const bindings = collectImportBindings(sourceFile, cohortRanges);
   const targetStillUsed = referencedOutsideCohort(targetName(resolved), cohortRanges, sourceFile);
@@ -123,6 +123,16 @@ function orderedCohort(
   const nodes: Statement[] = [statementOf(resolved.declaration)];
   for (const name of exclusive) nodes.push(statementOf(localDeclaration(sourceFile, name)));
   return nodes.sort((a, b) => a.getStart() - b.getStart());
+}
+
+// A statement's text with its JSDoc and its same-line trailing comment: getText(true)
+// stops at the statement's end, and node.remove() deletes the trailing comment too.
+function textWithComments(node: Statement): string {
+  const trailing = node.getTrailingCommentRanges().at(-1);
+  if (trailing === undefined) return node.getText(true);
+  return (
+    node.getText(true) + node.getSourceFile().getFullText().slice(node.getEnd(), trailing.getEnd())
+  );
 }
 
 // The top-level statement carrying a declaration: a VariableDeclaration's owning
