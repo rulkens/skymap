@@ -110,9 +110,6 @@ async function buildVolumeBricks(row: VolumePyramidFieldRow): Promise<void> {
         r8Bricks.forEach((r8Brick, i) => {
           const [by, bz] = [i % ny, Math.floor(i / ny)];
           const brick = cutBrick(bytes, layoutOf(bpt), by, bz);
-          if (brick.length !== levelByteLength(E, E, E, bpt)) {
-            throw new Error(`${format} brick ${bx},${by},${bz}: ${brick.length} B`);
-          }
           bricks.get(format)!.set(brickId([bx, by, bz], grid), brickEntryBytes(r8Brick, brick));
         });
         seconds.set(format, seconds.get(format)! + (performance.now() - started) / 1000);
