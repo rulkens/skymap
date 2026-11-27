@@ -107,7 +107,7 @@ export type EngineState = {
   orbitTrailGroups: readonly GatedTrailGroup<OrbitTrailGroup>[];
   /** Every Layer's `guides.sampledTrails` group, each with its fade bound. */
   sampledTrailGroups: readonly GatedTrailGroup<SampledTrailGroup>[];
-  /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `heightAt`. */
+  /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `terrain`. */
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];

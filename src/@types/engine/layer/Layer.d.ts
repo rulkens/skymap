@@ -15,7 +15,7 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { SkyCapture } from '../../rendering/SkyCapture';
-import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
+import type { TerrainQueries } from '../../camera/terrain/TerrainQueries';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -107,6 +107,6 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The ground height core's camera reads; the datum with none. One provider per composition; boot throws on two. */
-  heightAt?(runtime: Runtime): TerrainHeightAtLookup;
+  /** The ground core's camera reads; the datum with none. One provider per composition; boot throws on two. */
+  terrain?(runtime: Runtime): TerrainQueries;
 };
