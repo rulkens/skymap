@@ -236,6 +236,8 @@ export function createVolumeFieldRenderer<Id extends string>({
   const fields = new Map<Id, FieldEntry>();
   // Apart from `fields`, so a base re-upload leaves the region bound. Its texture is borrowed.
   const regions = new Map<Id, RegionEntry>();
+  // Both scratches are reused across fields and draws, so each is zero-filled before a write.
+  const scratch = new Float32Array(UNIFORM_BYTES / 4);
   const regionScratch = new Float32Array(REGION_UNIFORM_BYTES / 4);
 
   function createRegionBindGroup(
@@ -458,7 +460,6 @@ export function createVolumeFieldRenderer<Id extends string>({
       // 268..271  baseVoxelMpc     (f32; the volume's placement.voxelSize)
       // 272..283  nativeBoxOffset  (vec3; 4 B pad after)
       // 288..299  nativeBoxScale   (vec3; 4 B pad to 304)
-      const scratch = new Float32Array(UNIFORM_BYTES / 4);
       const jitterIndex = inputs.jitterIndex % JITTER_INDEX_WRAP;
       for (const [id, e] of fields.entries()) {
         const s = settingsOf(id);
@@ -489,10 +490,8 @@ export function createVolumeFieldRenderer<Id extends string>({
         // fade", so we skip the GPU work entirely.
         const opacity = fadeOpacityOf(id);
         if (opacity <= 0 || s.intensity <= 0) continue;
+        scratch.fill(0);
         writeCameraPrefix(scratch, viewProj, viewportPx, pxPerRad);
-        // Explicit pad zeroing — the scratch is reused across the field
-        // loop, so the pad can't rely on Float32Array zero-init.
-        scratch[19] = 0;
         for (let i = 0; i < 16; i++) scratch[20 + i] = e.modelMatrix[i] ?? 0;
         for (let i = 0; i < 16; i++) scratch[36 + i] = e.invModelMatrix[i] ?? 0;
         scratch[52] = cameraPosWorld[0];

@@ -6,25 +6,11 @@
 }
 
 .toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  cursor: pointer;
+  composes: checkRow from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
 }
 
 .infoIcon {
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: help;
-  font-size: var(--font-size-lg);
-  line-height: 1;
-  color: var(--color-fg-faint);
-}
-
-.infoIcon:hover,
-.infoIcon:focus-visible {
-  color: var(--color-fg-muted);
+  composes: infoIcon from '../../../../components/common/ParamSlider/ParamSlider.module.css';
 }
 
 .legend {

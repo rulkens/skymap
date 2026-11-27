@@ -121,6 +121,20 @@ describe('createDetailRegion', () => {
     vi.useRealTimers();
   });
 
+  // Built outside the try, a throwing signal left `loading`, and so the planner's wake vote, set.
+  it('a signal that cannot be built ends the load with one warning', async () => {
+    const any = vi.spyOn(AbortSignal, 'any').mockImplementation(() => {
+      throw new TypeError('AbortSignal.any is not a function');
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { region, landed } = setup(fetch, emptyIndex(8));
+    await landed;
+    expect(region.frame([48, 48, 48], 1000, 1, 0)).toEqual({ draw: null, busy: false });
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+    any.mockRestore();
+  });
+
   // Touch before allocate is the fade's slot lock (spec §6.4): allocating first evicted a brick
   // still drawn in the box fading out, and the entering brick overwrote its slot.
   it('a brick in the box fading out keeps its slot against a wanted brick of the same residue', async () => {

@@ -43,9 +43,13 @@ export function createDetailRegion(deps: DetailRegionDeps): DetailRegion {
   let loading = true;
 
   void (async () => {
-    // A stalled request would hold `busy`, and so the planner's wake vote, forever.
-    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(ARCHIVE_FETCH_DEADLINE_MS)]);
     try {
+      // A stalled request would hold `busy`, and so the planner's wake vote, forever. Inside the
+      // try so a throw here clears `loading` too.
+      const signal = AbortSignal.any([
+        abort.signal,
+        AbortSignal.timeout(ARCHIVE_FETCH_DEADLINE_MS),
+      ]);
       const sidecar = await fetchVolumePyramidSidecar(deps.binBaseName, signal);
       const format = pickVolumePyramidFormat(deps.device.features);
       const url = dataUrl(volumeBrickArchivePath(deps.binBaseName, format.format));
