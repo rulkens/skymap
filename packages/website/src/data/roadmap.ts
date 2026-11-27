@@ -64,13 +64,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         backlog: 'Mars global height z8–z9 from MOLA (supports z9.7)',
       },
       {
-        id: 'shadows',
-        title: 'Shadows on spacecraft and rovers',
-        text: 'A 3D model that shades itself from the Sun, so that a rover’s mast throws a shadow on its deck.',
-        state: 'planned',
-        backlog: 'Mesh bodies: sun shadows',
-      },
-      {
         id: 'pluto-pair',
         title: 'Pluto and Charon round their common centre',
         text: 'Pluto and Charon each circling the point between them, which Pluto’s four small moons wait for.',

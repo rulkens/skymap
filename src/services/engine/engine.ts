@@ -14,6 +14,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineComposition } from '../../@types/engine/EngineComposition';
 import type { Layer } from '../../@types/engine/layer/Layer';
 import type { EngineState } from '../../@types/engine/state/EngineState';
+import type { RootState } from '../../store/types';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
@@ -31,6 +32,7 @@ import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsyste
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { noTerrainHorizon } from '../../utils/camera/terrain/noTerrainHorizon';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -89,11 +91,15 @@ export function createEngine(
   // keeps `settled()` pending: a throwing frame draws nothing, so a shot would be blank.
   const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0, threw: false };
 
+  // The engine's only read of the root (enforced by `engineRootRead.test.ts`): one seam, so a
+  // later overlay on the read (a playing clip's scene) reaches every engine reader at once.
+  const readRoot = (): RootState => cb.store.getState();
+
   // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
   // exists. The register seeds from the camera slice's initial `base` — the
   // single home for the pre-bootstrap placeholder pose, arm tag included.
   const cameraRuntime = seedCameraRuntime({
-    state: cb.store.getState(),
+    state: readRoot(),
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
@@ -121,26 +127,24 @@ export function createEngine(
     ]),
   ) as CubemapCaptureRuntimes;
 
-  const store = cb.store;
-
   const state: EngineState = {
-    // These getters delegate straight to the store: sagas and sub-handle
+    // These getters delegate straight to the root: sagas and sub-handle
     // setters own the writes, per-frame readers reach the authoritative object
     // here, and there is no engine-side mirror to drift.
     get settings() {
-      return store.getState().settings;
+      return readRoot().settings;
     },
     get tier() {
-      return store.getState().tier;
+      return readRoot().tier;
     },
     get selection() {
-      return store.getState().selection;
+      return readRoot().selection;
     },
     get selectionRows() {
-      return store.getState().selectionRows;
+      return readRoot().selectionRows;
     },
     get ui() {
-      return store.getState().ui;
+      return readRoot().ui;
     },
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
@@ -270,6 +274,7 @@ export function createEngine(
     orbitTrailGroups: [],
     sampledTrailGroups: [],
     terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHorizonAt: noTerrainHorizon,
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
@@ -302,6 +307,7 @@ export function createEngine(
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
+    readRoot,
     composition,
     frameRef,
     handleRef,
@@ -311,7 +317,7 @@ export function createEngine(
 
   // The single clip-run seam the saga context exposes.
   const playClip = createPlayClip({
-    store,
+    store: cb.store,
     clipPlayer: state.subsystems.clipPlayer,
     getLivePose: () => liveClipStartPose(state),
   });
@@ -405,7 +411,7 @@ export function createEngine(
 
   const unsettled = (): string[] => [
     ...(frameStats.threw ? ['last frame threw'] : []),
-    ...viewUnsettledReasons(state, store.getState().camera.intent),
+    ...viewUnsettledReasons(state, readRoot().camera.intent),
   ];
 
   // The engine's only public surface: imperative operations only — store writes go
@@ -455,7 +461,7 @@ export function createEngine(
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.
       cameraDebug: () => {
-        const rootState = store.getState();
+        const rootState = readRoot();
         const time = selectTimeState(rootState);
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays);

@@ -15,6 +15,10 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { LIMB_DARKENING_PARAMS } from '../../../../../src/layers/body/spheres/data/limbDarkeningParams';
+import {
+  NO_HORIZON_RECT,
+  WHOLE_GLOBE_HORIZON_RECT,
+} from '../../../../../src/data/gpu/horizonRects';
 import { sunDirLocal } from '../../../../../src/utils/camera/bodyCompose/sunDirLocal';
 import { bodySlabCamAltitudeSq } from '../../../../../src/layers/body/slabs/present/bodySlabCamAltitudeSq';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
@@ -230,6 +234,27 @@ describe('texturedBodiesPass.draw', () => {
     expect(u0[28]).toBe(Math.fround(0.5 * marsRadiusM));
     expect(u0[31]).toBe(Math.fround(3.5 * marsRadiusM));
     expect([u0[40], u0[41], u0[42], u0[43]]).toEqual([12.5, 13.5, 14.5, 15.5]);
+  });
+
+  it("'terrain-no-shadows' zeroes the horizon rect of a globe that has a horizon map", () => {
+    const renderer = { ...makeRendererSpy(), hasMap: vi.fn(() => true) };
+    const { bodies, textured } = makeFixture(renderer, [bodyAt('mars', 3390000)]);
+    const ctx = makeCtx(bodies);
+    const overlays: Record<string, boolean> = { 'terrain-no-shadows': false };
+    const state = {
+      gpu: {},
+      settings: { surfaceTileDebug: { overlays } },
+    } as unknown as EngineState;
+
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    overlays['terrain-no-shadows'] = true;
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+
+    // TexturedBodyUniforms floats 44..47 (bytes 176..191).
+    const rectOf = (call: number) =>
+      Array.from(renderer.draw.mock.calls[call]![2].subarray(44, 48));
+    expect(rectOf(0)).toEqual([...WHOLE_GLOBE_HORIZON_RECT]);
+    expect(rectOf(1)).toEqual([...NO_HORIZON_RECT]);
   });
 
   it('packs Saturn`s SCENE_RINGS radii as ring ratios and zeros for a ringless body', () => {

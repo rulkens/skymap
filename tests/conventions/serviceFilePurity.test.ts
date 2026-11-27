@@ -127,6 +127,7 @@ const SWEPT_DIRS = [
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
+  ['frame/computes', FRAME_DIR + 'computes/'] as const,
   ['frame/readouts', FRAME_DIR + 'readouts/'] as const,
   ...LAYER_PASS_DIRS,
   ...DESKTOP_MODULE_DIRS,

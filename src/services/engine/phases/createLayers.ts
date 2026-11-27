@@ -19,7 +19,7 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceId } from '../../../@types/data/SourceId';
 
 import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
-import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
+import { composeTerrain } from '../layer/composeTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -45,6 +45,7 @@ import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
+import { CORE_COMPUTES } from '../frame/computes/coreComputes';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -105,9 +106,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       sourceBgl,
       focusBgl,
       focusUniform,
-      settings: () => deps.cb.store.getState().settings,
-      debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
-      tier: () => deps.cb.store.getState().tier,
+      settings: () => deps.readRoot().settings,
+      debugPanelOpen: () => deps.readRoot().ui.debugPanelOpen,
+      tier: () => deps.readRoot().tier,
       requestRender,
       pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
       meshBodies,
@@ -156,11 +157,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
   ]).map((pass) => gatePassByFade(pass, state));
-  state.computes = concatUniqueRows(
-    'createLayers: compute rows',
-    (compute) => compute.name,
-    instances.map((instance) => instance.computes),
-  ).map((compute) => gateComputeByFade(compute, state));
+  state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
+    CORE_COMPUTES,
+    ...instances.map((instance) => instance.computes),
+  ]).map((compute) => gateComputeByFade(compute, state));
   state.planners = concatUniqueRows(
     'createLayers: planner rows',
     (planner) => planner.name,
@@ -210,11 +210,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.sampledTrailGroups = instances
     .flatMap((instance) => instance.sampledTrails)
     .map((group) => gateTrailGroup(group, state));
-  state.terrainHeightAt = composeTerrainHeightAt(
+  const terrain = composeTerrain(
     instances.flatMap((instance) =>
-      instance.heightAt ? [{ name: instance.name, heightAt: instance.heightAt }] : [],
+      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
     ),
   );
+  state.terrainHeightAt = terrain.heightAt;
+  state.terrainHorizonAt = terrain.horizonAt;
 
   // A source names its slab (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   for (const instance of instances) {

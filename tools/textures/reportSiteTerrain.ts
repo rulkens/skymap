@@ -1,7 +1,8 @@
 /**
  * reportSiteTerrain — read-only survey of the ground under every
- * `SURFACE_FIXED_SITES` row: the committed seat height's and up's drift against
- * today's tiles, the slope, and the tile's relief. Writes nothing.
+ * `resting` `SURFACE_FIXED_SITES` row: the committed seat height's and up's
+ * drift against today's tiles, the slope, and the tile's relief. Writes nothing.
+ * An `anchored` site's seat reads no tiles, so it has nothing to drift.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -18,17 +19,16 @@ import { tilePostAtLatLon } from '../utils/textures/siteTerrain/tilePostAtLatLon
 import { deepestBandLevel } from '../utils/textures/siteTerrain/deepestBandLevel';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
 import { readGroundHeightM } from '../utils/textures/siteTerrain/readGroundHeightM';
-import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
-import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
+import { siteRestingSeat } from '../utils/textures/siteTerrain/siteRestingSeat';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
 export async function reportSiteTerrain(): Promise<void> {
   for (const site of SURFACE_FIXED_SITES) {
+    if (site.seat !== 'resting') continue;
     const manifest = readSurfaceTileManifest(site.hostId);
     const z = deepestBandLevel(manifest, site.latDeg, site.lonDeg);
-    const up = await siteGroundUpEnu(site, manifest);
-    const heightM = await siteSeatHeightM(site, manifest, up);
+    const { heightM, up } = await siteRestingSeat(site, manifest);
     const centreM = await readGroundHeightM(manifest, site.latDeg, site.lonDeg, z);
     const tiltDeg = Math.acos(Math.min(1, up[2])) * RAD_TO_DEG;
     const downhillDeg = (Math.atan2(up[0], up[1]) * RAD_TO_DEG + 360) % 360;

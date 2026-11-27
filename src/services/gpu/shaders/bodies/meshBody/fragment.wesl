@@ -4,9 +4,10 @@
 // the body's self-bounce ('MESH_SELF_BOUNCE', which no probe of its own carries)
 // plus a site shot's extra.
 //
-// LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
-// the sun by the host is the CPU-side scalar 'uniforms.sunVisibleFraction' and nothing
-// else, the same analytic posture every other body-lighting effect here takes.
+// LANDMINE -- only the direct sun is shadowed; the probe environment and the fill are not. The sun
+// is dimmed by the host ('sunVisibleFraction', CPU-side), by the body's own sun shadow layer
+// ('lib/meshShadow.wesl', when it holds a slot), and, for every surface-site mesh body, by the baked
+// terrain horizon at its anchor: one rect + uv + up per body (host axes, as 'sunDirLocal').
 //
 // The metal blend is built HERE and handed to 'lib/pbr.wesl' as 'f0'.
 
@@ -14,6 +15,10 @@ import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;
 import package::lib::pbr::pbrDirectSphere;
 import package::lib::pbr::envSplitSum;
+import package::lib::horizonLookup::horizonVisibility;
+import package::lib::horizonLookup::localSunAngles;
+import package::lib::meshShadow::meshShadowVisibility;
+import package::lib::meshShadow::MeshShadowFilter;
 
 @group(0) @binding(0) var<uniform> uniforms: MeshBodyUniforms;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
@@ -23,6 +28,11 @@ import package::lib::pbr::envSplitSum;
 @group(1) @binding(0) var meshSampler: sampler;
 @group(1) @binding(1) var envBrdfLut: texture_2d<f32>;
 @group(1) @binding(2) var lutSampler: sampler;
+// The host's horizon tile atlas (a 1 x 1 stand-in off the ground, where the rect is zero).
+@group(2) @binding(0) var horizonAtlas: texture_2d<f32>;
+// The renderer's sun shadow array, one layer per slot ('MESH_SHADOW_SLOTS').
+@group(2) @binding(1) var shadowMap: texture_depth_2d_array;
+@group(2) @binding(2) var shadowSampler: sampler_comparison;
 
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
@@ -56,9 +66,27 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let diffuseAlbedo = albedo * (1.0 - metallic);
 
   let viewDir = normalize(uniforms.camPosLocal - in.localPos);
+  // A uniform branch: bodies off the ground (zero rect) skip the lookup's loads entirely.
+  var terrainSun = 1.0;
+  if (uniforms.horizonRect.z > 0.0) {
+    let sunAngles = localSunAngles(uniforms.horizonUp, uniforms.sunDirLocal);
+    terrainSun = horizonVisibility(
+      horizonAtlas, uniforms.horizonRect, uniforms.horizonUv, sunAngles.x, sunAngles.y, asin(uniforms.sinSunAngularRadius),
+    ).x;
+  }
+  // Uniform too: a body without a slot (-1) reads lit. The step off the surface runs along the
+  // face the eye sees, which is the side a two-sided sheet is lit from.
+  var selfSun = 1.0;
+  if (uniforms.shadowSlot >= 0) {
+    let receiver = in.localPos + geometricNormal * uniforms.shadowNormalOffsetM;
+    selfSun = meshShadowVisibility(
+      shadowMap, shadowSampler, uniforms.shadowSlot, (uniforms.lightFromLocal * vec4<f32>(receiver, 1.0)).xyz,
+      MeshShadowFilter(uniforms.shadowDepthBiasTexels, uniforms.shadowFilterRadiusTexels, uniforms.shadowFilterSide),
+    );
+  }
   let direct =
     pbrDirectSphere(shadingNormal, viewDir, uniforms.sunDirLocal, diffuseAlbedo, roughness, specularF0, uniforms.sinSunAngularRadius) *
-    SUN_IRRADIANCE * uniforms.sunVisibleFraction;
+    SUN_IRRADIANCE * uniforms.sunVisibleFraction * terrainSun * selfSun;
   let env = envSplitSum(
     shadingNormal, viewDir, diffuseAlbedo, roughness, specularF0, probeTexture, meshSampler, envBrdfLut, lutSampler, ao,
   );

@@ -29,7 +29,7 @@ composition root and the ratchets read by path.
 
 What stays by role, at the Layer root:
 
-- the root files: `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `visibility.ts`, `heightAt.ts`;
+- the root files: `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `visibility.ts`, `terrain.ts`;
 - the folders the composition root imports leaf by leaf: `sources/`, `state/`, `bodies/`, `exhibits/`;
 - `@types/` for the Layer's contract types only: `<Name>Runtime`, its facts, its settings types (`StructureSettings`,
   `CosmicWebDensitySettings`), its id and source types.

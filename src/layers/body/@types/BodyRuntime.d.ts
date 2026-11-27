@@ -43,6 +43,8 @@ export type BodyRuntime = {
   readonly pickCodes: CatalogPickCodes<BodySourceId>;
   readonly publish: (patch: Partial<BodyFacts>) => void;
   readonly debugPanelOpen: () => boolean;
+  /** The `terrain-no-shadows` debug overlay, read at call time. */
+  readonly noTerrainShadows: () => boolean;
   readonly readoutGate: TrailingThrottle;
   /** Core's one mesh renderer, which this Layer's mesh slots commit to. */
   readonly meshBodies: MeshBodiesSink;

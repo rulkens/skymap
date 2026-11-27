@@ -5,7 +5,8 @@
  * line in `FRAME_ORDER`; both rows read the SAME `prepareBodySurfaceFrame` memo. An
  * empty cut or unengaged atlas is the ordinary pre-residency picture: `enabled`
  * returns false and the globe covers the cap. The engaged body's
- * `SURFACE_TILE_REGISTRY` row picks the shading; effect maps come from `earthRenderer`.
+ * `SURFACE_TILE_REGISTRY` row picks the shading; effect maps come from `earthRenderer`, the
+ * site bodies' sun shadows from core's `meshBodyRenderer`.
  */
 
 import type { ContentPass } from '../../../../../@types/engine/frame/ContentPass';
@@ -99,6 +100,8 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
           surfaceTiles.stream.getAtlasView('horizon') ??
           runtime.surfaceTileRenderer.horizonStandInView,
       };
+      const noShadows = state.settings.surfaceTileDebug.overlays['terrain-no-shadows'];
+      const meshBodies = state.gpu.meshBodyRenderer;
       runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,
         // Already eye-relative (body-m rows build vp about the eye): no rebase.
@@ -118,6 +121,16 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         debugLodOverlay: state.settings.surfaceTileDebug.overlays['surface-lod-overlay'],
         noDisplacement: state.settings.surfaceTileDebug.overlays['terrain-no-displacement'],
         noSkirts: state.settings.surfaceTileDebug.overlays['terrain-no-skirts'],
+        noShadows,
+        // Either toggle takes the rover's shadow off the ground.
+        meshShadows:
+          meshBodies === null || noShadows || state.settings.debug.meshNoShadows
+            ? null
+            : {
+                view: meshBodies.shadowMapView,
+                casters: meshBodies.groundCasters(hostId, pose.eyeRelBodyM),
+                tuning: state.settings.debug.meshShadowTuning,
+              },
         atlasViews,
       });
     },

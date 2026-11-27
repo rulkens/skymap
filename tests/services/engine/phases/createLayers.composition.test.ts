@@ -301,24 +301,24 @@ describe('createLayers composition', () => {
     );
   });
 
-  it('throws at boot when heightAt is provided more than once', async () => {
+  it('throws at boot when terrain is provided more than once', async () => {
     const { store } = createAppStore();
     const state = makeState();
-    const heightAtLayer = (tag: string) =>
+    const terrainLayer = (tag: string) =>
       ({
         name: tag,
         create: () => ({}),
         destroy: () => {},
         passes: () => [],
-        heightAt: () => datumOnlyTerrainHeight,
+        terrain: () => ({ heightAt: datumOnlyTerrainHeight }),
       }) as unknown as Layer<string, unknown>;
 
     await expect(
-      createLayers(state, makeDeps([heightAtLayer('a'), heightAtLayer('b')], store)),
-    ).rejects.toThrow(/heightAt provided twice — a and b/);
+      createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
+    ).rejects.toThrow(/terrain provided twice — a and b/);
   });
 
-  it("createLayers composes the body Layer's heightAt and no core provider", async () => {
+  it("createLayers composes the body Layer's terrain and no core provider", async () => {
     // Bug caught: a core tile provider left beside the body Layer's throws at boot as a
     // second ground; a dropped body row would leave the camera on the flat datum.
     const { store } = createAppStore();

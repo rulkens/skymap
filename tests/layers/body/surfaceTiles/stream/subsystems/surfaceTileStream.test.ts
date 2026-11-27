@@ -41,6 +41,8 @@ import { codeHeightM } from '../../../../../../src/layers/body/surfaceTiles/form
 import { asSceneBodyId } from '../../../../../../src/utils/scene/asSceneBodyId';
 import { resolveStandaloneRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/resolveStandaloneRect';
 import { flattenAtlasRect } from '../../../../../../src/layers/body/surfaceTiles/plan/subsystems/flattenAtlasRect';
+import { horizonRectOf } from '../../../../../../src/layers/body/surfaceTiles/horizon/utils/horizonRectOf';
+import { surfaceTileColumns } from '../../../../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import { surfaceTileMortonKey } from '../../../../../../src/layers/body/surfaceTiles/archive/utils/surfaceTileMortonKey';
 import { encodeArchiveIndex } from '../../../../../../tools/utils/archive/encodeArchiveIndex';
 import {
@@ -582,5 +584,70 @@ describe('surfaceTileStream absent tiles', () => {
       isEmpty: residency.isEmpty,
     });
     expect(leaf).toEqual(flattenAtlasRect(residency.residentSlot(parent)!, 1, 1, 0));
+  });
+});
+
+describe('surfaceTileStream horizonAt', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // Level `z` tiles 0 and 1 of the north row: 0 baked, 1 baked flat (a zero-length entry) under
+  // a baked parent the flat tile must not read through.
+  const z = MIN_TILE_LEVEL + 1;
+  const horizon = (x: number): SurfaceTileId => ({ product: 'horizon', z, x, y: 0 });
+  const PARENT: SurfaceTileId = { product: 'horizon', z: z - 1, x: 0, y: 0 };
+  const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
+  const dirIn = (x: number) => equirectUvToDirection([(x + 0.25) / cols, 1 - 0.5 / (cols / 2)]);
+
+  async function withHorizonTiles() {
+    const listed = [
+      { key: surfaceTileMortonKey(0, 0), part: 0, offset: 0, length: 4 },
+      { key: surfaceTileMortonKey(1, 0), part: 0, offset: 4, length: 0 },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('.idx')
+          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          : new Response(new Uint8Array(4), { status: 206 }),
+      ),
+    );
+    vi.stubGlobal('createImageBitmap', async () => ({
+      width: HORIZON_TILE_PX,
+      height: HORIZON_TILE_PX,
+      close: () => {},
+    }));
+    const manifest = manifestOf(PREFIX, ['albedo', 'height', 'horizon']);
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(manifest);
+    const stream = createSurfaceTileStream({ device: stubDevice(), requestRender: () => {} });
+    stream.apply(plan({ wantManifest: EARTH }));
+    await tick();
+    const params = derivePlannerParams(manifest, BASE_LEVEL);
+    stream.apply(
+      plan({
+        verdict: ENGAGE_EARTH,
+        params,
+        requests: [PARENT, horizon(0), horizon(1)].map((tile, i) => ({ tile, screenPx: 1000 - i })),
+      }),
+    );
+    await tick();
+    return { stream, params };
+  }
+
+  it("reads the leaf's own rect at the patch uv; nothing for a flat tile or without an atlas", async () => {
+    // Bug caught: a flat tile read through its hilly ancestor (a rover shadowed on open
+    // ground), or a body with no horizon bake handed a rect into an atlas it never built.
+    const { stream, params } = await withHorizonTiles();
+    expect(stream.residency.isEmpty(horizon(1))).toBe(true);
+
+    const sample = stream.horizonAt(EARTH, dirIn(0), params)!;
+    expect(sample.atlas).toBe(stream.getAtlasView('horizon'));
+    expect(sample.rect).toEqual(horizonRectOf(stream.residency.residentSlot(horizon(0))));
+    expect(sample.uv[0]).toBeCloseTo(0.25);
+    expect(sample.uv[1]).toBeCloseTo(0.5);
+    expect(stream.horizonAt(EARTH, dirIn(1), params)).toBeNull();
+    expect(stream.horizonAt(MARS, dirIn(0), params)).toBeNull();
+
+    const noHorizonBake = await engagedWith();
+    expect(noHorizonBake.horizonAt(EARTH, dirIn(0), PARAMS)).toBeNull();
   });
 });

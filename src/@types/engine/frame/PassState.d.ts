@@ -18,4 +18,5 @@ export type PassState = Pick<
   | 'gpu'
   | 'subsystems'
   | 'frameIndex'
+  | 'terrainHorizonAt'
 >;

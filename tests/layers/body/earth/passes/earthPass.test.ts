@@ -30,6 +30,10 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/layers/body/clouds/data/cloudShellParams';
 import { packPickWord } from '../../../../../src/data/selectionEncoding';
+import {
+  NO_HORIZON_RECT,
+  WHOLE_GLOBE_HORIZON_RECT,
+} from '../../../../../src/data/gpu/horizonRects';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -187,7 +191,7 @@ function makeRuntime(
 
 function makeState(): EngineState {
   return {
-    gpu: {},
+    gpu: { meshBodyRenderer: null },
     // Seeded from EARTH_SURFACE_PARAMS so the packed tail slots equal the authored defaults.
     settings: {
       earth: {
@@ -470,6 +474,37 @@ describe('surfaceTilesPass', () => {
     ).surfaceTileDebug.overlays['surface-lod-overlay'] = true;
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
+  });
+
+  it("'terrain-no-shadows' zeroes the globe's horizon rect and reaches the tile draw", () => {
+    const globeDraw = vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array) => void>();
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
+    const view = makeEarthBodyView('earth');
+    const state = makeState();
+    const runtime = makeRuntime({
+      earthRenderer: {
+        draw: globeDraw,
+        hasMap: () => true,
+        getMapView: vi.fn(() => ({}) as GPUTextureView),
+      },
+      surfaceTileRenderer: { draw: tileDraw },
+      surfaceTiles: makeTiles({ cut: STUB_CUT, atlasView: ATLAS_VIEW }),
+    });
+    const { overlays } = (
+      state.settings as unknown as { surfaceTileDebug: { overlays: Record<string, boolean> } }
+    ).surfaceTileDebug;
+
+    for (const noShadows of [false, true]) {
+      overlays['terrain-no-shadows'] = noShadows;
+      earthPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
+      surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
+    }
+
+    // EarthSurfaceUniforms floats 32..35 (bytes 128..143).
+    const rectOf = (call: number) => Array.from(globeDraw.mock.calls[call]![1].subarray(32, 36));
+    expect(rectOf(0)).toEqual([...WHOLE_GLOBE_HORIZON_RECT]);
+    expect(rectOf(1)).toEqual([...NO_HORIZON_RECT]);
+    expect(tileDraw.mock.calls.map(([, args]) => args.noShadows)).toEqual([false, true]);
   });
 
   it('is disabled until the cut AND both atlases are live', () => {

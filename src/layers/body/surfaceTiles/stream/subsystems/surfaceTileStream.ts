@@ -28,6 +28,7 @@ import type { SurfaceTileStreamDeps } from '../@types/SurfaceTileStreamDeps';
 import type { Destroyable } from '../../../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { ResidentHeightLookup } from '../@types/ResidentHeightLookup';
+import type { TerrainHorizonSample } from '../../../../../@types/camera/terrain/TerrainHorizonSample';
 import { createTileStreamSubsystem } from '../../../../../services/engine/subsystems/tileStreamSubsystem';
 import { TextureAtlas } from '../../../../../services/gpu/resources/textureAtlas';
 import { uploadBitmapToAtlas } from '../../../../../utils/gpu/uploadBitmapToAtlas';
@@ -41,6 +42,10 @@ import type { SurfaceTileSource } from '../@types/SurfaceTileSource';
 import { directionToLonLatDeg } from '../../../../../utils/geo/directionToLonLatDeg';
 import { deepestBandLevelAt } from './deepestBandLevelAt';
 import { terrainHeightM } from './terrainHeightM';
+import { resolveStandaloneRect } from '../../plan/subsystems/resolveStandaloneRect';
+import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
+import { surfaceTilePointAt } from '../../format/utils/surfaceTilePointAt';
+import { deepestBandMax } from '../../plan/utils/deepestBandMax';
 import { SURFACE_TILE_CONCURRENCY } from '../../format/data/surfaceTileParams';
 import { SURFACE_TILE_LANE_SPECS } from '../data/surfaceTileLaneSpecs';
 
@@ -286,6 +291,34 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     return terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, query.resident);
   }
 
+  function horizonAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): TerrainHorizonSample | null {
+    if (engaged === null || engaged.bodyId !== bodyId || params === null) return null;
+    const lane = engaged.lanes.horizon;
+    if (lane === undefined) return null;
+    const { baseLevel, tilePx } = params;
+    const z = deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel;
+    const point = surfaceTilePointAt(dirBodyFixed, z, tilePx);
+    if (point === null) return null;
+    const rect = horizonRectOf(
+      resolveStandaloneRect({
+        product: 'horizon',
+        z,
+        x: point.x,
+        y: point.y,
+        maxLevel: deepestBandMax(params.requestBands.horizon),
+        baseLevel,
+        residentSlot,
+        isEmpty: residency.isEmpty,
+      }),
+    );
+    if (rect[2] === 0) return null;
+    return { atlas: lane.stream.slots.getTextureView(), rect, uv: point.uv };
+  }
+
   /** Runs the real climb with an instrumented lookup rather than a second
    *  address derivation, so the level reported is the one the height came from. */
   function residentHeightLevelAt(
@@ -355,6 +388,7 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     residency,
     apply,
     heightAt,
+    horizonAt,
     residentHeightLevelAt,
     getAtlasView: (product) => engaged?.lanes[product]?.stream.slots.getTextureView() ?? null,
     debugStats,
