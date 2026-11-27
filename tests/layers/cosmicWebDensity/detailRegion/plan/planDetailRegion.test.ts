@@ -54,6 +54,23 @@ describe('planDetailRegion', () => {
     });
   });
 
+  it('an even K keeps the eye within half a brick of the target centre, either half of its brick', () => {
+    // Brick 7 along x: 346 voxels sits in its lower half, 374 in its upper half.
+    const target = (eyeVox: Vec3) =>
+      planDetailRegion(START, input({ bricksPerAxis: 8, eyeVox })).state.target!;
+    const lower = target([346, 590, 346]);
+    const upper = target([374, 590, 346]);
+    expect(upper.lo).toEqual([lower.lo[0] + 1, lower.lo[1], lower.lo[2]]);
+    for (const [box, eyeVox] of [
+      [lower, [346, 590, 346]],
+      [upper, [374, 590, 346]],
+    ] as const) {
+      box.lo.forEach((lo, a) => {
+        expect(Math.abs(eyeVox[a]! / 48 - (lo + box.hi[a]!) / 2)).toBeLessThanOrEqual(0.5);
+      });
+    }
+  });
+
   it('an eye outside the box but in reach gets a target against the nearest face', () => {
     const { state } = planDetailRegion(START, input({ eyeVox: [-100, 600, 300] }));
     expect(state.target).toEqual({ lo: [0, 10, 4], hi: [5, 15, 9] });

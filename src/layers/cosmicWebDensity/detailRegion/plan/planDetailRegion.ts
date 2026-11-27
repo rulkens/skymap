@@ -1,7 +1,8 @@
 /**
  * planDetailRegion — one frame of a field's detail region as a pure step (spec §6.2): the target box
- * around the eye clamped into the dataBox, the reach gate, the settled box's growth by whole held
- * layers, and the fade each change of it becomes (§8). The region object keeps the state.
+ * centred on the eye clamped into the dataBox (lo = round(centre / 48 − K/2)), the reach gate, the
+ * settled box's growth by whole held layers, and the fade each change of it becomes (§8). The region
+ * object keeps the state.
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { VOLUME_BRICK_EDGE } from '../../../../data/volume/volumeBrickEdge';
@@ -29,7 +30,10 @@ export function planDetailRegion(
   const seed = centre.map((v, a) =>
     Math.min(Math.floor(v / VOLUME_BRICK_EDGE), grid[a]! - 1),
   ) as Vec3;
-  const lo = seed.map((s, a) => Math.max(0, Math.min(s - Math.floor(k / 2), grid[a]! - k))) as Vec3;
+  // From the centre, not its brick (owner, 2026-11-27): even K stays within half a brick of the eye.
+  const lo = centre.map((v, a) =>
+    Math.max(0, Math.min(Math.round(v / VOLUME_BRICK_EDGE - k / 2), grid[a]! - k)),
+  ) as Vec3;
   const target: BrickBox = { lo, hi: lo.map((v, a) => Math.min(v + k, grid[a]!)) as Vec3 };
   // No failed check: only a fetch marks a brick failed, and a held brick is never fetched.
   const usable = (box: BrickBox) => bricksOf(box).every((c) => held(brickId(c, grid)));

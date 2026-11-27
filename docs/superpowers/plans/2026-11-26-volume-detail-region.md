@@ -758,7 +758,7 @@ export type BrickBox = { readonly lo: Vec3; readonly hi: Vec3 };
 export type DetailRegionFade = { readonly into: BrickBox | null; readonly out: BrickBox | null; readonly w: number };
 
 export type DetailRegionState = {
-  /** K bricks per axis around the centre's brick, inside the grid; null before the first frame in reach. */
+  /** K bricks per axis centred on the centre, inside the grid; null before the first frame in reach. */
   readonly target: BrickBox | null;
   /** Every brick inside is in the texture; drawn at weight 1. */
   readonly settled: BrickBox | null;
@@ -799,8 +799,11 @@ export function planDetailRegion(prev: DetailRegionState, input: DetailRegionPla
 **Rules, in order** (spec §6.2):
 
 1. **Centre and target.** `centre = clamp(eyeVox, 0, dims)`; its brick is `floor(centre / 48)`
-   clamped to `grid − 1`; the target is K bricks per axis around it, shifted to lie inside the grid.
-   From outside it sits against the nearest face, K bricks deep, and slides along that face.
+   clamped to `grid − 1`. The target is K bricks per axis centred on the centre itself:
+   `lo = round(centre / 48 − K/2)` clamped to `[0, grid − K]`, `hi = min(lo + K, grid)` (owner's
+   ruling, 2026-11-27, the spike's rule: the eye stays within half a brick of the target's middle
+   for even K too; for odd K it is the centre's brick ± ⌊K/2⌋). From outside it sits against the
+   nearest face, K bricks deep, and slides along that face.
 2. **Reach.** `|eyeVox − centre| ≥ gateVox`: out of reach. A ray marches only inside the stored box,
    and the target's part there contains the centre, the box's nearest point to the eye, so no region
    sample could pass the per-ray gate. The target and settled box stay, nothing is wanted, no fade
@@ -819,6 +822,9 @@ Steps:
   - `the target is K bricks around the centre's brick, shifted inside the grid at both corners`:
     eye at voxel (10, 10, 10) → lo (0, 0, 0), hi (5, 5, 5); eye at (670, 1150, 640) → lo
     (9, 19, 9), hi (14, 24, 14).
+  - `an even K keeps the eye within half a brick of the target centre, either half of its brick`
+    (owner, 2026-11-27): K = 8, eyes at x 346 and 374 (brick 7's lower and upper half) → targets one
+    brick apart in x, each middle within half a brick of the eye.
   - `an eye outside the box but in reach gets a target against the nearest face`: eye (−100, 600,
     300) → lo.x 0, hi.x 5, y and z around bricks 12 and 6; `inReach` true.
   - `moving parallel to the face slides the target; moving straight away does not`: eye y +96

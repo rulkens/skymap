@@ -387,7 +387,7 @@ export type DetailRegionFade = { readonly into: BrickBox | null; readonly out: B
 
 // …/@types/DetailRegionState.d.ts
 export type DetailRegionState = {
-  /** K bricks per axis around the centre's brick, inside the grid; null before the first frame in reach. */
+  /** K bricks per axis centred on the centre, inside the grid; null before the first frame in reach. */
   readonly target: BrickBox | null;
   /** Every brick inside is in the texture; drawn at weight 1. */
   readonly settled: BrickBox | null;
@@ -429,9 +429,11 @@ export function planDetailRegion(prev: DetailRegionState, input: DetailRegionPla
 ### 6.2 The plan, in order
 
 1. **Target.** The region centre is the eye clamped into the dataBox: the eye itself inside, the
-   nearest point of the box outside. The target is K bricks per axis around the centre's brick,
-   clamped inside the grid, so from outside it sits against the nearest face, K bricks deep, and
-   slides along that face as the camera moves. **Reach:** a ray marches only inside the stored box,
+   nearest point of the box outside. The target is K bricks per axis centred on it:
+   `lo = round(centre / 48 − K/2)` per axis, clamped to `[0, grid − K]`, `hi = min(lo + K, grid)`
+   (owner's ruling, 2026-11-27, the spike's rule: the eye stays within half a brick of the target's
+   middle for even K too). Clamped inside the grid, from outside it sits against the nearest face,
+   K bricks deep, and slides along that face as the camera moves. **Reach:** a ray marches only inside the stored box,
    and the target's part there contains the centre, the stored box's nearest point to the eye; so
    when `|eyeVox − centre| ≥ gateVox` no sample of the region can pass the per-ray gate (§7).
    Then the target stays where it was, nothing is wanted, the held bricks stay and the draw value
