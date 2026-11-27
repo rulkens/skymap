@@ -814,7 +814,7 @@ export function planDetailRegion(prev: DetailRegionState, input: DetailRegionPla
 
 Steps:
 
-- [ ] Tests, MCPM's grid `[14, 24, 14]`, dims `[672, 1152, 648]`, K = 5, gate 340 voxels:
+- [x] Tests, MCPM's grid `[14, 24, 14]`, dims `[672, 1152, 648]`, K = 5, gate 340 voxels:
   - `the target is K bricks around the centre's brick, shifted inside the grid at both corners`:
     eye at voxel (10, 10, 10) → lo (0, 0, 0), hi (5, 5, 5); eye at (670, 1150, 640) → lo
     (9, 19, 9), hi (14, 24, 14).
@@ -831,8 +831,8 @@ Steps:
   - `a change of settled becomes a fade; the new box settles when w reaches 1; shown holds settled,
     into and out meanwhile`.
   - `wanted is nearest first from the centre's brick`: shell order, then Euclidean within a shell.
-- [ ] Implement.
-- [ ] `npm test -- planDetailRegion`.
+- [x] Implement.
+- [x] `npm test -- planDetailRegion`.
 
 **Commit:** `planDetailRegion: the detail region's box, reach, growth and fade, as a pure step`
 
