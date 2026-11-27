@@ -45,12 +45,18 @@ export async function netCommand(args: PhoneArgs): Promise<void> {
         consoleLines.push(
           `exception: ${(d.exception?.description ?? d.text).slice(0, MESSAGE_CHARS)}`,
         );
+      } else if (method === 'Log.entryAdded' && ['error', 'warning'].includes(p.entry.level)) {
+        // Browser-written lines (WebGPU validation, CSP, network) never reach `console.*`.
+        consoleLines.push(
+          `${p.entry.level} [${p.entry.source}]: ${p.entry.text.slice(0, MESSAGE_CHARS)}`,
+        );
       }
     });
     await client.call('Network.enable', {}, tab.sessionId);
     await client.call('Network.setCacheDisabled', { cacheDisabled: true }, tab.sessionId);
     await client.call('Runtime.enable', {}, tab.sessionId);
-    consoleLines.length = 0; // Runtime.enable replays the old page's console
+    await client.call('Log.enable', {}, tab.sessionId);
+    consoleLines.length = 0; // both enables replay the old page's lines
     if (args.link !== undefined)
       await loadUrl(client, tab.sessionId, linkUrl(serverOrigin(args), args.link));
     else await client.call('Page.reload', { ignoreCache: true }, tab.sessionId);
