@@ -916,14 +916,14 @@ export function createBrickTextureStore(
 
 Steps:
 
-- [ ] Tests, a mock device, K = 5:
+- [x] Tests, a mock device, K = 5:
   - `a brick's slot is its coordinates mod K`: bricks (6, 0, 0) and (1, 0, 0) on `[14, 24, 14]` share
     slot (1, 0, 0).
   - `allocate refuses while the occupant was touched at or after liveSince, else evicts once`: the
     handler runs exactly once, with the old key.
   - `write places a brick at 48 · slot with the format's layout`: slot (1, 2, 3), ASTC → origin
     (48, 96, 144), `bytesPerRow` 128, `rowsPerImage` 8, size 48³; r8 → 48 and 48.
-- [ ] `npm test -- createBrickTextureStore`.
+- [x] `npm test -- createBrickTextureStore`.
 
 **Commit:** `Brick texture store: a toroidal SlotStore over one 3D texture`
 
