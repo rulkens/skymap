@@ -446,7 +446,8 @@ export function planDetailRegion(prev: DetailRegionState, input: DetailRegionPla
 
 The draw value derives from the state in one more pure step,
 `detailRegionDraw(state, geometry): DetailRegionDraw | null`: boxes to the stored box's local
-[0,1]³, the settled box inset half a native voxel so the linear filter never reads past it.
+[0,1]³, the settled box inset half a native voxel so the linear filter never reads past it, its
+high face clamped to the data first so it never reaches into the last z layer's zero padding.
 
 ### 6.3 The per-field draw value
 

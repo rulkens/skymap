@@ -24,6 +24,11 @@ describe('detailRegionDraw', () => {
     expect(draw.fade).toBeNull();
   });
 
+  it('a box reaching the zero-padded last z brick layer stops half a voxel inside the data', () => {
+    const draw = detailRegionDraw({ ...STATE, settled: box([1, 1, 12], [3, 3, 14]) }, MCPM)!;
+    expect(draw.settledHi[2]).toBeCloseTo(647.5 / 648, 9);
+  });
+
   it('texScale is the dims over K bricks of 48', () => {
     const [x, y, z] = detailRegionDraw(STATE, MCPM)!.texScale;
     expect([x, y, z].map((v) => +v.toFixed(9))).toEqual([2.8, 4.8, 2.7]);
