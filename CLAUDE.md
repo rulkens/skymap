@@ -38,8 +38,8 @@ tools/utils/io/rawDataRegistry.ts  every path into data/raw/ goes through here;
                                    VizieR ReadMes sit beside their files (byte layouts!)
 packages/shared/  leaf package of code the app and tool apps both use (math, form components,
                   GPU device, data manifest, design tokens); imported by relative path (ADR 0017)
-packages/mcpm-workbench/  the MCPM workbench tool app; its src/ and tools/ imports are a
-                          shrink-only list (tests/conventions/mcpmWorkbenchBoundary.test.ts)
+packages/mcpm-workbench/  the MCPM workbench tool app; its imports from outside itself and
+                          packages/shared are a shrink-only list (tests/conventions/mcpmWorkbenchBoundary.test.ts)
 docs/BACKLOG.md  ground-truth list of what's next
 docs/superpowers/plans/ + specs/  active plans and specs; shipped → */completed/
 tests/  Vitest suite — mirrors src/ tree (packages/shared, mcpm-workbench, move-files
