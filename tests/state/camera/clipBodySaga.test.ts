@@ -18,6 +18,9 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
+import { clockTo } from '../../../src/state/tour/clockTo';
+import { watchClockToSaga } from '../../../src/state/tour/watchClockToSaga';
+import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { hashBodyFor } from '../../../src/state/url/hashBodyFor';
 import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
@@ -80,6 +83,7 @@ function buildHarness(seam: PlayClipStub, structures: StructureRowFixture = EMPT
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchTakeoverSaga);
+  sagaMiddleware.run(watchClockToSaga);
   return { store };
 }
 
@@ -286,6 +290,21 @@ describe('clipBodySaga', () => {
     expect(after.paused).toBe(false);
   });
 
+  it('leaves a paused live clock paused at its instant after a clip, as the tour does', async () => {
+    const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store } = buildHarness(seam);
+    store.dispatch(goLive({ simDays: 2451545, nowMs: 100 }));
+    store.dispatch(pause({ nowMs: 100 }));
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    await flush();
+
+    const after = store.getState().time;
+    expect(after).toMatchObject({ mode: 'live', paused: true });
+    expect(deriveSimDays(after, 999_999)).toBe(2451545);
+  });
+
   it('restores manual playback after a clip, including the cancel path', async () => {
     // Blocking seam so the clip only ends via the explicit exitTakeover below.
     const seam = blockingSeam(() => {});
@@ -338,5 +357,63 @@ describe('clipBodySaga', () => {
       .map(([action]) => (action as { type: string }).type)
       .filter((t) => t === resume.type || t === goLive.type);
     expect(restored).toEqual([]);
+  });
+
+  describe('a clip that moves the clock (a tour beat played alone)', () => {
+    const JD = 2_460_000;
+    const NIGHT = JD + 0.4;
+
+    // A paused manual clock; the seam stands in for the clip player firing `scene(clockTo(…))`.
+    function pausedClockHarness(
+      slide: (dispatch: (a: ReturnType<typeof clockTo>) => void) => Promise<void>,
+    ) {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+      let dispatch: (a: ReturnType<typeof clockTo>) => void = () => {};
+      const seam = vi
+        .fn<(clip: ClipData) => Promise<void>>()
+        .mockImplementation(() => slide(dispatch));
+      const { store } = buildHarness(seam);
+      dispatch = store.dispatch;
+      store.dispatch(setSimDays({ simDays: JD, nowMs: performance.now() }));
+      store.dispatch(pause({ nowMs: performance.now() }));
+      const at = () => deriveSimDays(store.getState().time, performance.now());
+      return { store, at };
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('puts the clock back at the frozen instant, paused, when the clip ends', async () => {
+      const { store, at } = pausedClockHarness((dispatch) => {
+        dispatch(clockTo({ simDays: NIGHT, overSec: 10 }));
+        return new Promise<void>((resolve) => setTimeout(resolve, 11_000));
+      });
+
+      store.dispatch(startClip('tourParkOpeningDwell'));
+      await vi.advanceTimersByTimeAsync(12_000);
+
+      expect(selectTakeoverSource(store.getState())).toBeNull();
+      expect(store.getState().time).toMatchObject({ mode: 'manual', paused: true, profile: null });
+      expect(at()).toBe(JD);
+    });
+
+    it('Esc mid clock slide puts the clock back and stops the slide', async () => {
+      const { store, at } = pausedClockHarness((dispatch) => {
+        dispatch(clockTo({ simDays: NIGHT, overSec: 30 }));
+        return new Promise<void>(() => {});
+      });
+
+      store.dispatch(startClip('tourParkOpeningDwell'));
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(at()).toBeGreaterThan(JD);
+      store.dispatch(exitTakeover());
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().time).toMatchObject({ mode: 'manual', paused: true, profile: null });
+      expect(at()).toBe(JD);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(at()).toBe(JD);
+    });
   });
 });
