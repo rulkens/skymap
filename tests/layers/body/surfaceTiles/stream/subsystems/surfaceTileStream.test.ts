@@ -607,7 +607,7 @@ describe('surfaceTileStream horizonAt', () => {
       'fetch',
       vi.fn(async (url: string) =>
         url.endsWith('.idx')
-          ? new Response(encodeSurfaceTileArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
+          ? new Response(encodeArchiveIndex(listed, 1) as Uint8Array<ArrayBuffer>)
           : new Response(new Uint8Array(4), { status: 206 }),
       ),
     );
