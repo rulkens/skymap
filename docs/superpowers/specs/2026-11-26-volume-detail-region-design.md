@@ -856,16 +856,15 @@ one pass. A breach halts and goes to the owner.
 3. **Phone, small tier.** Moving at the MCPM inside pose on the OnePlus: ms per frame with the
    region on ≤ 1.10× off (step 1's phone run was not made). The picked format is recorded.
 4. **Image: sharper.** Converged at rest (the tier's cap), the region against today's main at the
-   same tier, at MCPM inside and knot and 2MRS inside and dense. Measure: the mean Sobel gradient
+   same tier, at MCPM inside and 2MRS dense. Measure: the mean Sobel gradient
    magnitude of luminance (8-bit output) inside the region's screen footprint. Bar: ≥ 1.25× main's.
    (The owner's value test saw 1.56× "detail" with brightness matched; its metric is not known to
    be this one, so the bar sits below it.)
 5. **Image: never dimmer.** In the same footprint, mean luminance ≥ main's − 0.5 of 255.
 6. **Fill time after a jump.** From arrival at the MCPM inside pose (cold HTTP cache, production
-   R2) to the planner's `busy` going false: K = 5 ≤ 2 s and K = 8 ≤ 4 s on the Mac, with the
-   shipped HTTP-cache reads and again with `no-store` (a scratch patch), each in ms; plus 12
-   concurrent Range reads into one pack part both ways (BACKLOG.md:179's case). K = 5 on the phone
-   over Wi-Fi ≤ 5 s. These are first guesses; the numbers go to the owner, who rules on switching
+   R2) to the planner's `busy` going false: K = 8 ≤ 4 s on the Mac, with the shipped HTTP-cache
+   reads and again with `no-store` (a scratch patch), each in ms; plus 12 concurrent Range reads
+   into one pack part both ways (BACKLOG.md:179's case). These are first guesses; the numbers go to the owner, who rules on switching
    (ruling 10).
 7. **No seam line at rest.** At the knot pose with the box edge in view, converged: in the image of
    region-on minus region-off, no pixel row along the projected box edge is brighter or darker than
