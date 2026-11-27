@@ -6,7 +6,8 @@
  *
  * FRAME CONTRACT (`shaders/bodies/meshBody/io.wesl`): every direction the shader receives is in
  * the HOST's fixed axes, the frame `posM`/`rotM` land in, so `sunDirLocal` is fed the HOST's
- * orientation, not the body's own.
+ * orientation, not the body's own. A body standing on its row's host also reads the baked
+ * terrain horizon at its anchor (`state.terrainHorizonAt`), one sample for the whole body.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -15,6 +16,8 @@ import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import type { MeshMaterialFactors } from '../../../@types/rendering/MeshMaterialFactors';
 import { NEUTRAL_MESH_MATERIAL_FACTORS } from '../../../data/mesh/neutralMeshMaterialFactors';
+import { NO_HORIZON_RECT } from '../../../data/gpu/horizonRects';
+import { positionDriverOrNull } from '../../../data/bodies/positionDrivers';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
@@ -22,6 +25,7 @@ import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../utils/camera/bodyCompose/composeMeshMvp';
 import { sunDirLocal } from '../../../utils/camera/bodyCompose/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import { normalize3 } from '../../../utils/math/normalize3';
 import { packMeshBodyUniforms } from '../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
@@ -68,6 +72,13 @@ export function drawMeshBodiesOnRow(
           hostRadiusM: innerBoundRadiusM(umbraHost.surface),
         })
       : 1;
+    const driver = positionDriverOrNull(body.id);
+    // `posM` is already host body-fixed: its direction is the anchor the terrain is read under.
+    const up = normalize3(posM);
+    const horizon =
+      driver?.kind === 'surfaceFixed' && driver.hostId === hostId
+        ? state.terrainHorizonAt(driver.hostId, up)
+        : null;
     renderer.draw(
       pass,
       body.id,
@@ -90,7 +101,14 @@ export function drawMeshBodiesOnRow(
           RENDER_ORIGIN_MPC,
           sunRadiusM,
         ),
+        horizon: {
+          rect: horizon?.rect ?? NO_HORIZON_RECT,
+          // Any unit vector off the ground: the shader skips the lookup on a zero rect.
+          up: horizon === null ? [0, 0, 1] : up,
+          uv: horizon?.uv ?? [0, 0],
+        },
       }),
+      horizon?.atlas ?? null,
     );
   }
 }

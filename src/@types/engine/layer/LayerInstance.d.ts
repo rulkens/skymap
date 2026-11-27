@@ -1,4 +1,4 @@
-import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
+import type { TerrainQueries } from '../../camera/terrain/TerrainQueries';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -31,6 +31,6 @@ export type LayerInstance = {
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
-  readonly heightAt?: TerrainHeightAtLookup;
+  readonly terrain?: TerrainQueries;
   destroy(): void;
 };

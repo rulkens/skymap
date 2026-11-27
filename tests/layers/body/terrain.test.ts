@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { heightAt } from '../../../src/layers/body/heightAt';
+import { terrain } from '../../../src/layers/body/terrain';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import type { BodyRuntime } from '../../../src/layers/body/@types/BodyRuntime';
 import type { SurfaceTilePlan } from '../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
-describe('heightAt', () => {
+describe('terrain', () => {
   it("reads the plan written after it was built, climbing with that plan's params", () => {
     const params = { tilePx: 512, baseLevel: 3, bands: [], lodBias: 0 };
     const tiles = {
@@ -14,10 +14,24 @@ describe('heightAt', () => {
       },
       plan: IDLE_SURFACE_TILE_PLAN,
     } as unknown as BodyRuntime['surfaceTiles'];
-    const lookup = heightAt({ surfaceTiles: tiles } as BodyRuntime);
+    const { heightAt } = terrain({ surfaceTiles: tiles } as BodyRuntime);
 
     tiles.plan = { ...IDLE_SURFACE_TILE_PLAN, params } as unknown as SurfaceTilePlan;
 
-    expect(lookup(asSceneBodyId('earth'), [0, 0, 1])).toBe(1234);
+    expect(heightAt(asSceneBodyId('earth'), [0, 0, 1])).toBe(1234);
+  });
+
+  it('reads no horizon while the no-shadows overlay is on, so a rover lights with its ground', () => {
+    const sample = { atlas: {}, rect: [0, 0, 1, 1], uv: [0.5, 0.5] };
+    let noShadows = true;
+    const { horizonAt } = terrain({
+      surfaceTiles: { stream: { horizonAt: () => sample }, plan: IDLE_SURFACE_TILE_PLAN },
+      noTerrainShadows: () => noShadows,
+    } as unknown as BodyRuntime);
+    const mars = asSceneBodyId('mars');
+
+    expect(horizonAt(mars, [1, 0, 0])).toBeNull();
+    noShadows = false;
+    expect(horizonAt(mars, [1, 0, 0])).toBe(sample);
   });
 });

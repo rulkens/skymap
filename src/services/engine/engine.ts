@@ -31,6 +31,7 @@ import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsyste
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { noTerrainHorizon } from '../../utils/camera/terrain/noTerrainHorizon';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -270,6 +271,7 @@ export function createEngine(
     orbitTrailGroups: [],
     sampledTrailGroups: [],
     terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHorizonAt: noTerrainHorizon,
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s

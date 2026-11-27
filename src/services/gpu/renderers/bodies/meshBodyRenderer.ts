@@ -19,6 +19,7 @@ import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubema
 import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
 import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
+import { horizonLookupConstants } from '../../../../utils/gpu/horizonLookupConstants';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import type { ContactShadowResources } from '../../../../@types/rendering/ContactShadowResources';
@@ -116,6 +117,33 @@ export function createMeshBodyRenderer(init: {
     ],
   });
 
+  // Group 2: the host's horizon atlas, read with `textureLoad` (`lib/horizonLookup.wesl`).
+  const horizonBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-horizon-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    ],
+  });
+  const horizonBindGroupOf = (view: GPUTextureView, label: string) =>
+    device.createBindGroup({
+      label,
+      layout: horizonBindGroupLayout,
+      entries: [{ binding: 0, resource: view }],
+    });
+  // Bound off the ground, where every rect is zero and the lookup reads nothing.
+  const horizonStandIn = device.createTexture({
+    label: 'meshBody-horizon-stand-in',
+    size: [1, 1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const horizonStandInBindGroup = horizonBindGroupOf(
+    horizonStandIn.createView(),
+    'meshBody-horizon-stand-in-bg',
+  );
+  // Cached on the atlas view's identity, as `drawContactShadow` caches its own.
+  let horizonAtlasBinding: { view: GPUTextureView; bindGroup: GPUBindGroup } | null = null;
+
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'meshBody.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'meshBody.fragment');
 
@@ -123,7 +151,7 @@ export function createMeshBodyRenderer(init: {
     label: 'meshBody-pipeline',
     layout: device.createPipelineLayout({
       label: 'meshBody-pipeline-layout',
-      bindGroupLayouts: [bodyBindGroupLayout, globalBindGroupLayout],
+      bindGroupLayouts: [bodyBindGroupLayout, globalBindGroupLayout, horizonBindGroupLayout],
     }),
     vertex: {
       module: vsModule,
@@ -136,6 +164,8 @@ export function createMeshBodyRenderer(init: {
     fragment: {
       module: fsModule,
       entryPoint: 'fs',
+      // The sun alone: a mesh body has no sky term to dim.
+      constants: horizonLookupConstants(false),
       // No blend descriptor = opaque replace; the foreground composite blends
       // the whole layer.
       targets: [{ format: targetFormat }],
@@ -372,7 +402,20 @@ export function createMeshBodyRenderer(init: {
     return meshes.has(id);
   }
 
-  function draw(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array): void {
+  function horizonBindGroup(view: GPUTextureView | null): GPUBindGroup {
+    if (view === null) return horizonStandInBindGroup;
+    if (horizonAtlasBinding?.view !== view) {
+      horizonAtlasBinding = { view, bindGroup: horizonBindGroupOf(view, 'meshBody-horizon-bg') };
+    }
+    return horizonAtlasBinding.bindGroup;
+  }
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    id: string,
+    uniforms: Float32Array,
+    horizonAtlas: GPUTextureView | null,
+  ): void {
     const res = meshes.get(id);
     if (res === undefined) return;
     // Write THIS id's own uniform buffer immediately before its draw:
@@ -382,6 +425,7 @@ export function createMeshBodyRenderer(init: {
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, res.bindGroup);
     pass.setBindGroup(1, globalBindGroup);
+    pass.setBindGroup(2, horizonBindGroup(horizonAtlas));
     for (let slot = 0; slot < res.vertexBuffers.length; slot++) {
       pass.setVertexBuffer(slot, res.vertexBuffers[slot]!);
     }
@@ -421,6 +465,8 @@ export function createMeshBodyRenderer(init: {
   function destroy(): void {
     for (const res of meshes.values()) releaseResources(res);
     meshes.clear();
+    horizonStandIn.destroy();
+    horizonAtlasBinding = null;
   }
 
   const renderer: MeshBodyRenderer = {

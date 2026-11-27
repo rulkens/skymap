@@ -19,7 +19,7 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceId } from '../../../@types/data/SourceId';
 
 import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
-import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
+import { composeTerrain } from '../layer/composeTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -210,11 +210,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.sampledTrailGroups = instances
     .flatMap((instance) => instance.sampledTrails)
     .map((group) => gateTrailGroup(group, state));
-  state.terrainHeightAt = composeTerrainHeightAt(
+  const terrain = composeTerrain(
     instances.flatMap((instance) =>
-      instance.heightAt ? [{ name: instance.name, heightAt: instance.heightAt }] : [],
+      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
     ),
   );
+  state.terrainHeightAt = terrain.heightAt;
+  state.terrainHorizonAt = terrain.horizonAt;
 
   // A source names its slab (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   for (const instance of instances) {

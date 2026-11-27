@@ -16,7 +16,7 @@
 // '@builtin(position)'-bearing struct -- a second one links fine and is rejected
 // at 'createShaderModule' (the runtime-only landmine).
 //
-// ## Byte layout (uniform address space) -- 176 bytes, 44 f32
+// ## Byte layout (uniform address space) -- 224 bytes, 56 f32
 //
 //   offset   0..63:  mvp                 (mat4x4<f32>, column-major)
 //   offset  64..75:  sunDirLocal         (vec3<f32> -- 16-byte aligned)
@@ -32,7 +32,13 @@
 //   offset 152..155: roughnessFactor     (f32    baked maps; 1 leaves a mesh as baked)
 //   offset 156..159: padding to baseColorFactor's 16-byte alignment
 //   offset 160..171: baseColorFactor     (vec3<f32> -- linear RGB)
-//   offset 172..175: struct padding to a 16-byte multiple
+//   offset 172..175: padding to horizonRect's 16-byte alignment
+//   offset 176..191: horizonRect         (vec4<f32> -- the host tile's horizon post
+//                                         rect; zero for any body not on the ground)
+//   offset 192..203: horizonUp           (vec3<f32> -- the anchor's up, host axes)
+//   offset 204..207: padding to horizonUv's 8-byte alignment
+//   offset 208..215: horizonUv           (vec2<f32> -- the anchor's uv in that tile)
+//   offset 216..223: struct padding to a 16-byte multiple
 //
 // The first 80 bytes match 'LitBodyUniforms' byte-for-byte, but
 // 'packLitBodyUniforms' can NOT be reused: it zeroes byte 76 that
@@ -49,6 +55,9 @@ struct MeshBodyUniforms {
   metallicFactor: f32,
   roughnessFactor: f32,
   baseColorFactor: vec3<f32>,
+  horizonRect: vec4<f32>,
+  horizonUp: vec3<f32>,
+  horizonUv: vec2<f32>,
 };
 
 struct MeshBodyVSOut {
