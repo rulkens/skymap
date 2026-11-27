@@ -754,7 +754,8 @@ npm run build-2mrs-bricks
 export type BrickBox = { readonly lo: Vec3; readonly hi: Vec3 };
 
 /** The fade (spec §8): `into` and `out` both contain the settled box and meet only in it. */
-export type DetailRegionFade = { readonly into: BrickBox; readonly out: BrickBox; readonly w: number };
+// A side with nothing to fade is null: `out` on a first fill, `into` after a far jump.
+export type DetailRegionFade = { readonly into: BrickBox | null; readonly out: BrickBox | null; readonly w: number };
 
 export type DetailRegionState = {
   /** K bricks per axis around the centre's brick, inside the grid; null before the first frame in reach. */
