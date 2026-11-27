@@ -42,7 +42,7 @@ export type VolumeFieldDefaults = {
    *     log-normalised trace density is the canonical example.
    *
    * The shader generalises the windowing transform around this
-   * center; see `applyContrastWindow` in `fragment.wesl`.
+   * center; see `applyContrastWindow` in `scalarVolume/transfer.wesl`.
    */
   contrastCenter: number;
   /**

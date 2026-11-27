@@ -22,7 +22,7 @@ export type VolumeFieldSettings = DataItemSettings & {
   intensity: number;
   /**
    * Width of the deadband-and-stretch window (`applyContrastWindow` in
-   * `fragment.wesl`): samples within 1 − 1/contrast of the field's
+   * `scalarVolume/transfer.wesl`): samples within 1 − 1/contrast of the field's
    * contrast centre are hidden, the rest stretched over the palette.
    * 1.0 is identity. Orthogonal to `intensity`: intensity controls
    * overall opacity, contrast hides the noise floor.

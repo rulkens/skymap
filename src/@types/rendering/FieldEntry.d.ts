@@ -22,7 +22,7 @@ export type FieldEntry = {
    * pushes mid-density values toward the bright end.  Per-cube
    * static — read once at registration time from `upload`'s `statics`
    * argument, not user-tunable.  See `applyContrastWindow` in
-   * `fragment.wesl` for the math.
+   * `scalarVolume/transfer.wesl` for the math.
    */
   contrastCenter: number;
   /**

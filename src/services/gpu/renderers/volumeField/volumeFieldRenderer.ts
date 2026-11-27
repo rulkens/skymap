@@ -35,7 +35,7 @@ import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatri
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 
 // Fields through nativeBoxScale (300 B), rounded up to 16 for a uniform struct. Pinned against
-// fragment.wesl by volumeUniformsLayout.parity.test.ts.
+// io.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 304;
 // RegionUniforms, pinned the same way.
 const REGION_UNIFORM_BYTES = 112;

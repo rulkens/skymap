@@ -1,6 +1,6 @@
 /**
  * VolumeUniforms WESL↔renderer parity: `volumeFieldRenderer.ts` packs the struct by hand-literal
- * float index, so a field added or reordered in `fragment.wesl` would shift every later field
+ * float index, so a field added or reordered in `io.wesl` would shift every later field
  * silently. This lays out the struct from the shader, drives the REAL `draw` with a distinct
  * sentinel per field, and asserts each lands where the struct says. The `cam` prefix is opaque here
  * (its own parity lives in `cameraUniforms.test.ts`).
@@ -17,8 +17,7 @@ import type { DetailRegionDraw } from '../../../../../src/@types/rendering/Detai
 import { weslStructLayout } from '../../../../helpers/wesl/weslStructLayout';
 
 const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/scalarVolume');
-const fragment = readFileSync(join(SHADERS, 'fragment.wesl'), 'utf-8');
-const vertex = readFileSync(join(SHADERS, 'vertex.wesl'), 'utf-8');
+const io = readFileSync(join(SHADERS, 'io.wesl'), 'utf-8');
 
 const VOLUME: GpuVolume = {
   texture: {
@@ -53,7 +52,7 @@ function mockDevice(): GPUDevice {
 }
 
 describe('VolumeUniforms layout', () => {
-  const struct = weslStructLayout(fragment, 'VolumeUniforms', 'uniform');
+  const struct = weslStructLayout(io, 'VolumeUniforms', 'uniform');
 
   it('every field the WGSL struct declares lands at its offset', () => {
     const device = mockDevice();
@@ -141,15 +140,16 @@ describe('VolumeUniforms layout', () => {
     expect(scratch.byteLength).toBe(struct.size);
   });
 
-  it("vertex.wesl's VolumeUniforms is a prefix of fragment.wesl's", () => {
-    const prefix = weslStructLayout(vertex, 'VolumeUniforms', 'uniform').fields;
-    expect(prefix.length).toBeGreaterThan(0);
-    expect(prefix).toEqual(struct.fields.slice(0, prefix.length));
+  // A stage declaring its own copy would drift from the struct this test lays out.
+  it.each(['vertex.wesl', 'fragment.wesl'])('%s takes VolumeUniforms from io.wesl', (file) => {
+    const stage = readFileSync(join(SHADERS, file), 'utf-8');
+    expect(stage).toMatch(/^import package::scalarVolume::io::VolumeUniforms;$/m);
+    expect(stage).not.toMatch(/struct\s+VolumeUniforms\b/);
   });
 });
 
 describe('RegionUniforms layout', () => {
-  const struct = weslStructLayout(fragment, 'RegionUniforms', 'uniform');
+  const struct = weslStructLayout(io, 'RegionUniforms', 'uniform');
 
   it('every RegionUniforms field lands at its offset', () => {
     const device = mockDevice();
