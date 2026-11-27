@@ -8,6 +8,7 @@
  * the HOST's fixed axes, the frame `posM`/`rotM` land in, so `sunDirLocal` is fed the HOST's
  * orientation, not the body's own. A body standing on its row's host also reads the baked
  * terrain horizon at its anchor (`state.terrainHorizonAt`), one sample for the whole body.
+ * Its own sun shadow layer, if it holds one (`renderShadows`), is re-based onto this draw's `rotM`.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -25,6 +26,7 @@ import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../utils/camera/bodyCompose/composeMeshMvp';
 import { sunDirLocal } from '../../../utils/camera/bodyCompose/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import { meshShadowLightFromLocal } from '../../../utils/meshBodies/meshShadowLightFromLocal';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { packMeshBodyUniforms } from '../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
@@ -56,6 +58,8 @@ export function drawMeshBodiesOnRow(
   const hostPose = ctx.bodyPose(hostId);
   if (hostPose === null) return;
   const sunRadiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
+  const noMeshShadows = state.settings.debug.meshNoShadows;
+  const tuning = state.settings.debug.meshShadowTuning;
 
   for (const body of bodies) {
     const bodyState = bodyStates.get(body.id)!;
@@ -79,6 +83,7 @@ export function drawMeshBodiesOnRow(
       driver?.kind === 'surfaceFixed' && driver.hostId === hostId
         ? state.terrainHorizonAt(driver.hostId, up)
         : null;
+    const shadow = noMeshShadows ? null : renderer.shadowOf(body.id);
     renderer.draw(
       pass,
       body.id,
@@ -106,6 +111,14 @@ export function drawMeshBodiesOnRow(
           // Any unit vector off the ground: the shader skips the lookup on a zero rect.
           up: horizon === null ? [0, 0, 1] : up,
           uv: horizon?.uv ?? [0, 0],
+        },
+        shadow: shadow && {
+          slot: shadow.slot,
+          normalOffsetM: tuning.normalOffsetTexels * shadow.texelM,
+          lightFromLocal: narrowMat4(meshShadowLightFromLocal(shadow.lightFromMesh, rotM)),
+          depthBiasTexels: tuning.depthBiasTexels,
+          filterRadiusTexels: tuning.filterRadiusTexels,
+          filterSide: tuning.filterSide,
         },
       }),
       horizon?.atlas ?? null,

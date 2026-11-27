@@ -218,8 +218,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toEqual({ kind: 'compute', name: 'star-cut' });
     expect(steps[3]).toEqual({ kind: 'compute', name: 'asteroid-kepler' });
-    expect(steps[4]).toBe(capture[0]);
-    expect(steps[capture.length + 4]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[4]).toEqual({ kind: 'compute', name: 'mesh-shadows' });
+    expect(steps[5]).toBe(capture[0]);
+    expect(steps[capture.length + 5]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {

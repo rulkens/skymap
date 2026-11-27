@@ -24,7 +24,14 @@ import type { SplineMode } from '../../../@types/animation/SplineMode';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../../@types/settings/ClipPathTuningKnob';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
+import type { MeshShadowTuning } from '../../../@types/settings/MeshShadowTuning';
 import { MESH_SELF_BOUNCE } from '../../../data/mesh/meshSelfBounce';
+import {
+  MESH_SHADOW_FILTER_RADIUS_TEXELS,
+  MESH_SHADOW_FILTER_SIDE,
+  MESH_SHADOW_MAP_PX,
+  MESH_SHADOW_NORMAL_OFFSET_TEXELS,
+} from '../../../data/mesh/meshShadowMap';
 
 const initialState: DebugSettings = {
   // One entry per DEBUG_OVERLAY_ROWS row, all off — the roster is the
@@ -39,6 +46,15 @@ const initialState: DebugSettings = {
   matteWhite: false,
   meshAmbient: 0,
   meshSelfBounce: MESH_SELF_BOUNCE,
+  meshNoShadows: false,
+  meshShadowTuning: {
+    mapPx: MESH_SHADOW_MAP_PX,
+    depthBiasTexels: 0,
+    normalOffsetTexels: MESH_SHADOW_NORMAL_OFFSET_TEXELS,
+    filterSide: MESH_SHADOW_FILTER_SIDE,
+    filterRadiusTexels: MESH_SHADOW_FILTER_RADIUS_TEXELS,
+  },
+  siteSeatOffsetsM: {},
   // 'auto' reproduces the old timing-derived pass shape, so production +
   // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
   renderStrategy: 'auto',
@@ -91,6 +107,15 @@ export const debugSlice = createSlice({
     },
     setMeshSelfBounce: (debug, action: PayloadAction<number>) => {
       debug.meshSelfBounce = action.payload;
+    },
+    setMeshNoShadows: (debug, action: PayloadAction<boolean>) => {
+      debug.meshNoShadows = action.payload;
+    },
+    tuneMeshShadows: (debug, action: PayloadAction<Partial<MeshShadowTuning>>) => {
+      Object.assign(debug.meshShadowTuning, action.payload);
+    },
+    setSiteSeatOffsetM: (debug, action: PayloadAction<{ siteId: string; offsetM: number }>) => {
+      debug.siteSeatOffsetsM[action.payload.siteId] = action.payload.offsetM;
     },
     // Override the frame's render-pass shape independently of GPU timing (Joint 1;
     // see `resolveStrategy`). 'auto' restores the timing-derived default.
@@ -192,6 +217,9 @@ export const {
   setMatteWhite,
   setMeshAmbient,
   setMeshSelfBounce,
+  setMeshNoShadows,
+  tuneMeshShadows,
+  setSiteSeatOffsetM,
   setRenderStrategy,
   inspectClipPath,
   recalcClipPath,

@@ -6,7 +6,8 @@
  * recovery. The vertex layout and the material bindings come from
  * `MESH_VERTEX_SLOTS` / `MESH_TEXTURE_SLOTS`, so the pipeline descriptor and
  * the upload path cannot disagree about a stride, a location or a format. An id
- * with no asset draws nothing.
+ * with no asset draws nothing. It also owns the sun shadow array: one depth layer per
+ * slot, re-rendered only when its body's mesh or mesh-frame sun moves (`renderShadows`).
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -14,6 +15,27 @@ import type { MeshBodyRenderer } from '../../../../@types/rendering/MeshBodyRend
 import type { MeshResources } from '../../../../@types/rendering/MeshResources';
 import type { MeshProbe } from '../../../../@types/rendering/MeshProbe';
 import type { MeshAsset } from '../../../../@types/data/mesh/MeshAsset';
+import type { MeshShadowCaster } from '../../../../@types/rendering/MeshShadowCaster';
+import type { MeshShadowSlot } from '../../../../@types/rendering/MeshShadowSlot';
+import type { MeshGroundCaster } from '../../../../@types/rendering/MeshGroundCaster';
+import type { MeshShadowLayer } from '../../../../@types/rendering/MeshShadowLayer';
+import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import {
+  MESH_SHADOW_DEPTH_BIAS,
+  MESH_SHADOW_DEPTH_BIAS_SLOPE,
+  MESH_SHADOW_GROUND_CASTERS,
+  MESH_SHADOW_MAP_PX,
+  MESH_SHADOW_SAMPLER,
+  MESH_SHADOW_SLOTS,
+  MESH_SHADOW_SPHERE_PAD,
+} from '../../../../data/mesh/meshShadowMap';
+import { assignMeshShadowSlots } from '../../../../utils/meshBodies/assignMeshShadowSlots';
+import { meshShadowLightFromMesh } from '../../../../utils/meshBodies/meshShadowLightFromMesh';
+import { meshShadowLightFromLocal } from '../../../../utils/meshBodies/meshShadowLightFromLocal';
+import { meshShadowLightFromEye } from '../../../../utils/meshBodies/meshShadowLightFromEye';
+import { meshShadowNeedsRender } from '../../../../utils/meshBodies/meshShadowNeedsRender';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { MESH_BODY_UNIFORM_BYTES } from '../../../../data/mesh/meshBodyUniformLayout';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
@@ -28,6 +50,7 @@ import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
 import contactVsCode from '../../shaders/bodies/contactShadow/vertex.wesl?static';
 import contactFsCode from '../../shaders/bodies/contactShadow/fragment.wesl?static';
+import shadowVsCode from '../../shaders/bodies/meshShadow/vertex.wesl?static';
 
 // The unit cube as 12 non-indexed triangles, generated in the vertex stage.
 const CUBE_VERTEX_COUNT = 36;
@@ -35,6 +58,9 @@ const CUBE_VERTEX_COUNT = 36;
 // The body's reflection probe, after the material maps; the fragment's
 // `@group(0) @binding(5)` decoration mirrors this by hand.
 const PROBE_BINDING = 5;
+
+// `MeshShadowDepthUniforms` (shaders/bodies/meshShadow/io.wesl): one mat4.
+const SHADOW_DEPTH_UNIFORM_BYTES = 64;
 
 /**
  * @param init.reversedZ selects this slab's depth convention (single-sourced in
@@ -117,18 +143,52 @@ export function createMeshBodyRenderer(init: {
     ],
   });
 
-  // Group 2: the host's horizon atlas, read with `textureLoad` (`lib/horizonLookup.wesl`).
+  // The sun shadow array: a 2D view per layer to render into, one array view to read. Sized by
+  // `renderShadows`' `mapPx`, so every view and bind group holding it is re-made with it.
+  function createShadowMap(mapPx: number) {
+    const texture = device.createTexture({
+      label: 'meshBody-shadow-map',
+      size: [mapPx, mapPx, MESH_SHADOW_SLOTS],
+      format: 'depth16unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const view = texture.createView({ label: 'meshBody-shadow-map-view', dimension: '2d-array' });
+    const layerViews = Array.from({ length: MESH_SHADOW_SLOTS }, (_, layer) =>
+      texture.createView({
+        label: `meshBody-shadow-layer-${layer}`,
+        dimension: '2d',
+        baseArrayLayer: layer,
+        arrayLayerCount: 1,
+      }),
+    );
+    return { mapPx, texture, view, layerViews };
+  }
+  let shadowMap = createShadowMap(MESH_SHADOW_MAP_PX);
+  const shadowSampler = device.createSampler(MESH_SHADOW_SAMPLER);
+
+  // Group 2: the host's horizon atlas, read with `textureLoad` (`lib/horizonLookup.wesl`),
+  // and the shadow array with its comparison sampler (`lib/meshShadow.wesl`).
   const horizonBindGroupLayout = device.createBindGroupLayout({
     label: 'meshBody-horizon-bgl',
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'depth', viewDimension: '2d-array' },
+      },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
     ],
   });
   const horizonBindGroupOf = (view: GPUTextureView, label: string) =>
     device.createBindGroup({
       label,
       layout: horizonBindGroupLayout,
-      entries: [{ binding: 0, resource: view }],
+      entries: [
+        { binding: 0, resource: view },
+        { binding: 1, resource: shadowMap.view },
+        { binding: 2, resource: shadowSampler },
+      ],
     });
   // Bound off the ground, where every rect is zero and the lookup reads nothing.
   const horizonStandIn = device.createTexture({
@@ -137,11 +197,13 @@ export function createMeshBodyRenderer(init: {
     format: 'rgba8unorm',
     usage: GPUTextureUsage.TEXTURE_BINDING,
   });
-  const horizonStandInBindGroup = horizonBindGroupOf(
-    horizonStandIn.createView(),
+  const horizonStandInView = horizonStandIn.createView();
+  let horizonStandInBindGroup = horizonBindGroupOf(
+    horizonStandInView,
     'meshBody-horizon-stand-in-bg',
   );
-  // Cached on the atlas view's identity, as `drawContactShadow` caches its own.
+  // Cached on the atlas view's identity, as `drawContactShadow` caches its own; dropped with
+  // the shadow array it also binds.
   let horizonAtlasBinding: { view: GPUTextureView; bindGroup: GPUBindGroup } | null = null;
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'meshBody.vertex');
@@ -228,6 +290,73 @@ export function createMeshBodyRenderer(init: {
     // depthStencil: this draws in a 'sample' step, which attaches no depth.
     primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
   });
+
+  // Depth only, from the position stream alone. Unculled for the main pipeline's reason
+  // (single sheets); the bias is the caster's half of the acne guard, the fragment's normal
+  // offset the receiver's.
+  const shadowBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-shadow-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: 'uniform', minBindingSize: SHADOW_DEPTH_UNIFORM_BYTES },
+      },
+    ],
+  });
+  const shadowPipeline = device.createRenderPipeline({
+    label: 'meshBody-shadow-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'meshBody-shadow-pipeline-layout',
+      bindGroupLayouts: [shadowBindGroupLayout],
+    }),
+    vertex: {
+      module: createShaderModuleWithDevLog(device, shadowVsCode, 'meshShadow.vertex'),
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: MESH_VERTEX_SLOTS[0].bytes,
+          attributes: [{ shaderLocation: 0, offset: 0, format: MESH_VERTEX_SLOTS[0].format }],
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list', cullMode: 'none' },
+    depthStencil: {
+      format: 'depth16unorm',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      depthBias: MESH_SHADOW_DEPTH_BIAS,
+      depthBiasSlopeScale: MESH_SHADOW_DEPTH_BIAS_SLOPE,
+    },
+  });
+  // One uniform buffer per layer: every dirty layer is encoded into the same submit, so a
+  // shared buffer would hand all of them the last layer's matrix.
+  const shadowUniforms = Array.from({ length: MESH_SHADOW_SLOTS }, (_, layer) => {
+    const buffer = device.createBuffer({
+      label: `meshBody-shadow-uniform-${layer}`,
+      size: SHADOW_DEPTH_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const bindGroup = device.createBindGroup({
+      label: `meshBody-shadow-bg-${layer}`,
+      layout: shadowBindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer } }],
+    });
+    return { buffer, bindGroup };
+  });
+
+  // What each layer holds, null when free; `rankedLayers` the held ones nearest first, the
+  // order ground casters are taken in.
+  let shadowLayers: (MeshShadowLayer | null)[] = new Array<MeshShadowLayer | null>(
+    MESH_SHADOW_SLOTS,
+  ).fill(null);
+  let rankedLayers: readonly MeshShadowLayer[] = [];
+
+  // A reloaded or cleared mesh drops its layer, so the next `renderShadows` redraws or frees it.
+  function dropShadowLayer(id: string): void {
+    shadowLayers = shadowLayers.map((layer) => (layer?.caster.id === id ? null : layer));
+    rankedLayers = rankedLayers.filter((layer) => layer.caster.id !== id);
+  }
 
   const meshes = new Map<string, MeshResources>();
 
@@ -325,6 +454,7 @@ export function createMeshBodyRenderer(init: {
       // Drop the entry BEFORE rebuilding: a throw below would otherwise leave
       // `hasMesh` true over destroyed buffers.
       meshes.delete(id);
+      dropShadowLayer(id);
     }
 
     const vertexBuffers = MESH_VERTEX_SLOTS.map((slot) => {
@@ -359,6 +489,7 @@ export function createMeshBodyRenderer(init: {
     });
 
     meshes.set(id, {
+      boundingRadiusM: asset.boundingRadiusM,
       vertexBuffers,
       indexBuffer,
       indexCount: asset.indexCount,
@@ -396,6 +527,7 @@ export function createMeshBodyRenderer(init: {
     if (res === undefined) return;
     releaseResources(res);
     meshes.delete(id);
+    dropShadowLayer(id);
   }
 
   function hasMesh(id: string): boolean {
@@ -462,11 +594,131 @@ export function createMeshBodyRenderer(init: {
     pass.draw(CUBE_VERTEX_COUNT);
   }
 
+  function resizeShadowMap(mapPx: number): void {
+    shadowMap.texture.destroy();
+    shadowMap = createShadowMap(mapPx);
+    horizonStandInBindGroup = horizonBindGroupOf(
+      horizonStandInView,
+      'meshBody-horizon-stand-in-bg',
+    );
+    horizonAtlasBinding = null;
+  }
+
+  function renderShadows(
+    encoder: GPUCommandEncoder,
+    casters: readonly MeshShadowCaster[],
+    mapPx: number,
+    claimTimestampWrites: ClaimTimestampWrites,
+  ): void {
+    // A new size starts from an empty array: every held layer redraws below.
+    const resized = mapPx !== shadowMap.mapPx;
+    if (resized) resizeShadowMap(mapPx);
+    const ranked = casters
+      .filter((caster) => meshes.has(caster.id))
+      .sort((a, b) => a.cameraDistanceSq - b.cameraDistanceSq)
+      .slice(0, MESH_SHADOW_SLOTS);
+    const casterOf = new Map(ranked.map((caster) => [caster.id, caster]));
+    const owners = assignMeshShadowSlots(
+      shadowLayers.map((layer) => layer?.caster.id ?? null),
+      ranked.map((caster) => caster.id),
+    );
+    const dirty: number[] = [];
+    shadowLayers = owners.map((id, slot) => {
+      if (id === null) return null;
+      const caster = casterOf.get(id)!;
+      const held = shadowLayers[slot];
+      if (
+        !resized &&
+        held?.caster.id === id &&
+        !meshShadowNeedsRender(held.rendered, caster.sunDirMesh)
+      ) {
+        return { ...held, caster };
+      }
+      dirty.push(slot);
+      const radiusM = meshes.get(id)!.boundingRadiusM;
+      return {
+        rendered: caster.sunDirMesh,
+        shadow: {
+          slot,
+          lightFromMesh: meshShadowLightFromMesh(caster.sunDirMesh, radiusM),
+          texelM: (2 * radiusM * MESH_SHADOW_SPHERE_PAD) / mapPx,
+        },
+        caster,
+      };
+    });
+    rankedLayers = ranked.map(
+      (caster) => shadowLayers.find((layer) => layer?.caster.id === caster.id)!,
+    );
+    if (dirty.length === 0) return;
+
+    // One timing slot spans every layer drawn: it opens on the first pass, closes on the last.
+    const timestampWrites = claimTimestampWrites().timestampWrites;
+    dirty.forEach((slot, i) => {
+      const layer = shadowLayers[slot]!;
+      const res = meshes.get(layer.caster.id)!;
+      const uniform = shadowUniforms[slot]!;
+      device.queue.writeBuffer(uniform.buffer, 0, narrowMat4(layer.shadow.lightFromMesh));
+      const pass = encoder.beginRenderPass({
+        label: `meshBody-shadow-pass-${slot}`,
+        colorAttachments: [],
+        depthStencilAttachment: {
+          view: shadowMap.layerViews[slot]!,
+          depthClearValue: 1,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+        },
+        // A middle pass carries none: WebGPU rejects timestampWrites naming no index.
+        ...(timestampWrites &&
+          (i === 0 || i === dirty.length - 1) && {
+            timestampWrites: {
+              querySet: timestampWrites.querySet,
+              ...(i === 0 && {
+                beginningOfPassWriteIndex: timestampWrites.beginningOfPassWriteIndex,
+              }),
+              ...(i === dirty.length - 1 && {
+                endOfPassWriteIndex: timestampWrites.endOfPassWriteIndex,
+              }),
+            },
+          }),
+      });
+      pass.setPipeline(shadowPipeline);
+      pass.setBindGroup(0, uniform.bindGroup);
+      pass.setVertexBuffer(0, res.vertexBuffers[0]!);
+      pass.setIndexBuffer(res.indexBuffer, 'uint32');
+      pass.drawIndexed(res.indexCount);
+      pass.end();
+    });
+  }
+
+  function shadowOf(id: string): MeshShadowSlot | null {
+    return rankedLayers.find((layer) => layer.caster.id === id)?.shadow ?? null;
+  }
+
+  function groundCasters(hostId: string, eyeRelBodyM: Readonly<Vec3>): readonly MeshGroundCaster[] {
+    return rankedLayers
+      .filter((layer) => layer.caster.groundHostId === hostId)
+      .slice(0, MESH_SHADOW_GROUND_CASTERS)
+      .map(({ shadow, caster }) => ({
+        slot: shadow.slot,
+        lightFromEye: narrowMat4(
+          meshShadowLightFromEye(
+            meshShadowLightFromLocal(shadow.lightFromMesh, caster.rotM),
+            eyeRelBodyM,
+            caster.posM,
+          ),
+        ),
+      }));
+  }
+
   function destroy(): void {
     for (const res of meshes.values()) releaseResources(res);
     meshes.clear();
     horizonStandIn.destroy();
     horizonAtlasBinding = null;
+    shadowMap.texture.destroy();
+    for (const uniform of shadowUniforms) uniform.buffer.destroy();
+    shadowLayers = shadowLayers.map(() => null);
+    rankedLayers = [];
   }
 
   const renderer: MeshBodyRenderer = {
@@ -477,6 +729,12 @@ export function createMeshBodyRenderer(init: {
     probeOf,
     draw,
     drawContactShadow,
+    renderShadows,
+    shadowOf,
+    groundCasters,
+    get shadowMapView() {
+      return shadowMap.view;
+    },
     destroy,
   };
   renderer satisfies Renderer;

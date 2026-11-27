@@ -27,6 +27,7 @@ import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalo
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { debugSlice } from '../../../src/state/settings/core/debugSlice';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -176,6 +177,9 @@ export function makeSettingsFixture(
       matteWhite: false,
       meshAmbient: 0,
       meshSelfBounce: 0,
+      meshNoShadows: false,
+      meshShadowTuning: { ...debugSlice.getInitialState().meshShadowTuning },
+      siteSeatOffsetsM: {},
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

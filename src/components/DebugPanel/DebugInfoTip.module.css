@@ -1,0 +1,3 @@
+.root {
+  composes: infoIcon from '../common/ParamSlider/ParamSlider.module.css';
+}
