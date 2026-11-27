@@ -11,7 +11,7 @@ import type { BrickBox } from '../@types/BrickBox';
 import type { DetailRegionGeometry } from '../@types/DetailRegionGeometry';
 import type { DetailRegionState } from '../@types/DetailRegionState';
 
-/** null out of reach or before anything settled; during a first fill only the fade has boxes. */
+/** null out of reach or with neither a settled box nor a fade: a first fill fades in (spec §8). */
 export function detailRegionDraw(
   state: DetailRegionState,
   geometry: DetailRegionGeometry,

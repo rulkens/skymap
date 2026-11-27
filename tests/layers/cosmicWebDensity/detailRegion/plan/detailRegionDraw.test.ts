@@ -29,7 +29,7 @@ describe('detailRegionDraw', () => {
     expect([x, y, z].map((v) => +v.toFixed(9))).toEqual([2.8, 4.8, 2.7]);
   });
 
-  it('out of reach or with nothing settled draws null', () => {
+  it('out of reach or with neither a settled box nor a fade draws null', () => {
     expect(detailRegionDraw({ ...STATE, inReach: false }, MCPM)).toBeNull();
     expect(detailRegionDraw({ ...STATE, settled: null }, MCPM)).toBeNull();
   });

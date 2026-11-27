@@ -855,8 +855,9 @@ export type DetailRegionGeometry = {
   readonly voxelMpc: number;      // the sidecar's
 };
 
-/** null out of reach or before anything settled. Boxes to the stored box's local [0,1]³; the
- *  settled box inset half a native voxel so the linear filter never reads past it. */
+/** null out of reach or with neither a settled box nor a fade (a first fill fades in, spec §8).
+ *  Boxes to the stored box's local [0,1]³, the settled box inset half a native voxel so the
+ *  linear filter never reads past it. */
 export function detailRegionDraw(state: DetailRegionState, geometry: DetailRegionGeometry): DetailRegionDraw | null;
 
 export const DENSITY_REGION_BRICKS_BY_TIER = { small: 5, medium: 5, large: 8 } as const satisfies Record<Tier, number>;
@@ -868,7 +869,7 @@ Steps:
   - `boxes map to local [0,1]³ with the settled box inset half a native voxel`: settled bricks
     (1, 1, 1)–(3, 3, 3) on MCPM dims → lo.x = (48 + 0.5) / 672, hi.x = (144 − 0.5) / 672.
   - `texScale is the dims over K bricks of 48`: MCPM at K = 5 → (2.8, 4.8, 2.7).
-  - `out of reach or with nothing settled draws null`.
+  - `out of reach or with neither a settled box nor a fade draws null`.
 - [x] `npm test -- detailRegionDraw`.
 
 **Commit:** `detailRegionDraw: the planner's state as the draw value; K by tier`
