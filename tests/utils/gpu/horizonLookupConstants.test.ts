@@ -8,9 +8,10 @@ import surfaceTileBare from '../../../src/services/gpu/shaders/bodies/surfaceTil
 import surfaceTileEarth from '../../../src/services/gpu/shaders/bodies/surfaceTile/fragmentEarth.wesl?static';
 import earthGlobe from '../../../src/services/gpu/shaders/bodies/earth/fragment.wesl?static';
 import texturedBody from '../../../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
+import meshBody from '../../../src/services/gpu/shaders/bodies/meshBody/fragment.wesl?static';
 import { horizonLookupConstants } from '../../../src/utils/gpu/horizonLookupConstants';
 
-const LINKED = { surfaceTileBare, surfaceTileEarth, earthGlobe, texturedBody };
+const LINKED = { surfaceTileBare, surfaceTileEarth, earthGlobe, texturedBody, meshBody };
 
 describe('horizonLookupConstants', () => {
   it.each(Object.entries(LINKED))(

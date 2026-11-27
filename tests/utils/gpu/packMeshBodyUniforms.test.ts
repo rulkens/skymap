@@ -10,7 +10,8 @@
  * sentinel and is asserted at its documented index — never by re-deriving the
  * packer's own expression. `model` is the trap this pins hardest: a `mat3x3` is
  * three 16-byte columns, so its 9 values land at 20..22 / 24..26 / 28..30 with a
- * dead float between each, and packing it densely would slide every later field.
+ * dead float between each, and packing it densely would slide every later field. The horizon
+ * block is the other trap: a vec2 after a vec3 aligns to 8, so `horizonUv` starts at 52, not 51.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -40,6 +41,11 @@ const MATERIAL: MeshMaterialFactors = {
   metallic: 0.3125,
   roughness: 0.5625,
 };
+const HORIZON = {
+  rect: [0.015625, 0.03125, 0.046875, 0.0625],
+  up: [-0.5, -0.25, -0.75],
+  uv: [0.1875, 0.8125],
+} as const;
 
 describe('MeshBodyUniforms byte offsets', () => {
   it('packs every field at its documented float index', () => {
@@ -52,10 +58,11 @@ describe('MeshBodyUniforms byte offsets', () => {
       sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
       ambient: AMBIENT,
       material: MATERIAL,
+      horizon: HORIZON,
     });
 
     expect(out).toHaveLength(MESH_BODY_UNIFORM_FLOATS);
-    expect(out.byteLength).toBe(176);
+    expect(out.byteLength).toBe(224);
 
     for (let i = 0; i < 16; i++) expect(out[i]).toBe(i + 1); // bytes 0..63
 
@@ -77,7 +84,12 @@ describe('MeshBodyUniforms byte offsets', () => {
     expect(out[38]).toBe(0.5625); // byte 152 — roughnessFactor
     expect(out[39]).toBe(0); // padding: baseColorFactor is a 16-byte-aligned vec3
     expect([out[40], out[41], out[42]]).toEqual([0.875, 0.4375, 0.1875]); // bytes 160..171
-    expect(out[43]).toBe(0); // struct padding
+    expect(out[43]).toBe(0); // padding: horizonRect is 16-byte aligned
+    expect([out[44], out[45], out[46], out[47]]).toEqual(HORIZON.rect); // bytes 176..191
+    expect([out[48], out[49], out[50]]).toEqual(HORIZON.up); // bytes 192..203
+    expect(out[51]).toBe(0); // padding: horizonUv is 8-byte aligned
+    expect([out[52], out[53]]).toEqual(HORIZON.uv); // bytes 208..215
+    expect([out[54], out[55]]).toEqual([0, 0]); // struct padding
   });
 
   it('reads only the first 16 floats of a longer mvp', () => {
@@ -94,6 +106,7 @@ describe('MeshBodyUniforms byte offsets', () => {
       sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
       ambient: AMBIENT,
       material: MATERIAL,
+      horizon: HORIZON,
     });
     expect([out[16], out[17], out[18]]).toEqual([0.5, 0.25, 0.75]);
   });

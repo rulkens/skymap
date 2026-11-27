@@ -1,5 +1,6 @@
 import type { TerrainQueries } from '../../../@types/camera/terrain/TerrainQueries';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { noTerrainHorizon } from '../../../utils/camera/terrain/noTerrainHorizon';
 
 /** One ground per composition: two providers would make the camera's height depend on fold order. */
 export function composeTerrain(
@@ -10,5 +11,5 @@ export function composeTerrain(
       `createLayers: terrain provided twice — ${providers.map((p) => p.name).join(' and ')}`,
     );
   }
-  return providers[0]?.terrain ?? { heightAt: datumOnlyTerrainHeight };
+  return providers[0]?.terrain ?? { heightAt: datumOnlyTerrainHeight, horizonAt: noTerrainHorizon };
 }

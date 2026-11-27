@@ -20,4 +20,18 @@ describe('terrain', () => {
 
     expect(heightAt(asSceneBodyId('earth'), [0, 0, 1])).toBe(1234);
   });
+
+  it('reads no horizon while the no-shadows overlay is on, so a rover lights with its ground', () => {
+    const sample = { atlas: {}, rect: [0, 0, 1, 1], uv: [0.5, 0.5] };
+    let noShadows = true;
+    const { horizonAt } = terrain({
+      surfaceTiles: { stream: { horizonAt: () => sample }, plan: IDLE_SURFACE_TILE_PLAN },
+      noTerrainShadows: () => noShadows,
+    } as unknown as BodyRuntime);
+    const mars = asSceneBodyId('mars');
+
+    expect(horizonAt(mars, [1, 0, 0])).toBeNull();
+    noShadows = false;
+    expect(horizonAt(mars, [1, 0, 0])).toBe(sample);
+  });
 });

@@ -104,6 +104,7 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
     // last state before the loop sleeps still reaches the panel.
     readoutGate: throttleWithTrailingCall(READOUT_INTERVAL_MS, deps.requestRender),
     debugPanelOpen: deps.debugPanelOpen,
+    noTerrainShadows: () => deps.settings().surfaceTileDebug.overlays['terrain-no-shadows'],
     meshBodies: deps.meshBodies,
     terrainPickCursor: createTerrainPickCursor(
       deps.ctx.canvas,

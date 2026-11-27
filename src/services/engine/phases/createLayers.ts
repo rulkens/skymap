@@ -210,11 +210,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.sampledTrailGroups = instances
     .flatMap((instance) => instance.sampledTrails)
     .map((group) => gateTrailGroup(group, state));
-  state.terrainHeightAt = composeTerrain(
+  const terrain = composeTerrain(
     instances.flatMap((instance) =>
       instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
     ),
-  ).heightAt;
+  );
+  state.terrainHeightAt = terrain.heightAt;
+  state.terrainHorizonAt = terrain.horizonAt;
 
   // A source names its slab (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   for (const instance of instances) {

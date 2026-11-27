@@ -107,6 +107,6 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The ground core's camera reads; the datum with none. One provider per composition; boot throws on two. */
+  /** The ground core reads: camera height, mesh bodies' terrain horizon; the datum with none. One provider per composition; boot throws on two. */
   terrain?(runtime: Runtime): TerrainQueries;
 };

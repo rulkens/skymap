@@ -4,9 +4,9 @@
 // the body's self-bounce ('MESH_SELF_BOUNCE', which no probe of its own carries)
 // plus a site shot's extra.
 //
-// LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
-// the sun by the host is the CPU-side scalar 'uniforms.sunVisibleFraction' and nothing
-// else, the same analytic posture every other body-lighting effect here takes.
+// LANDMINE -- no shadow map, no self-shadowing. The sun is dimmed by the host ('sunVisibleFraction',
+// CPU-side) and, on the ground, by the baked terrain horizon at the anchor: one rect + uv + up per
+// body (host axes, as 'sunDirLocal'), so mast and deck dim together with the tile under them.
 //
 // The metal blend is built HERE and handed to 'lib/pbr.wesl' as 'f0'.
 
@@ -14,6 +14,8 @@ import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;
 import package::lib::pbr::pbrDirectSphere;
 import package::lib::pbr::envSplitSum;
+import package::lib::horizonLookup::horizonVisibility;
+import package::lib::horizonLookup::localSunAngles;
 
 @group(0) @binding(0) var<uniform> uniforms: MeshBodyUniforms;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
@@ -23,6 +25,8 @@ import package::lib::pbr::envSplitSum;
 @group(1) @binding(0) var meshSampler: sampler;
 @group(1) @binding(1) var envBrdfLut: texture_2d<f32>;
 @group(1) @binding(2) var lutSampler: sampler;
+// The host's horizon tile atlas (a 1 x 1 stand-in off the ground, where the rect is zero).
+@group(2) @binding(0) var horizonAtlas: texture_2d<f32>;
 
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
@@ -56,9 +60,13 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let diffuseAlbedo = albedo * (1.0 - metallic);
 
   let viewDir = normalize(uniforms.camPosLocal - in.localPos);
+  let sunAngles = localSunAngles(uniforms.horizonUp, uniforms.sunDirLocal);
+  let terrainSun = horizonVisibility(
+    horizonAtlas, uniforms.horizonRect, uniforms.horizonUv, sunAngles.x, sunAngles.y, asin(uniforms.sinSunAngularRadius),
+  ).x;
   let direct =
     pbrDirectSphere(shadingNormal, viewDir, uniforms.sunDirLocal, diffuseAlbedo, roughness, specularF0, uniforms.sinSunAngularRadius) *
-    SUN_IRRADIANCE * uniforms.sunVisibleFraction;
+    SUN_IRRADIANCE * uniforms.sunVisibleFraction * terrainSun;
   let env = envSplitSum(
     shadingNormal, viewDir, diffuseAlbedo, roughness, specularF0, probeTexture, meshSampler, envBrdfLut, lutSampler, ao,
   );
