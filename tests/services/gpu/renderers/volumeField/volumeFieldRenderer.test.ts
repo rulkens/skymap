@@ -6,6 +6,7 @@ import type { GpuVolume } from '../../../../../src/@types/rendering/GpuVolume';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { VolumeFieldDrawInputs } from '../../../../../src/@types/rendering/VolumeFieldDrawInputs';
 import type { VolumeFieldRendererDeps } from '../../../../../src/@types/rendering/VolumeFieldRendererDeps';
+import type { DetailRegionDraw } from '../../../../../src/@types/rendering/DetailRegionDraw';
 
 function fixture(): GpuVolume {
   return {
@@ -319,6 +320,7 @@ describe('createVolumeFieldRenderer draw', () => {
       'draw',
       'setPipeline',
       'drawIndexed',
+      'setPipeline',
       'drawIndexed',
     ]);
     expect(log[0]).toEqual(['setBlendConstant', { r: 0.25, g: 0.25, b: 0.25, a: 0.25 }]);
@@ -387,10 +389,11 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(deps(device));
     const volume = fixture();
+    const before = createdTextures(device).length;
     r.upload('mcpm', volume, MCPM_ENTRY);
     // upload() creates one texture (the palette; the volume arrives finished) and, last among
-    // buffers, [uniformBuffer, fadeBuffer]: the factory already made cornerBuffer/indexBuffer.
-    const textures = createdTextures(device);
+    // buffers, [uniformBuffer, fadeBuffer]: the factory already made its own.
+    const textures = createdTextures(device).slice(before);
     expect(textures).toHaveLength(1);
     const [paletteTexture] = textures;
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
@@ -407,7 +410,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     const r = createVolumeFieldRenderer(deps(device));
     const first = fixture();
     r.upload('mcpm', first, MCPM_ENTRY);
-    const [paletteTexture] = createdTextures(device);
+    const paletteTexture = createdTextures(device).at(-1);
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
     const second = fixture();
     r.upload('mcpm', second, MCPM_ENTRY);
@@ -441,5 +444,111 @@ describe('createVolumeFieldRenderer hasActiveFields', () => {
         () => 0.5,
       ),
     ).toBe(true);
+  });
+});
+
+const STEADY: DetailRegionDraw = {
+  settledLo: [0.2, 0.2, 0.2],
+  settledHi: [0.6, 0.6, 0.6],
+  texScale: [1, 1, 1],
+  voxelMpc: 1,
+  fade: null,
+};
+const FADING: DetailRegionDraw = {
+  ...STEADY,
+  fade: { intoLo: [0, 0, 0], intoHi: [0, 0, 0], outLo: [0, 0, 0], outHi: [0, 0, 0], w: 0.5 },
+};
+
+// The march pipeline built with `REGION` = `variant`, and the group 2 each draw bound.
+function marchPipeline(device: GPUDevice, variant: number): unknown {
+  const { calls, results } = vi.mocked(device.createRenderPipeline).mock;
+  const at = calls.findIndex(([desc]) => desc.fragment?.constants?.REGION === variant);
+  return results[at]?.value;
+}
+function placeholderGroup(device: GPUDevice): unknown {
+  const { calls, results } = vi.mocked(device.createBindGroup).mock;
+  return results[calls.findIndex(([desc]) => desc.label === 'density-region-placeholder')]?.value;
+}
+function drawWith(
+  r: ReturnType<typeof createVolumeFieldRenderer>,
+  region: DetailRegionDraw | null,
+): { pipeline: unknown; group2: unknown } {
+  const pass = makeFakePass();
+  r.draw(
+    pass,
+    new Float32Array(16) as unknown as Mat4,
+    [320, 180],
+    1000,
+    [0, 0, 5],
+    () => fullSettings(),
+    () => 1,
+    () => region,
+    INPUTS,
+  );
+  const group2 = vi.mocked(pass.setBindGroup).mock.calls.find(([index]) => index === 2)?.[1];
+  return { pipeline: vi.mocked(pass.setPipeline).mock.calls.at(-1)?.[0], group2 };
+}
+
+describe('createVolumeFieldRenderer detail regions', () => {
+  // createBindGroup returns a fresh object per call, so a group is told apart by identity.
+  function regionDevice(): GPUDevice {
+    const device = mockDevice();
+    vi.mocked(device.createBindGroup).mockImplementation(() => ({}) as GPUBindGroup);
+    return device;
+  }
+  const regionTexture = () =>
+    ({ createView: vi.fn(() => ({})), destroy: vi.fn() }) as unknown as GPUTexture;
+
+  it('a field with no region draws the base pipeline with the placeholder group 2', () => {
+    const device = regionDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const drawn = drawWith(r, null);
+    expect(drawn.pipeline).toBe(marchPipeline(device, 0));
+    expect(drawn.group2).toBe(placeholderGroup(device));
+  });
+
+  it('a region without a fade picks the steady pipeline; with a fade, the fading one', () => {
+    const device = regionDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', regionTexture());
+    const regionGroup = vi.mocked(device.createBindGroup).mock.results.at(-1)?.value;
+    expect(drawWith(r, STEADY)).toEqual({
+      pipeline: marchPipeline(device, 1),
+      group2: regionGroup,
+    });
+    expect(drawWith(r, FADING)).toEqual({
+      pipeline: marchPipeline(device, 2),
+      group2: regionGroup,
+    });
+    expect(regionGroup).not.toBe(placeholderGroup(device));
+  });
+
+  it('a region value with no attached texture draws the base pipeline', () => {
+    const device = regionDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    expect(drawWith(r, FADING)).toEqual({
+      pipeline: marchPipeline(device, 0),
+      group2: placeholderGroup(device),
+    });
+  });
+
+  it('attachRegion(id, null) drops the binding; a base re-upload keeps it; destroy never destroys a region texture', () => {
+    const device = regionDevice();
+    const r = createVolumeFieldRenderer(deps(device));
+    const texture = regionTexture();
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    r.attachRegion('mcpm', texture);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 1));
+    r.attachRegion('mcpm', null);
+    expect(drawWith(r, STEADY).pipeline).toBe(marchPipeline(device, 0));
+    r.attachRegion('mcpm', texture);
+    r.unload('mcpm');
+    r.destroy();
+    expect(texture.destroy).not.toHaveBeenCalled();
   });
 });

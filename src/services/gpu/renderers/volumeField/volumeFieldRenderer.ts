@@ -6,7 +6,7 @@
  * knobs are read per frame through `settingsOf`, never mirrored. The jitter index, step count and
  * blend weight `w` arrive per draw as `inputs`: this renderer holds no frame counter. Below w = 1
  * one decay triangle scales the target by (1 − w), then every field adds at w, so the target holds
- * a running mean. One shared march pipeline means one bind-group layout, so field bind groups are
+ * a running mean. The march's three `REGION` variants share one layout, so field bind groups are
  * interchangeable. A palette change rewrites the field's LUT in place (views stay valid).
  */
 
@@ -15,6 +15,7 @@ import type { ScalarFieldPaletteId } from '../../../../@types/data/volume/Scalar
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
+import type { RegionEntry } from '../../../../@types/rendering/RegionEntry';
 import type { VolumeFieldRendererDeps } from '../../../../@types/rendering/VolumeFieldRendererDeps';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import { BLUE_NOISE_MASK_SLICES } from '../../../../data/volume/blueNoiseMask';
@@ -29,6 +30,9 @@ import { writeCameraPrefix } from '../../lib/cameraUniforms';
 // Fields through nativeBoxScale (300 B), rounded up to 16 for a uniform struct. Pinned against
 // fragment.wesl by volumeUniformsLayout.parity.test.ts.
 const UNIFORM_BYTES = 304;
+// RegionUniforms, pinned the same way.
+const REGION_UNIFORM_BYTES = 112;
+const REGION_PLACEHOLDER_LABEL = 'density-region-placeholder';
 
 // Caps `inputs.jitterIndex` (never wrapped upstream) so the integer survives the f32 uniform.
 // A multiple of the mask's slice count, so the wrap never breaks the shader's slice cycle.
@@ -97,6 +101,14 @@ export function createVolumeFieldRenderer<Id extends string>({
     addressModeW: 'clamp-to-edge',
   });
   const paletteSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+  // The region texture is toroidal (a brick's slot is its coordinates mod K), hence repeat.
+  const regionSampler = device.createSampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    addressModeW: 'repeat',
+  });
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scalarVolume.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
@@ -134,39 +146,58 @@ export function createVolumeFieldRenderer<Id extends string>({
     ],
   });
 
-  const pipelineLayout = device.createPipelineLayout({
-    label: 'scalarVolume-pipeline-layout',
-    bindGroupLayouts: [group0Bgl, fadeBgl],
+  const group2Bgl = device.createBindGroupLayout({
+    label: 'scalarVolume-bgl-region',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '3d' },
+      },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
   });
 
-  const pipeline = device.createRenderPipeline({
-    label: 'scalarVolume-pipeline',
-    layout: pipelineLayout,
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs_main',
-      buffers: [
-        {
-          arrayStride: 12,
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs_main',
-      targets: [
-        {
-          format: targetFormat,
-          blend: WEIGHTED_ADDITIVE_BLEND,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-      cullMode: 'front', // ← back faces only; see fragment.wesl module header
-    },
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'scalarVolume-pipeline-layout',
+    bindGroupLayouts: [group0Bgl, fadeBgl, group2Bgl],
   });
+
+  // Indexed by REGION: 0 compiles the region code out (the spike measured an empty region branch
+  // at +0.1 ms), 1 the steady march, 2 the fading one. All three are built here, so a WGSL error in
+  // any of them shows at creation, region or not.
+  const marchPipelines = [0, 1, 2].map((variant) =>
+    device.createRenderPipeline({
+      label: `scalarVolume-pipeline-region${variant}`,
+      layout: pipelineLayout,
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs_main',
+        buffers: [
+          {
+            arrayStride: 12,
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+          },
+        ],
+      },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs_main',
+        constants: { REGION: variant },
+        targets: [
+          {
+            format: targetFormat,
+            blend: WEIGHTED_ADDITIVE_BLEND,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+        cullMode: 'front', // ← back faces only; see fragment.wesl module header
+      },
+    }),
+  );
   const decayPipeline = device.createRenderPipeline({
     label: 'scalarVolume-decay-pipeline',
     layout: device.createPipelineLayout({
@@ -200,8 +231,43 @@ export function createVolumeFieldRenderer<Id extends string>({
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<Id, FieldEntry>();
-  // Apart from `fields`, so a base re-upload leaves the region bound. Borrowed: never destroyed here.
-  const regions = new Map<Id, GPUTexture>();
+  // Apart from `fields`, so a base re-upload leaves the region bound. Its texture is borrowed.
+  const regions = new Map<Id, RegionEntry>();
+  const regionScratch = new Float32Array(REGION_UNIFORM_BYTES / 4);
+
+  function createRegionBindGroup(
+    buffer: GPUBuffer,
+    texture: GPUTexture,
+    label: string,
+  ): GPUBindGroup {
+    return device.createBindGroup({
+      label,
+      layout: group2Bgl,
+      entries: [
+        { binding: 0, resource: { buffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: regionSampler },
+      ],
+    });
+  }
+  // Bound for every field drawn without a region: the layout is shared, so group 2 must be set.
+  const placeholderTexture = device.createTexture({
+    label: REGION_PLACEHOLDER_LABEL,
+    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+    format: 'r8unorm',
+    dimension: '3d',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const placeholderBuffer = device.createBuffer({
+    label: REGION_PLACEHOLDER_LABEL,
+    size: REGION_UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM,
+  });
+  const placeholderBindGroup = createRegionBindGroup(
+    placeholderBuffer,
+    placeholderTexture,
+    REGION_PLACEHOLDER_LABEL,
+  );
 
   // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
@@ -301,8 +367,21 @@ export function createVolumeFieldRenderer<Id extends string>({
       });
     },
     attachRegion(id, texture) {
-      if (texture === null) regions.delete(id);
-      else regions.set(id, texture);
+      const existing = regions.get(id);
+      if (texture === null) {
+        existing?.uniformBuffer.destroy();
+        regions.delete(id);
+        return;
+      }
+      const uniformBuffer =
+        existing?.uniformBuffer ??
+        device.createBuffer({
+          label: `density-region-uniform-${id}`,
+          size: REGION_UNIFORM_BYTES,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+      const bindGroup = createRegionBindGroup(uniformBuffer, texture, `density-region-bg-${id}`);
+      regions.set(id, { uniformBuffer, bindGroup });
     },
     unload(id) {
       const entry = fields.get(id);
@@ -340,7 +419,7 @@ export function createVolumeFieldRenderer<Id extends string>({
       cameraPosWorld,
       settingsOf,
       fadeOpacityOf,
-      _regionOf,
+      regionOf,
       inputs,
     ) {
       // WebGPU's default blend constant is 0, which would erase every field.
@@ -351,7 +430,6 @@ export function createVolumeFieldRenderer<Id extends string>({
         pass.setPipeline(decayPipeline);
         pass.draw(3);
       }
-      pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
       // Per-field uniform buffer layout (304 bytes; mat4 alignment):
@@ -436,8 +514,29 @@ export function createVolumeFieldRenderer<Id extends string>({
         // gate above, written into the 16-byte fadeBuffer.
         fadeScratchF32[0] = opacity;
         device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
+        // RegionUniforms: settledLo 0, voxelMpc 12, settledHi 16, fadeW 28, texScale 32, intoLo 48,
+        // intoHi 64, outLo 80, outHi 96; the fade members stay 0 while steady.
+        const region = regionOf(id);
+        const bound = region ? regions.get(id) : undefined;
+        if (region && bound) {
+          regionScratch.fill(0);
+          regionScratch.set(region.settledLo, 0);
+          regionScratch[3] = region.voxelMpc;
+          regionScratch.set(region.settledHi, 4);
+          regionScratch.set(region.texScale, 8);
+          if (region.fade) {
+            regionScratch[7] = region.fade.w;
+            regionScratch.set(region.fade.intoLo, 12);
+            regionScratch.set(region.fade.intoHi, 16);
+            regionScratch.set(region.fade.outLo, 20);
+            regionScratch.set(region.fade.outHi, 24);
+          }
+          device.queue.writeBuffer(bound.uniformBuffer, 0, regionScratch);
+        }
+        pass.setPipeline(marchPipelines[!bound ? 0 : region?.fade ? 2 : 1]!);
         pass.setBindGroup(0, e.bindGroup);
         pass.setBindGroup(1, e.fadeBindGroup);
+        pass.setBindGroup(2, bound ? bound.bindGroup : placeholderBindGroup);
         pass.drawIndexed(CUBE_INDICES.length);
       }
     },
@@ -449,7 +548,10 @@ export function createVolumeFieldRenderer<Id extends string>({
         e.fadeBuffer.destroy();
       }
       fields.clear();
+      for (const r of regions.values()) r.uniformBuffer.destroy();
       regions.clear();
+      placeholderTexture.destroy();
+      placeholderBuffer.destroy();
       cornerBuffer.destroy();
       indexBuffer.destroy();
     },

@@ -116,6 +116,22 @@ struct VolumeUniforms {
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
+// The detail region (DetailRegionDraw): boxes in the stored box's local [0,1]³, the texture
+// repeat-sampled at local · texScale. vec3 alignment alone places every member (no pad members).
+struct RegionUniforms {
+  settledLo: vec3<f32>, voxelMpc: f32,
+  settledHi: vec3<f32>, fadeW: f32,
+  texScale: vec3<f32>,
+  intoLo: vec3<f32>,
+  intoHi: vec3<f32>,
+  outLo: vec3<f32>,
+  outHi: vec3<f32>,
+};
+@group(2) @binding(0) var<uniform> region: RegionUniforms;
+@group(2) @binding(1) var regionTex: texture_3d<f32>;
+@group(2) @binding(2) var regionSampler: sampler;
+override REGION: u32 = 0u;   // 0 base only, 1 steady, 2 fading
+
 const SATURATION_THRESHOLD: f32 = 0.99;
 
 struct FsIn {

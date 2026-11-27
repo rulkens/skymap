@@ -1199,16 +1199,16 @@ No explicit pad members (decision 7). Groups 0 and 1 and the 304 B block are unc
 
 Steps:
 
-- [ ] Renderer tests (spec §12):
+- [x] Renderer tests (spec §12):
   - `a field with no region draws the base pipeline with the placeholder group 2`.
   - `a region without a fade picks the steady pipeline; with a fade, the fading one`.
   - `a region value with no attached texture draws the base pipeline`.
   - `attachRegion(id, null) drops the binding; a base re-upload keeps it; destroy never destroys a
     region texture`.
-- [ ] Parity test, a second block: `every RegionUniforms field lands at its offset`, a fake
+- [x] Parity test, a second block: `every RegionUniforms field lands at its offset`, a fake
       `DetailRegionDraw` with a distinct sentinel per member, read back from the region buffer's
       `writeBuffer`; `struct.size` is 112.
-- [ ] `npm run typecheck:fast`; `npm test -- volumeField volumeUniformsLayout`.
+- [x] `npm run typecheck:fast`; `npm test -- volumeField volumeUniformsLayout`.
 
 **Commit:** `Volume renderer: a region bind group and three pipelines picked per field`
 
