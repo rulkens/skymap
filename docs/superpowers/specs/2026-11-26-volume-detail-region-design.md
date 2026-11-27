@@ -33,7 +33,7 @@ MCPM: 0.48–0.50 ms, against 0.59–0.65 ms for the old large tier.
 The timing checks #1178 deferred (BACKLOG.md:123) were accepted on 2026-11-27; the region's own cost
 is timed on against off in acceptance (§13 check 2).
 
-Non-goals: a region beyond the gate distance (§6.6); mips in the region; an app-side brick cache; target-centred or frozen regions; a debug panel; the dust volume; any change to the
+Non-goals: a region beyond the gate distance (§6.6); mips in the region; an app-side brick cache; target-centred or frozen regions; a debug panel beyond ruling 14's toggle; the dust volume; any change to the
 L1–L3 files, the sidecar or the base path; a finer 2MRS export.
 
 ## 2. Rulings
@@ -64,6 +64,12 @@ Owner, 2026-11-26, at the spec's review, binding:
 12. Full-res brick builds run only on the owner's machine (ruling 6; §5).
 13. Prep (a) runs once the terrain-shadow PR has merged, since both touch the tile files. It merged
     as #1179; this branch merged main after it, so prep (a) is an ordinary prep commit.
+
+Owner, 2026-11-27, binding:
+
+14. A per-field "Colour by level" debug toggle (`VolumeFieldSettings.showLevels`) in the existing
+    cosmic web density tuning section shades each step by where it read; its pipelines, a `LEVELS`
+    override on twins of the three `REGION` variants, are built on first use (§7, §16).
 
 Carried: the region is centred on the camera, clamped into the volume; the name is "detail
 region"; 2MRS works exactly like MCPM; the region is torn down on disable; nothing is deleted from the spike; the deferred #1178
@@ -394,6 +400,8 @@ export type DetailRegionState = {
   /** Every brick inside is in the texture; drawn at weight 1. */
   readonly settled: BrickBox | null;
   readonly fade: DetailRegionFade | null;
+  /** False while the eye is beyond the gate distance: the draw value is null, the bricks stay. */
+  readonly inReach: boolean;
 };
 
 // …/@types/DetailRegionPlanInput.d.ts
@@ -638,11 +646,11 @@ K and reads its bricks again, from the HTTP cache where they were read before.
 struct RegionUniforms {
   settledLo: vec3<f32>, voxelMpc: f32,
   settledHi: vec3<f32>, fadeW: f32,
-  texScale: vec3<f32>, _pad0: f32,
-  intoLo: vec3<f32>, _pad1: f32,
-  intoHi: vec3<f32>, _pad2: f32,
-  outLo: vec3<f32>, _pad3: f32,
-  outHi: vec3<f32>, _pad4: f32,
+  texScale: vec3<f32>,
+  intoLo: vec3<f32>,
+  intoHi: vec3<f32>,
+  outLo: vec3<f32>,
+  outHi: vec3<f32>,
 };
 @group(2) @binding(0) var<uniform> region: RegionUniforms;
 @group(2) @binding(1) var regionTex: texture_3d<f32>;
@@ -657,14 +665,16 @@ override REGION: u32 = 0u;   // 0 base only, 1 steady, 2 fading
 | 16 | `settledHi` | vec3<f32> | `settledHi` |
 | 28 | `fadeW` | f32 | `fade.w` (0 when steady) |
 | 32 | `texScale` | vec3<f32> | `texScale` |
-| 44 | pad | f32 | 0 |
+| 44 | (alignment gap) | | |
 | 48 | `intoLo` | vec3<f32> | `fade.intoLo` |
 | 64 | `intoHi` | vec3<f32> | `fade.intoHi` |
 | 80 | `outLo` | vec3<f32> | `fade.outLo` |
 | 96 | `outHi` | vec3<f32> | `fade.outHi` |
 | 108 | pad to 112 | | |
 
-112 bytes per field. `volumeUniformsLayout.parity.test.ts` pins this block too.
+112 bytes per field. vec3 alignment alone places every member, so the struct declares no pad
+members: `volumeUniformsLayout.parity.test.ts` pins this block too and wants a sentinel for every
+declared member.
 
 **Three pipelines, one module, one layout.** `REGION` picks the variant per field per draw:
 `regionOf(id)` null → 0, `fade` null → 1, else 2. Variant 0 compiles the region code out, so it
@@ -672,7 +682,8 @@ costs what main costs today (the spike measured an empty-region branch at +0.1 m
 the region pipeline is never bound without a region). WGSL counts a binding as used by the entry
 point whatever an override's value, so all three pipelines share the layout `[group0, fade, group2]`
 and a field without a region binds a renderer-owned placeholder group 2 (a 1³ r8 texture and a
-zeroed block).
+zeroed block). Ruling 14's `LEVELS` override (default off, compiled out) gives each variant a twin,
+built the first time a field draws with `showLevels` on; its tints mirror `DENSITY_LEVEL_LEGEND`.
 
 **Per ray** (variants 1 and 2): one ray–box intersection with the settled box, capped at the gate
 distance `tGate = pxPerRad · voxelMpc / |M · dir|`. Beyond `tGate` a pixel spans more than one native
@@ -932,7 +943,8 @@ answers Range. A kiosk on an older desktop build ignores them.
 ## 16. Deliberately left out
 
 - **Debug panel rows** (size, follows, takeover, budget): knobs nobody sets; the spike's panel stays
-  in the spike. The Memory panel shows the region.
+  in the spike. The Memory panel shows the region. The one debug row is ruling 14's per-field
+  "Colour by level" toggle, in the existing density tuning section, its pipelines built on first use.
 - **Target-centred or frozen regions:** the owner ruled camera.
 - **A region beyond the gate distance:** no pixel there is finer than a native voxel (§6.6).
 - **An app-side brick cache:** the HTTP cache serves revisits (§10.1); a Cache Storage layer is new

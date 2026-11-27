@@ -1482,18 +1482,20 @@ no re-review. If the fix touches the builder's output, Task 7.2 runs again.
   `DetailRegionPlanInput`, `DetailRegionPlan`, `DetailRegionGeometry`, `BrickTextureStore`,
   `DetailRegion`, `DetailRegionDeps`, `DetailRegionHost`, `DetailRegionHostDeps`,
   `DetailRegionFrame`; `NpyHeader`, `BrickCutLayout`; `VolumePyramidFormatRow.zeroBlock`;
-  `CosmicWebDensityRuntime.regions`.
+  `CosmicWebDensityRuntime.regions`; `VolumeFieldSettings.showLevels`.
 - Constants: `VOLUME_BRICK_EDGE`, `DENSITY_REGION_BRICKS_BY_TIER`,
   `DETAIL_REGION_ZERO_BRICKS_PER_FRAME`, `DETAIL_REGION_FETCH_CONCURRENCY`, `DETAIL_REGION_FADE_MS`,
   `COSMIC_WEB_DENSITY_TARGET_SCALE`, `ARCHIVE_*`, `ARCHIVE_FETCH_DEADLINE_MS`,
-  `SURFACE_TILE_ARCHIVE_MAX_LEVEL` in its own file.
+  `SURFACE_TILE_ARCHIVE_MAX_LEVEL` in its own file; `DENSITY_LEVEL_LEGEND`.
 - Functions: `readArchiveRange`, `decodeArchiveIndex`, `findArchiveEntry`, `planArchiveParts`,
   `encodeArchiveIndex`, `brickId`, `brickCoordsOf`, `volumeBrickArchivePath`, `planDetailRegion`,
   `detailRegionDraw`, `createBrickTextureStore`, `fetchVolumeBrick`, `fetchVolumePyramidSidecar`,
   `createDetailRegion`, `createDetailRegionHost`, `detailRegionPlanner`, `densityFadeOpacityOf`,
   `readNpyHeader`, `readNpySlab`, `npyPeak`, `cutBrick`, `brickEntryBytes`.
 - Renderer: `attachRegion`; group 2 with the 112 B `RegionUniforms`; three pipelines by `REGION`; the
-  placeholder group 2; the steady and fading march in `fragment.wesl`.
+  placeholder group 2; the steady and fading march in `fragment.wesl`; the `LEVELS` override and
+  its lazily built pipeline twins.
+- UI: `DensityLevelsRow`, the "Colour by level" toggle in the density tuning section.
 - Build and deploy: `tools/volumes/buildVolumeBricks.ts`, `npm run build-mcpm-bricks` and
   `build-2mrs-bricks`; the extractors' d1 tier; the `volume-pyramid` regex with `L0.idx` and the
   `volume-bricks` row.
@@ -1538,5 +1540,9 @@ and 8–14 were not run. What stands in for checks 4, 5 and 7 is the first look 
   picked format was not read. Dragging for 8.5 s, one run each: main 551 frames (median interval
   14.7 ms, p95 19.3), branch 577 frames (median 16.3 ms, p95 18.9); rAF callback median 4.7 ms on
   both. No cost shows within one run's noise; that the drags moved the camera was not confirmed.
-- **Never run in a browser:** the fading pipeline (`REGION` 2) and the base-only pipeline's pixel
-  comparison against main; the level tint's `REGION` 0 and 2 variants.
+- **The fading pipeline (`REGION` 2) ran; parts of it were never looked at.** Read from the code,
+  not observed: `planDetailRegion` turns a first fill into a fade, and the renderer picks variant 2
+  for it, so the fill ran in the owner's first look and on the phone without a validation error.
+  Nobody looked at the `out` shell (only a shift fills it) or at the fade's appearance.
+- **Never run in a browser:** the base-only pipeline's pixel comparison against main; the level
+  tint's `REGION` 0 and 2 variants.
