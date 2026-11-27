@@ -850,8 +850,8 @@ one pass. A breach halts and goes to the owner.
 
 1. **Memory.** The ledger shows exactly §9's bytes per region texture, per format seen, at each
    tier.
-2. **Region on against off, Mac** (owner, 2026-11-27). MCPM large, two cases: camera inside the
-   region and camera just outside the volume (350 Mpc; the run records that the region drew). Bar:
+2. **Region on against off, Mac** (owner, 2026-11-27). MCPM at the medium tier (base volume
+   medium, region K = 5), two cases: camera inside the region and camera just outside the volume (350 Mpc; the run records that the region drew). Bar:
    on ≤ 1.10× off at each; above it, halt and ask the owner.
 3. **Phone, small tier.** Moving at the MCPM inside pose on the OnePlus: ms per frame with the
    region on ≤ 1.10× off (step 1's phone run was not made). The picked format is recorded.

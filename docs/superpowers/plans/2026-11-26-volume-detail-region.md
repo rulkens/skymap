@@ -1364,7 +1364,7 @@ alternating.
 | # | Check | Bar |
 | --- | --- | --- |
 | 1 | Memory: the ledger rows per region texture at each tier, per format seen | spec §9 to the byte: per field K = 5 ASTC 6,144,000 / BC4 6,912,000 / r8 13,824,000; K = 8 25,165,824 / 28,311,552 / 56,623,104; the placeholder 1 B |
-| 2 | Region on vs off, Mac | MCPM large (K = 8, the largest region), two cases: camera inside the region (MCPM inside) and just outside the volume (`…,350,0`, the run records that the region drew); the rig above, ms per draw and fps first | on ≤ 1.10 × off at each; more halts and goes to the owner |
+| 2 | Region on vs off, Mac | MCPM at the medium tier (base volume medium, region K = 5; owner, 2026-11-27), two cases: camera inside the region (MCPM inside) and just outside the volume (`…,350,0`, the run records that the region drew); the rig above, ms per draw and fps first | on ≤ 1.10 × off at each; more halts and goes to the owner |
 | 3 | Phone, small | moving at MCPM inside on the OnePlus, region on against off (Task 1's phone run was not made, so there is no older baseline); the picked format recorded | on ≤ 1.10 × off |
 | 4 | Sharper | converged, region vs main at the same tier, MCPM inside and 2MRS dense: mean Sobel gradient of luminance in the region's footprint ≥ 1.25 × main's |
 | 5 | Never dimmer | same footprint: mean luminance ≥ main's − 0.5 of 255 |
