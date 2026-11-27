@@ -35,7 +35,7 @@ import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
-import { horizonPostRect } from '../../horizon/utils/horizonPostRect';
+import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
 import { NO_HORIZON_RECT } from '../../../textures/data/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
@@ -276,7 +276,6 @@ export function createSurfaceTileRenderer(
       // Night never reads 'empty' (no empty night tile is baked): the sentinel maps to
       // "no tile" like null, so the fragment falls back to the global map.
       const nightRect = tile.standalone.night === 'empty' ? null : tile.standalone.night;
-      const horizon = tile.standalone.horizon;
       const fadeWeight = surfaceTileFadeWeight(tile.albedo, nowMs);
 
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
@@ -317,11 +316,7 @@ export function createSurfaceTileRenderer(
           (tile.edgeCoarser[2] << 2) |
           (tile.edgeCoarser[3] << 3),
         heightCells: (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
-        // Never an ancestor's rect for 'empty': a flat tile under a hilly ancestor stays lit.
-        horizonRect:
-          noShadows || horizon === null || horizon === 'empty'
-            ? NO_HORIZON_RECT
-            : horizonPostRect(horizon),
+        horizonRect: noShadows ? NO_HORIZON_RECT : horizonRectOf(tile.standalone.horizon),
       });
     }
 
