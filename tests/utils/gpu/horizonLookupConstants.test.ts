@@ -4,11 +4,11 @@
  * an imported module's declarations, so the check runs on each linked fragment, not the source.
  */
 import { describe, expect, it } from 'vitest';
-import surfaceTileBare from '../../../../../../src/services/gpu/shaders/bodies/surfaceTile/fragmentBare.wesl?static';
-import surfaceTileEarth from '../../../../../../src/services/gpu/shaders/bodies/surfaceTile/fragmentEarth.wesl?static';
-import earthGlobe from '../../../../../../src/services/gpu/shaders/bodies/earth/fragment.wesl?static';
-import texturedBody from '../../../../../../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
-import { horizonLookupConstants } from '../../../../../../src/layers/body/surfaceTiles/horizon/utils/horizonLookupConstants';
+import surfaceTileBare from '../../../src/services/gpu/shaders/bodies/surfaceTile/fragmentBare.wesl?static';
+import surfaceTileEarth from '../../../src/services/gpu/shaders/bodies/surfaceTile/fragmentEarth.wesl?static';
+import earthGlobe from '../../../src/services/gpu/shaders/bodies/earth/fragment.wesl?static';
+import texturedBody from '../../../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
+import { horizonLookupConstants } from '../../../src/utils/gpu/horizonLookupConstants';
 
 const LINKED = { surfaceTileBare, surfaceTileEarth, earthGlobe, texturedBody };
 

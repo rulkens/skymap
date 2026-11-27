@@ -30,7 +30,7 @@ import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
 import { throttleWithTrailingCall } from '../../utils/throttle/throttleWithTrailingCall';
 import { isCoarsePointer } from '../../utils/browser/isCoarsePointer';
-import { horizonLookupConstants } from './surfaceTiles/horizon/utils/horizonLookupConstants';
+import { horizonLookupConstants } from '../../utils/gpu/horizonLookupConstants';
 
 /** The rate every textual DebugPanel readout refreshes at. */
 const READOUT_INTERVAL_MS = 250;
