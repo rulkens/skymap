@@ -30,11 +30,8 @@ export function planDetailRegion(
   ) as Vec3;
   const lo = seed.map((s, a) => Math.max(0, Math.min(s - Math.floor(k / 2), grid[a]! - k))) as Vec3;
   const target: BrickBox = { lo, hi: lo.map((v, a) => Math.min(v + k, grid[a]!)) as Vec3 };
-  const usable = (box: BrickBox) =>
-    bricksOf(box).every((c) => {
-      const b = brickId(c, grid);
-      return held(b) && !failed(b);
-    });
+  // No failed check: only a fetch marks a brick failed, and a held brick is never fetched.
+  const usable = (box: BrickBox) => bricksOf(box).every((c) => held(brickId(c, grid)));
 
   let settled = prev.settled;
   let fade: DetailRegionFade | null = null;

@@ -82,14 +82,11 @@ describe('planDetailRegion', () => {
     expect(planDetailRegion(START, input({ held: () => true })).state.fade?.into).toEqual(TARGET);
   });
 
-  it('a failed brick blocks its layer', () => {
-    const bad = id(9, 12, 7);
-    const plan = planDetailRegion(
-      START,
-      input({ held: (b) => b !== bad, failed: (b) => b === bad }),
-    );
-    expect(plan.state.fade?.into).toEqual({ lo: [5, 10, 5], hi: [9, 15, 10] });
-    expect(plan.wanted).toEqual([]);
+  it('a failed brick is not wanted', () => {
+    const bad = id(8, 12, 7);
+    const { wanted } = planDetailRegion(START, input({ failed: (b) => b === bad }));
+    expect(wanted).toHaveLength(124);
+    expect(wanted).not.toContain(bad);
   });
 
   it('a shift clips settled to the new target and keeps the rest', () => {
