@@ -125,6 +125,60 @@ describe('planDetailRegion', () => {
     expect(end.busy).toBe(false);
   });
 
+  it('a target shift during a fade keeps its boxes; at w = 1 the settled box is clipped to the new target', () => {
+    const part: BrickBox = { lo: [5, 10, 5], hi: [9, 15, 10] };
+    const before = settle(START, { held: inBox(part) });
+    const step = (prev: DetailRegionState, eyeVox: Vec3) =>
+      planDetailRegion(prev, input({ eyeVox, held: () => true, rampStep: 0.6 }));
+    const start = step(before, MID);
+    expect(start.state.fade).toEqual({ into: TARGET, out: part, w: 0 });
+
+    // Three bricks along +x: the target moves to (8, 10, 5)–(13, 15, 10) under the running fade.
+    const shifted: Vec3 = [504, 600, 360];
+    const mid = step(start.state, shifted);
+    expect(mid.state.fade).toEqual({ into: TARGET, out: part, w: 0.6 });
+
+    const end = step(mid.state, shifted);
+    const kept = { lo: [8, 10, 5], hi: [10, 15, 10] };
+    expect(end.state.settled).toEqual(kept);
+    expect(end.state.fade).toEqual({
+      into: { lo: [8, 10, 5], hi: [13, 15, 10] },
+      out: TARGET,
+      w: 0,
+    });
+  });
+
+  it('a far jump fades the old box out to nothing, shown until w reaches 1', () => {
+    const before = settle(START, { held: inBox(TARGET) });
+    const step = (prev: DetailRegionState) =>
+      planDetailRegion(prev, input({ eyeVox: [10, 10, 10], held: inBox(TARGET), rampStep: 0.6 }));
+    const start = step(before);
+    expect(start.state.settled).toBeNull();
+    expect(start.state.fade).toEqual({ into: null, out: TARGET, w: 0 });
+    expect(start.shown).toEqual([TARGET]);
+
+    const mid = step(start.state);
+    expect(mid.shown).toEqual([TARGET]);
+
+    const end = step(mid.state);
+    expect(end.state).toMatchObject({ settled: null, fade: null });
+    expect(end.shown).toEqual([]);
+  });
+
+  it('a fade does not advance while out of reach', () => {
+    const fading = planDetailRegion(
+      START,
+      input({ eyeVox: [-100, 600, 300], held: () => true, rampStep: 0.5 }),
+    ).state;
+    expect(fading.fade?.w).toBe(0);
+    const away = planDetailRegion(
+      fading,
+      input({ eyeVox: [-400, 600, 300], held: () => true, rampStep: 0.5 }),
+    );
+    expect(away.state.fade).toBe(fading.fade);
+    expect(away.shown).toEqual([]);
+  });
+
   it('wanted is nearest first from the centre brick', () => {
     const { wanted, busy } = planDetailRegion(START, input());
     expect(wanted).toHaveLength(125);
