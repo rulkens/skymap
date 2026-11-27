@@ -125,6 +125,8 @@ export function createTileStreamSubsystem<T, S extends SlotStore>(
     },
     destroy() {
       destroyed = true;
+      // Queued fetches would otherwise start as in-flight ones settle, results thrown away.
+      queue.destroy();
       // Drop our own store-eviction subscription (the constructor wired
       // it up).  Without this, the underlying store would call back
       // into our set-clearing closure post-destroy.

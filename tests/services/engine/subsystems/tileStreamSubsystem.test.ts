@@ -360,6 +360,28 @@ describe('createTileStreamSubsystem', () => {
     expect(destroySlots).toHaveBeenCalledOnce();
   });
 
+  // A torn-down detail region left ~500 queued brick fetches behind: each in-flight
+  // settle started the next, with every result thrown away.
+  it('destroy drops queued fetches: an in-flight settle starts none of them', async () => {
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
+      requestRender: () => {},
+      ...makeBitmapDeps(),
+      concurrency: 1,
+    });
+    let settle!: (bitmap: ImageBitmap | null) => void;
+    const running = () => new Promise<ImageBitmap | null>((resolve) => (settle = resolve));
+    atlas.enqueueFetch({ key: 'running', priority: 2, fetcher: running, onResult: () => {} });
+    const queued = vi.fn(async () => makeFakeBitmap());
+    atlas.enqueueFetch({ key: 'queued', priority: 1, fetcher: queued, onResult: () => {} });
+
+    atlas.destroy();
+    settle(makeFakeBitmap());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(queued).not.toHaveBeenCalled();
+  });
+
   it('release fires for a payload that resolves after destroy()', async () => {
     const deps = makeBitmapDeps();
     const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
