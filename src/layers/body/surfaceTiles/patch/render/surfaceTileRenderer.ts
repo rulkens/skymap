@@ -36,7 +36,7 @@ import { SURFACE_TILE_PRODUCTS } from '../../format/data/surfaceTileProducts';
 import { SURFACE_TILE_LANE_SPECS } from '../../stream/data/surfaceTileLaneSpecs';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import { horizonRectOf } from '../../horizon/utils/horizonRectOf';
-import { NO_HORIZON_RECT } from '../../../textures/data/horizonRects';
+import { NO_HORIZON_RECT } from '../../../../../data/gpu/horizonRects';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 import type { Vec4 } from '../../../../../@types/math/Vec4';
 

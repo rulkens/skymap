@@ -1,4 +1,4 @@
-import type { Vec4 } from '../../../../@types/math/Vec4';
+import type { Vec4 } from '../../@types/math/Vec4';
 
 /** The `rect` `lib/horizonLookup.wesl` reads as "no horizon data": it skips the map and reads
  *  fully lit, as the surface looks without one. Tiles pack it for an `'empty'` or unresident

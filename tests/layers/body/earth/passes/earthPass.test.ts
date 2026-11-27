@@ -33,7 +33,7 @@ import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import {
   NO_HORIZON_RECT,
   WHOLE_GLOBE_HORIZON_RECT,
-} from '../../../../../src/layers/body/textures/data/horizonRects';
+} from '../../../../../src/data/gpu/horizonRects';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
