@@ -1,0 +1,21 @@
+.root {
+  composes: end from '../sidebar.module.css';
+}
+
+.scroll {
+  composes: sections from '../sidebar.module.css';
+}
+
+/* reset / clear trace, under the run/seed/weight toggles. */
+.simActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border-divider);
+}
+
+.simActionButton {
+  composes: blockButton from '../../../../../shared/src/components/common/shared.module.css';
+  font-size: var(--font-size-sm);
+}

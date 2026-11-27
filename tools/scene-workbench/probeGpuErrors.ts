@@ -3,7 +3,7 @@
  *   npx tsx tools/scene-workbench/probeGpuErrors.ts   # or: npm run scene-workbench:probe
  * Structure and infra (dev server, chromium-channel launch with a headless-shell
  * fallback, the `requestDevice` monkey-patch, the step queue + settle-frame +
- * drain loop) mirror `tools/mcpm-workbench/probeGpuErrors.ts` — copied for its
+ * drain loop) mirror `packages/mcpm-workbench/probeGpuErrors.ts` — copied for its
  * structure, not its content. `?probe` makes `watchRegistrySaga` install a
  * synthetic one-group registry (`syntheticProbeScene.ts`), so this never
  * touches the network or `public/data`.
@@ -74,7 +74,7 @@ function findFreePort(): Promise<number> {
 
 /**
  * Start the tool's OWN Vite server on an ephemeral port — see
- * `tools/mcpm-workbench/probeGpuErrors.ts`'s own doc for why (the worktree
+ * `packages/mcpm-workbench/probeGpuErrors.ts`'s own doc for why (the worktree
  * "which server did I just measure" trap, and never colliding with a dev
  * server already parked on 5600).
  */

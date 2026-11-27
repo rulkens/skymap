@@ -32,7 +32,7 @@ export const WORKBENCHES: readonly Workbench[] = [
     publicPath: '/mcpm/',
     script: 'mcpm-workbench',
     port: 5500,
-    manual: 'tools/mcpm-workbench/README.md',
+    manual: 'packages/mcpm-workbench/README.md',
     picture: {
       title: 'The MCPM workbench a few hundred steps into a run',
       caption:

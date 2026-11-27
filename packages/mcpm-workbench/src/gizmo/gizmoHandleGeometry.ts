@@ -1,0 +1,90 @@
+import type { GizmoHandleGeometry } from '../../@types/gizmo/GizmoHandleGeometry';
+import type { GridBox } from '../../@types/grid/GridBox';
+import type { Handle } from '../../@types/gizmo/Handle';
+import type { RingHandle } from '../../@types/gizmo/RingHandle';
+import type { Vec3 } from '../../../shared/src/@types/math/Vec3';
+import { boxHalfExtentMpc } from '../grid/box/boxHalfExtentMpc';
+import { RING_RADIUS_ARROW_MULTIPLE } from './ringRadiusArrowMultiple.constant';
+
+function addScaled(center: Readonly<Vec3>, dir: Readonly<Vec3>, scale: number): Vec3 {
+  return [center[0] + dir[0] * scale, center[1] + dir[1] * scale, center[2] + dir[2] * scale];
+}
+
+function translateHandle(
+  axis: 0 | 1 | 2,
+  axisDir: Readonly<Vec3>,
+  center: Readonly<Vec3>,
+  arrowLengthMpc: number,
+): Handle {
+  return {
+    id: { kind: 'translate', axis },
+    positionMpc: addScaled(center, axisDir, arrowLengthMpc),
+    axisDir: [axisDir[0], axisDir[1], axisDir[2]],
+  };
+}
+
+function resizeHandle(
+  axis: 0 | 1 | 2,
+  sign: 1 | -1,
+  axisDir: Readonly<Vec3>,
+  center: Readonly<Vec3>,
+  half: Readonly<Vec3>,
+): Handle {
+  return {
+    id: { kind: 'resize', axis, sign },
+    positionMpc: addScaled(center, axisDir, sign * half[axis]),
+    axisDir: [axisDir[0], axisDir[1], axisDir[2]],
+  };
+}
+
+function rotateHandle(
+  axis: 0 | 1 | 2,
+  axisDir: Readonly<Vec3>,
+  center: Readonly<Vec3>,
+  radiusMpc: number,
+): RingHandle {
+  return {
+    id: { kind: 'rotate', axis },
+    centerMpc: [center[0], center[1], center[2]],
+    axisDir: [axisDir[0], axisDir[1], axisDir[2]],
+    radiusMpc,
+  };
+}
+
+/**
+ * gizmoHandleGeometry — world-space position/direction for every gizmo handle, built from
+ * `box` and the caller-supplied axis directions (UNIT_AXES, or `boxBasisVectors(box.rotation)`
+ * for a rotated box — this function doesn't care which). `arrowLengthMpc` is the translate-arrow reach, computed by the
+ * caller via gizmoArrowLengthMpc.ts so it holds a constant screen size instead of scaling with
+ * the box; resize stays box-scaled, rotate rides arrowLengthMpc too (RING_RADIUS_ARROW_MULTIPLE above).
+ */
+export function gizmoHandleGeometry(
+  box: GridBox,
+  axes: readonly [Readonly<Vec3>, Readonly<Vec3>, Readonly<Vec3>],
+  arrowLengthMpc: number,
+): GizmoHandleGeometry {
+  const half = boxHalfExtentMpc(box.sizeMpc);
+  const center = box.centerMpc;
+  const ringRadiusMpc = RING_RADIUS_ARROW_MULTIPLE * arrowLengthMpc;
+
+  return {
+    translate: [
+      translateHandle(0, axes[0], center, arrowLengthMpc),
+      translateHandle(1, axes[1], center, arrowLengthMpc),
+      translateHandle(2, axes[2], center, arrowLengthMpc),
+    ],
+    resize: [
+      resizeHandle(0, 1, axes[0], center, half),
+      resizeHandle(0, -1, axes[0], center, half),
+      resizeHandle(1, 1, axes[1], center, half),
+      resizeHandle(1, -1, axes[1], center, half),
+      resizeHandle(2, 1, axes[2], center, half),
+      resizeHandle(2, -1, axes[2], center, half),
+    ],
+    rotate: [
+      rotateHandle(0, axes[0], center, ringRadiusMpc),
+      rotateHandle(1, axes[1], center, ringRadiusMpc),
+      rotateHandle(2, axes[2], center, ringRadiusMpc),
+    ],
+  };
+}

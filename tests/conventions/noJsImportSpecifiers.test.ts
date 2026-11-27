@@ -13,6 +13,7 @@ const ROOTS = [
   'packages/shared/src',
   'packages/shared/tests',
   'tools',
+  'packages/mcpm-workbench',
   'packages/website/src',
   'packages/desktop/src',
   'packages/desktop/scripts',

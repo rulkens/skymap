@@ -33,6 +33,9 @@ const testFiles = walkTsFiles(join(ROOT, 'tests'));
 const others = [
   ...testFiles.map((t) => join(ROOT, 'tests', t)),
   ...walkTsFiles(join(ROOT, 'tools')).map((t) => join(ROOT, 'tools', t)),
+  ...walkTsFiles(join(ROOT, 'packages/mcpm-workbench')).map((t) =>
+    join(ROOT, 'packages/mcpm-workbench', t),
+  ),
 ];
 
 const areaStats = new Map<string, { files: number; code: number }>();

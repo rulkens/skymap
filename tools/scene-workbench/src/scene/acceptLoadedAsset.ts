@@ -8,7 +8,7 @@ import type { GpuAsset, RenderResources } from '../render/renderResources';
  * `cancellation.aborted` (set in the worker's `finally`) covers cancellation;
  * `resources.epoch !== myEpoch` independently covers a dispose with no
  * cancellation at all (Viewport's unmount). Shape and full reasoning:
- * `tools/mcpm-workbench/src/state/scene/acceptBuiltHarness.ts`.
+ * `packages/mcpm-workbench/src/state/scene/acceptBuiltHarness.ts`.
  */
 export function acceptLoadedAsset(
   built: GpuAsset,

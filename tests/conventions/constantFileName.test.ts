@@ -22,7 +22,7 @@ type Scope = {
 const SCOPES: readonly Scope[] = [
   {
     name: 'mcpm-workbench',
-    roots: ['tools/mcpm-workbench/src'],
+    roots: ['packages/mcpm-workbench/src'],
     allowed: [],
   },
 ];

@@ -1,0 +1,112 @@
+/**
+ * watchSceneSaga structural-trigger coverage: `GRID_FIXTURES`/`SIM_FIXTURES` are
+ * typed `{ [K in keyof typeof slice.actions]: … }`, so a new grid/sim action without
+ * a fixture fails to compile. For every fixture, trigger-list membership must agree
+ * with "does this action move a structural field" in BOTH directions — a missing one
+ * silently stops rebuilding; a wrongly listed one tears down a running sim for nothing.
+ */
+import { describe, expect, it } from 'vitest';
+import type { Action } from '@reduxjs/toolkit';
+import type { GridBox } from '../../../../@types/grid/GridBox';
+import { gridShapeOf } from '../../../../src/state/grid/gridShapeOf';
+import { catalogLoaded, setWeightMode } from '../../../../src/state/catalog/catalogSlice';
+import { defaultGridSlice, gridSlice } from '../../../../src/state/grid/gridSlice';
+import { defaultSimSlice, simSlice } from '../../../../src/state/sim/simSlice';
+import { SCENE_REBUILD_TRIGGERS } from '../../../../src/state/scene/watchSceneSaga';
+
+const TRIGGER_TYPES: Set<string> = new Set(SCENE_REBUILD_TRIGGERS.map((action) => action.type));
+
+const SAMPLE_BOX: GridBox = {
+  centerMpc: [10, -5, 3],
+  sizeMpc: [300, 300, 300],
+  dims: [256, 256, 256],
+  voxelSizeMpc: 1.171875,
+  rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
+};
+
+// One fixture per grid action — the mapped type is the exhaustiveness check:
+// add a case reducer to gridSlice without adding a row here and this object
+// literal fails to typecheck.
+const GRID_FIXTURES: {
+  [K in keyof typeof gridSlice.actions]: ReturnType<(typeof gridSlice.actions)[K]>;
+} = {
+  setVoxelSizeMpc: gridSlice.actions.setVoxelSizeMpc(1.5),
+  setPaddingMpc: gridSlice.actions.setPaddingMpc(10),
+  setManualCenterMpc: gridSlice.actions.setManualCenterMpc([1, 2, 3]),
+  setManualSizeMpc: gridSlice.actions.setManualSizeMpc([10, 20, 30]),
+  setRotation: gridSlice.actions.setRotation([0, 0, Math.SQRT1_2, Math.SQRT1_2]),
+  installImportedBox: gridSlice.actions.installImportedBox(SAMPLE_BOX),
+  fitBoxToCatalog: gridSlice.actions.fitBoxToCatalog({
+    bounds: { min: [0, 0, 0], max: [10, 10, 10] },
+    lanes: { agentCount: 0, pointCount: 0 },
+  }),
+  setAutoFitPercent: gridSlice.actions.setAutoFitPercent(90),
+  setResolvedGrid: gridSlice.actions.setResolvedGrid({ resolvedElement: 'f32' }),
+  setMaxBufferBytes: gridSlice.actions.setMaxBufferBytes(123),
+};
+
+function isGridStructural(next: typeof defaultGridSlice): boolean {
+  return (
+    JSON.stringify(gridShapeOf(next)) !== JSON.stringify(gridShapeOf(defaultGridSlice)) ||
+    next.importedBox !== defaultGridSlice.importedBox
+  );
+}
+
+describe('grid-slice actions vs SCENE_REBUILD_TRIGGERS', () => {
+  for (const action of Object.values(GRID_FIXTURES) as Action[]) {
+    it(`${action.type}: trigger membership matches whether it moves gridShapeOf/importedBox`, () => {
+      const next = gridSlice.reducer(defaultGridSlice, action);
+      expect(TRIGGER_TYPES.has(action.type)).toBe(isGridStructural(next));
+    });
+  }
+});
+
+const SIM_FIXTURES: {
+  [K in keyof typeof simSlice.actions]: ReturnType<(typeof simSlice.actions)[K]>;
+} = {
+  setSimParam: simSlice.actions.setSimParam({ key: 'senseSpreadDeg', value: 99 }),
+  setAgentCount: simSlice.actions.setAgentCount(2_000_000),
+  setInitMode: simSlice.actions.setInitMode('uniform'),
+  setRunning: simSlice.actions.setRunning(false),
+  setSeed: simSlice.actions.setSeed(2),
+  resetStepCount: simSlice.actions.resetStepCount(),
+  incrementStep: simSlice.actions.incrementStep(),
+};
+
+// createMcpmHarness's own three build-time inputs from SimSlice — the sim fields
+// buildKey used to serialize, now hand-checked the same way gridShapeOf is above.
+function simStructuralFieldsOf(sim: typeof defaultSimSlice) {
+  return { agentCount: sim.agentCount, initMode: sim.initMode, seed: sim.seed };
+}
+
+function isSimStructural(next: typeof defaultSimSlice): boolean {
+  return (
+    JSON.stringify(simStructuralFieldsOf(next)) !==
+    JSON.stringify(simStructuralFieldsOf(defaultSimSlice))
+  );
+}
+
+describe('sim-slice actions vs SCENE_REBUILD_TRIGGERS', () => {
+  for (const action of Object.values(SIM_FIXTURES) as Action[]) {
+    it(`${action.type}: trigger membership matches whether it moves agentCount/initMode/seed`, () => {
+      const next = simSlice.reducer(defaultSimSlice, action);
+      expect(TRIGGER_TYPES.has(action.type)).toBe(isSimStructural(next));
+    });
+  }
+});
+
+/**
+ * The two catalog-slice triggers don't fit the structural-field-diff pattern above
+ * (`catalogLoaded` isn't a value-diff trigger at all — see `watchSceneSaga.ts`'s own
+ * docblock; `setWeightMode` moves `catalog.weightMode`, a field neither `gridShapeOf`
+ * nor `isSimStructural` touches), so this is a plain membership check instead: without
+ * it, removing either from `SCENE_REBUILD_TRIGGERS` passes every OTHER test in this
+ * file yet silently stops a catalog load or a weight-mode change from ever rebuilding.
+ */
+describe('catalog-slice triggers are present in SCENE_REBUILD_TRIGGERS', () => {
+  for (const actionCreator of [catalogLoaded, setWeightMode]) {
+    it(`${actionCreator.type} is a trigger`, () => {
+      expect(TRIGGER_TYPES.has(actionCreator.type)).toBe(true);
+    });
+  }
+});

@@ -11,7 +11,11 @@ import { INLINE_TYPE_FILES } from '../helpers/conventions/inlineTypeFiles';
 import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
 
 const SKIP_NAMES = new Set(['node_modules', '@types', 'types']);
-const SKIP_PATHS = new Set(['tools/stars-rs/target', 'tools/vendor-types']);
+const SKIP_PATHS = new Set([
+  'tools/stars-rs/target',
+  'tools/vendor-types',
+  'packages/mcpm-workbench/tests',
+]);
 
 function sourceFilesUnder(root: string): string[] {
   const out: string[] = [];
@@ -32,6 +36,7 @@ const files = [
   ...sourceFilesUnder('src'),
   ...sourceFilesUnder('packages/shared/src'),
   ...sourceFilesUnder('tools'),
+  ...sourceFilesUnder('packages/mcpm-workbench'),
   ...sourceFilesUnder('packages/website/src'),
   ...sourceFilesUnder('packages/desktop/src'),
   ...sourceFilesUnder('packages/desktop/scripts'),

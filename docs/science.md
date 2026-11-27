@@ -96,7 +96,7 @@ Three kinds of content share the scene; this section says which is which.
 ### Volumes and flow
 
 - **Raymarch**: the MCPM and CF-4 cubes march front-to-back in 128 jittered steps at half resolution, then upsample into HDR; each field has its own palette (inferno, coolwarm) plus intensity, contrast, trim, density, and exposure controls ([scalarVolume](../src/services/gpu/shaders/scalarVolume/fragment.wesl)).
-- **Baked, not simulated**: the in-app MCPM layer renders the pre-baked trace cube; the full simulation, a Woodcock-tracking volumetric path tracer, lives in the workbench at [/mcpm/](https://skymap.rulkens.com/mcpm/) ([tools/mcpm-workbench/](../tools/mcpm-workbench/)).
+- **Baked, not simulated**: the in-app MCPM layer renders the pre-baked trace cube; the full simulation, a Woodcock-tracking volumetric path tracer, lives in the workbench at [/mcpm/](https://skymap.rulkens.com/mcpm/) ([packages/mcpm-workbench/](../packages/mcpm-workbench/)).
 - **Flow**: tracer particles advect through the CF4++ velocity texture in a compute pass; trails draw as additive screen-space ribbons coloured by speed ([compute.wesl](../src/services/gpu/shaders/flow/compute.wesl)).
 
 ### Labels and picking

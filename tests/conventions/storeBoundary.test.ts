@@ -25,10 +25,10 @@ type Scope = {
 const SCOPES: readonly Scope[] = [
   {
     name: 'mcpm-workbench',
-    roots: ['tools/mcpm-workbench/src/ui'],
-    containers: ['tools/mcpm-workbench/src/ui/containers'],
-    storeModules: ['tools/mcpm-workbench/src/store/hooks', 'react-redux'],
-    compositionRoots: ['tools/mcpm-workbench/src/ui/App/App.tsx'],
+    roots: ['packages/mcpm-workbench/src/ui'],
+    containers: ['packages/mcpm-workbench/src/ui/containers'],
+    storeModules: ['packages/mcpm-workbench/src/store/hooks', 'react-redux'],
+    compositionRoots: ['packages/mcpm-workbench/src/ui/App/App.tsx'],
     allowed: [],
   },
 ];

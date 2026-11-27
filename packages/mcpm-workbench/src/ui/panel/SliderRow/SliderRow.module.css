@@ -1,0 +1,7 @@
+.tipProse {
+  composes: tipProse from '../../../../../shared/src/components/common/ParamSlider/ParamSlider.module.css';
+}
+
+.tipPath {
+  composes: tipPath from '../../../../../shared/src/components/common/ParamSlider/ParamSlider.module.css';
+}

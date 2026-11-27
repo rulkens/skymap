@@ -17,6 +17,12 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "@webgpu/types", "vite/client"]
   },
-  "include": ["src", "tests", "packages/shared/src", "packages/shared/tests"],
+  "include": [
+    "src",
+    "tests",
+    "packages/shared/src",
+    "packages/shared/tests",
+    "packages/mcpm-workbench/tests"
+  ],
   "exclude": ["tools"]
 }

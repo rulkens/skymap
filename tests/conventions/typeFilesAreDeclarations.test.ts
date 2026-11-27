@@ -15,6 +15,7 @@ const TYPES_DIRS = [
   'src',
   'packages/shared/src',
   'tools',
+  'packages/mcpm-workbench',
   'packages/website/src',
   'packages/desktop/src',
 ].flatMap((root) => dirsNamed(root, '@types'));

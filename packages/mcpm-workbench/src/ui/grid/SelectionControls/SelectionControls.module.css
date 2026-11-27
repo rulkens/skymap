@@ -1,0 +1,17 @@
+/* "auto fit" — a one-shot command, styled like the Simulation section's
+   reset/clear-trace pair: the same class of control, not a slider or toggle. */
+.autoFitButton {
+  composes: blockButton from '../../../../../shared/src/components/common/shared.module.css';
+  font-size: var(--font-size-sm);
+}
+
+/* The padding field, in the chrome every sidebar dropdown shares. */
+.field {
+  composes: control from '../../../../../../src/components/common/formControl.module.css';
+  inline-size: 8ch;
+  cursor: text;
+}
+
+.field[aria-invalid='true'] {
+  border-color: var(--tool-status-bad);
+}
