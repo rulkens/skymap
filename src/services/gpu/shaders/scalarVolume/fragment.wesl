@@ -139,6 +139,13 @@ struct FsIn {
   @location(1) worldPos: vec3<f32>,
 };
 
+// A box's span along the ray, ended at tGate: past it a pixel spans more than one native voxel,
+// so the base serves it. A zero-sized box gives an empty span, never a match (tests are half-open).
+fn regionSpan(origin: vec3<f32>, dir: vec3<f32>, boxLo: vec3<f32>, boxHi: vec3<f32>, tGate: f32) -> vec2<f32> {
+  let hit = intersectAabb(origin, dir, boxLo, boxHi);
+  return vec2<f32>(hit.x, min(hit.y, tGate));
+}
+
 // Windowing transform for the per-step voxel sample.  Returns a
 // (signedT, visibility) pair packed into a vec2:
 //
@@ -182,13 +189,6 @@ struct FsIn {
 // midpoint stretch toward t=1, voxels below stretch toward t=0; at
 // center=0 every voxel is above the center so they all stretch
 // monotonically toward t=1.
-// A box's span along the ray, ended at tGate: past it a pixel spans more than one native voxel,
-// so the base serves it. A zero-sized box gives an empty span, never a match (tests are half-open).
-fn regionSpan(origin: vec3<f32>, dir: vec3<f32>, boxLo: vec3<f32>, boxHi: vec3<f32>, tGate: f32) -> vec2<f32> {
-  let hit = intersectAabb(origin, dir, boxLo, boxHi);
-  return vec2<f32>(hit.x, min(hit.y, tGate));
-}
-
 fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
   let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
