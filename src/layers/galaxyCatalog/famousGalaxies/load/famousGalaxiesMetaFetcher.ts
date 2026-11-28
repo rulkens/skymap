@@ -11,7 +11,7 @@
  * the fetcher honest about HTTP status lets the retry policy distinguish
  * "really gone" (404, give up) from "transient flake" (5xx, retry).
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousGalaxiesPayload } from '../@types/FamousGalaxiesPayload';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';

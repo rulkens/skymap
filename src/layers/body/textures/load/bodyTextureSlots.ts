@@ -6,7 +6,7 @@
  * parse of the composite key.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { bodyTextureFetcher } from './bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../data/bodyTextureKeys';
 import { hostBodyId } from '../present/hostBodyId';
@@ -14,7 +14,7 @@ import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 import { isTexturedBodyKey } from '../present/isTexturedBodyKey';
 import { closeBitmap } from '../../../../utils/gpu/closeBitmap';
 
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { BodyTextureReq } from '../@types/BodyTextureReq';
 import type { BodyTextureKey } from '../@types/BodyTextureKey';
 import type { BodyTextureSlotKey } from '../../@types/BodyTextureSlotKey';

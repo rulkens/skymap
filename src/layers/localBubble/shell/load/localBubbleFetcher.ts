@@ -3,7 +3,7 @@
  * the `.shell` mesh is baked once at a fixed triangle budget, not per-tier
  * like the point catalogs.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { ShellMesh } from '../../@types/ShellMesh';
 import { decodeShellMesh } from '../data/shellMeshFormat';
 import {

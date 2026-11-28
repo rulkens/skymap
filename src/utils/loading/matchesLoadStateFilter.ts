@@ -7,7 +7,7 @@
  * own.
  */
 
-import type { LoadState } from '../../@types/loading/LoadState';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 import type { LoadStateFilter } from '../../@types/loading/LoadStateFilter';
 
 export function matchesLoadStateFilter(

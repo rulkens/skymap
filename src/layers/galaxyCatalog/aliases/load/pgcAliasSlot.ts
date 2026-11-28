@@ -11,9 +11,9 @@
  * Promise the shim returns; nothing engine-side to mutate, and so no deps.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { pgcAliasFetcher } from './pgcAliasFetcher';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../@types/PgcAliasMap';
 
 export function createPgcAliasSlot(): AssetSlot<PgcAliasMap, void> {

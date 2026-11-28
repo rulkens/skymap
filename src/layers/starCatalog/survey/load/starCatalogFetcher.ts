@@ -6,7 +6,7 @@
  * `Octree` the renderer draws. A seeded catalog (`binBaseName` null) is built in code and
  * has nothing to fetch, so the guard below excludes it.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { StarCatalogReq } from '../@types/StarCatalogReq';
 import type { Octree } from '../../../../@types/octree/Octree';
 import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';

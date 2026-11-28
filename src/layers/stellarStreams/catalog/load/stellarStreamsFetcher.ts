@@ -2,7 +2,7 @@
  * stellarStreamsFetcher — the particle bin. It runs the pair check only when the meta has
  * committed first; when the bin lands first, the meta fetcher runs it instead.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { StellarStreamsPayload } from '../@types/StellarStreamsPayload';
 import {
   dataUrl,

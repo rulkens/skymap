@@ -1,4 +1,4 @@
-import type { AssetSlot } from './AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 /**
  * Public surface of the load-progress emitter.  `emit()` is exported so

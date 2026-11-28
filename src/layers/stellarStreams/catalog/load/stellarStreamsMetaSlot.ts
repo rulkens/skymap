@@ -1,9 +1,9 @@
 /** stellarStreamsMetaSlot — the meta sidecar's slot: commit builds the pick ribbons, release frees them. */
 
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { StellarStreamMeta } from '../@types/StellarStreamMeta';
 import type { StellarStreamsRibbonPickRenderer } from '../../streaks/@types/StellarStreamsRibbonPickRenderer';
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { stellarStreamsMetaFetcher } from './stellarStreamsMetaFetcher';
 
 export function createStellarStreamsMetaSlot(

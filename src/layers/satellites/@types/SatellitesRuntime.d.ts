@@ -2,7 +2,7 @@
  * The satellites Layer's whole runtime: the propagator, the dot renderer, the orbit-ring renderer
  * (its own instance, not core's) and the catalog slot.
  */
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { OrbitTrailRenderer } from '../../../@types/rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { SatellitePointRenderer } from '../points/@types/SatellitePointRenderer';
 import type { SatellitePropagator } from '../sweep/@types/SatellitePropagator';

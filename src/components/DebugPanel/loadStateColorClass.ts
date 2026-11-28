@@ -11,7 +11,7 @@
  * `noUncheckedIndexedAccess`) never actually happens.
  */
 
-import type { LoadState } from '../../@types/loading/LoadState';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 import colors from './loadStateColors.module.css';
 
 const BY_KIND: Record<LoadState<unknown>['kind'], string> = {

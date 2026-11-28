@@ -4,8 +4,8 @@
  * A relative URL, like `loadEnvBrdfLut`: the mask rides the static shell, not the R2 manifest.
  */
 
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { fetchWithProgress } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 
 const MASK_URL = '/lut/blueNoise.bin';

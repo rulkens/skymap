@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { satellitesSearch } from '../../../../src/layers/satellites/focus/present/satellitesSearch';
-import { createAssetSlot } from '../../../../src/services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../packages/shared/src/services/loading/AssetSlot';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 
 describe('satellitesSearch', () => {

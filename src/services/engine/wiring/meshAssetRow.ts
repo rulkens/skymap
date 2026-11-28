@@ -8,7 +8,7 @@ import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
 import type { MeshBodiesSink } from '../../../@types/engine/layer/MeshBodiesSink';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
-import { createAssetSlot } from '../../loading/AssetSlot';
+import { createAssetSlot } from '../../../../packages/shared/src/services/loading/AssetSlot';
 import { meshFetcher } from '../../loading/fetchers/meshFetcher';
 import { clampTier } from '../../../utils/math/clampTier';
 import { closeMeshAssetBitmaps } from '../../../utils/meshBodies/closeMeshAssetBitmaps';

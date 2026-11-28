@@ -8,7 +8,7 @@ import type { RingRenderer } from '../rings/@types/RingRenderer';
 import type { CloudShellRenderer } from '../clouds/@types/CloudShellRenderer';
 import type { AtmosphereShellRenderer } from '../atmosphere/@types/AtmosphereShellRenderer';
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { BodyTextureReq } from '../textures/@types/BodyTextureReq';
 import type { BodyTextureSlotKey } from './BodyTextureSlotKey';
 import type { SurfaceTileStream } from '../surfaceTiles/stream/@types/SurfaceTileStream';

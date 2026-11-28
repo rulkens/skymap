@@ -23,7 +23,7 @@ import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { AssetKey } from '../../loading/AssetKey';
-import type { AssetSlot } from '../../loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { SlabRow } from '../frame/SlabRow';
 import type { VisibilityEntry } from '../layer/VisibilityEntry';

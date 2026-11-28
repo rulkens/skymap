@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 import type { LoadStateFilter } from '../../@types/loading/LoadStateFilter';
 import { aggregateRegistry } from '../../services/loading/aggregateRegistry';
 import { matchesLoadStateFilter } from '../../utils/loading/matchesLoadStateFilter';

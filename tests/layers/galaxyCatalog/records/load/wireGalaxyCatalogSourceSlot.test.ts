@@ -23,7 +23,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCa
 import { installSlotReadyWake } from '../../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { LayerCoreDeps } from '../../../../../src/@types/engine/layer/LayerCoreDeps';
 import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { AssetSlot } from '../../../../../src/@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';

@@ -5,12 +5,12 @@
  * galaxies dropping back to their atlas tiles (ordering comment in `commit`).
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { createHiResFamousTexture } from '../../hiResFamous/load/hiResFamousTexture';
 import { createHiResFamousSubsystem } from '../../hiResFamous/subsystems/hiResFamousSubsystem';
 import { HI_RES_LAYER_COUNT } from '../../hiResFamous/data/hiResLayerCount';
 
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { HiResFamousPair } from '../../hiResFamous/@types/HiResFamousPair';
 import type { HiResFamousReq } from '../../hiResFamous/@types/HiResFamousReq';
 import type { TexturedDiskRenderer } from '../textured/@types/TexturedDiskRenderer';

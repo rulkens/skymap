@@ -11,7 +11,7 @@
  * want (a renderer-ready GalaxyCatalog) and lets the buffer be GC'd after
  * decode without any explicit handoff.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
 import type { GalaxyCatalog } from '../../../../../packages/shared/src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { decodeGalaxyCatalog } from '../data/galaxyCatalogFormat';

@@ -12,7 +12,7 @@
 import type { GpuTimingService } from '../../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../FrameStats';
 import type { CameraDebugSnapshot } from '../../../camera/debug/CameraDebugSnapshot';
-import type { AssetSlot } from '../../../loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GpuMemorySnapshot } from '../../../gpu/memory/GpuMemorySnapshot';
 import type { PassOverridesHandle } from './PassOverridesHandle';
 

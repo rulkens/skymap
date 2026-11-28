@@ -5,7 +5,7 @@
  * renderer without a null check.
  */
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { ShellMesh } from './ShellMesh';
 import type { LocalBubbleRenderer } from '../shell/@types/LocalBubbleRenderer';
 

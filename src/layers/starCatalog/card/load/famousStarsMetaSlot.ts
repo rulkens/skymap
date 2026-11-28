@@ -6,10 +6,10 @@
  * InfoCard text, and the engine keeps running.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { famousStarsMetaFetcher } from './famousStarsMetaFetcher';
 import type { FamousStarsPayload } from '../@types/FamousStarsPayload';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { LayerCoreDeps } from '../../../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from '../../@types/StarCatalogFacts';
 

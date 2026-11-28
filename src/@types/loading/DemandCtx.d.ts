@@ -11,7 +11,7 @@
 
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
-import type { LoadState } from './LoadState';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 import type { UiState } from '../ui/UiState';
 import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { Vec3 } from '../../../packages/shared/src/@types/math/Vec3';

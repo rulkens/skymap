@@ -5,9 +5,9 @@
  * only after `upload` does.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { flowFieldFetcher } from './flowFieldFetcher';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import type { FlowFieldRenderer } from '../@types/FlowFieldRenderer';
 

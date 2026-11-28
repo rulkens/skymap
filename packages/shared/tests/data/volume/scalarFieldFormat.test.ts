@@ -8,7 +8,7 @@ import {
 } from '../../../src/data/volume/scalarFieldFormat';
 import type { ScalarCube } from '../../../src/@types/data/volume/ScalarCube';
 import { FormatVersionError } from '../../../src/data/formatVersionError';
-import { defaultRetryPolicy } from '../../../../../src/services/loading/retryPolicy';
+import { defaultRetryPolicy } from '../../../src/services/loading/retryPolicy';
 
 function makeFixture(): ScalarCube {
   // Tiny 2x2x2 single-channel cube — 8 voxels — for quick round-trip checks.

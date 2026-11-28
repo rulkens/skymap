@@ -12,7 +12,7 @@ import { FormatVersionError } from '../../../../packages/shared/src/data/formatV
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 import { reopenSplash } from '../../../state/ui/uiSlice';
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AppDispatch } from '../../../store/types';
 
 export function installFormatVersionAlert(

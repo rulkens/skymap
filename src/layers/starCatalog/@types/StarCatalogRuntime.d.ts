@@ -5,7 +5,7 @@
 
 import type { StarCatalogId } from './StarCatalogId';
 import type { Octree } from '../../../@types/octree/Octree';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../survey/@types/StarCatalogReq';
 import type { FamousStarsPayload } from '../card/@types/FamousStarsPayload';
 import type { StarCatalogRenderer } from '../survey/@types/StarCatalogRenderer';

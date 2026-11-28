@@ -1,8 +1,8 @@
 /** createCosmicWebDensitySlot — one density row's asset slot, construction-pure. */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GpuVolume } from '../../../../@types/rendering/GpuVolume';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 import type { CosmicWebDensitySlotDeps } from '../../@types/CosmicWebDensitySlotDeps';

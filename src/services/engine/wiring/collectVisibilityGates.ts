@@ -6,7 +6,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { VisibilityGates } from '../../../@types/engine/state/VisibilityGates';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { gateIdentityOf } from '../../../utils/visibility/gateIdentityOf';
 

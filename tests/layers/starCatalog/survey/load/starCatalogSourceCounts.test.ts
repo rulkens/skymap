@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 
 import { starCatalogSourceCounts } from '../../../../../src/layers/starCatalog/survey/load/starCatalogSourceCounts';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
-import type { LoadState } from '../../../../../src/@types/loading/LoadState';
+import type { LoadState } from '../../../../../packages/shared/src/@types/loading/LoadState';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { SourceCountReport } from '../../../../../src/@types/engine/layer/SourceCountReport';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';

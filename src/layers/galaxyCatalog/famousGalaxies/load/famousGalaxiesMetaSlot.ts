@@ -5,10 +5,10 @@
  * publishes `[]`, degrading the enriched InfoCard text, not the engine.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { famousGalaxiesMetaFetcher } from './famousGalaxiesMetaFetcher';
 import type { LayerCoreDeps } from '../../../../@types/engine/layer/LayerCoreDeps';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../@types/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';

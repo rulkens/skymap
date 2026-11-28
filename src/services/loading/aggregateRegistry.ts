@@ -18,7 +18,7 @@
  * snapshot read each frame is cheap (~10 slots in the registry) and never
  * disagrees with `slot.state()`.
  */
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 import type { RegistrySnapshot } from '../../@types/loading/RegistrySnapshot';
 
 export function aggregateRegistry(

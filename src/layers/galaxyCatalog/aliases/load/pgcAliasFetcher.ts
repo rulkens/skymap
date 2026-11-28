@@ -21,7 +21,7 @@
  * Map so the palette's famous-only search still works. This also
  * makes retry policy honest — a 5xx flake retries, a 404 gives up.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { PgcAliasJsonShape } from '../@types/PgcAliasJsonShape';
 import type { PgcAliasMap } from '../@types/PgcAliasMap';
 import {

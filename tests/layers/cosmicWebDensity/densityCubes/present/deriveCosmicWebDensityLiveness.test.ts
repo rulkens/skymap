@@ -13,7 +13,7 @@ import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { CosmicWebDensityRuntime } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import type { LoadState } from '../../../../../src/@types/loading/LoadState';
+import type { LoadState } from '../../../../../packages/shared/src/@types/loading/LoadState';
 
 const runtimeWithMask = (kind: LoadState<unknown>['kind']) =>
   ({

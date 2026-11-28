@@ -26,7 +26,7 @@ Direct `.load()` sites outside the queue:
   first direction below). At a tier switch this can start every
   enabled catalog at once, which is the exact pattern the queue exists
   to prevent, just not at boot.
-- `src/services/loading/AssetSlot.ts` `forceReload` — debug-panel
+- `packages/shared/src/services/loading/AssetSlot.ts` `forceReload` — debug-panel
   Reload button.
 
 `reevaluateDemand`'s enqueued fetcher re-checks `slot.state().kind ===

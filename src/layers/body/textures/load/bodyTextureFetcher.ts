@@ -8,7 +8,7 @@
  * an abort never falls through to the next URL.
  */
 
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { BodyTextureReq } from '../@types/BodyTextureReq';
 import { isGreyTextureKind } from '../../../../utils/bodyTextures/isGreyTextureKind';
 import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';

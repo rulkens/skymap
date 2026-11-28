@@ -16,7 +16,7 @@
  * crashing).
  */
 
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { ScalarCube } from '../../../../../packages/shared/src/@types/data/volume/ScalarCube';
 import {
   decodeScalarField,

@@ -1,4 +1,4 @@
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
 import type { StellarStreamMeta } from '../catalog/@types/StellarStreamMeta';
 import type { StellarStreamsPayload } from '../catalog/@types/StellarStreamsPayload';

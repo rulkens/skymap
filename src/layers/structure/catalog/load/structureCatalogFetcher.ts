@@ -29,7 +29,7 @@
  * plain `fetch` keeps the two requests symmetric (binary + JSON) and still
  * honors the abort signal.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { StructureCatalogReq } from '../@types/StructureCatalogReq';
 import type { StructureCatalogPayload } from '../@types/StructureCatalogPayload';
 import {

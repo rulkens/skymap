@@ -21,7 +21,7 @@
  * an extra wake — harmless, the scheduler coalesces redundant wakes.
  */
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 
 export function installSlotReadyWake(
   requestRender: () => void,
