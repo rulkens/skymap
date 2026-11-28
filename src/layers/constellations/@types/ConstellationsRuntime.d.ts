@@ -5,7 +5,7 @@
  * renderer/slot without a null check.
  */
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { ConstellationsArtifact } from '../figures/@types/ConstellationsArtifact';
 import type { ConstellationRenderer } from '../figures/@types/ConstellationRenderer';
 

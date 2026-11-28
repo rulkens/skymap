@@ -12,12 +12,12 @@ import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../@types/GalaxyRecordSource';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../../../@types/engine/layer/LayerCoreDeps';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
 import type { GalaxyPointRenderer } from '../../pointSprites/@types/GalaxyPointRenderer';
 import type { GalaxyCatalogFacts } from '../../@types/GalaxyCatalogFacts';
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { galaxyCatalogFetcher } from './galaxyCatalogFetcher';
 import { flatGalaxyRecordSource } from './flatGalaxyRecordSource';
 

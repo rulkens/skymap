@@ -13,7 +13,7 @@ Two related asks:
 
 - Registry: `src/services/engine/wiring/assetWiring.ts:203-313` — `ASSET_WIRING` rows `{key, factory, req, demand, release?}`. Demand predicates exist for every row; `release` exists for **body textures only** (`:186-201` — load inside `loadRadiusMpc(body)`, release past 2×, hysteresis gap prevents thrash). Filaments, MCPM, CF4 density, flow, structure catalog, star catalogs, galaxy catalogs: demand-load, never release.
 - Demand loop: `src/services/engine/wiring/reevaluateDemand.ts` re-runs the whole table on any relevant state change and re-issues `req(tier)`.
-- Slot machinery: `src/services/loading/AssetSlot.ts` (forceReload/cancel/subscribe), fetchers + slot builders under `src/services/loading/`, `aggregateRegistry.ts` snapshots for UI.
+- Slot machinery: `packages/shared/src/services/loading/AssetSlot.ts` (forceReload/cancel/subscribe), fetchers + slot builders under `src/services/loading/`, `aggregateRegistry.ts` snapshots for UI.
 - Debug UI: `src/components/DebugPanel/AssetLoadingSection.tsx` — subscribes to every slot (`:40-46`), one `SlotRow` each with state/summary/Reload/Cancel (`:76-108`), MB progress formatting (`:111-126`). Toggled via `d` (`useKeyboardShortcuts.ts:129-132`).
 
 ## The inventory half is done

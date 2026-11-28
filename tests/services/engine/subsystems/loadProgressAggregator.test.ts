@@ -19,8 +19,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { createLoadProgressEmitter } from '../../../../src/services/engine/subsystems/loadProgressAggregator';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
 
 /**

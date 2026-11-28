@@ -4,9 +4,9 @@
  * loop's load/release edges are the worker's whole lifetime: no worker exists while the Layer is
  * inactive.
  */
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { fetchLiveFile } from '../../../../services/loading/fetchLiveFile';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { SatellitePointRenderer } from '../../points/@types/SatellitePointRenderer';
 import type { SatellitePropagator } from '../../sweep/@types/SatellitePropagator';
 

@@ -15,7 +15,7 @@
 
 import cx from 'classnames';
 import type { MouseEvent, ReactNode } from 'react';
-import type { LoadState } from '../../@types/loading/LoadState';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 import type { LoadStateFilter } from '../../@types/loading/LoadStateFilter';
 import { loadStateColorClass } from './loadStateColorClass';
 import styles from './AssetLoadingTitle.module.css';

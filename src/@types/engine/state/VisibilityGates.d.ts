@@ -1,4 +1,4 @@
-import type { AssetSlot } from '../../loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 
 /** The slot each gated fade identity waits on, keyed by `fadeIdentityKey`. Only `committed()`
  * is read: a reload keeps the previous upload drawn, so `state()` is the wrong question. */

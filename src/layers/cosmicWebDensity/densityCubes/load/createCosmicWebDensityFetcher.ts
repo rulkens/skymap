@@ -4,7 +4,7 @@
  * surfaces as a commit that never fires, so a missing optional cube draws nothing.
  */
 
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { GpuVolume } from '../../../../@types/rendering/GpuVolume';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 import { loadScfdVolume } from '../../../../services/loading/volume/loadScfdVolume';

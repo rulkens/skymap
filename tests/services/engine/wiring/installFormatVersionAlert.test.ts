@@ -13,8 +13,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 import type { AppDispatch } from '../../../../src/store/types';
 import { installFormatVersionAlert } from '../../../../src/services/engine/wiring/installFormatVersionAlert';
 import { FormatVersionError } from '../../../../packages/shared/src/data/formatVersionError';

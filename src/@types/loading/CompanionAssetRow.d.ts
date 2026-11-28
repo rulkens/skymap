@@ -1,5 +1,5 @@
 import type { AssetKey } from './AssetKey';
-import type { AssetSlot } from './AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 /**
  * An asset that loads whenever its parent does, one rank behind it, with the

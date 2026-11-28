@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { awaitSlotValue } from '../../../src/utils/loading/awaitSlotValue';
-import { createAssetSlot } from '../../../src/services/loading/AssetSlot';
-import type { AssetSlot } from '../../../src/@types/loading/AssetSlot';
+import { createAssetSlot } from '../../../packages/shared/src/services/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 const never = (): Promise<string> => new Promise(() => {});
 

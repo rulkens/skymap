@@ -2,7 +2,7 @@ import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineComposition } from './EngineComposition';
 import type { Layer } from './layer/Layer';
-import type { AssetSlot } from '../loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
 import type { SelectionResolver } from './selection/SelectionResolver';
 import type { RootState } from '../../store/types';

@@ -9,7 +9,7 @@
  * is in `bodyTextureFetcher.ts`.
  */
 
-import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../packages/shared/src/@types/loading/Fetcher';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
 import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshTextureField } from '../../../@types/data/mesh/MeshTextureField';

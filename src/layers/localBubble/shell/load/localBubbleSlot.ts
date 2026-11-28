@@ -1,8 +1,8 @@
 /** localBubbleSlot — factory for the shell's asset slot (own fetcher and renderer target). */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { localBubbleFetcher } from './localBubbleFetcher';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { ShellMesh } from '../../@types/ShellMesh';
 import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
 

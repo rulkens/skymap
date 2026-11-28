@@ -8,8 +8,8 @@
 
 import { useState, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
-import type { LoadState } from '../../@types/loading/LoadState';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 import { loadStateColorClass } from './loadStateColorClass';
 import styles from './SlotRow.module.css';
 

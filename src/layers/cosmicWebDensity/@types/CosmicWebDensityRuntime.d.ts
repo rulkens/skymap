@@ -4,7 +4,7 @@
  * Non-null throughout: `create` builds all of it before returning.
  */
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GpuVolume } from '../../../@types/rendering/GpuVolume';
 import type { CosmicWebDensityFieldId } from './CosmicWebDensityFieldId';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';

@@ -2,7 +2,7 @@
  * stellarStreamsMetaFetcher — the name sidecar. It runs the pair check only when the bin has
  * committed first; when the meta lands first, the bin fetcher runs it instead.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { StellarStreamMeta } from '../@types/StellarStreamMeta';
 import {
   HttpError,

@@ -4,7 +4,7 @@
  * what lets the pass and the fade guard read the renderer without a null check.
  */
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { FilamentCloud } from './FilamentCloud';
 import type { FilamentReq } from '../filaments/@types/FilamentReq';
 import type { FilamentRenderer } from '../filaments/@types/FilamentRenderer';

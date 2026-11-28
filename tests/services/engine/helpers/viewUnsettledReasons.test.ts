@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { viewUnsettledReasons } from '../../../../src/services/engine/helpers/viewUnsettledReasons';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { CameraIntentState } from '../../../../src/@types/camera/orbitCamera/CameraIntentState';
 

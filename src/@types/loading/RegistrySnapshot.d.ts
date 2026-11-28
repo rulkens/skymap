@@ -1,4 +1,4 @@
-import type { LoadState } from './LoadState';
+import type { LoadState } from '../../../packages/shared/src/@types/loading/LoadState';
 
 /**
  * Snapshot of the slot registry suitable for the loading-bar UI and the

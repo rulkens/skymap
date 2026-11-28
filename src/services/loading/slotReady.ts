@@ -1,4 +1,4 @@
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 /**
  * slotReady — true once a slot has a committed value. Reads `committed()`, not

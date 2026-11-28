@@ -6,7 +6,7 @@
 
 import { memo } from 'react';
 import type { RefObject } from 'react';
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';

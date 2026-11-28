@@ -11,7 +11,7 @@ import { claimingSelectionRow } from '../../../utils/selection/claimingSelection
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
-import type { LoadState } from '../../../@types/loading/LoadState';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 
 export function buildDemandCtx(state: EngineState): DemandCtx {
   const { select, focus, pending } = state.selection;

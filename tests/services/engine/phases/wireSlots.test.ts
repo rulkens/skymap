@@ -22,8 +22,8 @@ import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/asset
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 import type { SourceId } from '../../../../src/@types/data/SourceId';
 
 // Every fetcher is a no-op resolved Promise: slots whose `.load()` fires inside wireSlots

@@ -16,7 +16,7 @@ import { setVisibility } from '../../../../src/state/settings/setVisibilityActio
 import settingsReducer from '../../../../src/state/settings/settingsReducer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 import type { SetVisibilityPayload } from '../../../../src/@types/settings/SetVisibilityPayload';
 
 const READY = { kind: 'ready', req: {}, value: 1, loadedAtMs: 0 } as const;

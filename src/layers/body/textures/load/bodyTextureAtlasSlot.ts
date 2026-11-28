@@ -6,12 +6,12 @@
  * generated `BODY_ATLAS_LAYOUT`.
  */
 
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { bodyAtlasFetcher } from './bodyAtlasFetcher';
 import { BODY_ATLAS_GRID, BODY_ATLAS_LAYOUT } from '../data/bodyAtlas.generated';
 import { atlasTileRect } from '../../../../utils/gpu/atlasTileRect';
 import { closeBitmap } from '../../../../utils/gpu/closeBitmap';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { BodyTextureSinks } from '../@types/BodyTextureSinks';
 

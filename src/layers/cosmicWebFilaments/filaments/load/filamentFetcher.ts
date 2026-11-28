@@ -13,7 +13,7 @@
  * them keeps each fetcher's typed request narrow and avoids a "what does
  * source mean for filaments?" branch in the galaxy-catalog fetcher.
  */
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import type { FilamentReq } from '../@types/FilamentReq';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import { decodeFilaments, FILAMENT_DATA_PREFIX } from '../data/filamentBinaryFormat';

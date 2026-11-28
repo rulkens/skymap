@@ -1,9 +1,9 @@
 /** stellarStreamsSlot — the particle bin's slot: commit uploads it, release frees the GPU buffer. */
 
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { StellarStreamsPayload } from '../@types/StellarStreamsPayload';
 import type { StellarStreamsRenderer } from '../../streaks/@types/StellarStreamsRenderer';
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { stellarStreamsFetcher } from './stellarStreamsFetcher';
 
 export function createStellarStreamsSlot(

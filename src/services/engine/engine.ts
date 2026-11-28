@@ -47,7 +47,7 @@ import { readOrientDeltas } from './camera/orientation/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';

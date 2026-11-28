@@ -7,7 +7,7 @@
  * branch (numeric normal/material channels) does not apply.
  */
 
-import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { Fetcher } from '../../../../../packages/shared/src/@types/loading/Fetcher';
 import { BODY_ATLAS_FILENAME } from '../data/bodyAtlas.generated';
 import { dataUrl } from '../../../../../packages/shared/src/services/loading/fetchWithProgress';
 

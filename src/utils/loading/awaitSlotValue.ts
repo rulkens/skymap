@@ -1,4 +1,4 @@
-import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 
 /**
  * The slot's committed value once it has one, or null if the slot errors or is released first: a

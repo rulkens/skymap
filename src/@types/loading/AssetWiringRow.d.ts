@@ -7,7 +7,7 @@
  */
 
 import type { AssetKey } from './AssetKey';
-import type { AssetSlot } from './AssetSlot';
+import type { AssetSlot } from '../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AssetDemand } from './AssetDemand';
 import type { Tier } from '../../../packages/shared/src/@types/data/Tier';
 import type { VisibilityAddress } from '../animation/VisibilityAddress';

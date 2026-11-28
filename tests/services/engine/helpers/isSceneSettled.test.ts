@@ -6,8 +6,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { isSceneSettled } from '../../../../src/services/engine/helpers/isSceneSettled';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../../packages/shared/src/@types/loading/LoadState';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 
 type Slots = ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;

@@ -5,11 +5,11 @@
  * catalog is the decoded one, so the GPU upload and the CPU mirror read the same columns; commit
  * uploads the solver's rows and release destroys them.
  */
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { AsteroidCatalog } from '../@types/AsteroidCatalog';
 import type { LoadedAsteroids } from '../@types/LoadedAsteroids';
 import type { AsteroidKeplerSolver } from '../../kepler/@types/AsteroidKeplerSolver';
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import {
   dataUrl,
   fetchWithProgress,

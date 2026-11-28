@@ -3,7 +3,7 @@
  * commits into, the dot renderer that reads the solver's rows, and the orbit-ring renderer (its own
  * instance, not core's).
  */
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { OrbitTrailRenderer } from '../../../@types/rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { LoadedAsteroids } from '../catalog/@types/LoadedAsteroids';
 import type { AsteroidKeplerSolver } from '../kepler/@types/AsteroidKeplerSolver';

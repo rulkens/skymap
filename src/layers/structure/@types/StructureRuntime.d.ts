@@ -7,7 +7,7 @@
 
 import type { StructureStore } from '../catalog/@types/StructureStore';
 import type { StructureMarkerRenderer } from '../markers/@types/StructureMarkerRenderer';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { StructureCatalogPayload } from '../catalog/@types/StructureCatalogPayload';
 import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
 import type { StructureId } from '../../../@types/data/structure/StructureId';

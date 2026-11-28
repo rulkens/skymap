@@ -5,11 +5,11 @@
  * release drops the stream and frees the catalog's GPU buffers. Its row `gates` the star entry's item, so core fades the
  * catalog in on the commit; the entry's `survey` band rides on top of that value.
  */
-import { createAssetSlot } from '../../../../services/loading/AssetSlot';
+import { createAssetSlot } from '../../../../../packages/shared/src/services/loading/AssetSlot';
 import { starCatalogFetcher } from './starCatalogFetcher';
 import { installStarPool } from './installStarPool';
 import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';
-import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
+import type { AssetSlot } from '../../../../../packages/shared/src/@types/loading/AssetSlot';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { StarCatalogReq } from '../@types/StarCatalogReq';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
